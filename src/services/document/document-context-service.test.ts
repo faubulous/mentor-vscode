@@ -1034,6 +1034,138 @@ describe('DocumentContextService', () => {
 		});
 	});
 
+	describe('isLoading and waitUntilLoaded', () => {
+		it('reports a load until it has finished, including the inference', async () => {
+			const { service, tokenSource, mockDocumentFactory } = createService();
+			const uri = 'file:///test.ttl';
+			const doc = { languageId: 'turtle', uri: vscode.Uri.parse(uri), getText: () => '' } as any;
+			const ctx = createMockContext({ uri: doc.uri, isLoaded: false, isParsed: false });
+
+			let finishInference!: () => void;
+
+			ctx.infer = vi.fn(() => new Promise<void>(resolve => finishInference = resolve));
+			(mockDocumentFactory.create as any).mockReturnValue(ctx);
+
+			const load = service.loadDocument(doc);
+
+			expect(service.isLoading(uri)).toBe(true);
+
+			tokenSource.deliverTokens(uri, []);
+
+			await vi.waitFor(() => expect(ctx.infer).toHaveBeenCalled());
+
+			expect(service.isLoading(uri)).toBe(true);
+
+			const loaded = service.waitUntilLoaded(uri);
+
+			finishInference();
+			await loaded;
+			await load;
+
+			expect(service.isLoading(uri)).toBe(false);
+		});
+
+		it('resolves waitUntilLoaded at once when no load is in progress', async () => {
+			const { service } = createService();
+
+			expect(service.isLoading('file:///idle.ttl')).toBe(false);
+
+			await service.waitUntilLoaded('file:///idle.ttl');
+		});
+
+		it('reports the triple reload after an edit', async () => {
+			const { service, tokenSource } = createService();
+			const uri = 'file:///test.ttl';
+			const ctx = createMockContext({ uri: vscode.Uri.parse(uri), isParsed: true });
+
+			let finishInference!: () => void;
+
+			ctx.infer = vi.fn(() => new Promise<void>(resolve => finishInference = resolve));
+			service.contexts[uri] = ctx;
+			(vscode.workspace.textDocuments as any[]).push({ uri: vscode.Uri.parse(uri), getText: () => '' });
+
+			try {
+				tokenSource.deliverTokens(uri, []);
+
+				await vi.waitFor(() => expect(ctx.infer).toHaveBeenCalled());
+
+				expect(service.isLoading(uri)).toBe(true);
+
+				const loaded = service.waitUntilLoaded(uri);
+
+				finishInference();
+				await loaded;
+
+				expect(service.isLoading(uri)).toBe(false);
+			} finally {
+				(vscode.workspace.textDocuments as any[]).pop();
+			}
+		});
+	});
+
+	describe('loadDocument event loop yields', () => {
+		/**
+		 * Starts loading a document whose parse takes the given time, and returns
+		 * the context and the pending load.
+		 */
+		function startLoad(parseMs: number) {
+			const { service, tokenSource, mockDocumentFactory } = createService();
+			const uri = vscode.Uri.parse('file:///test.ttl');
+			const doc = { languageId: 'turtle', uri, getText: () => '' } as any;
+			const ctx = createMockContext({ uri, isLoaded: false, isParsed: false });
+
+			(mockDocumentFactory.create as any).mockReturnValue(ctx);
+
+			vi.spyOn(tokenSource, 'waitForTokens').mockImplementation(async () => {
+				vi.setSystemTime(Date.now() + parseMs);
+
+				return [];
+			});
+
+			return { ctx, load: service.loadDocument(doc) };
+		}
+
+		/**
+		 * Lets all pending promise callbacks run, but no timers.
+		 */
+		async function flushMicrotasks(): Promise<void> {
+			for (let index = 0; index < 10; index++) {
+				await Promise.resolve();
+			}
+		}
+
+		afterEach(() => {
+			vi.useRealTimers();
+		});
+
+		it('yields before loading the triples when the parse used up the budget', async () => {
+			vi.useFakeTimers();
+
+			const { ctx, load } = startLoad(100);
+
+			await flushMicrotasks();
+
+			expect(ctx.loadTriples).not.toHaveBeenCalled();
+
+			await vi.runAllTimersAsync();
+			await load;
+
+			expect(ctx.loadTriples).toHaveBeenCalledOnce();
+		});
+
+		it('loads the triples of a quickly parsed document without yielding', async () => {
+			vi.useFakeTimers();
+
+			const { ctx, load } = startLoad(0);
+
+			await flushMicrotasks();
+
+			expect(ctx.loadTriples).toHaveBeenCalledOnce();
+
+			await load;
+		});
+	});
+
 	describe('loadDocument supersession guards', () => {
 		it('returns undefined when generation is bumped before tokens arrive (line 403)', async () => {
 			const { service, tokenSource, mockDocumentFactory } = createService();

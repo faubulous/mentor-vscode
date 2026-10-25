@@ -58,6 +58,14 @@ export class TurtleCompletionItemProvider extends TurtleFeatureProvider implemen
 	}
 
 	provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, t: vscode.CancellationToken, completion: vscode.CompletionContext): vscode.ProviderResult<vscode.CompletionItem[] | vscode.CompletionList> {
+		// The suggestions are read from the triple store; while the document is
+		// loading, its own triples may not be there yet.
+		const uri = document.uri.toString();
+
+		if (this._contextService.isLoading(uri)) {
+			return this._contextService.waitUntilLoaded(uri).then(() => this.provideCompletionItems(document, position, t, completion));
+		}
+
 		const context = this._contextService.getDocumentContext(document, TurtleDocument);
 
 		if (!context || t.isCancellationRequested) {

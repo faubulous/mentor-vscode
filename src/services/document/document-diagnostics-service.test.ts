@@ -113,7 +113,7 @@ function makeSetup(contextsByUri: Record<string, any>) {
     return {
         service,
         collection,
-        deliverTokens: (uri: string) => deliveryEmitter.fire({ uri, tokens: [], consumed: false }),
+        deliverTokens: (uri: string, consumed = false) => deliveryEmitter.fire({ uri, tokens: [], consumed }),
     };
 }
 
@@ -142,6 +142,60 @@ describe('DocumentDiagnosticsService', () => {
         deliverTokens(uri);
 
         expect(collection.set).toHaveBeenCalledWith(document.uri, []);
+    });
+
+    it('validates an edited document right away', () => {
+        const uri = 'file:///test.ttl';
+        const document = makeDocument(uri, INVALID_TURTLE);
+        env.textDocuments.push(document);
+
+        const { collection, deliverTokens } = makeSetup({ [uri]: makeTurtleContext() });
+
+        deliverTokens(uri, false);
+
+        expect(collection.set).toHaveBeenCalledOnce();
+    });
+
+    it('validates a loaded document after the event loop polled for I/O', async () => {
+        vi.useFakeTimers();
+
+        try {
+            const uri = 'file:///test.ttl';
+            const document = makeDocument(uri, INVALID_TURTLE);
+            env.textDocuments.push(document);
+
+            const { collection, deliverTokens } = makeSetup({ [uri]: makeTurtleContext() });
+
+            deliverTokens(uri, true);
+
+            expect(collection.set).not.toHaveBeenCalled();
+
+            await vi.runAllTimersAsync();
+
+            expect(collection.set).toHaveBeenCalledOnce();
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
+    it('drops a deferred load validation when an edit validates the document first', async () => {
+        vi.useFakeTimers();
+
+        try {
+            const uri = 'file:///test.ttl';
+            const document = makeDocument(uri, INVALID_TURTLE);
+            env.textDocuments.push(document);
+
+            const { collection, deliverTokens } = makeSetup({ [uri]: makeTurtleContext() });
+
+            deliverTokens(uri, true);
+            deliverTokens(uri, false);
+            await vi.runAllTimersAsync();
+
+            expect(collection.set).toHaveBeenCalledOnce();
+        } finally {
+            vi.useRealTimers();
+        }
     });
 
     it('publishes parse error diagnostics for an invalid visible document', () => {

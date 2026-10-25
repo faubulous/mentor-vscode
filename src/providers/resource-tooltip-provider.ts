@@ -15,6 +15,23 @@ export class ResourceTooltipProvider implements vscode.HoverProvider {
 	}
 
 	provideHover(document: vscode.TextDocument, position: vscode.Position): vscode.ProviderResult<vscode.Hover> {
+		// The tooltip reads labels and descriptions from the triple store; while the
+		// document is loading, its own triples may not be there yet.
+		const uri = document.uri.toString();
+
+		if (this._contextService.isLoading(uri)) {
+			return this._contextService.waitUntilLoaded(uri).then(() => this._provideHover(document, position));
+		}
+
+		return this._provideHover(document, position);
+	}
+
+	/**
+	 * Returns the hover for a position once the document is loaded.
+	 * @param document The document.
+	 * @param position The position of the hover.
+	 */
+	private _provideHover(document: vscode.TextDocument, position: vscode.Position): vscode.Hover | null {
 		const context = this._contextService.contexts[document.uri.toString()];
 
 		if (context) {
