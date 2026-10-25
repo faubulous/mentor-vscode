@@ -73,6 +73,68 @@ describe('ResourceDefinitionProvider', () => {
         });
     });
 
+    describe('provideDefinition during workspace indexing', () => {
+        const range = { start: { line: 1, character: 0 }, end: { line: 1, character: 20 } };
+        const iri = 'http://example.org/Thing';
+
+        /**
+         * Creates a context with the given type definitions.
+         */
+        function makeContext(uri: vscode.Uri, typeDefinitions: RangeIndex) {
+            return {
+                uri,
+                getIriAtPosition: vi.fn(() => iri),
+                typeDefinitions,
+                typeAssertions: new RangeIndex(),
+                namespaceDefinitions: new RangeIndex(),
+                references: createRangeIndex({ [iri]: [range] }),
+            };
+        }
+
+        it('waits for the index when no loaded file defines the resource', async () => {
+            let finishIndexing!: () => void;
+
+            const indexer = {
+                indexingFinished: false,
+                waitForIndexed: vi.fn(() => new Promise<void>(resolve => finishIndexing = resolve)),
+            };
+
+            mockContextService.contexts[docUriStr] = makeContext(docUri, new RangeIndex());
+
+            const result = new ResourceDefinitionProvider(mockContextService as any, indexer).provideDefinition({ uri: docUri } as any, pos) as Promise<vscode.Location>;
+
+            // The defining file is indexed after the request.
+            const definingUri = vscode.Uri.parse('file:///ontology.ttl');
+
+            mockContextService.contexts[definingUri.toString()] = makeContext(definingUri, createRangeIndex({ [iri]: [range] }));
+            finishIndexing();
+
+            expect((await result).uri.toString()).toBe(definingUri.toString());
+        });
+
+        it('answers right away when a loaded file defines the resource', () => {
+            const indexer = { indexingFinished: false, waitForIndexed: vi.fn() };
+
+            mockContextService.contexts[docUriStr] = makeContext(docUri, createRangeIndex({ [iri]: [range] }));
+
+            const result = new ResourceDefinitionProvider(mockContextService as any, indexer).provideDefinition({ uri: docUri } as any, pos);
+
+            expect(result).toBeInstanceOf(vscode.Location);
+            expect(indexer.waitForIndexed).not.toHaveBeenCalled();
+        });
+
+        it('answers right away when the workspace is indexed', () => {
+            const indexer = { indexingFinished: true, waitForIndexed: vi.fn() };
+
+            mockContextService.contexts[docUriStr] = makeContext(docUri, new RangeIndex());
+
+            const result = new ResourceDefinitionProvider(mockContextService as any, indexer).provideDefinition({ uri: docUri } as any, pos);
+
+            expect((result as vscode.Location).uri.toString()).toBe(docUriStr);
+            expect(indexer.waitForIndexed).not.toHaveBeenCalled();
+        });
+    });
+
     describe('provideDefinitionForResource', () => {
         it('returns null when IRI has no definition, assertion, namespace, or reference', () => {
             const ctx = {
