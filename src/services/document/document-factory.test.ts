@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import * as fs from 'fs';
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as vscode from 'vscode';
 
@@ -528,6 +529,23 @@ describe('DocumentFactory', () => {
 
 		it('throws when language cannot be determined from the URI', () => {
 			expect(() => factory.create({ path: '/test/file.xyz' } as any)).toThrow('Unable to determine the document language');
+		});
+	});
+
+	describe('activation events in package.json', () => {
+		const manifest = JSON.parse(fs.readFileSync(new URL('../../../package.json', import.meta.url), 'utf8'));
+		const activationEvents: string[] = manifest.activationEvents;
+
+		it('keep activating Mentor in every window, so that its status bar items show up', () => {
+			expect(activationEvents).toContain('onStartupFinished');
+		});
+
+		it('activate Mentor at start-up in workspaces that contain a file the indexer reads', () => {
+			const event = activationEvents.find(e => e.startsWith('workspaceContains:'));
+			const extensions = /\{([^}]*)\}/.exec(event ?? '')?.[1].split(',').map(extension => `.${extension}`);
+
+			expect(event).toMatch(/^workspaceContains:\*\*\/\*\.\{[^}]+\}$/);
+			expect(extensions?.sort()).toEqual(Object.keys(factory.supportedExtensions).sort());
 		});
 	});
 });

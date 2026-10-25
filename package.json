@@ -143,6 +143,7 @@
     "vscode-languageserver-types": "^3.18.5"
   },
   "activationEvents": [
+    "workspaceContains:**/*.{ttl,n3,nt,nq,trig,sparql,rq,rdf,mnb}",
     "onStartupFinished",
     "onLanguage:xml",
     "onNotebook:mentor-notebook",
