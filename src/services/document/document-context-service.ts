@@ -86,11 +86,11 @@ export class DocumentContextService {
 			this._onDidChangeDocumentContext,
 			this
 		]);
+	}
 
-		// If there is an active editor on startup, load its document and set the active context.
-		this.handleActiveEditorChanged().then(() => {
-			this.activateDocument();
-		});
+	async loadActiveEditorAtStartup(): Promise<void> {
+		await this.handleActiveEditorChanged();
+		await this.activateDocument();
 	}
 
 	/**

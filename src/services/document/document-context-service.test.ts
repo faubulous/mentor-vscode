@@ -1298,6 +1298,48 @@ describe('DocumentContextService', () => {
 		});
 	});
 
+	describe('loadActiveEditorAtStartup', () => {
+		afterEach(() => {
+			(vscode.window as any).activeTextEditor = undefined;
+		});
+
+		it('does not load the active editor when the service is constructed', async () => {
+			const uri = vscode.Uri.parse('file:///test.ttl');
+			(vscode.window as any).activeTextEditor = { document: { languageId: 'turtle', uri, getText: () => '' } };
+
+			const loadDocument = vi.spyOn(DocumentContextService.prototype, 'loadDocument');
+
+			try {
+				createService();
+
+				await Promise.resolve();
+
+				expect(loadDocument).not.toHaveBeenCalled();
+			} finally {
+				loadDocument.mockRestore();
+			}
+		});
+
+		it('loads the active editor and announces its context to the subscribers', async () => {
+			const { service, mockDocumentFactory } = createService();
+			const uri = vscode.Uri.parse('file:///test.ttl');
+			const ctx = createMockContext({ uri, isLoaded: true });
+
+			service.contexts[uri.toString()] = ctx;
+			(mockDocumentFactory.create as any).mockReturnValue(ctx);
+			(vscode.window as any).activeTextEditor = { document: { languageId: 'turtle', uri, getText: () => '' } };
+
+			const fired: IDocumentContext[] = [];
+
+			service.onDidChangeDocumentContext(context => context && fired.push(context));
+
+			await service.loadActiveEditorAtStartup();
+
+			expect(service.activeContext).toBe(ctx);
+			expect(fired).toEqual([ctx]);
+		});
+	});
+
 	describe('activateDocument', () => {
 		afterEach(() => {
 			(vscode.window as any).activeTextEditor = undefined;

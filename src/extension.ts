@@ -47,6 +47,13 @@ export async function activateExtension(context: vscode.ExtensionContext) {
 	registerNotebookInferenceContext(context);
 	registerConfigurationListeners(context);
 
+	// Only now load the document of the editor that is open at start-up: every view and
+	// provider has subscribed to the document context events, so none misses the first
+	// one (e.g. the definition tree stayed empty for a document restored at start-up).
+	container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService).loadActiveEditorAtStartup().catch(e => {
+		getLog().error('Loading the active editor failed:', e);
+	});
+
 	vscode.commands.executeCommand('setContext', 'mentor.isInitializing', false);
 
 	// Do not await this, to allow the extension to finish activating while the

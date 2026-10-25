@@ -37,6 +37,16 @@ export default defineConfig([
 		env,
 	},
 	{
+		// VS Code starts with a document already open, as when it restores the editors
+		// of the last session; its definitions must show up in the definition tree.
+		label: 'startup-editor',
+		files: 'out/e2e/startup-editor/*.test.js',
+		workspaceFolder: 'e2e/fixtures/reveal-workspace',
+		launchArgs: ['e2e/fixtures/reveal-workspace/data/people-teams.ttl'],
+		mocha,
+		env,
+	},
+	{
 		// The tests create, move and delete folders in this workspace from outside
 		// of VS Code, which is how #95 was reported.
 		label: 'file-watcher',
