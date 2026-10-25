@@ -90,6 +90,11 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService, vscode
 	private _fileListSyncTimer?: ReturnType<typeof setTimeout>;
 
 	/**
+	 * Cancels the workspace diagnostics that run after an indexing pass, or `undefined`.
+	 */
+	private _diagnosticsCancellation?: vscode.CancellationTokenSource;
+
+	/**
 	 * A promise that resolves when all background indexing tasks have 
 	 * settled (either fulfilled or rejected).
 	 */
@@ -257,6 +262,8 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService, vscode
 		clearTimeout(this._fileListSyncTimer);
 
 		this._fileListSyncTimer = undefined;
+
+		this._cancelWorkspaceDiagnostics();
 	}
 
 	/**
@@ -283,7 +290,44 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService, vscode
 			const summary = await this._runIndexingTasks(scanResult.targetFileUris, run);
 
 			this._finalizeIndexingRun(run.fileUris.length, scanResult.skippedFiles, summary, startTime);
+
+			if (run.diagnoseFiles) {
+				this._startWorkspaceDiagnostics(scanResult.targetFileUris);
+			}
 		}
+	}
+
+	/**
+	 * Validates the files of a finished indexing pass in the background, for the
+	 * workspace-wide problems overview of `index.diagnoseFiles`. Neither go to
+	 * definition nor the definition tree need the diagnostics, so they no longer
+	 * hold up the end of indexing. A new indexing pass cancels the validation.
+	 * @param uris The files the pass indexed.
+	 */
+	private _startWorkspaceDiagnostics(uris: readonly vscode.Uri[]): void {
+		this._cancelWorkspaceDiagnostics();
+
+		const cancellation = new vscode.CancellationTokenSource();
+
+		this._diagnosticsCancellation = cancellation;
+
+		this._diagnosticsService.diagnoseFiles(uris, undefined, cancellation.token).catch(error => {
+			this._statusLog.error(`Failed to diagnose the indexed files: ${getErrorMessage(error)}`, error);
+		}).finally(() => {
+			if (this._diagnosticsCancellation === cancellation) {
+				this._diagnosticsCancellation = undefined;
+			}
+
+			cancellation.dispose();
+		});
+	}
+
+	/**
+	 * Cancels the workspace diagnostics of the previous indexing pass, if they still run.
+	 */
+	private _cancelWorkspaceDiagnostics(): void {
+		this._diagnosticsCancellation?.cancel();
+		this._diagnosticsCancellation = undefined;
 	}
 
 	/**
@@ -294,6 +338,8 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService, vscode
 	 */
 	private _startIndexingRun(reindex: boolean): IndexingRun {
 		this._indexingFinished = false;
+
+		this._cancelWorkspaceDiagnostics();
 
 		vscode.commands.executeCommand('setContext', 'mentor.workspace.isIndexing', true);
 
@@ -733,17 +779,9 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService, vscode
 
 		const loadMs = Math.round(performance.now() - loadStart);
 
-		// Compute syntax and lint diagnostics in-process from the content we already
-		// read (no openTextDocument), so `index.diagnoseFiles` gives the workspace-wide
-		// problems overview without the per-file document-open cost. The flag is
-		// snapshotted once per run instead of re-read per file.
-		if (run.diagnoseFiles) {
-			this._diagnosticsService.diagnoseContent(uri, content);
-		}
-
-		// The diagnostics were the last reader of the tokens. A file that is not open
-		// in an editor is parsed again only when it is opened or changes, so from here
-		// on only its index maps and graphs need to stay in memory.
+		// A file that is not open in an editor is parsed again only when it is opened
+		// or changes, so from here on only its index maps and graphs need to stay in
+		// memory. The workspace diagnostics after the pass read the file again.
 		if (!openDocument) {
 			this._releaseTokens(uri);
 		}
@@ -897,8 +935,8 @@ type IndexingRun = {
 	maxSize: number;
 
 	/**
-	 * Whether syntax/lint diagnostics are computed per indexed file. Snapshotted
-	 * once per run so the hot loop does not re-read the configuration per file.
+	 * Whether syntax/lint diagnostics are computed for the indexed files once the
+	 * run has finished. Snapshotted once per run.
 	 */
 	diagnoseFiles: boolean;
 

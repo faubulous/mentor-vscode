@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import type { ILexingError } from 'chevrotain';
-import { createFileBlankNodeIdGenerator, IRecognitionException, IToken, RdfSyntax, tokenizeWithTriplate } from '@faubulous/mentor-rdf-parsers';
+import { createFileBlankNodeIdGenerator, IRecognitionException, IToken, RdfSyntax, tokenizeWithTriplate, TriplateLexingResult, TurtleQuadReader } from '@faubulous/mentor-rdf-parsers';
 import { Diagnostic as LspDiagnostic, DiagnosticSeverity as LspDiagnosticSeverity, Range as LspRange } from 'vscode-languageserver-types';
 import { ParserFactory } from '@src/languages/parser-factory';
 import { SparqlUnusedVariableLinter } from '@src/languages/sparql/sparql-unused-variable-linter';
@@ -120,11 +120,13 @@ export class DocumentDiagnosticsService implements vscode.Disposable {
 	 * @param uris The files to validate.
 	 * @param onProgress Optional callback invoked once per file with the number
 	 * processed so far and the total, for status bar progress.
+	 * @param token Optional token that stops the validation before the next file.
 	 * @returns The number of files validated and how many have at least one error.
 	 */
 	async diagnoseFiles(
 		uris: readonly vscode.Uri[],
-		onProgress?: (processed: number, total: number) => void
+		onProgress?: (processed: number, total: number) => void,
+		token?: vscode.CancellationToken
 	): Promise<{ validated: number; filesWithErrors: number }> {
 		let validated = 0;
 		let filesWithErrors = 0;
@@ -137,6 +139,10 @@ export class DocumentDiagnosticsService implements vscode.Disposable {
 			const uri = uris[i];
 
 			await eventLoop.yieldIfBusy();
+
+			if (token?.isCancellationRequested) {
+				break;
+			}
 
 			onProgress?.(i + 1, uris.length);
 
@@ -337,12 +343,7 @@ export class DocumentDiagnosticsService implements vscode.Disposable {
 
 			tokens = lexingResult.tokens;
 			lexErrors = lexingResult.errors;
-
-			const parser = ParserFactory.getParser(context.syntax);
-
-			parser.parse(lexingResult.parseTokens, false);
-
-			errors = [...parser.errors, ...parser.semanticErrors];
+			errors = this._getSyntaxErrors(context.syntax, lexingResult);
 		}
 
 		const linters = context.syntax === RdfSyntax.Sparql
@@ -356,6 +357,35 @@ export class DocumentDiagnosticsService implements vscode.Disposable {
 		];
 
 		return diagnostics.map(d => this._toVscodeDiagnostic(d));
+	}
+
+	/**
+	 * Returns the syntax errors of a lexed document. A Turtle document is read
+	 * with the quad reader first, the way the document context reads it (see
+	 * `TurtleDocument._analyze`): a document the reader accepts has no syntax
+	 * errors, and only a rejected one goes through the grammar parser with error
+	 * recovery, which lists every error but costs far more.
+	 * @param syntax The syntax of the document.
+	 * @param lexingResult The tokens of the document.
+	 * @returns The parser and semantic errors.
+	 */
+	private _getSyntaxErrors(syntax: RdfSyntax, lexingResult: TriplateLexingResult): IRecognitionException[] {
+		if (syntax === RdfSyntax.Turtle && !lexingResult.template) {
+			try {
+				new TurtleQuadReader().read(lexingResult.tokens);
+
+				return [];
+			} catch {
+				// A syntax error, or the reader giving up (e.g. on a pathologically nested
+				// document): the grammar parser reports what it finds.
+			}
+		}
+
+		const parser = ParserFactory.getParser(syntax);
+
+		parser.parse(lexingResult.parseTokens, false);
+
+		return [...parser.errors, ...parser.semanticErrors];
 	}
 
 	/**
