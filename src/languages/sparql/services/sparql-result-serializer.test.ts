@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import * as vscode from 'vscode';
-import { DataFactory } from 'n3';
+import { rdfDataFactory } from '@src/utilities/rdf';
 import type { Literal, Quad } from '@rdfjs/types';
 import { SparqlResultSerializer } from '@src/languages/sparql/services/sparql-result-serializer';
 import { getLog } from '@src/utilities/vscode/log';
@@ -155,11 +155,11 @@ describe('SparqlResultSerializer', () => {
 
         it('returns Turtle string for a quad', async () => {
             const serializer = new SparqlResultSerializer(noPrefixService as any);
-            const quad = DataFactory.quad(
-                DataFactory.namedNode('http://example.org/subject'),
-                DataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'),
-                DataFactory.namedNode('http://example.org/Type'),
-                DataFactory.defaultGraph()
+            const quad = rdfDataFactory.quad(
+                rdfDataFactory.namedNode('http://example.org/subject'),
+                rdfDataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'),
+                rdfDataFactory.namedNode('http://example.org/Type'),
+                rdfDataFactory.defaultGraph()
             );
             const result = await serializer.serializeQuads(
                 makeContext() as any,
@@ -180,11 +180,11 @@ describe('SparqlResultSerializer', () => {
                 },
             };
             const serializer = new SparqlResultSerializer(prefixService as any);
-            const quad = DataFactory.quad(
-                DataFactory.namedNode('http://example.org/subject'),
-                DataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'),
-                DataFactory.namedNode('http://example.org/Type'),
-                DataFactory.defaultGraph()
+            const quad = rdfDataFactory.quad(
+                rdfDataFactory.namedNode('http://example.org/subject'),
+                rdfDataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'),
+                rdfDataFactory.namedNode('http://example.org/Type'),
+                rdfDataFactory.defaultGraph()
             );
             const result = await serializer.serializeQuads(
                 makeContext() as any,
@@ -204,11 +204,11 @@ describe('SparqlResultSerializer', () => {
 
         it('returns Turtle string for quads without namespace map', async () => {
             const serializer = new SparqlResultSerializer(noPrefixService as any);
-            const quad = DataFactory.quad(
-                DataFactory.namedNode('http://example.org/s'),
-                DataFactory.namedNode('http://example.org/p'),
-                DataFactory.namedNode('http://example.org/o'),
-                DataFactory.defaultGraph()
+            const quad = rdfDataFactory.quad(
+                rdfDataFactory.namedNode('http://example.org/s'),
+                rdfDataFactory.namedNode('http://example.org/p'),
+                rdfDataFactory.namedNode('http://example.org/o'),
+                rdfDataFactory.defaultGraph()
             );
             const result = await serializer.serializeQuadsToString([quad]);
             expect(typeof result).toBe('string');
@@ -218,11 +218,11 @@ describe('SparqlResultSerializer', () => {
 
         it('uses provided namespace map for prefixes', async () => {
             const serializer = new SparqlResultSerializer(noPrefixService as any);
-            const quad = DataFactory.quad(
-                DataFactory.namedNode('http://example.org/subject'),
-                DataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'),
-                DataFactory.namedNode('http://example.org/Type'),
-                DataFactory.defaultGraph()
+            const quad = rdfDataFactory.quad(
+                rdfDataFactory.namedNode('http://example.org/subject'),
+                rdfDataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'),
+                rdfDataFactory.namedNode('http://example.org/Type'),
+                rdfDataFactory.defaultGraph()
             );
             const namespaces = { 'ex': 'http://example.org/', 'rdf': 'http://www.w3.org/1999/02/22-rdf-syntax-ns#' };
             const result = await serializer.serializeQuadsToString([quad], namespaces);
@@ -232,15 +232,15 @@ describe('SparqlResultSerializer', () => {
         it('handles multiple quads', async () => {
             const serializer = new SparqlResultSerializer(noPrefixService as any);
             const quads = [
-                DataFactory.quad(
-                    DataFactory.namedNode('http://example.org/a'),
-                    DataFactory.namedNode('http://example.org/p'),
-                    DataFactory.namedNode('http://example.org/b'),
+                rdfDataFactory.quad(
+                    rdfDataFactory.namedNode('http://example.org/a'),
+                    rdfDataFactory.namedNode('http://example.org/p'),
+                    rdfDataFactory.namedNode('http://example.org/b'),
                 ),
-                DataFactory.quad(
-                    DataFactory.namedNode('http://example.org/c'),
-                    DataFactory.namedNode('http://example.org/p'),
-                    DataFactory.namedNode('http://example.org/d'),
+                rdfDataFactory.quad(
+                    rdfDataFactory.namedNode('http://example.org/c'),
+                    rdfDataFactory.namedNode('http://example.org/p'),
+                    rdfDataFactory.namedNode('http://example.org/d'),
                 ),
             ];
             const result = await serializer.serializeQuadsToString(quads);
@@ -256,11 +256,11 @@ describe('SparqlResultSerializer', () => {
                 getDefaultPrefixes: () => ({}),
             };
             const serializer = new SparqlResultSerializer(prefixService as any);
-            const quad = DataFactory.quad(
-                DataFactory.namedNode('http://example.org/subject'),
-                DataFactory.namedNode('http://example.org/predicate'),
-                DataFactory.namedNode('http://example.org/object'),
-                DataFactory.defaultGraph()
+            const quad = rdfDataFactory.quad(
+                rdfDataFactory.namedNode('http://example.org/subject'),
+                rdfDataFactory.namedNode('http://example.org/predicate'),
+                rdfDataFactory.namedNode('http://example.org/object'),
+                rdfDataFactory.defaultGraph()
             );
             const result = await serializer.serializeQuadsToString([quad]);
             // The prefix 'ex' matched 'http://example.org/' → result uses ex: prefix
@@ -276,11 +276,11 @@ describe('SparqlResultSerializer', () => {
                 getDefaultPrefixes: () => ({}),
             };
             const serializer = new SparqlResultSerializer(throwingPrefixService as any);
-            const quad = DataFactory.quad(
-                DataFactory.namedNode('http://example.org/s'),
-                DataFactory.namedNode('http://example.org/p'),
-                DataFactory.namedNode('http://example.org/o'),
-                DataFactory.defaultGraph()
+            const quad = rdfDataFactory.quad(
+                rdfDataFactory.namedNode('http://example.org/s'),
+                rdfDataFactory.namedNode('http://example.org/p'),
+                rdfDataFactory.namedNode('http://example.org/o'),
+                rdfDataFactory.defaultGraph()
             );
             const result = await serializer.serializeQuadsToString([quad]);
             expect(result).toBe('');
@@ -293,11 +293,11 @@ describe('SparqlResultSerializer', () => {
         it('serializes a Quad-termType value recursively', async () => {
             // Cover lines 60-63: the Quad branch in serializeTerm
             const serializer = new SparqlResultSerializer(noPrefixService as any);
-            const quadValue = DataFactory.quad(
-                DataFactory.namedNode('http://example.org/s'),
-                DataFactory.namedNode('http://example.org/p'),
-                DataFactory.namedNode('http://example.org/o'),
-                DataFactory.defaultGraph()
+            const quadValue = rdfDataFactory.quad(
+                rdfDataFactory.namedNode('http://example.org/s'),
+                rdfDataFactory.namedNode('http://example.org/p'),
+                rdfDataFactory.namedNode('http://example.org/o'),
+                rdfDataFactory.defaultGraph()
             );
             const binding = new Map([
                 [{ termType: 'Variable', value: 'q' }, quadValue],
@@ -340,10 +340,10 @@ describe('SparqlResultSerializer', () => {
 
         it('emits @prefix directives', async () => {
             const serializer = new SparqlResultSerializer(noPrefixService as any);
-            const quad = DataFactory.quad(
-                DataFactory.namedNode('http://example.org/s'),
-                DataFactory.namedNode('http://example.org/p'),
-                DataFactory.namedNode('http://example.org/o'),
+            const quad = rdfDataFactory.quad(
+                rdfDataFactory.namedNode('http://example.org/s'),
+                rdfDataFactory.namedNode('http://example.org/p'),
+                rdfDataFactory.namedNode('http://example.org/o'),
             );
             const result = await serializer.serializeQuadsToString([quad], { ex: 'http://example.org/' });
             expect(result).toContain('@prefix ex: <http://example.org/> .');
@@ -351,10 +351,10 @@ describe('SparqlResultSerializer', () => {
 
         it('collapses duplicate quads into a single statement', async () => {
             const serializer = new SparqlResultSerializer(noPrefixService as any);
-            const quad = () => DataFactory.quad(
-                DataFactory.namedNode('http://example.org/s'),
-                DataFactory.namedNode('http://example.org/p'),
-                DataFactory.namedNode('http://example.org/o'),
+            const quad = () => rdfDataFactory.quad(
+                rdfDataFactory.namedNode('http://example.org/s'),
+                rdfDataFactory.namedNode('http://example.org/p'),
+                rdfDataFactory.namedNode('http://example.org/o'),
             );
             const result = await serializer.serializeQuadsToString([quad(), quad()], { ex: 'http://example.org/' });
             expect(result.match(/ex:s ex:p ex:o/g)).toHaveLength(1);
@@ -362,11 +362,11 @@ describe('SparqlResultSerializer', () => {
 
         it('serializes named-graph quads as plain triples', async () => {
             const serializer = new SparqlResultSerializer(noPrefixService as any);
-            const quad = DataFactory.quad(
-                DataFactory.namedNode('http://example.org/s'),
-                DataFactory.namedNode('http://example.org/p'),
-                DataFactory.namedNode('http://example.org/o'),
-                DataFactory.namedNode('http://example.org/graph')
+            const quad = rdfDataFactory.quad(
+                rdfDataFactory.namedNode('http://example.org/s'),
+                rdfDataFactory.namedNode('http://example.org/p'),
+                rdfDataFactory.namedNode('http://example.org/o'),
+                rdfDataFactory.namedNode('http://example.org/graph')
             );
             const result = await serializer.serializeQuadsToString([quad], { ex: 'http://example.org/' });
             expect(result).toContain('ex:s ex:p ex:o');
@@ -374,21 +374,21 @@ describe('SparqlResultSerializer', () => {
 
         it('serializes SHACL-style shapes with inline blank nodes and collections', async () => {
             const serializer = new SparqlResultSerializer(noPrefixService as any);
-            const propertyShape = DataFactory.blankNode('13xf400_b0');
-            const listHead = DataFactory.blankNode('13xf400_b1');
-            const listTail = DataFactory.blankNode('13xf400_b2');
+            const propertyShape = rdfDataFactory.blankNode('13xf400_b0');
+            const listHead = rdfDataFactory.blankNode('13xf400_b1');
+            const listTail = rdfDataFactory.blankNode('13xf400_b2');
 
             const quads = [
-                DataFactory.quad(
-                    DataFactory.namedNode('http://example.org/shape'),
-                    DataFactory.namedNode(`${SH_NS}property`),
+                rdfDataFactory.quad(
+                    rdfDataFactory.namedNode('http://example.org/shape'),
+                    rdfDataFactory.namedNode(`${SH_NS}property`),
                     propertyShape
                 ),
-                DataFactory.quad(propertyShape, DataFactory.namedNode(`${SH_NS}path`), listHead),
-                DataFactory.quad(listHead, DataFactory.namedNode(`${RDF_NS}first`), DataFactory.namedNode('http://example.org/broader')),
-                DataFactory.quad(listHead, DataFactory.namedNode(`${RDF_NS}rest`), listTail),
-                DataFactory.quad(listTail, DataFactory.namedNode(`${RDF_NS}first`), DataFactory.namedNode('http://example.org/narrower')),
-                DataFactory.quad(listTail, DataFactory.namedNode(`${RDF_NS}rest`), DataFactory.namedNode(`${RDF_NS}nil`)),
+                rdfDataFactory.quad(propertyShape, rdfDataFactory.namedNode(`${SH_NS}path`), listHead),
+                rdfDataFactory.quad(listHead, rdfDataFactory.namedNode(`${RDF_NS}first`), rdfDataFactory.namedNode('http://example.org/broader')),
+                rdfDataFactory.quad(listHead, rdfDataFactory.namedNode(`${RDF_NS}rest`), listTail),
+                rdfDataFactory.quad(listTail, rdfDataFactory.namedNode(`${RDF_NS}first`), rdfDataFactory.namedNode('http://example.org/narrower')),
+                rdfDataFactory.quad(listTail, rdfDataFactory.namedNode(`${RDF_NS}rest`), rdfDataFactory.namedNode(`${RDF_NS}nil`)),
             ];
 
             const result = await serializer.serializeQuadsToString(quads, { ex: 'http://example.org/', sh: SH_NS });
@@ -400,15 +400,15 @@ describe('SparqlResultSerializer', () => {
 
         describe('blankLinesBetweenSubjects setting', () => {
             const twoSubjects = [
-                DataFactory.quad(
-                    DataFactory.namedNode('http://example.org/a'),
-                    DataFactory.namedNode('http://example.org/p'),
-                    DataFactory.namedNode('http://example.org/x'),
+                rdfDataFactory.quad(
+                    rdfDataFactory.namedNode('http://example.org/a'),
+                    rdfDataFactory.namedNode('http://example.org/p'),
+                    rdfDataFactory.namedNode('http://example.org/x'),
                 ),
-                DataFactory.quad(
-                    DataFactory.namedNode('http://example.org/b'),
-                    DataFactory.namedNode('http://example.org/p'),
-                    DataFactory.namedNode('http://example.org/y'),
+                rdfDataFactory.quad(
+                    rdfDataFactory.namedNode('http://example.org/b'),
+                    rdfDataFactory.namedNode('http://example.org/p'),
+                    rdfDataFactory.namedNode('http://example.org/y'),
                 ),
             ];
 
@@ -452,10 +452,10 @@ describe('SparqlResultSerializer', () => {
 
         describe('spaceBeforePunctuation setting', () => {
             const oneSubject = [
-                DataFactory.quad(
-                    DataFactory.namedNode('http://example.org/s'),
-                    DataFactory.namedNode('http://example.org/p'),
-                    DataFactory.namedNode('http://example.org/o'),
+                rdfDataFactory.quad(
+                    rdfDataFactory.namedNode('http://example.org/s'),
+                    rdfDataFactory.namedNode('http://example.org/p'),
+                    rdfDataFactory.namedNode('http://example.org/o'),
                 ),
             ];
 
