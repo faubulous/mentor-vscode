@@ -482,6 +482,46 @@ describe('DocumentDiagnosticsService', () => {
             expect(result.validated).toBe(1);
         });
 
+        it('stops before the next file when cancelled', async () => {
+            const uriA = vscode.Uri.parse('file:///a.ttl');
+            const uriB = vscode.Uri.parse('file:///b.ttl');
+            env.textDocuments.push(makeDocument(uriA.toString(), VALID_TURTLE), makeDocument(uriB.toString(), VALID_TURTLE));
+
+            const { service } = makeSetup({ [uriA.toString()]: makeTurtleContext(), [uriB.toString()]: makeTurtleContext() });
+            const token = { isCancellationRequested: false } as vscode.CancellationToken;
+
+            const result = await service.diagnoseFiles([uriA, uriB], processed => {
+                (token as any).isCancellationRequested = processed === 1;
+            }, token);
+
+            expect(result.validated).toBe(1);
+        });
+
+        it('reads valid Turtle with the quad reader and only parses a document with errors', async () => {
+            const valid = vscode.Uri.parse('file:///valid.ttl');
+            const invalid = vscode.Uri.parse('file:///invalid.ttl');
+            env.textDocuments.push(makeDocument(valid.toString(), VALID_TURTLE), makeDocument(invalid.toString(), INVALID_TURTLE));
+
+            const { ParserFactory } = await import('@src/languages/parser-factory');
+            const getParser = vi.spyOn(ParserFactory, 'getParser');
+
+            try {
+                const { service, collection } = makeSetup({ [valid.toString()]: makeTurtleContext(), [invalid.toString()]: makeTurtleContext() });
+
+                await service.diagnoseFiles([valid]);
+
+                expect(getParser).not.toHaveBeenCalled();
+                expect(collection.set).toHaveBeenLastCalledWith(valid, []);
+
+                await service.diagnoseFiles([invalid]);
+
+                expect(getParser).toHaveBeenCalled();
+                expect(collection.set.mock.calls.at(-1)![1].length).toBeGreaterThan(0);
+            } finally {
+                getParser.mockRestore();
+            }
+        });
+
         it('counts files that have at least one error', async () => {
             const uri = vscode.Uri.parse('file:///bad.ttl');
             env.textDocuments.push(makeDocument(uri.toString(), INVALID_TURTLE));

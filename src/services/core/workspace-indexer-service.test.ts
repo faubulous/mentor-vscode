@@ -64,6 +64,7 @@ beforeEach(() => {
 
 	mockDiagnosticsService = {
 		diagnoseContent: vi.fn(),
+		diagnoseFiles: vi.fn(async () => ({ validated: 0, filesWithErrors: 0 })),
 		deleteDiagnostics: vi.fn(),
 	};
 
@@ -266,14 +267,25 @@ describe('WorkspaceIndexerService', () => {
 			expect(service.statistics).toMatchObject({ indexedFiles: 1, skippedFiles: 1 });
 		});
 
-		it('computes syntax diagnostics for each text file when index.diagnoseFiles is enabled', async () => {
+		it('diagnoses the indexed files after indexing has finished when index.diagnoseFiles is enabled', async () => {
 			const uri = vscode.Uri.parse('file:///w/test.ttl');
 			mockWorkspaceFileService.files = [uri];
 			// No override => default true.
 			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockTokenSource, mockDiagnosticsService);
+
+			let finishedBeforeDiagnostics: boolean | undefined;
+
+			mockDiagnosticsService.diagnoseFiles.mockImplementation(async () => {
+				finishedBeforeDiagnostics = service.indexingFinished;
+
+				return { validated: 1, filesWithErrors: 0 };
+			});
+
 			await service.indexWorkspace();
-			await service.waitForIndexed();
-			expect(mockDiagnosticsService.diagnoseContent).toHaveBeenCalledWith(uri, expect.any(String));
+
+			expect(mockDiagnosticsService.diagnoseContent).not.toHaveBeenCalled();
+			expect(mockDiagnosticsService.diagnoseFiles).toHaveBeenCalledWith([uri], undefined, expect.anything());
+			expect(finishedBeforeDiagnostics).toBe(true);
 		});
 
 		it('does not compute diagnostics when index.diagnoseFiles is disabled', async () => {
@@ -284,6 +296,28 @@ describe('WorkspaceIndexerService', () => {
 			await service.indexWorkspace();
 			await service.waitForIndexed();
 			expect(mockDiagnosticsService.diagnoseContent).not.toHaveBeenCalled();
+			expect(mockDiagnosticsService.diagnoseFiles).not.toHaveBeenCalled();
+		});
+
+		it('cancels the diagnostics of the previous pass when a new pass starts', async () => {
+			mockWorkspaceFileService.files = [vscode.Uri.parse('file:///w/test.ttl')];
+
+			const tokens: vscode.CancellationToken[] = [];
+
+			mockDiagnosticsService.diagnoseFiles.mockImplementation((_uris: unknown, _progress: unknown, token: vscode.CancellationToken) => {
+				tokens.push(token);
+
+				return new Promise(() => {});
+			});
+
+			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockTokenSource, mockDiagnosticsService);
+
+			await service.indexWorkspace();
+			await service.indexWorkspace(true);
+
+			expect(tokens).toHaveLength(2);
+			expect(tokens[0].isCancellationRequested).toBe(true);
+			expect(tokens[1].isCancellationRequested).toBe(false);
 		});
 
 		it('should skip already indexed files when force=false', async () => {
@@ -903,12 +937,12 @@ describe('token release after indexing', () => {
 		return context;
 	}
 
-	it('releases the tokens of an indexed file after it has been diagnosed', async () => {
+	it('releases the tokens of an indexed file right away; the diagnostics after the pass read it again', async () => {
 		const context = await indexTokenizedFile(vscode.Uri.parse('file:///w/test.ttl'));
 
 		expect(context.releaseTokens).toHaveBeenCalledTimes(1);
-		expect(mockDiagnosticsService.diagnoseContent.mock.invocationCallOrder[0])
-			.toBeLessThan(context.releaseTokens.mock.invocationCallOrder[0]);
+		expect(context.releaseTokens.mock.invocationCallOrder[0])
+			.toBeLessThan(mockDiagnosticsService.diagnoseFiles.mock.invocationCallOrder[0]);
 	});
 
 	it('releases the tokens also when diagnostics are disabled', async () => {
