@@ -93,7 +93,9 @@ export class DefinitionTree implements TreeView {
 		return vscode.commands.registerCommand('mentor.e2e.getDefinitionTreeState', () => ({
 			visible: this.treeView.visible,
 			selection: this.treeView.selection.map(node => node.id),
-			activeContext: this._contextService.activeContext?.uri.toString()
+			activeContext: this._contextService.activeContext?.uri.toString(),
+			document: this.treeDataProvider.document?.uri.toString(),
+			rootCount: (this.treeDataProvider.getChildren(undefined) ?? []).length
 		}));
 	}
 
