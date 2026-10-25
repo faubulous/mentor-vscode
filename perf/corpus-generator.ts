@@ -1,4 +1,4 @@
-import { DataFactory } from 'n3';
+import { rdfDataFactory } from '@src/utilities/rdf';
 import type { Term } from '@rdfjs/types';
 import type { SparqlQueryExecutionState } from '@src/languages/sparql/services/sparql-query-state';
 
@@ -77,9 +77,9 @@ export class CorpusGenerator {
 
 		for (let row = 0; row < rowCount; row++) {
 			rows.push({
-				s: DataFactory.namedNode(`http://example.org/perf/subject/${row}`),
-				p: DataFactory.namedNode('http://www.w3.org/2000/01/rdf-schema#label'),
-				o: DataFactory.literal(`Row ${row} ${this._nextWord()}`, 'en')
+				s: rdfDataFactory.namedNode(`http://example.org/perf/subject/${row}`),
+				p: rdfDataFactory.namedNode('http://www.w3.org/2000/01/rdf-schema#label'),
+				o: rdfDataFactory.literal(`Row ${row} ${this._nextWord()}`, 'en')
 			});
 		}
 
