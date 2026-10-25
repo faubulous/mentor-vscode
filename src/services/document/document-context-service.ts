@@ -263,10 +263,12 @@ export class DocumentContextService {
 		return this._trackLoad(document.uri.toString(), this._loadDocument(document, forceReload, slug));
 	}
 
-	getPendingLoad(uri: string): Promise<void> | undefined {
-		const pending = this._pendingLoads.get(uri);
+	isLoading(uri: string): boolean {
+		return this._pendingLoads.has(uri);
+	}
 
-		return pending?.then(() => undefined, () => undefined);
+	async waitUntilLoaded(uri: string): Promise<void> {
+		await this._pendingLoads.get(uri);
 	}
 
 	/**

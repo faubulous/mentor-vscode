@@ -33,7 +33,7 @@ export class SparqlCompletionItemProvider extends TurtleCompletionItemProvider {
 
 	override async provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, t: vscode.CancellationToken, completion: vscode.CompletionContext): Promise<vscode.CompletionItem[] | vscode.CompletionList | null> {
 		// The suggestions are read from the triple store; see the Turtle provider.
-		await this._contextService.getPendingLoad(document.uri.toString());
+		await this._contextService.waitUntilLoaded(document.uri.toString());
 
 		const context = this._contextService.getDocumentContext(document, TurtleDocument);
 

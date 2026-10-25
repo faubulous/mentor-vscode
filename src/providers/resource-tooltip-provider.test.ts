@@ -11,7 +11,8 @@ vi.mock('@src/utilities/vscode/config', () => ({
 
 const mockContextService = {
 	contexts: {} as Record<string, any>,
-	getPendingLoad: (() => undefined) as (uri: string) => Promise<void> | undefined,
+	isLoading: ((_uri: string) => false) as (uri: string) => boolean,
+	waitUntilLoaded: (async (_uri: string) => {}) as (uri: string) => Promise<void>,
 	activeContext: undefined as Record<string, any> | undefined,
 };
 
@@ -44,7 +45,7 @@ describe('ResourceTooltipProvider', () => {
 		vi.clearAllMocks();
 		mockContextService.contexts = {};
 		mockContextService.activeContext = undefined;
-		mockContextService.getPendingLoad = () => undefined;
+		mockContextService.isLoading = () => false;
 		mockStore.matchAll = vi.fn(() => []);
 		provider = new ResourceTooltipProvider({ subscriptions: [] } as any, mockContextService as any, mockStore as any);
 	});
@@ -166,13 +167,16 @@ describe('ResourceTooltipProvider', () => {
 
 		let finishLoad!: () => void;
 
-		mockContextService.getPendingLoad = () => new Promise<void>(resolve => finishLoad = resolve);
+		const load = new Promise<void>(resolve => finishLoad = resolve);
+
+		mockContextService.isLoading = () => true;
+		mockContextService.waitUntilLoaded = () => load;
 
 		const result = provider.provideHover(doc, mockPosition) as Promise<vscode.Hover>;
 
 		// The load finishes and replaces the tooltip data, e.g. the labels of the document.
 		mockContextService.contexts[uri].getResourceTooltip = () => new vscode.MarkdownString('Thing (loaded)');
-		mockContextService.getPendingLoad = () => undefined;
+		mockContextService.isLoading = () => false;
 		finishLoad();
 
 		expect(JSON.stringify((await result).contents)).toContain('Thing (loaded)');

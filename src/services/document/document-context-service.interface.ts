@@ -65,13 +65,20 @@ export interface IDocumentContextService {
 	loadDocument(document: vscode.TextDocument, forceReload?: boolean): Promise<IDocumentContext | undefined>;
 
 	/**
-	 * Get the load or triple reload that is in progress for a document. Readers of the
-	 * triple store await it, so that they see all triples of the document, including
-	 * the inferred ones, and not the state between two phases of the load.
+	 * Indicates whether a load or triple reload of a document is in progress. Readers
+	 * of the triple store then wait with {@link waitUntilLoaded}, so that they see all
+	 * triples of the document, including the inferred ones, and not the state between
+	 * two phases of the load.
 	 * @param uri The document URI.
-	 * @returns A promise that settles when the load has finished, or `undefined` if none is in progress.
 	 */
-	getPendingLoad(uri: string): Promise<void> | undefined;
+	isLoading(uri: string): boolean;
+
+	/**
+	 * Waits until the load or triple reload of a document that is in progress has
+	 * finished. Resolves at once when none is in progress.
+	 * @param uri The document URI.
+	 */
+	waitUntilLoaded(uri: string): Promise<void>;
 
 	/**
 	 * Activate the document associated with the active context in the editor.

@@ -992,7 +992,7 @@ describe('DocumentContextService', () => {
 		});
 	});
 
-	describe('getPendingLoad', () => {
+	describe('isLoading and waitUntilLoaded', () => {
 		it('reports a load until it has finished, including the inference', async () => {
 			const { service, tokenSource, mockDocumentFactory } = createService();
 			const uri = 'file:///test.ttl';
@@ -1006,19 +1006,29 @@ describe('DocumentContextService', () => {
 
 			const load = service.loadDocument(doc);
 
-			expect(service.getPendingLoad(uri)).toBeDefined();
+			expect(service.isLoading(uri)).toBe(true);
 
 			tokenSource.deliverTokens(uri, []);
 
 			await vi.waitFor(() => expect(ctx.infer).toHaveBeenCalled());
 
-			expect(service.getPendingLoad(uri)).toBeDefined();
+			expect(service.isLoading(uri)).toBe(true);
+
+			const loaded = service.waitUntilLoaded(uri);
 
 			finishInference();
+			await loaded;
 			await load;
-			await Promise.resolve();
 
-			expect(service.getPendingLoad(uri)).toBeUndefined();
+			expect(service.isLoading(uri)).toBe(false);
+		});
+
+		it('resolves waitUntilLoaded at once when no load is in progress', async () => {
+			const { service } = createService();
+
+			expect(service.isLoading('file:///idle.ttl')).toBe(false);
+
+			await service.waitUntilLoaded('file:///idle.ttl');
 		});
 
 		it('reports the triple reload after an edit', async () => {
@@ -1037,15 +1047,14 @@ describe('DocumentContextService', () => {
 
 				await vi.waitFor(() => expect(ctx.infer).toHaveBeenCalled());
 
-				const pending = service.getPendingLoad(uri);
+				expect(service.isLoading(uri)).toBe(true);
 
-				expect(pending).toBeDefined();
+				const loaded = service.waitUntilLoaded(uri);
 
 				finishInference();
-				await pending;
-				await Promise.resolve();
+				await loaded;
 
-				expect(service.getPendingLoad(uri)).toBeUndefined();
+				expect(service.isLoading(uri)).toBe(false);
 			} finally {
 				(vscode.workspace.textDocuments as any[]).pop();
 			}

@@ -402,7 +402,8 @@ describe('SparqlCompletionItemProvider', () => {
         it('returns null when context is null', async () => {
             const p = new SparqlCompletionItemProvider({} as any, {} as any, {} as any, {} as any, {} as any);
             (p as any)._contextService = ({
-                getPendingLoad: () => undefined,
+                isLoading: () => false,
+                waitUntilLoaded: async () => {},
                 getDocumentContext: vi.fn(() => null),
             });
             const result = await p.provideCompletionItems(
@@ -414,7 +415,8 @@ describe('SparqlCompletionItemProvider', () => {
         it('returns null when the tokens do not cover the position', async () => {
             const p = new SparqlCompletionItemProvider({} as any, {} as any, {} as any, {} as any, {} as any);
             (p as any)._contextService = ({
-                getPendingLoad: () => undefined,
+                isLoading: () => false,
+                waitUntilLoaded: async () => {},
                 getDocumentContext: vi.fn(() => ({
                     tokenizeDocument: vi.fn(() => []),
                 })),
@@ -433,7 +435,8 @@ describe('SparqlCompletionItemProvider', () => {
             ];
             const tokenizeDocument = vi.fn(() => tokens);
             (p as any)._contextService = ({
-                getPendingLoad: () => undefined,
+                isLoading: () => false,
+                waitUntilLoaded: async () => {},
                 getDocumentContext: vi.fn(() => ({ tokenizeDocument })),
             });
             const spy = vi.spyOn(p, 'getCompletionItems').mockReturnValue([]);
