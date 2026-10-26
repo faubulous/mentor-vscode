@@ -77,8 +77,8 @@ export class PropertyNode extends DefinitionTreeNode {
 			case XSD.long:
 			case XSD.unsignedInt:
 			case XSD.unsignedShort:
-			case XSD.unsingedLong:
-			case XSD.usignedByte: {
+			case XSD.unsignedLong:
+			case XSD.unsignedByte: {
 				return 'symbol-number';
 			}
 			case XSD.string:
