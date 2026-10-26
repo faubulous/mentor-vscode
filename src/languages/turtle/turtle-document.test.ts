@@ -280,6 +280,27 @@ describe('TurtleDocument', () => {
             expect(doc.references.has('http://example.org/Thing')).toBe(true);
         });
 
+        it('does not index the names of prefix declarations as references to the namespace (#165)', () => {
+            for (const declaration of ['@prefix ex: <http://example.org/> .', 'PREFIX ex: <http://example.org/>']) {
+                const doc = makeDoc();
+
+                doc.parse(declaration + '\nex: a ex:Ontology .\n');
+
+                // Only the namespace used as a resource on line 2 is a reference to it.
+                expect(doc.references.getRanges('http://example.org'), declaration).toEqual([{ start: { line: 1, character: 0 }, end: { line: 1, character: 3 } }]);
+                expect(doc.namespaces['ex'], declaration).toBe('http://example.org/');
+            }
+        });
+
+        it('indexes the names that follow a namespace used as a subject', () => {
+            const doc = makeDoc();
+
+            doc.parse('@prefix ex: <http://example.org/> .\nex: ex:p ex:o .\n');
+
+            expect(doc.references.has('http://example.org/p')).toBe(true);
+            expect(doc.references.has('http://example.org/o')).toBe(true);
+        });
+
         it('registers A token type assertions with subject', () => {
             const doc = makeDoc();
             const tokens = [
