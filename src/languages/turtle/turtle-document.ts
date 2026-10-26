@@ -1,24 +1,24 @@
 import * as vscode from 'vscode';
 import type { CstNode } from 'chevrotain';
-import { Quad, Quad_Subject, Quad_Object, Quad_Predicate } from '@rdfjs/types';
+import { Quad, Quad_Graph, Quad_Subject, Quad_Object, Quad_Predicate } from '@rdfjs/types';
 import { LanguageTagUsageStats, Store, Uri, VocabularyRepository, _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, RDF } from '@faubulous/mentor-rdf';
 import { BlankNodeIdGenerator, createFileBlankNodeIdGenerator, IToken, QuadContext, QuadReaderError, RdfSyntax, RdfToken, tokenizeWithTriplate, TriplateLexingResult, TurtleQuadReader, TurtleReader } from '@faubulous/mentor-rdf-parsers';
 import { ParserFactory } from '@src/languages/parser-factory';
 import { ISettingsService } from '@src/services/core';
 import { DocumentContext } from '@src/services/document/document-context';
 import { DocumentParseResult, ITokenizedDocumentContext } from '@src/services/document/document-context.interface';
-import { RangeIndex } from '@src/services/document/range-index';
+import { RangeIndex } from '@src/utilities/range-index';
 import { WorkspaceUri } from '@src/providers/workspace-uri';
 import {
 	getIriFromIriReference,
-	getIriFromPrefixedName,
 	getIriFromToken,
 	getNamespaceDefinition,
 	getTokenAtPosition,
+	getTokenRange,
 	isPrefixTokenAtPosition
 } from '@src/utilities';
-import { addLanguageTagUsage } from '@src/utilities/rdf';
-import { getRangeFromToken } from '@src/utilities/vscode/tokens';
+import { PrefixedNameResolver } from '@src/languages/prefixed-name-resolver';
+import { addLanguageTagUsage, replaceGraphQuads } from '@src/utilities/rdf';
 
 /**
  * A document context for Turtle and TriG documents.
@@ -313,48 +313,33 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 	 * @param data The file content (not used, parsing uses existing tokens).
 	 */
 	public override async loadTriples(data: string): Promise<void> {
-		// Counted while the quads are added, instead of in a separate scan of the graph.
+		// Counted while the quads are read, instead of in a separate scan of the graph.
 		const languageTagStats: LanguageTagUsageStats = {};
 
+		const store = this._store;
+		const graphUri = WorkspaceUri.toCanonicalString(this.graphIri);
+
 		try {
-			const store = this._store;
-			const graphUri = WorkspaceUri.toCanonicalString(this.graphIri);
 			const g = store.dataFactory.namedNode(graphUri);
 
-			// Capture old graph URIs before resetting (needed to clean up slug changes).
-			const oldGraphs = [...this.graphs];
+			// The graphs of a previous graph IRI, e.g. before a notebook cell got its slug.
+			const previousGraphs = this.graphs.filter(uri => uri !== graphUri);
 
-			// Initialize the graphs *before* trying to load the document so 
+			// Initialize the graphs *before* trying to load the document so
 			// that they are initialized even when loading the document fails.
 			this.graphs.length = 0;
 			this.graphs.push(graphUri);
 
-			// Delete old graphs and their inference graphs (handles slug changes and
-			// stale triples removed from the document). Done after resetting
-			// this.graphs so the invariant holds on error.
-			store.deleteGraphs([...oldGraphs, graphUri], true);
+			if (previousGraphs.length > 0) {
+				store.deleteGraphs(previousGraphs, true);
+			}
 
-			// Reset inference flag so that infer() re-runs after each reload. This is
-			// essential when a slug update triggers a reload: the old inference graph
-			// (based on the opaque cell ID) was deleted above, and a fresh inference
-			// pass is needed to populate the slug-based graph.
-			this._inferenceExecuted = false;
+			const quads = this._readGraphQuads(data, g, languageTagStats);
 
-			// Reuse the quads or the CST captured by parse() when they were
-			// produced from exactly this content. An errored, stale or already
-			// released result reads the tokens again, which throws on errors,
-			// so invalid documents keep loading no triples.
-			const quads = this.getParseResult(data)?.quads ?? this._readQuads(data);
-
-			for (const q of quads) {
-				const s = q.subject as Quad_Subject;
-				const p = q.predicate as Quad_Predicate;
-				const o = q.object as Quad_Object;
-
-				const quad = store.dataFactory.quad(s, p, o, g);
-
-				store.add(quad);
-				addLanguageTagUsage(languageTagStats, o);
+			// Only the triples that changed are applied, so an edit does not replace all
+			// triples of a large document, and the inference re-runs only after a change.
+			if (replaceGraphQuads(store, g, quads)) {
+				this._inferenceExecuted = false;
 			}
 		} catch (e) {
 			// This is not a critical error because the graph might be invalid.
@@ -367,6 +352,33 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 		}
 
 		this.languageTagStats = languageTagStats;
+	}
+
+	/**
+	 * Reads the quads of the document into a graph and counts the language tags of their objects.
+	 * @param data The text being loaded.
+	 * @param graph The graph of the document.
+	 * @param languageTagStats The statistics to count the language tags in.
+	 * @returns The quads, or no quads when the document has errors, so that an invalid
+	 * document loads no triples.
+	 */
+	private _readGraphQuads(data: string, graph: Quad_Graph, languageTagStats: LanguageTagUsageStats): Quad[] {
+		let quads: Quad[];
+
+		try {
+			// Reuse the quads or the CST captured by parse() when they were produced
+			// from exactly this content. An errored, stale or already released result
+			// reads the tokens again, which throws on errors.
+			quads = this.getParseResult(data)?.quads ?? this._readQuads(data);
+		} catch {
+			return [];
+		}
+
+		return quads.map(q => {
+			addLanguageTagUsage(languageTagStats, q.object);
+
+			return this._store.dataFactory.quad(q.subject as Quad_Subject, q.predicate as Quad_Predicate, q.object as Quad_Object, graph);
+		});
 	}
 
 	/**
@@ -474,6 +486,8 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 
 		let previousToken: IToken | undefined;
 
+		const prefixedNames = new PrefixedNameResolver(this.namespaces);
+
 		tokens.forEach((t: IToken, i: number) => {
 			switch (t.tokenType.name) {
 				case RdfToken.PREFIX.name:
@@ -483,7 +497,9 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 					// Only set the namespace if it is preceeded by a prefix keyword.
 					if (ns) {
 						this.namespaces[ns.prefix] = ns.uri;
-						this.namespaceDefinitions.set(ns.uri, getRangeFromToken(t));
+						this.namespaceDefinitions.set(ns.uri, getTokenRange(t));
+
+						prefixedNames.clear();
 					}
 					break;
 				}
@@ -497,20 +513,18 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 							break;
 					}
 
-					let iri = getIriFromPrefixedName(this.namespaces, t.image);
+					// Without a trailing slash or hash, so that the IRIs are comparable
+					// with the vscode.Uri.toString() output.
+					const iri = prefixedNames.getNormalizedIri(t.image);
 
 					if (!iri) break;
-
-					// Remove any trailing slahes or hashes so that the IRIs are comparable
-					// with the vscode.Uri.toString() output.
-					iri = Uri.getNormalizedUri(iri);
 
 					if (previousToken) {
 						this._registerSubject(tokens, i, t, iri, previousToken);
 					}
 
-					this._handleTypeAssertion(tokens, t, iri, i);
-					this._handleTypeDefinition(tokens, t, iri, i);
+					this._handleTypeAssertion(tokens, iri, i, prefixedNames);
+					this._handleTypeDefinition(tokens, iri, i, prefixedNames);
 					this._handleResourceReference(tokens, t, iri);
 					break;
 				}
@@ -521,14 +535,14 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 						this._registerSubject(tokens, i, t, iri, previousToken);
 					}
 
-					this._handleTypeAssertion(tokens, t, iri, i);
-					this._handleTypeDefinition(tokens, t, iri, i);
+					this._handleTypeAssertion(tokens, iri, i, prefixedNames);
+					this._handleTypeDefinition(tokens, iri, i, prefixedNames);
 					this._handleResourceReference(tokens, t, iri);
 					break;
 				}
 				case RdfToken.A.name: {
-					this._handleTypeAssertion(tokens, t, RDF.type, i);
-					this._handleTypeDefinition(tokens, t, RDF.type, i);
+					this._handleTypeAssertion(tokens, RDF.type, i, prefixedNames);
+					this._handleTypeDefinition(tokens, RDF.type, i, prefixedNames);
 					break;
 				}
 				case RdfToken.LBRACKET.name: {
@@ -560,6 +574,27 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 		});
 	}
 
+	/**
+	 * Returns the IRI of an IRI, prefixed name or blank node token, as `getIriFromToken` does.
+	 * @param token A token.
+	 * @param prefixedNames The resolver of the prefixed names of the document.
+	 * @returns The IRI or blank node ID, or `undefined` if the token denotes no resource.
+	 */
+	private _getTokenIri(token: IToken, prefixedNames: PrefixedNameResolver): string | undefined {
+		switch (token.tokenType.name) {
+			case RdfToken.IRIREF.name: {
+				return getIriFromIriReference(token.image);
+			}
+			case RdfToken.PNAME_LN.name:
+			case RdfToken.PNAME_NS.name: {
+				return prefixedNames.getIri(token.image);
+			}
+			default: {
+				return token.payload?.blankNodeId;
+			}
+		}
+	}
+
 	private _registerSubject(tokens: IToken[], tokenIndex: number, token: IToken, iriOrBlankId: string, previousToken: IToken) {
 		const previousType = previousToken.tokenType.name;
 
@@ -579,35 +614,35 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 		}
 
 		if (isSubject) {
-			this.subjects.add(iriOrBlankId, getRangeFromToken(token));
+			this.subjects.add(iriOrBlankId, getTokenRange(token));
 		}
 	}
 
 	private _handleResourceReference(tokens: IToken[], token: IToken, iriOrBlankId: string) {
-		this.references.add(iriOrBlankId, getRangeFromToken(token));
+		this.references.add(iriOrBlankId, getTokenRange(token));
 	}
 
-	private _handleTypeAssertion(tokens: IToken[], token: IToken, uri: string, index: number) {
+	private _handleTypeAssertion(tokens: IToken[], uri: string, index: number, prefixedNames: PrefixedNameResolver) {
 		if (uri === RDF.type) {
 			const subjectToken = tokens[index - 1];
 
 			if (!subjectToken) return;
 
-			const subjectUri = getIriFromToken(this.namespaces, subjectToken);
+			const subjectUri = this._getTokenIri(subjectToken, prefixedNames);
 
 			if (!subjectUri) return;
 
-			this.typeAssertions.set(subjectUri, getRangeFromToken(subjectToken));
+			this.typeAssertions.set(subjectUri, getTokenRange(subjectToken));
 		}
 	}
 
-	private _handleTypeDefinition(tokens: IToken[], token: IToken, uri: string, index: number) {
+	private _handleTypeDefinition(tokens: IToken[], uri: string, index: number, prefixedNames: PrefixedNameResolver) {
 		if (uri == RDF.type) {
 			const subjectToken = tokens[index - 1];
 
 			if (!subjectToken) return;
 
-			const subjectUri = getIriFromToken(this.namespaces, subjectToken);
+			const subjectUri = this._getTokenIri(subjectToken, prefixedNames);
 
 			if (!subjectUri) return;
 
@@ -615,7 +650,7 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 
 			if (!objectToken) return;
 
-			const objectUri = getIriFromToken(this.namespaces, objectToken);
+			const objectUri = this._getTokenIri(objectToken, prefixedNames);
 
 			if (!objectUri) return;
 
@@ -629,7 +664,7 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 				case _SKOS:
 				case _SKOS_XL:
 				case _SH: {
-					this.typeDefinitions.set(subjectUri, getRangeFromToken(subjectToken));
+					this.typeDefinitions.set(subjectUri, getTokenRange(subjectToken));
 				}
 			}
 		}

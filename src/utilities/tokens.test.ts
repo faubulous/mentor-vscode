@@ -129,6 +129,14 @@ describe('getIriFromPrefixedName', () => {
 	it('returns undefined for a string without a colon', () => {
 		expect(getIriFromPrefixedName(prefixes, 'noColon')).toBeUndefined();
 	});
+
+	it('returns undefined for a name with more than one colon', () => {
+		expect(getIriFromPrefixedName(prefixes, 'ex:a:b')).toBeUndefined();
+	});
+
+	it('expands a name with the empty prefix', () => {
+		expect(getIriFromPrefixedName({ '': 'http://default.org/' }, ':Thing')).toBe('http://default.org/Thing');
+	});
 });
 
 describe('getNamespaceIriFromPrefixedName', () => {

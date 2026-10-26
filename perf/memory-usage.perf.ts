@@ -130,6 +130,17 @@ describe('MemoryUsage', () => {
 
 			await largeContext.loadTriples(largeFile.text);
 		});
+
+		await observer.measure('store: edit large file (one triple added, with inference)', 1, largeQuads, async () => {
+			const editedText = largeFile.text + '\n<urn:mentor:edit> <urn:mentor:p> "edit" .\n';
+
+			if (largeContext.isTokenized()) {
+				largeContext.parse(editedText);
+			}
+
+			await largeContext.loadTriples(editedText);
+			await largeContext.infer();
+		});
 	});
 
 	it('measures the load of the large file step by step', async () => {
