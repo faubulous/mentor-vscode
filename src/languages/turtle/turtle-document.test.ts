@@ -241,6 +241,25 @@ describe('TurtleDocument', () => {
             storeControl.shouldThrowLoad = false;
         });
 
+        it('indexes prefixed names with colons and escapes in the local name under the IRIs of their triples', () => {
+            const doc = makeDoc();
+            const text = '@prefix ex: <http://example.org/> .\n@prefix owl: <http://www.w3.org/2002/07/owl#> .\nex:a:b a owl:Class .\nex:a\\-b a owl:Class .\n';
+
+            doc.parse(text);
+
+            const subjects = (doc.getParseResult(text)?.quads ?? []).map(q => q.subject.value);
+
+            expect(subjects).toEqual(['http://example.org/a:b', 'http://example.org/a-b']);
+
+            for (const iri of subjects) {
+                expect(doc.references.has(iri), iri).toBe(true);
+                expect(doc.subjects.has(iri), iri).toBe(true);
+                expect(doc.typeDefinitions.has(iri), iri).toBe(true);
+            }
+
+            expect(doc.references.has('http://example.org/a\\-b')).toBe(false);
+        });
+
         it('resolves prefixed names with the prefix declared before them', () => {
             const doc = makeDoc();
 

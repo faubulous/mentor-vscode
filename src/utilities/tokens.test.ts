@@ -130,8 +130,18 @@ describe('getIriFromPrefixedName', () => {
 		expect(getIriFromPrefixedName(prefixes, 'noColon')).toBeUndefined();
 	});
 
-	it('returns undefined for a name with more than one colon', () => {
-		expect(getIriFromPrefixedName(prefixes, 'ex:a:b')).toBeUndefined();
+	it('ends the prefix at the first colon, as local names may contain colons', () => {
+		expect(getIriFromPrefixedName(prefixes, 'ex:a:b')).toBe('http://example.org/a:b');
+		expect(getIriFromPrefixedName(prefixes, 'ex:a:')).toBe('http://example.org/a:');
+	});
+
+	it('resolves the reserved character escapes of the local name', () => {
+		expect(getIriFromPrefixedName(prefixes, 'ex:a\\-b')).toBe('http://example.org/a-b');
+		expect(getIriFromPrefixedName(prefixes, "ex:\\_\\~\\.\\!\\$\\&\\'\\(\\)\\*\\+\\,\\;\\=\\/\\?\\#\\@\\%")).toBe("http://example.org/_~.!$&'()*+,;=/?#@%");
+	});
+
+	it('keeps the percent-encodings of the local name', () => {
+		expect(getIriFromPrefixedName(prefixes, 'ex:a%20b')).toBe('http://example.org/a%20b');
 	});
 
 	it('expands a name with the empty prefix', () => {
@@ -144,6 +154,10 @@ describe('getNamespaceIriFromPrefixedName', () => {
 
 	it('returns the namespace IRI for a known prefix', () => {
 		expect(getNamespaceIriFromPrefixedName(prefixes, 'ex:Thing')).toBe('http://example.org/');
+	});
+
+	it('returns the namespace IRI of a name whose local name contains colons', () => {
+		expect(getNamespaceIriFromPrefixedName(prefixes, 'ex:a:b')).toBe('http://example.org/');
 	});
 
 	it('returns the namespace IRI for the empty prefix', () => {
