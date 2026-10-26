@@ -6,7 +6,7 @@ vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 import * as vscode from 'vscode';
 import { ReferenceUpdateService } from '@src/services/core/reference-update-service';
 import { WorkspaceUri } from '@src/providers/workspace-uri';
-import { getTextEdits } from '@src/utilities/mocks/factories';
+import { createTurtleDocument, getTextEdits } from '@src/utilities/mocks/factories';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -65,6 +65,28 @@ describe('ReferenceUpdateService', () => {
 	});
 
 	describe('batchUpdate', () => {
+		it('does not rewrite the name of a prefix declaration when its namespace is renamed (#165)', async () => {
+			const text = '@prefix data: <workspace:///data/> .\ndata: a <urn:example:Folder> .\n';
+			const ctx = createTurtleDocument('file:///w/folders.ttl');
+
+			ctx.parse(text);
+
+			openTextDocumentSpy.mockResolvedValue({
+				uri: ctx.uri,
+				getText: (r: vscode.Range) => text.split('\n')[r.start.line].substring(r.start.character, r.end.character),
+			} as any);
+
+			const service = makeService({ [ctx.uri.toString()]: ctx });
+			await service.batchUpdate(new Map([['workspace:///data', 'workspace:///archive']]), ctx.uri);
+
+			const edits = getTextEdits(applyEditSpy.mock.calls[0][0] as vscode.WorkspaceEdit);
+
+			// Only the use of the namespace as a resource is renamed, not the declared prefix.
+			expect(edits.map(e => [e.range.start.line, e.range.start.character, e.range.end.character, e.newText])).toEqual([
+				[1, 0, 5, '<workspace:///archive>'],
+			]);
+		});
+
 		it('does nothing when changes is empty', async () => {
 			const service = makeService({});
 			await service.batchUpdate(new Map());
