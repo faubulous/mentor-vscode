@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import type { CstNode, ILexingError } from 'chevrotain';
-import { RangeIndex } from './range-index';
+import { RangeIndex } from '@src/utilities/range-index';
 import { Quad, Quad_Subject } from '@rdfjs/types';
 import { LanguageTagUsageStats } from '@faubulous/mentor-rdf';
 import { Label } from './document-context';

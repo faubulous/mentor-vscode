@@ -262,15 +262,18 @@ export function getIriFromIriReference(value: string): string {
  * @returns A IRI string.
  */
 export function getIriFromPrefixedName(prefixes: PrefixMap, name: string): string | undefined {
-	const parts = name.split(':');
+	// Located with indexOf instead of split, which allocates an array per name: this runs for
+	// every prefixed name in a document. Names with more than one colon are not resolved.
+	const colon = name.indexOf(':');
 
-	if (parts.length == 2) {
-		const prefix = parts[0];
-		const label = parts[1];
+	if (colon < 0 || name.indexOf(':', colon + 1) >= 0) {
+		return undefined;
+	}
 
-		if (prefixes[prefix]) {
-			return prefixes[prefix] + label;
-		}
+	const namespaceIri = prefixes[name.substring(0, colon)];
+
+	if (namespaceIri) {
+		return namespaceIri + name.substring(colon + 1);
 	}
 }
 

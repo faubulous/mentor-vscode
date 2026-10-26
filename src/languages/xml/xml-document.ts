@@ -4,7 +4,7 @@ import { IToken, RdfSyntax } from '@faubulous/mentor-rdf-parsers';
 import { ISettingsService } from '@src/services/core';
 import { DocumentContext } from '@src/services/document/document-context';
 import { ITokenizedDocumentContext } from '@src/services/document/document-context.interface';
-import { RangeIndex } from '@src/services/document/range-index';
+import { RangeIndex } from '@src/utilities/range-index';
 import { WorkspaceUri } from '@src/providers/workspace-uri';
 import { XmlParseResult } from '@src/languages/xml/xml-types';
 import { XmlParser } from '@src/languages/xml/xml-parser';

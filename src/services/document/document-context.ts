@@ -9,7 +9,7 @@ import { WorkspaceUri } from '@src/providers/workspace-uri';
 import { TreeLabelStyle } from '@src/services/core/settings-service';
 import { getPredicatesConfig } from '@src/utilities/vscode/config';
 import { IDocumentContext, ITokenizedDocumentContext } from './document-context.interface';
-import { RangeIndex } from './range-index';
+import { RangeIndex } from '@src/utilities/range-index';
 
 /**
  * A literal value with optional language tag.
