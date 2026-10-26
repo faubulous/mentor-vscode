@@ -45,11 +45,12 @@ The developer friendly IDE for RDF knowledge graphs.
 ### Version 0.7.0: Rename Across Files and Lower Memory Use
 - **Breaking change:** renaming an IRI (F2) now also renames it in all other indexed files that reference it; the changes in other files are shown in the Refactor Preview before they are applied. Set `mentor.editor.renameAcrossFiles` to `false` to rename within the document only, as before
 - Go to Definition now opens the framework vocabularies shipped with Mentor (RDF, RDFS, OWL, SHACL, SKOS, XSD, …) and the preset SHACL shapes in read-only documents, e.g. for `rdfs:label` or `owl:Class`
+- The XSD vocabulary now covers many more XSD 1.1 datatypes and the constraining facets, with labels and descriptions (contributed by [@otellomaria](https://github.com/otellomaria))
 - Much lower memory use: indexed files that are not open no longer keep their syntax tree and tokens; a test workspace with 400k triples retains about 0.5 GB instead of 1.8 GB after indexing ([#112](https://github.com/faubulous/mentor-vscode/issues/112), [#124](https://github.com/faubulous/mentor-vscode/issues/124))
 - Faster start-up, indexing and editing of large files, and SPARQL results that are no longer re-queried when their view is shown again ([#114](https://github.com/faubulous/mentor-vscode/issues/114), [#116](https://github.com/faubulous/mentor-vscode/issues/116)–[#120](https://github.com/faubulous/mentor-vscode/issues/120), [#127](https://github.com/faubulous/mentor-vscode/issues/127), [#143](https://github.com/faubulous/mentor-vscode/issues/143), [#144](https://github.com/faubulous/mentor-vscode/issues/144), [#150](https://github.com/faubulous/mentor-vscode/issues/150))
-- Fixed Go to Definition returning a reference in the current document while the workspace is indexed ([#147](https://github.com/faubulous/mentor-vscode/issues/147)), RDF/XML names with upper-case letters not being found ([#130](https://github.com/faubulous/mentor-vscode/issues/130)), and commented-out RDF/XML elements being treated as definitions
+- Fixed Go to Definition returning a reference in the current document while the workspace is indexed ([#147](https://github.com/faubulous/mentor-vscode/issues/147)), RDF/XML names with upper-case letters not being found ([#130](https://github.com/faubulous/mentor-vscode/issues/130)), commented-out RDF/XML elements being treated as definitions, and properties with an `xsd:unsignedLong` or `xsd:unsignedByte` range not being shown as numeric
 - Fixed the definitions tree staying empty for the document that is open when VS Code starts ([#156](https://github.com/faubulous/mentor-vscode/issues/156))
-- Updated mentor-rdf to 2.3.0 and mentor-rdf-parsers to 2.2.1
+- Updated mentor-rdf to 2.4.0 and mentor-rdf-parsers to 2.2.1
 
 ## Installation
 
