@@ -19,7 +19,6 @@ import {
 } from '@src/utilities';
 import { PrefixedNameResolver } from '@src/languages/prefixed-name-resolver';
 import { addLanguageTagUsage, replaceGraphQuads } from '@src/utilities/rdf';
-import { getRangeFromToken } from '@src/utilities/vscode/tokens';
 
 /**
  * A document context for Turtle and TriG documents.
