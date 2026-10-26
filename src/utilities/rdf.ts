@@ -58,8 +58,8 @@ export function getPropertyTypeFromRange(rangeIri?: string): PropertyType {
 		case XSD.string:
 		case XSD.unsignedInt:
 		case XSD.unsignedShort:
-		case XSD.unsingedLong:
-		case XSD.usignedByte: {
+		case XSD.unsignedLong:
+		case XSD.unsignedByte: {
 			return 'dataProperty';
 		}
 		default: {

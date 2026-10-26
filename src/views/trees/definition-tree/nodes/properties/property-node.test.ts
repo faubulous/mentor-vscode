@@ -122,6 +122,10 @@ describe('PropertyNode', () => {
 		it('should return "dataProperty" for XSD.unsignedShort', () => {
 			expect(makeNode().getPropertyType(XSD.unsignedShort)).toBe('dataProperty');
 		});
+		it('should return "dataProperty" for XSD.unsignedLong and XSD.unsignedByte', () => {
+			expect(makeNode().getPropertyType(XSD.unsignedLong)).toBe('dataProperty');
+			expect(makeNode().getPropertyType(XSD.unsignedByte)).toBe('dataProperty');
+		});
 		it('should return "objectProperty" for RDFS.Resource (non-literal class)', () => {
 			expect(makeNode().getPropertyType(RDFS.Resource)).toBe('objectProperty');
 		});
@@ -154,6 +158,10 @@ describe('PropertyNode', () => {
 		});
 		it('should return "symbol-number" for XSD.decimal', () => {
 			expect(makeNode().getIconNameFromRange(XSD.decimal)).toBe('symbol-number');
+		});
+		it('should return "symbol-number" for XSD.unsignedLong and XSD.unsignedByte', () => {
+			expect(makeNode().getIconNameFromRange(XSD.unsignedLong)).toBe('symbol-number');
+			expect(makeNode().getIconNameFromRange(XSD.unsignedByte)).toBe('symbol-number');
 		});
 		it('should return "symbol-number" for XSD.double', () => {
 			expect(makeNode().getIconNameFromRange(XSD.double)).toBe('symbol-number');

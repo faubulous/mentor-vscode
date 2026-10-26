@@ -5,6 +5,12 @@ build-font.mjs
 tsconfig.json
 tsconfig.spec.json
 vitest.config.ts
+vitest.perf.config.ts
+eslint.config.mjs
+knip.json
+
+# Memory and performance harness (npm run perf)
+perf/**
 
 # Source maps: never loaded from a published extension, and they dominate its
 # size -- the dist/ maps alone are ~48 MB against ~28 MB of bundles.
