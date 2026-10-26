@@ -505,12 +505,10 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 				}
 				case RdfToken.PNAME_NS.name:
 				case RdfToken.PNAME_LN.name: {
-					// Skip processing prefixes and iris in prefix definitions..
-					switch (previousToken?.tokenType.name) {
-						case RdfToken.PREFIX.name:
-						case RdfToken.TTL_PREFIX.name:
-						case RdfToken.PNAME_NS.name:
-							break;
+					// The name in a prefix declaration declares the prefix and denotes no resource;
+					// indexing it as a reference made e.g. namespace renames rewrite the declaration.
+					if (this._isPrefixKeyword(previousToken)) {
+						break;
 					}
 
 					// Without a trailing slash or hash, so that the IRIs are comparable
@@ -593,6 +591,16 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 				return token.payload?.blankNodeId;
 			}
 		}
+	}
+
+	/**
+	 * Indicates whether a token is the keyword of a prefix declaration, `@prefix` or `PREFIX`.
+	 * @param token A token.
+	 */
+	private _isPrefixKeyword(token: IToken | undefined): boolean {
+		const tokenType = token?.tokenType.name;
+
+		return tokenType === RdfToken.PREFIX.name || tokenType === RdfToken.TTL_PREFIX.name;
 	}
 
 	private _registerSubject(tokens: IToken[], tokenIndex: number, token: IToken, iriOrBlankId: string, previousToken: IToken) {

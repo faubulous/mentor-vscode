@@ -51,6 +51,7 @@ The developer friendly IDE for RDF knowledge graphs.
 - Edits of large documents apply only the triples that changed and skip the inference when no triple changed, and Turtle documents are parsed about 40% faster ([#120](https://github.com/faubulous/mentor-vscode/issues/120))
 - Fixed Go to Definition returning a reference in the current document while the workspace is indexed ([#147](https://github.com/faubulous/mentor-vscode/issues/147)), RDF/XML names with upper-case letters not being found ([#130](https://github.com/faubulous/mentor-vscode/issues/130)), commented-out RDF/XML elements being treated as definitions, and properties with an `xsd:unsignedLong` or `xsd:unsignedByte` range not being shown as numeric
 - Fixed the definitions tree staying empty for the document that is open when VS Code starts ([#156](https://github.com/faubulous/mentor-vscode/issues/156))
+- Fixed Go to Definition, Find References and rename missing prefixed names with colons or escaped characters in the local name, e.g. `ex:a:b` or `ex:a\-b` ([#164](https://github.com/faubulous/mentor-vscode/issues/164)), and renaming a workspace folder rewriting the names of prefix declarations for that folder ([#165](https://github.com/faubulous/mentor-vscode/issues/165))
 - Fixed the SPARQL formatter putting a space between a function and its arguments, e.g. `ex:fn (?x)` or `NOW ()` ([mentor-rdf-serializers#5](https://github.com/faubulous/mentor-rdf-serializers/issues/5))
 - Updated mentor-rdf to 2.4.0, mentor-rdf-parsers to 2.2.1 and mentor-rdf-serializers to 1.9.3
 
