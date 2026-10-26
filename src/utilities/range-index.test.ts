@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { Range } from 'vscode-languageserver-types';
-import { RangeIndex } from '@src/services/document/range-index';
+import { RangeIndex } from '@src/utilities/range-index';
 
 const first = Range.create(1, 2, 1, 10);
 const second = Range.create(5, 0, 6, 3);

@@ -7,7 +7,7 @@ import { ParserFactory } from '@src/languages/parser-factory';
 import { ISettingsService } from '@src/services/core';
 import { DocumentContext } from '@src/services/document/document-context';
 import { DocumentParseResult, ITokenizedDocumentContext } from '@src/services/document/document-context.interface';
-import { RangeIndex } from '@src/services/document/range-index';
+import { RangeIndex } from '@src/utilities/range-index';
 import { WorkspaceUri } from '@src/providers/workspace-uri';
 import {
 	getIriFromIriReference,
@@ -18,7 +18,7 @@ import {
 	isPrefixTokenAtPosition
 } from '@src/utilities';
 import { addLanguageTagUsage } from '@src/utilities/rdf';
-import { PrefixedNameResolver } from './prefixed-name-resolver';
+import { PrefixedNameResolver } from '@src/languages/prefixed-name-resolver';
 
 /**
  * A document context for Turtle and TriG documents.

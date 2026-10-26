@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createRangeIndex } from '@src/utilities/mocks/factories';
-import { RangeIndex } from '@src/services/document/range-index';
+import { RangeIndex } from '@src/utilities/range-index';
 
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 

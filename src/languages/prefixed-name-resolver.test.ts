@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { PrefixedNameResolver } from '@src/languages/turtle/prefixed-name-resolver';
+import { PrefixedNameResolver } from '@src/languages/prefixed-name-resolver';
 
 describe('PrefixedNameResolver', () => {
 	it('resolves a prefixed name to its IRI', () => {
