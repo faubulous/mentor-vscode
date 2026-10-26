@@ -56,6 +56,13 @@ export class ShaclValidationService implements vscode.Disposable {
 	private readonly _lastSkips = new Map<string, { triples: number; maxGraphSize: number }>();
 
 	/**
+	 * The inputs of the last validation per document URI: the data and shape graphs with
+	 * their versions in the store (see {@link _getValidationSignature}). Lets the automatic
+	 * validation skip a document whose result is still fresh, e.g. on a switch between tabs.
+	 */
+	private readonly _validationSignatures = new Map<string, string>();
+
+	/**
 	 * Tracks in-flight validation runs per document and shape graph combination so
 	 * that concurrent triggers share a single run. Guards `_validateAndPublish`,
 	 * the choke point every path funnels through — explicit commands, the
@@ -250,6 +257,14 @@ export class ShaclValidationService implements vscode.Disposable {
 			return;
 		}
 
+		// The context event also fires when an unchanged document becomes active again,
+		// e.g. on a switch between tabs. Its last result is still valid when neither the
+		// document nor the shapes changed since: edits drop the result, and every change
+		// of a data or shape graph changes its version in the store.
+		if (this._isLastResultFresh(context, shapeGraphUris)) {
+			return;
+		}
+
 		// Never auto-validate a pathologically large data graph on change: it would block
 		// the extension host on every edit. Explicit validation commands bypass this guard.
 		const maxGraphSize = this._batchRunner.getMaxGraphSize();
@@ -285,6 +300,33 @@ export class ShaclValidationService implements vscode.Disposable {
 	 * Whether the document currently has blocking syntax errors: any error-severity
 	 * diagnostic that is not a SHACL result (SHACL diagnostics carry `source: 'SHACL'`).
 	 */
+	/**
+	 * Indicates whether the last validation result of a document still reflects its data
+	 * and shape graphs, so that validating it again would produce the same result.
+	 * @param context The document context.
+	 * @param shapeGraphUris The shape graphs the document would be validated against.
+	 */
+	private _isLastResultFresh(context: IDocumentContext, shapeGraphUris: string[]): boolean {
+		const key = context.uri.toString();
+
+		return this._lastResults.has(key)
+			&& this._validationSignatures.get(key) === this._getValidationSignature(context, shapeGraphUris);
+	}
+
+	/**
+	 * Describes the inputs of a validation: the data graphs of the document and the shape
+	 * graphs, each with its version in the store, which changes with every mutation.
+	 * @param context The document context.
+	 * @param shapeGraphUris The shape graphs of the validation.
+	 */
+	private _getValidationSignature(context: IDocumentContext, shapeGraphUris: string[]): string {
+		const describe = (graphUri: string) => `${graphUri}@${this._store.getGraphVersion(graphUri)}`;
+		const dataGraphs = [...context.graphs].sort().map(describe);
+		const shapeGraphs = [...shapeGraphUris].sort().map(describe);
+
+		return `${dataGraphs.join(' ')}|${shapeGraphs.join(' ')}`;
+	}
+
 	private _hasSyntaxErrors(uri: vscode.Uri): boolean {
 		return vscode.languages.getDiagnostics(uri).some(diagnostic =>
 			diagnostic.severity === vscode.DiagnosticSeverity.Error && diagnostic.source !== 'SHACL');
@@ -623,6 +665,10 @@ export class ShaclValidationService implements vscode.Disposable {
 		// A read-only view over the store — no triple copying needed.
 		const dataDataset = this._store.getDataset(context.graphs, false);
 
+		// Taken before the validation reads the graphs, so a change during the run makes
+		// the result stale rather than fresh.
+		const signature = this._getValidationSignature(context, shapeGraphUris);
+
 		// Shape graphs that are not in the store contribute no shapes, so the run
 		// silently validates against less than what the profile promises. Record
 		// them on the result so consumers (status code lens, report export) can
@@ -647,9 +693,11 @@ export class ShaclValidationService implements vscode.Disposable {
 		this._log.info(`Validated ${documentUri.toString()}: ${duration}ms, ${dataDataset.size} triples, ${result.results.length} issues`);
 
 		this._lastResults.set(documentUri.toString(), result);
+		this._validationSignatures.set(documentUri.toString(), signature);
 		this._lastSkips.delete(documentUri.toString());
 
-		const quadContexts = context instanceof TurtleDocument ? context.getQuadContexts() : undefined;
+		// The quad contexts only refine the positions of results; a clean document needs none.
+		const quadContexts = result.results.length > 0 ? await this._getQuadContexts(documentUri, context) : undefined;
 
 		this._publishDiagnostics(documentUri, context, result, quadContexts);
 
@@ -708,6 +756,33 @@ export class ShaclValidationService implements vscode.Disposable {
 		}
 
 		return serializeReportAsTurtle(result);
+	}
+
+	/**
+	 * The quad contexts that map validation results to source positions. Indexed
+	 * files that are not open in an editor have released their tokens; their text
+	 * is read again for the mapping.
+	 * @param documentUri The URI of the validated document.
+	 * @param context The document context.
+	 */
+	private async _getQuadContexts(documentUri: vscode.Uri, context: IDocumentContext): Promise<QuadContext[] | undefined> {
+		if (!(context instanceof TurtleDocument)) {
+			return undefined;
+		}
+
+		if (context.isParsed) {
+			return context.getQuadContexts();
+		}
+
+		try {
+			const bytes = await vscode.workspace.fs.readFile(documentUri);
+
+			return context.getQuadContextsForText(new TextDecoder().decode(bytes));
+		} catch (error) {
+			this._log.warn(`Cannot read ${documentUri.toString()} to map the validation results: ${error}`);
+
+			return undefined;
+		}
 	}
 
 	private _publishDiagnostics(documentUri: vscode.Uri, context: IDocumentContext, result: ShaclValidationResult, quadContexts?: QuadContext[]): void {

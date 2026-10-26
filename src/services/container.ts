@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { Store, OwlReasoner, GraphUriGenerator, VocabularyRepository } from '@faubulous/mentor-rdf';
+import { getHeapUsedMb } from '@src/utilities/runtime';
 import { Quad_Graph } from '@rdfjs/types';
 import { ServiceToken } from './tokens';
 import { InferenceUri } from '../providers/inference-uri';
@@ -9,6 +10,7 @@ import { WorkspaceIndexerService } from './core/workspace-indexer-service';
 import { WorkspaceFileService } from './core/workspace-file-service';
 import { WorkspaceService } from './core/workspace-service';
 import { DocumentContextService } from './document/document-context-service';
+import { PresetDocumentService } from './document/preset-document-service';
 import { DocumentLintingService } from './document/document-linting-service';
 import { NotebookController } from './notebook/notebook-controller';
 import { DocumentTokenSource } from './document/document-token-source';
@@ -35,6 +37,7 @@ import { ShapeGraphService } from '@src/services/validation/shape-graph-service'
 import { ShapeReferenceRegistryService } from '@src/services/validation/shape-reference-registry-service';
 import { SettingsFileStore } from './core/settings-file-store';
 import { ReferenceUpdateService } from '@src/services/core/reference-update-service';
+import { WorkspaceRenameService } from './core/workspace-rename-service';
 import { WorkspaceFileOperationService } from '@src/services/core/workspace-file-operation-service';
 import { SettingsMigrationService } from './core/settings-migration-service';
 import { DocumentQueryTemplateMigration, IndexExcludeFilesMigration, LegacyTemplateFormatMigration } from './core/migrations/';
@@ -88,6 +91,12 @@ export function configureServiceContainer(context: vscode.ExtensionContext): voi
 
 	const documentContextService = new DocumentContextService(context, store, vocabularyRepository, documentFactory, documentTokenSource);
 	container.registerInstance(ServiceToken.DocumentContextService, documentContextService);
+
+	const presetDocumentService = new PresetDocumentService(documentContextService);
+	container.registerInstance(ServiceToken.PresetDocumentService, presetDocumentService);
+
+	const workspaceRenameService = new WorkspaceRenameService(documentContextService);
+	container.registerInstance(ServiceToken.WorkspaceRenameService, workspaceRenameService);
 
 	// Diagnostics are computed in the extension host — there are no language
 	// server processes. Constructed after DocumentContextService is registered:
@@ -227,7 +236,12 @@ export function configureServiceContainer(context: vscode.ExtensionContext): voi
 				indexingFinished: workspaceIndexerService.indexingFinished,
 				workspaceFiles: workspaceFileService.files.map(file => file.toString()),
 				documentContexts: Object.keys(documentContextService.contexts),
+				storeGraphs: store.getGraphs(),
+				heapUsedMb: getHeapUsedMb(),
 			})),
+			vscode.commands.registerCommand('mentor.e2e.countGraphTriples', (graphIri: string) => {
+				return store.countQuads(null, null, null, store.dataFactory.namedNode(graphIri));
+			}),
 			vscode.commands.registerCommand('mentor.e2e.setNotebookConnection', async (notebookUri: string, connectionId: string) => {
 				const notebook = vscode.workspace.notebookDocuments.find(nb => nb.uri.toString() === notebookUri);
 

@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
+import { RangeIndex } from '@src/services/document/range-index';
 import * as vscode from 'vscode';
 import { DocumentContextService } from '@src/services/document/document-context-service';
 import { DocumentTokenSource } from '@src/services/document/document-token-source';
@@ -8,12 +9,17 @@ import { IDocumentContext } from '@src/services/document/document-context.interf
 
 vi.mock('@faubulous/mentor-rdf', () => ({
 	Store: class { deleteGraphs = vi.fn(); },
-	VocabularyRepository: class { getPredicateUsageStats = vi.fn(() => ({})); },
+	VocabularyRepository: class {},
 }));
 
 vi.mock('@src/utilities/vscode/config', () => ({
 	getConfig: () => ({ get: (_key: string, defaultValue?: any) => defaultValue }),
 }));
+
+/**
+ * An `isTokenized` implementation for mock contexts that provide tokens.
+ */
+const alwaysTokenized = (() => true) as IDocumentContext['isTokenized'];
 
 function createMockContext(overrides: Partial<IDocumentContext> = {}): IDocumentContext {
 	return {
@@ -22,12 +28,12 @@ function createMockContext(overrides: Partial<IDocumentContext> = {}): IDocument
 		graphIri: vscode.Uri.parse('file:///test.ttl'),
 		baseIri: undefined,
 		namespaces: {},
-		namespaceDefinitions: {},
-		subjects: {},
-		references: {},
-		typeAssertions: {},
-		typeDefinitions: {},
-		predicateStats: {} as any,
+		namespaceDefinitions: new RangeIndex(),
+		subjects: new RangeIndex(),
+		references: new RangeIndex(),
+		typeAssertions: new RangeIndex(),
+		typeDefinitions: new RangeIndex(),
+		languageTagStats: {},
 		primaryLanguage: undefined,
 		activeLanguageTag: undefined,
 		activeLanguage: undefined,
@@ -35,6 +41,8 @@ function createMockContext(overrides: Partial<IDocumentContext> = {}): IDocument
 		isLoaded: true,
 		isParsed: false,
 		isTemporary: false,
+		isPreset: false,
+		isTokenized: () => false,
 		loadTriples: vi.fn(),
 		infer: vi.fn(),
 		getIriAtPosition: vi.fn(),
@@ -48,7 +56,7 @@ function createMockContext(overrides: Partial<IDocumentContext> = {}): IDocument
 function createService() {
 	const mockExtensionContext = { subscriptions: { push: vi.fn() } };
 	const mockStore = { deleteGraphs: vi.fn() };
-	const mockVocabulary = { getPredicateUsageStats: vi.fn(() => ({})) };
+	const mockVocabulary = {};
 	const mockDocumentFactory = {
 		supportedLanguages: new Set(['turtle', 'sparql']),
 		getConvertibleTargetLanguageIds: vi.fn(() => []),
@@ -153,7 +161,7 @@ describe('DocumentContextService', () => {
 			service.handleDocumentClosed({ uri } as any);
 
 			expect(service.contexts[uri.toString()]).toBeUndefined();
-			expect(mockStore.deleteGraphs).toHaveBeenCalledWith(context.graphs);
+			expect(mockStore.deleteGraphs).toHaveBeenCalledWith(context.graphs, true);
 		});
 
 		it('keeps a non-temporary context open', () => {
@@ -193,7 +201,7 @@ describe('DocumentContextService', () => {
 			service.removeDocuments([vscode.Uri.parse('file:///w/old/a.ttl')]);
 
 			expect(Object.keys(service.contexts)).toEqual(['file:///w/keep.ttl']);
-			expect(mockStore.deleteGraphs).toHaveBeenCalledExactlyOnceWith(['file:///w/old/a.ttl']);
+			expect(mockStore.deleteGraphs).toHaveBeenCalledExactlyOnceWith(['file:///w/old/a.ttl'], true);
 		});
 
 		it('removes the contexts of all cells of a removed notebook', () => {
@@ -214,6 +222,18 @@ describe('DocumentContextService', () => {
 
 			service.removeDocuments([vscode.Uri.parse('file:///w/unknown.ttl')]);
 
+			expect(mockStore.deleteGraphs).not.toHaveBeenCalled();
+		});
+
+		it('keeps the graph of a removed preset context, which is owned by the store', () => {
+			const { service, mockStore } = createService();
+			const uri = 'mentor-vfs:/vocabularies/rdfs.ttl';
+
+			service.contexts[uri] = createMockContext({ uri: vscode.Uri.parse(uri), graphs: ['http://www.w3.org/2000/01/rdf-schema#'], isPreset: true });
+
+			service.removeDocuments([vscode.Uri.parse(uri)]);
+
+			expect(service.contexts[uri]).toBeUndefined();
 			expect(mockStore.deleteGraphs).not.toHaveBeenCalled();
 		});
 	});
@@ -610,7 +630,7 @@ describe('DocumentContextService', () => {
 
 			expect(service.contexts[document.uri.toString()]).toBeUndefined();
 			expect(service.activeContext).toBeUndefined();
-			expect(mockStore.deleteGraphs).toHaveBeenCalledWith(context.graphs);
+			expect(mockStore.deleteGraphs).toHaveBeenCalledWith(context.graphs, true);
 		});
 
 		it('keeps the context when the language changes to an unsupported language', async () => {
@@ -745,6 +765,48 @@ describe('DocumentContextService', () => {
 
 			expect(service.activeContext).toBe(ctx);
 			expect(fired).toContain(ctx);
+		});
+
+		it('loads the document without waiting for the context keys', async () => {
+			const { service } = createService();
+			const uri = vscode.Uri.parse('file:///test.ttl');
+			const document = { languageId: 'turtle', uri, getText: () => '' };
+			(vscode.window as any).activeTextEditor = { document };
+
+			// The workbench answers no context key while it is busy with the new document.
+			const executeCommandSpy = vi.spyOn(vscode.commands, 'executeCommand').mockReturnValue(new Promise(() => {}));
+			const loadDocument = vi.spyOn(service, 'loadDocument').mockResolvedValue(undefined);
+
+			try {
+				void service.handleActiveEditorChanged();
+
+				await vi.waitFor(() => expect(loadDocument).toHaveBeenCalledWith(document, false, undefined));
+			} finally {
+				executeCommandSpy.mockRestore();
+			}
+		});
+
+		it('sends all context keys before the first one is answered', async () => {
+			const { service } = createService();
+			(vscode.window as any).activeTextEditor = undefined;
+
+			const executeCommandSpy = vi.spyOn(vscode.commands, 'executeCommand').mockReturnValue(new Promise(() => {}));
+
+			try {
+				void service.handleActiveEditorChanged();
+
+				const keys = executeCommandSpy.mock.calls.filter(call => call[0] === 'setContext').map(call => call[1]);
+
+				expect(keys).toEqual(expect.arrayContaining([
+					'mentor.command.convertFileFormat.executable',
+					'mentor.editor.isRdfDocument',
+					'mentor.editor.isMentorLanguage',
+					'mentor.command.convertFileFormat.target.turtle',
+					'mentor.editor.isTriplateTemplate'
+				]));
+			} finally {
+				executeCommandSpy.mockRestore();
+			}
 		});
 
 		it('does nothing when the active editor URI is unchanged from activeContext', async () => {
@@ -985,6 +1047,138 @@ describe('DocumentContextService', () => {
 		});
 	});
 
+	describe('isLoading and waitUntilLoaded', () => {
+		it('reports a load until it has finished, including the inference', async () => {
+			const { service, tokenSource, mockDocumentFactory } = createService();
+			const uri = 'file:///test.ttl';
+			const doc = { languageId: 'turtle', uri: vscode.Uri.parse(uri), getText: () => '' } as any;
+			const ctx = createMockContext({ uri: doc.uri, isLoaded: false, isParsed: false });
+
+			let finishInference!: () => void;
+
+			ctx.infer = vi.fn(() => new Promise<void>(resolve => finishInference = resolve));
+			(mockDocumentFactory.create as any).mockReturnValue(ctx);
+
+			const load = service.loadDocument(doc);
+
+			expect(service.isLoading(uri)).toBe(true);
+
+			tokenSource.deliverTokens(uri, []);
+
+			await vi.waitFor(() => expect(ctx.infer).toHaveBeenCalled());
+
+			expect(service.isLoading(uri)).toBe(true);
+
+			const loaded = service.waitUntilLoaded(uri);
+
+			finishInference();
+			await loaded;
+			await load;
+
+			expect(service.isLoading(uri)).toBe(false);
+		});
+
+		it('resolves waitUntilLoaded at once when no load is in progress', async () => {
+			const { service } = createService();
+
+			expect(service.isLoading('file:///idle.ttl')).toBe(false);
+
+			await service.waitUntilLoaded('file:///idle.ttl');
+		});
+
+		it('reports the triple reload after an edit', async () => {
+			const { service, tokenSource } = createService();
+			const uri = 'file:///test.ttl';
+			const ctx = createMockContext({ uri: vscode.Uri.parse(uri), isParsed: true });
+
+			let finishInference!: () => void;
+
+			ctx.infer = vi.fn(() => new Promise<void>(resolve => finishInference = resolve));
+			service.contexts[uri] = ctx;
+			(vscode.workspace.textDocuments as any[]).push({ uri: vscode.Uri.parse(uri), getText: () => '' });
+
+			try {
+				tokenSource.deliverTokens(uri, []);
+
+				await vi.waitFor(() => expect(ctx.infer).toHaveBeenCalled());
+
+				expect(service.isLoading(uri)).toBe(true);
+
+				const loaded = service.waitUntilLoaded(uri);
+
+				finishInference();
+				await loaded;
+
+				expect(service.isLoading(uri)).toBe(false);
+			} finally {
+				(vscode.workspace.textDocuments as any[]).pop();
+			}
+		});
+	});
+
+	describe('loadDocument event loop yields', () => {
+		/**
+		 * Starts loading a document whose parse takes the given time, and returns
+		 * the context and the pending load.
+		 */
+		function startLoad(parseMs: number) {
+			const { service, tokenSource, mockDocumentFactory } = createService();
+			const uri = vscode.Uri.parse('file:///test.ttl');
+			const doc = { languageId: 'turtle', uri, getText: () => '' } as any;
+			const ctx = createMockContext({ uri, isLoaded: false, isParsed: false });
+
+			(mockDocumentFactory.create as any).mockReturnValue(ctx);
+
+			vi.spyOn(tokenSource, 'waitForTokens').mockImplementation(async () => {
+				vi.setSystemTime(Date.now() + parseMs);
+
+				return [];
+			});
+
+			return { ctx, load: service.loadDocument(doc) };
+		}
+
+		/**
+		 * Lets all pending promise callbacks run, but no timers.
+		 */
+		async function flushMicrotasks(): Promise<void> {
+			for (let index = 0; index < 10; index++) {
+				await Promise.resolve();
+			}
+		}
+
+		afterEach(() => {
+			vi.useRealTimers();
+		});
+
+		it('yields before loading the triples when the parse used up the budget', async () => {
+			vi.useFakeTimers();
+
+			const { ctx, load } = startLoad(100);
+
+			await flushMicrotasks();
+
+			expect(ctx.loadTriples).not.toHaveBeenCalled();
+
+			await vi.runAllTimersAsync();
+			await load;
+
+			expect(ctx.loadTriples).toHaveBeenCalledOnce();
+		});
+
+		it('loads the triples of a quickly parsed document without yielding', async () => {
+			vi.useFakeTimers();
+
+			const { ctx, load } = startLoad(0);
+
+			await flushMicrotasks();
+
+			expect(ctx.loadTriples).toHaveBeenCalledOnce();
+
+			await load;
+		});
+	});
+
 	describe('loadDocument supersession guards', () => {
 		it('returns undefined when generation is bumped before tokens arrive (line 403)', async () => {
 			const { service, tokenSource, mockDocumentFactory } = createService();
@@ -1114,6 +1308,48 @@ describe('DocumentContextService', () => {
 			expect(context).toBeDefined();
 			// loadDocument no longer sets activeContext; handleActiveEditorChanged does.
 			expect(service.activeContext).toBeUndefined();
+		});
+	});
+
+	describe('loadActiveEditorAtStartup', () => {
+		afterEach(() => {
+			(vscode.window as any).activeTextEditor = undefined;
+		});
+
+		it('does not load the active editor when the service is constructed', async () => {
+			const uri = vscode.Uri.parse('file:///test.ttl');
+			(vscode.window as any).activeTextEditor = { document: { languageId: 'turtle', uri, getText: () => '' } };
+
+			const loadDocument = vi.spyOn(DocumentContextService.prototype, 'loadDocument');
+
+			try {
+				createService();
+
+				await Promise.resolve();
+
+				expect(loadDocument).not.toHaveBeenCalled();
+			} finally {
+				loadDocument.mockRestore();
+			}
+		});
+
+		it('loads the active editor and announces its context to the subscribers', async () => {
+			const { service, mockDocumentFactory } = createService();
+			const uri = vscode.Uri.parse('file:///test.ttl');
+			const ctx = createMockContext({ uri, isLoaded: true });
+
+			service.contexts[uri.toString()] = ctx;
+			(mockDocumentFactory.create as any).mockReturnValue(ctx);
+			(vscode.window as any).activeTextEditor = { document: { languageId: 'turtle', uri, getText: () => '' } };
+
+			const fired: IDocumentContext[] = [];
+
+			service.onDidChangeDocumentContext(context => context && fired.push(context));
+
+			await service.loadActiveEditorAtStartup();
+
+			expect(service.activeContext).toBe(ctx);
+			expect(fired).toEqual([ctx]);
 		});
 	});
 
@@ -1333,5 +1569,138 @@ describe('DocumentContextService', () => {
 
 			expect(ctx.loadTriples).not.toHaveBeenCalled();
 		});
+	});
+});
+
+describe('released tokens', () => {
+	function createDocument(uri: vscode.Uri) {
+		return { uri, languageId: 'turtle', getText: () => 'ex:a ex:b ex:c .', version: 1 } as any;
+	}
+
+	it('parses an opened document again when its tokens were released after indexing', async () => {
+		const { service } = createService();
+		const uri = vscode.Uri.parse('file:///w/indexed.ttl');
+		const context = createMockContext({ uri, isLoaded: true, isParsed: false, isTokenized: alwaysTokenized, loadTriples: vi.fn(), infer: vi.fn() });
+		const waitForTokens = vi.spyOn((service as any)._tokenSource, 'waitForTokens').mockResolvedValue([]);
+		const document = createDocument(uri);
+
+		service.contexts[uri.toString()] = context;
+
+		const result = await service.loadDocument(document);
+
+		expect(result).toBe(context);
+		expect(waitForTokens).toHaveBeenCalledWith(uri.toString(), undefined, document);
+		expect(context.loadTriples).not.toHaveBeenCalled();
+		expect(context.infer).toHaveBeenCalled();
+	});
+
+	it('does not parse an opened document that still has its tokens', async () => {
+		const { service } = createService();
+		const uri = vscode.Uri.parse('file:///w/open.ttl');
+		const context = createMockContext({ uri, isLoaded: true, isParsed: true, isTokenized: alwaysTokenized, loadTriples: vi.fn(), infer: vi.fn() });
+		const waitForTokens = vi.spyOn((service as any)._tokenSource, 'waitForTokens').mockResolvedValue([]);
+
+		service.contexts[uri.toString()] = context;
+
+		await service.loadDocument(createDocument(uri));
+
+		expect(waitForTokens).not.toHaveBeenCalled();
+		expect(context.loadTriples).not.toHaveBeenCalled();
+	});
+
+	it('releases the tokens of a closed non-temporary document', () => {
+		const { service } = createService();
+		const uri = vscode.Uri.parse('file:///w/closed.ttl');
+		const releaseTokens = vi.fn();
+		const context = createMockContext({ uri, isTemporary: false, isTokenized: alwaysTokenized, releaseTokens } as Partial<IDocumentContext>);
+
+		service.contexts[uri.toString()] = context;
+		service.handleDocumentClosed({ uri } as any);
+
+		expect(service.contexts[uri.toString()]).toBe(context);
+		expect(releaseTokens).toHaveBeenCalledTimes(1);
+	});
+});
+
+describe('loadDocumentContent with large documents', () => {
+	/**
+	 * Blocks the event loop for the given time, like parsing a very large document.
+	 */
+	function busyWait(milliseconds: number): void {
+		const end = Date.now() + milliseconds;
+
+		while (Date.now() < end) {
+			// Simulates synchronous work.
+		}
+	}
+
+	/**
+	 * Loads a document whose phases are recorded, with the given cost of its parse, and
+	 * returns the order in which the phases and a timer scheduled before the load ran.
+	 */
+	async function load(parseMilliseconds: number): Promise<string[]> {
+		const { service, mockDocumentFactory } = createService();
+		const order: string[] = [];
+		const context = createMockContext({
+			uri: vscode.Uri.parse('file:///w/large.ttl'),
+			isLoaded: false,
+			parse: vi.fn(() => { busyWait(parseMilliseconds); order.push('parse'); return []; }),
+			loadTriples: vi.fn(async () => { order.push('loadTriples'); }),
+			infer: vi.fn(async () => { order.push('infer'); }),
+		} as Partial<IDocumentContext>);
+
+		(mockDocumentFactory as any).getDocumentLanguageId = vi.fn(() => 'turtle');
+		mockDocumentFactory.create.mockReturnValue(context);
+
+		setTimeout(() => order.push('timer'), 0);
+
+		await service.loadDocumentContent(vscode.Uri.parse('file:///w/large.ttl'), '');
+
+		return order;
+	}
+
+	it('lets pending work run after a phase that used up the time budget', async () => {
+		expect(await load(80)).toEqual(['parse', 'timer', 'loadTriples', 'infer']);
+	});
+
+	it('does not yield after fast phases', async () => {
+		const order = await load(0);
+
+		expect(order.slice(0, 3)).toEqual(['parse', 'loadTriples', 'infer']);
+	});
+});
+
+describe('cursor on resource context key', () => {
+	/**
+	 * Sets the context key for an editor whose cursor is or is not on a resource and
+	 * returns the `setContext` calls made for the key.
+	 */
+	async function setCursor(service: DocumentContextService, onResource: boolean) {
+		const uri = vscode.Uri.parse('file:///w/data.ttl');
+
+		service.contexts[uri.toString()] = createMockContext({ uri, getIriAtPosition: vi.fn(() => onResource ? 'http://example.org/a' : undefined) });
+
+		await (service as any)._setCursorOnResourceContext({ document: { uri }, selection: { active: new vscode.Position(0, 0) } });
+	}
+
+	function contextKeyCalls(spy: { mock: { calls: unknown[][] } }) {
+		return spy.mock.calls.filter(call => call[0] === 'setContext' && call[1] === 'mentor.editor.cursorOnResource').map(call => call[2]);
+	}
+
+	it('sets the key only when its value changes', async () => {
+		const { service } = createService();
+		const executeCommand = vi.spyOn(vscode.commands, 'executeCommand');
+
+		executeCommand.mockClear();
+
+		await setCursor(service, true);
+		await setCursor(service, true);
+		await setCursor(service, false);
+		await setCursor(service, false);
+		await setCursor(service, true);
+
+		expect(contextKeyCalls(executeCommand)).toEqual([true, false, true]);
+
+		executeCommand.mockRestore();
 	});
 });

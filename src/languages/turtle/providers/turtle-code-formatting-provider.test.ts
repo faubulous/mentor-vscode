@@ -54,7 +54,7 @@ describe('TurtleCodeFormattingProvider', () => {
 
 	it('passes indent based on insertSpaces and tabSize to the formatter', () => {
 		const freshProvider = new TurtleCodeFormattingProvider();
-		const spy = vi.spyOn((freshProvider as any)._formatter, 'formatFromText');
+		const spy = vi.spyOn((freshProvider as any)._getFormatter(), 'formatFromText');
 		const doc = makeDocument('some text');
 		freshProvider.provideDocumentFormattingEdits(doc, makeOptions(true, 4), {} as any);
 
@@ -66,7 +66,7 @@ describe('TurtleCodeFormattingProvider', () => {
 
 	it('uses tab character when insertSpaces is false', () => {
 		const freshProvider = new TurtleCodeFormattingProvider();
-		const spy = vi.spyOn((freshProvider as any)._formatter, 'formatFromText');
+		const spy = vi.spyOn((freshProvider as any)._getFormatter(), 'formatFromText');
 		const doc = makeDocument('some text');
 		freshProvider.provideDocumentFormattingEdits(doc, makeOptions(false, 4), {} as any);
 
@@ -80,7 +80,7 @@ describe('TurtleCodeFormattingProvider', () => {
 		mockResolveFormatting.mockImplementation((_lang: string, key: string, fallback: any) => key === 'maxLineWidth' ? 80 : fallback);
 
 		const freshProvider = new TurtleCodeFormattingProvider();
-		const spy = vi.spyOn((freshProvider as any)._formatter, 'formatFromText');
+		const spy = vi.spyOn((freshProvider as any)._getFormatter(), 'formatFromText');
 		freshProvider.provideDocumentFormattingEdits(makeDocument('text'), makeOptions(), {} as any);
 
 		expect(mockResolveFormatting).toHaveBeenCalledWith('turtle', 'maxLineWidth', 120);

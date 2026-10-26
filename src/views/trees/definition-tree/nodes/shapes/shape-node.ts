@@ -22,6 +22,14 @@ export class NodeShapeNode extends ClassNodeBase {
 		return new vscode.ThemeIcon(iconName, iconColor);
 	}
 
+	/**
+	 * Node shapes are not expanded, so the inherited sub-class and instance check is skipped.
+	 * @returns Always `false`.
+	 */
+	override hasChildren(): boolean {
+		return false;
+	}
+
 	override getChildren(): DefinitionTreeNode[] {
 		return [];
 	}
@@ -51,6 +59,14 @@ export class PropertyShapeNode extends PropertyNode {
 		const iconColor = this.getIconColorFromRange(rangeIri);
 
 		return new vscode.ThemeIcon(iconName, iconColor);
+	}
+
+	/**
+	 * Property shapes are not expanded, so the inherited sub-property check is skipped.
+	 * @returns Always `false`.
+	 */
+	override hasChildren(): boolean {
+		return false;
 	}
 
 	override getChildren() {

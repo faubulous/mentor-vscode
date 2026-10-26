@@ -66,7 +66,7 @@ export function getTokenIndexAtPosition(tokens: IToken[], position: { line: numb
 	const l = position.line + 1;
 	const n = position.character;
 
-	for (let i = 0; i < tokens.length; i++) {
+	for (let i = _getFirstTokenIndexEndingOnOrAfterLine(tokens, l); i < tokens.length; i++) {
 		const token = tokens[i];
 
 		if (!token.startLine || !token.endLine || !token.startColumn || !token.endColumn) {
@@ -94,6 +94,37 @@ export function getTokenIndexAtPosition(tokens: IToken[], position: { line: numb
 	}
 
 	return -1;
+}
+
+/**
+ * Gets the index of the first token that ends on or after the given line, by binary search
+ * over tokens in document order. The tokens before it cannot contain a position on that
+ * line, so a search for a position can start there instead of at the first token.
+ * @param tokens The document tokens, in document order.
+ * @param line A one-based line number.
+ * @returns The index to start the search at.
+ */
+function _getFirstTokenIndexEndingOnOrAfterLine(tokens: IToken[], line: number): number {
+	let low = 0;
+	let high = tokens.length;
+
+	while (low < high) {
+		const middle = (low + high) >>> 1;
+		const endLine = tokens[middle].endLine;
+
+		// Without a position the order cannot be decided; the search continues linearly from here.
+		if (!endLine) {
+			return low;
+		}
+
+		if (endLine < line) {
+			low = middle + 1;
+		} else {
+			high = middle;
+		}
+	}
+
+	return low;
 }
 
 /**

@@ -18,6 +18,7 @@ vi.mock('@comunica/query-sparql', () => ({
     }),
 }));
 
+import { QueryEngine } from '@comunica/query-sparql';
 import { SparqlQueryService } from '@src/languages/sparql/services/sparql-query-service';
 import type { SparqlQueryExecutionState } from '@src/languages/sparql/services/sparql-query-state';
 import * as vscode from 'vscode';
@@ -292,6 +293,91 @@ describe('SparqlQueryService – clearQueryHistory', () => {
 // ---------------------------------------------------------------------------
 // _getQueryType
 // ---------------------------------------------------------------------------
+describe('SparqlQueryService – history footprint', () => {
+    function makeFinishedState(documentIri: string, startTime: number): SparqlQueryExecutionState {
+        return {
+            ...makeState(documentIri, startTime),
+            endTime: startTime + 10,
+            result: { type: 'bindings', columns: ['s'], rows: [], namespaceMap: {} },
+            rawResponse: { url: 'http://example.org/sparql', status: 200, statusText: 'OK', body: 'x'.repeat(1000) },
+            error: { type: 'QueryError', message: 'boom', stack: 'Error: boom\n    at query' },
+        };
+    }
+
+    async function logQueries(service: SparqlQueryService, count: number, firstIndex = 0): Promise<void> {
+        for (let index = firstIndex; index < firstIndex + count; index++) {
+            await (service as any)._logQueryExecution(makeFinishedState(`file:///q${index}.sparql`, index));
+        }
+    }
+
+    it('persists history entries as metadata: no result, raw response or error stack', async () => {
+        const context = makeContext();
+        const service = makeService(context);
+
+        service.getQueryHistory().push(makeFinishedState('file:///a.sparql', 1000));
+
+        await (service as any)._persistQueryHistory();
+
+        const [, persisted] = vi.mocked(context.workspaceState.update).mock.calls.slice(-1)[0];
+
+        expect(persisted).toHaveLength(1);
+        expect(persisted[0].documentIri).toBe('file:///a.sparql');
+        expect(persisted[0].result).toBeUndefined();
+        expect(persisted[0].rawResponse).toBeUndefined();
+        expect(persisted[0].error.message).toBe('boom');
+        expect(persisted[0].error.stack).toBeUndefined();
+    });
+
+    it('does not persist notebook cell queries, whose document IRIs do not survive a restart', async () => {
+        const context = makeContext();
+        const service = makeService(context);
+
+        service.getQueryHistory().push(makeFinishedState('vscode-notebook-cell:/w/notebook.mnb#cell1', 1000));
+
+        await (service as any)._persistQueryHistory();
+
+        const [, persisted] = vi.mocked(context.workspaceState.update).mock.calls.slice(-1)[0];
+
+        expect(persisted).toEqual([]);
+    });
+
+    it('keeps results and raw responses only for the ten most recent finished queries', async () => {
+        const service = makeService();
+
+        await logQueries(service, 11);
+
+        const history = service.getQueryHistory();
+
+        expect(history).toHaveLength(11);
+        expect(history[0].result).toBeDefined();
+        expect(history[9].result).toBeDefined();
+        expect(history[9].rawResponse).toBeDefined();
+        expect(history[10].result).toBeUndefined();
+        expect(history[10].rawResponse).toBeUndefined();
+        expect(history[10].documentIri).toBe('file:///q0.sparql');
+    });
+
+    it('leaves the fields of a query that is still running untouched', async () => {
+        const service = makeService();
+        const running = { ...makeFinishedState('file:///running.sparql', 0), endTime: undefined };
+
+        await (service as any)._logQueryExecution(running);
+        await logQueries(service, 11, 1);
+
+        expect(running.result).toBeDefined();
+        expect(running.rawResponse).toBeDefined();
+    });
+
+    it('caps the history at 100 entries', async () => {
+        const service = makeService();
+
+        await logQueries(service, 105);
+
+        expect(service.getQueryHistory()).toHaveLength(100);
+        expect(service.getQueryHistory()[0].documentIri).toBe('file:///q104.sparql');
+    });
+});
+
 describe('SparqlQueryService – _getQueryType', () => {
     let service: ReturnType<typeof makeService>;
 
@@ -1061,3 +1147,33 @@ describe('SparqlQueryService – executeQuery (background query)', () => {
     });
 });
 
+// ---------------------------------------------------------------------------
+// _getQueryEngine – lazy Comunica loading
+// ---------------------------------------------------------------------------
+describe('SparqlQueryService – _getQueryEngine', () => {
+    const queryEngineMock = vi.mocked(QueryEngine);
+
+    it('creates a single engine for concurrent first queries', async () => {
+        const service = makeService();
+        const callsBefore = queryEngineMock.mock.calls.length;
+
+        const [first, second] = await Promise.all([
+            (service as any)._getQueryEngine(),
+            (service as any)._getQueryEngine(),
+        ]);
+
+        expect(first).toBe(second);
+        expect(queryEngineMock.mock.calls.length - callsBefore).toBe(1);
+    });
+
+    it('retries creating the engine after a failed attempt', async () => {
+        const service = makeService();
+
+        queryEngineMock.mockImplementationOnce(function () {
+            throw new Error('Engine construction failed');
+        });
+
+        await expect((service as any)._getQueryEngine()).rejects.toThrow('Engine construction failed');
+        await expect((service as any)._getQueryEngine()).resolves.toBeDefined();
+    });
+});

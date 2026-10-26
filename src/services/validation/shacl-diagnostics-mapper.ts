@@ -23,8 +23,12 @@ export class ShaclDiagnosticsMapper {
 		// next-subject boundary per result is a binary search instead of a scan.
 		const subjectStartLines = this._getSortedSubjectStartLines(context);
 
+		// Index the quad contexts once so that each result is matched with a lookup
+		// instead of a scan over all quads of the document.
+		const quadContextIndex = this._indexQuadContexts(quadContexts);
+
 		for (const entry of result.results) {
-			const range = this._resolveRange(entry, context, subjectStartLines, quadContexts);
+			const range = this._resolveRange(entry, context, subjectStartLines, quadContextIndex);
 			const severity = this._mapSeverity(entry.severity);
 			const message = this._buildMessage(entry);
 
@@ -45,11 +49,11 @@ export class ShaclDiagnosticsMapper {
 	 * Resolve the document range for a validation result entry.
 	 * Prefers highlighting the offending predicate or value over the focus node.
 	 */
-	private _resolveRange(entry: ShaclValidationResultEntry, context: IDocumentContext, subjectStartLines: number[], quadContexts?: QuadContext[]): vscode.Range {
+	private _resolveRange(entry: ShaclValidationResultEntry, context: IDocumentContext, subjectStartLines: number[], quadContextIndex: Map<string, QuadContext>): vscode.Range {
 		// 0. Try to resolve the exact object token position from quad contexts.
 		//    This handles cases where the same subject appears on multiple non-contiguous
 		//    lines (e.g. repeated predicates), which defeats the heuristic anchor window.
-		const fromQuad = this._resolveRangeFromQuadContext(entry, quadContexts);
+		const fromQuad = this._resolveRangeFromQuadContext(entry, quadContextIndex);
 
 		if (fromQuad) {
 			return fromQuad;
@@ -65,7 +69,7 @@ export class ShaclDiagnosticsMapper {
 
 		// 1. Try the value IRI (most specific).
 		if (entry.value) {
-			const r = this._firstRangeAfterLine(context.references[entry.value], focusNodeStartLine, nextSubjectStartLine);
+			const r = this._firstRangeAfterLine(context.references.getRanges(entry.value), focusNodeStartLine, nextSubjectStartLine);
 
 			if (r) {
 				return r;
@@ -74,7 +78,7 @@ export class ShaclDiagnosticsMapper {
 
 		// 2. Try the predicate path.
 		if (entry.path) {
-			const r = this._firstRangeAfterLine(context.references[entry.path], focusNodeStartLine, nextSubjectStartLine);
+			const r = this._firstRangeAfterLine(context.references.getRanges(entry.path), focusNodeStartLine, nextSubjectStartLine);
 
 			if (r) {
 				return r;
@@ -83,11 +87,9 @@ export class ShaclDiagnosticsMapper {
 
 		// 3. Fall back to the focus node subject position.
 		if (focusNodeStartLine !== undefined) {
-			const allRanges = context.subjects[entry.focusNode] ?? context.references[entry.focusNode];
+			const r = context.subjects.first(entry.focusNode) ?? context.references.first(entry.focusNode);
 
-			if (allRanges?.length) {
-				const r = allRanges[0];
-
+			if (r) {
 				return new vscode.Range(r.start.line, r.start.character, r.end.line, r.end.character);
 			}
 		}
@@ -101,16 +103,38 @@ export class ShaclDiagnosticsMapper {
 	 * quad in the quad context list and returning the range of its object token.
 	 * Returns undefined if no quad context is available or no match is found.
 	 */
-	private _resolveRangeFromQuadContext(entry: ShaclValidationResultEntry, quadContexts?: QuadContext[]): vscode.Range | undefined {
-		if (!entry.value || !entry.path || !quadContexts?.length) return undefined;
+	private _resolveRangeFromQuadContext(entry: ShaclValidationResultEntry, quadContextIndex: Map<string, QuadContext>): vscode.Range | undefined {
+		if (!entry.value || !entry.path) return undefined;
 
-		const match = quadContexts.find(qc =>
-			qc.subject.value === entry.focusNode &&
-			qc.predicate.value === entry.path &&
-			qc.object.value === entry.value
-		);
+		const match = quadContextIndex.get(this._getQuadKey(entry.focusNode, entry.path, entry.value));
 
 		return match ? this._rangeFromToken(match.objectToken) : undefined;
+	}
+
+	/**
+	 * Indexes quad contexts by their subject, predicate and object values. The first quad
+	 * context of a statement wins, as with a search from the start of the document.
+	 * @param quadContexts The quad contexts of the document, if available.
+	 */
+	private _indexQuadContexts(quadContexts?: QuadContext[]): Map<string, QuadContext> {
+		const index = new Map<string, QuadContext>();
+
+		for (const quadContext of quadContexts ?? []) {
+			const key = this._getQuadKey(quadContext.subject.value, quadContext.predicate.value, quadContext.object.value);
+
+			if (!index.has(key)) {
+				index.set(key, quadContext);
+			}
+		}
+
+		return index;
+	}
+
+	/**
+	 * Returns the index key of a statement.
+	 */
+	private _getQuadKey(subject: string, predicate: string, object: string): string {
+		return `${subject}\u0000${predicate}\u0000${object}`;
 	}
 
 	/**
@@ -136,9 +160,9 @@ export class ShaclDiagnosticsMapper {
 	 * Returns the start line of the focus node in the document, or undefined if not found.
 	 */
 	private _getFocusNodeStartLine(focusNode: string, context: IDocumentContext): number | undefined {
-		const ranges = context.subjects[focusNode] ?? context.references[focusNode];
+		const range = context.subjects.first(focusNode) ?? context.references.first(focusNode);
 
-		return ranges?.length ? ranges[0].start.line : undefined;
+		return range?.start.line;
 	}
 
 	/**
@@ -147,9 +171,11 @@ export class ShaclDiagnosticsMapper {
 	private _getSortedSubjectStartLines(context: IDocumentContext): number[] {
 		const lines: number[] = [];
 
-		for (const ranges of Object.values(context.subjects)) {
-			if (ranges?.length) {
-				lines.push(ranges[0].start.line);
+		for (const subject of context.subjects.keys()) {
+			const first = context.subjects.first(subject);
+
+			if (first) {
+				lines.push(first.start.line);
 			}
 		}
 

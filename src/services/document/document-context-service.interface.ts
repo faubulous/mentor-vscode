@@ -65,6 +65,30 @@ export interface IDocumentContextService {
 	loadDocument(document: vscode.TextDocument, forceReload?: boolean): Promise<IDocumentContext | undefined>;
 
 	/**
+	 * Loads the document of the editor that is active when the extension starts and
+	 * makes it the active context. Called once, after all views and providers have
+	 * subscribed to {@link onDidChangeDocumentContext}, so that none of them misses
+	 * the first change.
+	 */
+	loadActiveEditorAtStartup(): Promise<void>;
+
+	/**
+	 * Indicates whether a load or triple reload of a document is in progress. Readers
+	 * of the triple store then wait with {@link waitUntilLoaded}, so that they see all
+	 * triples of the document, including the inferred ones, and not the state between
+	 * two phases of the load.
+	 * @param uri The document URI.
+	 */
+	isLoading(uri: string): boolean;
+
+	/**
+	 * Waits until the load or triple reload of a document that is in progress has
+	 * finished. Resolves at once when none is in progress.
+	 * @param uri The document URI.
+	 */
+	waitUntilLoaded(uri: string): Promise<void>;
+
+	/**
 	 * Activate the document associated with the active context in the editor.
 	 * @returns A promise that resolves to the active text editor or `undefined`.
 	 */

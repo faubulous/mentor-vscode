@@ -107,52 +107,36 @@ describe('DocumentContext – isTemporary', () => {
 // primaryLanguage
 // ---------------------------------------------------------------------------
 describe('DocumentContext – primaryLanguage', () => {
-    it('returns undefined when predicateStats is empty', () => {
+    it('returns undefined when no literals were counted', () => {
         const doc = makeDoc();
-        doc.predicateStats = {};
+        doc.languageTagStats = {};
         expect(doc.primaryLanguage).toBeUndefined();
     });
 
     it('returns the most frequently used language tag', () => {
         const doc = makeDoc();
-        doc.predicateStats = {
-            'http://www.w3.org/2000/01/rdf-schema#label': {
-                count: 3,
-                languageTags: { en: 2, de: 1 },
-            },
-        } as any;
+        doc.languageTagStats = { en: 2, de: 1 };
         expect(doc.primaryLanguage).toBe('en');
     });
 
     it('returns undefined when all tags are empty strings', () => {
         const doc = makeDoc();
-        doc.predicateStats = {
-            'http://www.w3.org/2000/01/rdf-schema#label': {
-                count: 1,
-                languageTags: { '': 5 },
-            },
-        } as any;
+        doc.languageTagStats = { '': 5 };
         expect(doc.primaryLanguage).toBeUndefined();
     });
 
-    it('accumulates counts across multiple predicates', () => {
+    it('does not pick untagged literals, even when they are the most frequent', () => {
         const doc = makeDoc();
-        doc.predicateStats = {
-            predA: { count: 2, languageTags: { en: 1, fr: 3 } },
-            predB: { count: 2, languageTags: { en: 5, fr: 1 } },
-        } as any;
-        // en total: 6, fr total: 4 → primary is 'en'
-        expect(doc.primaryLanguage).toBe('en');
+        doc.languageTagStats = { '': 10, fr: 1 };
+        expect(doc.primaryLanguage).toBe('fr');
     });
 
-    it('caches the computed value on repeated access', () => {
+    it('derives the primary language again when the statistics change', () => {
         const doc = makeDoc();
-        doc.predicateStats = {
-            pred: { count: 1, languageTags: { nl: 10 } },
-        } as any;
-        const first = doc.primaryLanguage;
-        doc.predicateStats = {}; // mutate — cached value should still be returned
-        expect(doc.primaryLanguage).toBe(first);
+        doc.languageTagStats = { nl: 10 };
+        expect(doc.primaryLanguage).toBe('nl');
+        doc.languageTagStats = { de: 3 };
+        expect(doc.primaryLanguage).toBe('de');
     });
 });
 
@@ -347,7 +331,7 @@ describe('DocumentContext – getResourceLabel (AnnotatedLabels)', () => {
             { object: makeLiteral('Thing', 'en') },
         ];
         const doc = makeDoc();
-        doc.predicateStats = { pred: { count: 1, languageTags: { de: 5, en: 1 } } } as any;
+        doc.languageTagStats = { de: 5, en: 1 };
         doc.activeLanguageTag = 'fr'; // no 'fr' literal exists
         const label = doc.getResourceLabel('http://example.org/Thing');
         // Should return 'de' (primary) or 'en' (fallback), not 'fr'
@@ -462,7 +446,7 @@ describe('DocumentContext – getResourceLabel (AnnotatedLabels advanced)', () =
             { object: makeLiteral('Deutsch', 'de') },
         ];
         const doc = makeDoc();
-        doc.predicateStats = { pred: { count: 1, languageTags: { de: 5 } } } as any;
+        doc.languageTagStats = { de: 5 };
         doc.activeLanguageTag = 'fr'; // no 'fr' literal → language label not set
         // activeLanguage = 'fr', 'de'.startsWith('fr') is false → no languageLabel
         // primaryLanguage = 'de', literal.language === 'de' → primaryLabel = literal

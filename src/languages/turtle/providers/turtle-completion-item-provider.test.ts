@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { createRangeIndex } from '@src/utilities/mocks/factories';
 import { RdfToken } from '@faubulous/mentor-rdf-parsers';
 
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
@@ -46,6 +47,8 @@ function makeProvider(): TurtleCompletionItemProvider {
     const provider = new TurtleCompletionItemProvider(createMockDocumentContextService(), createTestVocabulary());
 
     (provider as any)._contextService = ({
+        isLoading: () => false,
+        waitUntilLoaded: async () => {},
         getDocumentContext: () => null,
         getDocumentContextFromUri: () => null,
         contexts: {},
@@ -65,9 +68,9 @@ function makeMockContext(tokens: any[], namespaces: Record<string, string> = {},
     return {
         tokens,
         namespaces,
-        subjects,
+        subjects: createRangeIndex(Object.keys(subjects)),
         graphIri,
-        tokenize: vi.fn(() => tokens),
+        tokenizeDocument: vi.fn(() => tokens),
         getResourceDescription: vi.fn(() => undefined),
     };
 }
@@ -98,12 +101,46 @@ describe('TurtleCompletionItemProvider', () => {
             expect(result).toBeNull();
         });
 
+        it('answers only after a load of the document in progress has finished', async () => {
+            const provider = makeProvider();
+            const getDocumentContext = vi.fn(() => null);
+
+            let finishLoad!: () => void;
+            let loading = true;
+
+            const load = new Promise<void>(resolve => finishLoad = resolve);
+
+            (provider as any)._contextService = ({
+                isLoading: () => loading,
+                waitUntilLoaded: () => load,
+                getDocumentContext,
+                getDocumentContextFromUri: () => null,
+                contexts: {},
+            });
+
+            const doc = createMockTextDocument('ex:F', { uri: 'file:///w/test.ttl' });
+            const result = provider.provideCompletionItems(doc, new vscode.Position(0, 0), cancellationToken, completionContext);
+
+            await Promise.resolve();
+
+            expect(getDocumentContext).not.toHaveBeenCalled();
+
+            loading = false;
+            finishLoad();
+
+            await result;
+
+            expect(getDocumentContext).toHaveBeenCalledOnce();
+        });
+
         it('returns null when token index is less than 1', () => {
             const provider = makeProvider();
             // Position (0,0) sits at the first/only token → index 0 → provider returns null.
             const mockCtx = makeMockContext([makeToken(RdfToken.PNAME_LN.name, 'ex:F')]);
 
             (provider as any)._contextService = ({
+                isLoading: () => false,
+                waitUntilLoaded: async () => {},
                 getDocumentContext: () => mockCtx,
                 getDocumentContextFromUri: () => null,
                 contexts: {},
@@ -124,6 +161,8 @@ describe('TurtleCompletionItemProvider', () => {
             const mockCtx = makeMockContext(tokens, {});
 
             (provider as any)._contextService = ({
+                isLoading: () => false,
+                waitUntilLoaded: async () => {},
                 getDocumentContext: () => mockCtx,
                 getDocumentContextFromUri: () => null,
                 contexts: {},
@@ -140,11 +179,13 @@ describe('TurtleCompletionItemProvider', () => {
                 makeToken(RdfToken.PERIOD.name, '.', { startColumn: 1, endColumn: 1 }),
                 makeToken(RdfToken.PNAME_LN.name, 'ex:F', { startColumn: 2, endColumn: 5 }),
             ];
-            // The stored tokens are stale/empty — only tokenize() returns the fresh tokens.
+            // The stored tokens are stale/empty — only tokenizeDocument() returns the fresh tokens.
             const mockCtx = makeMockContext([], {});
-            mockCtx.tokenize = vi.fn(() => tokens);
+            mockCtx.tokenizeDocument = vi.fn(() => tokens);
 
             (provider as any)._contextService = ({
+                isLoading: () => false,
+                waitUntilLoaded: async () => {},
                 getDocumentContext: () => mockCtx,
                 getDocumentContextFromUri: () => null,
                 contexts: {},
@@ -153,7 +194,7 @@ describe('TurtleCompletionItemProvider', () => {
             const doc = createMockTextDocument('. ex:F', { uri: 'file:///w/test.ttl' });
             const result = provider.provideCompletionItems(doc, new vscode.Position(0, 3), cancellationToken, completionContext) as vscode.CompletionList;
 
-            expect(mockCtx.tokenize).toHaveBeenCalledWith('. ex:F');
+            expect(mockCtx.tokenizeDocument).toHaveBeenCalledWith(doc);
             expect(Array.isArray(result.items)).toBe(true);
         });
     });
@@ -178,6 +219,8 @@ describe('TurtleCompletionItemProvider', () => {
             context.setTokens(tokens as any);
 
             (provider as any)._contextService = ({
+                isLoading: () => false,
+                waitUntilLoaded: async () => {},
                 getDocumentContext: () => context,
                 getDocumentContextFromUri: () => null,
                 contexts: {},
@@ -198,6 +241,8 @@ describe('TurtleCompletionItemProvider', () => {
             context.setTokens(tokens as any);
 
             (provider as any)._contextService = ({
+                isLoading: () => false,
+                waitUntilLoaded: async () => {},
                 getDocumentContext: () => context,
                 getDocumentContextFromUri: () => null,
                 contexts: {},
@@ -234,6 +279,8 @@ describe('TurtleCompletionItemProvider', () => {
             };
 
             (provider as any)._contextService = ({
+                isLoading: () => false,
+                waitUntilLoaded: async () => {},
                 getDocumentContext: () => mockCtx,
                 getDocumentContextFromUri: vi.fn(() => null),
                 contexts: {},
@@ -260,10 +307,12 @@ describe('TurtleCompletionItemProvider', () => {
             const mockCtx = makeMockContext(tokens, { ex: 'http://example.org/' });
             // A sub-context that has a subject matching the prefix
             const subContext = {
-                subjects: { 'http://example.org/Foo': true, 'http://example.org/Bar': true },
+                subjects: createRangeIndex(['http://example.org/Foo', 'http://example.org/Bar']),
             };
 
             (provider as any)._contextService = ({
+                isLoading: () => false,
+                waitUntilLoaded: async () => {},
                 getDocumentContext: () => mockCtx,
                 getDocumentContextFromUri: vi.fn((uri: string) =>
                     uri === 'workspace:///test.ttl' || uri === 'http://example.org/' ? subContext : null
@@ -290,7 +339,7 @@ describe('TurtleCompletionItemProvider', () => {
             // context's graphIri falls back to the document URI itself.
             const mockCtx = makeMockContext(tokens, { ex: 'http://example.org/' }, {}, 'untitled:Untitled-1');
             const subContext = {
-                subjects: { 'http://example.org/Foo': true },
+                subjects: createRangeIndex(['http://example.org/Foo']),
             };
 
             const getDocumentContextFromUri = vi.fn((uri: string) =>
@@ -298,6 +347,8 @@ describe('TurtleCompletionItemProvider', () => {
             );
 
             (provider as any)._contextService = ({
+                isLoading: () => false,
+                waitUntilLoaded: async () => {},
                 getDocumentContext: () => mockCtx,
                 getDocumentContextFromUri,
                 contexts: {},
@@ -319,10 +370,12 @@ describe('TurtleCompletionItemProvider', () => {
             ];
             const mockCtx = makeMockContext(tokens, { ex: 'http://example.org/' });
             const globalContext = {
-                subjects: { 'http://example.org/Fizz': true },
+                subjects: createRangeIndex(['http://example.org/Fizz']),
             };
 
             (provider as any)._contextService = ({
+                isLoading: () => false,
+                waitUntilLoaded: async () => {},
                 getDocumentContext: () => mockCtx,
                 // Return null for graph-based lookup (no local context for those URIs)
                 getDocumentContextFromUri: vi.fn(() => null),
@@ -344,11 +397,13 @@ describe('TurtleCompletionItemProvider', () => {
                 makeToken(RdfToken.PNAME_LN.name, 'ex:F'),
             ];
             const mockCtx = makeMockContext(tokens, { ex: 'http://example.org/' });
-            const ctx1 = { subjects: { 'http://example.org/Foo': true } };
-            const ctx2 = { subjects: { 'http://example.org/Foo': true, 'http://example.org/Far': true } };
+            const ctx1 = { subjects: createRangeIndex(['http://example.org/Foo']) };
+            const ctx2 = { subjects: createRangeIndex(['http://example.org/Foo', 'http://example.org/Far']) };
 
             let callCount = 0;
             (provider as any)._contextService = ({
+                isLoading: () => false,
+                waitUntilLoaded: async () => {},
                 getDocumentContext: () => mockCtx,
                 getDocumentContextFromUri: vi.fn(() => {
                     callCount++;
@@ -377,8 +432,10 @@ describe('TurtleCompletionItemProvider', () => {
                 subjects[`http://example.org/${String.fromCharCode(65 + i)}`] = true;
             }
             (provider as any)._contextService = ({
+                isLoading: () => false,
+                waitUntilLoaded: async () => {},
                 getDocumentContext: () => mockCtx,
-                getDocumentContextFromUri: vi.fn(() => ({ subjects })),
+                getDocumentContextFromUri: vi.fn(() => ({ subjects: createRangeIndex(Object.keys(subjects)) })),
                 contexts: {},
             });
 
@@ -399,8 +456,10 @@ describe('TurtleCompletionItemProvider', () => {
             ];
             const mockCtx = makeMockContext(tokens, { ex: 'http://example.org/' });
             (provider as any)._contextService = ({
+                isLoading: () => false,
+                waitUntilLoaded: async () => {},
                 getDocumentContext: () => mockCtx,
-                getDocumentContextFromUri: vi.fn(() => ({ subjects: { 'http://example.org/Foo': true } })),
+                getDocumentContextFromUri: vi.fn(() => ({ subjects: createRangeIndex(['http://example.org/Foo']) })),
                 contexts: {},
             });
 
@@ -427,8 +486,10 @@ describe('TurtleCompletionItemProvider', () => {
             };
 
             (provider as any)._contextService = ({
+                isLoading: () => false,
+                waitUntilLoaded: async () => {},
                 getDocumentContext: () => mockCtx,
-                getDocumentContextFromUri: vi.fn(() => ({ subjects })),
+                getDocumentContextFromUri: vi.fn(() => ({ subjects: createRangeIndex(Object.keys(subjects)) })),
                 contexts: {},
             });
             (provider as any)._vocabulary = ({
@@ -465,8 +526,10 @@ describe('TurtleCompletionItemProvider', () => {
             };
 
             (provider as any)._contextService = ({
+                isLoading: () => false,
+                waitUntilLoaded: async () => {},
                 getDocumentContext: () => mockCtx,
-                getDocumentContextFromUri: vi.fn(() => ({ subjects })),
+                getDocumentContextFromUri: vi.fn(() => ({ subjects: createRangeIndex(Object.keys(subjects)) })),
                 contexts: {},
             });
             (provider as any)._vocabulary = ({
@@ -506,8 +569,10 @@ describe('TurtleCompletionItemProvider', () => {
             };
 
             (provider as any)._contextService = ({
+                isLoading: () => false,
+                waitUntilLoaded: async () => {},
                 getDocumentContext: () => mockCtx,
-                getDocumentContextFromUri: vi.fn(() => ({ subjects })),
+                getDocumentContextFromUri: vi.fn(() => ({ subjects: createRangeIndex(Object.keys(subjects)) })),
                 contexts: {},
             });
             (provider as any)._vocabulary = ({
@@ -539,8 +604,10 @@ describe('TurtleCompletionItemProvider', () => {
             };
 
             (provider as any)._contextService = ({
+                isLoading: () => false,
+                waitUntilLoaded: async () => {},
                 getDocumentContext: () => mockCtx,
-                getDocumentContextFromUri: vi.fn(() => ({ subjects })),
+                getDocumentContextFromUri: vi.fn(() => ({ subjects: createRangeIndex(Object.keys(subjects)) })),
                 contexts: {},
             });
             (provider as any)._vocabulary = ({
@@ -581,8 +648,10 @@ describe('TurtleCompletionItemProvider', () => {
             subjects[`${ns}zClass`] = true;
 
             (provider as any)._contextService = ({
+                isLoading: () => false,
+                waitUntilLoaded: async () => {},
                 getDocumentContext: () => mockCtx,
-                getDocumentContextFromUri: vi.fn(() => ({ subjects })),
+                getDocumentContextFromUri: vi.fn(() => ({ subjects: createRangeIndex(Object.keys(subjects)) })),
                 contexts: {},
             });
             (provider as any)._vocabulary = ({
@@ -613,8 +682,10 @@ describe('TurtleCompletionItemProvider', () => {
             const mockCtx = makeMockContext([], { nexus: 'http://example.org/nexus#' });
 
             (provider as any)._contextService = ({
+                isLoading: () => false,
+                waitUntilLoaded: async () => {},
                 getDocumentContext: () => mockCtx,
-                getDocumentContextFromUri: vi.fn(() => ({ subjects })),
+                getDocumentContextFromUri: vi.fn(() => ({ subjects: createRangeIndex(Object.keys(subjects)) })),
                 contexts: {},
             });
 

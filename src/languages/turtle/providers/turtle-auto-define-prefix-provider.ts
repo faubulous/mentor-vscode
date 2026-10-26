@@ -5,7 +5,6 @@ import { TurtlePrefixDefinitionService } from '@src/languages/turtle/services/tu
 import { getConfig } from '@src/utilities/vscode/config';
 import { getContentStartOffset, getTokenIndexAtPosition } from '@src/utilities';
 import { isTemplate } from 'triplate';
-import { isTokenizedDocumentContext } from '@src/services/document/document-context.interface';
 
 /**
  * A provider that automatically defines namespace prefixes when a colon is typed
@@ -114,11 +113,11 @@ export class TurtleAutoDefinePrefixProvider implements vscode.Disposable {
 	private async _tryAutoDefineBodyPrefix(document: vscode.TextDocument, position: vscode.Position): Promise<void> {
 		const context = this._contextService.getContextFromUri(document.uri.toString());
 
-		if (!context || !isTokenizedDocumentContext(context)) {
+		if (!context || !context.isTokenized()) {
 			return;
 		}
 
-		const tokens = context.tokenize(document.getText());
+		const tokens = context.tokenizeDocument(document);
 		const n = getTokenIndexAtPosition(tokens, position);
 
 		if (n > 0) {

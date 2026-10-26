@@ -1,12 +1,13 @@
 import * as vscode from 'vscode';
 import type { ILexingError } from 'chevrotain';
-import { createFileBlankNodeIdGenerator, IRecognitionException, IToken, RdfSyntax, tokenizeWithTriplate } from '@faubulous/mentor-rdf-parsers';
+import { createFileBlankNodeIdGenerator, IRecognitionException, IToken, RdfSyntax, tokenizeWithTriplate, TriplateLexingResult, TurtleQuadReader } from '@faubulous/mentor-rdf-parsers';
 import { Diagnostic as LspDiagnostic, DiagnosticSeverity as LspDiagnosticSeverity, Range as LspRange } from 'vscode-languageserver-types';
 import { ParserFactory } from '@src/languages/parser-factory';
 import { SparqlUnusedVariableLinter } from '@src/languages/sparql/sparql-unused-variable-linter';
 import { XmlParser } from '@src/languages/xml/xml-parser';
+import { XmlDocument } from '@src/languages/xml/xml-document';
 import { getConfig } from '@src/utilities/vscode/config';
-import { createYieldBudget } from '@src/utilities/scheduling';
+import { createEventLoopYielder, yieldToEventLoop } from '@src/utilities/scheduling';
 import { getNamespaceDefinition, PrefixMap } from '@src/utilities';
 import { createPositionMapper, PositionMapper } from '@src/utilities/position';
 import { LintingContext, LintingProvider } from '@src/providers/linting';
@@ -17,8 +18,8 @@ import {
 	XsdAnyUriLiteralLinter,
 	XsdDatatypeValidationLinter,
 } from '@src/providers/linting/linters';
-import { IDocumentContext, isTokenizedDocumentContext, ITokenizedDocumentContext } from './document-context.interface';
-import { IDocumentTokenSource } from './document-token-source.interface';
+import { IDocumentContext, ITokenizedDocumentContext } from './document-context.interface';
+import { IDocumentTokenSource, TokenDelivery } from './document-token-source.interface';
 
 /**
  * Computes document diagnostics in the extension host: syntax (lexer/parser)
@@ -61,6 +62,11 @@ export class DocumentDiagnosticsService implements vscode.Disposable {
 	private readonly _subscriptions: vscode.Disposable[] = [];
 
 	/**
+	 * The URIs of loaded documents whose validation waits for the event loop.
+	 */
+	private readonly _pendingLoadValidations = new Set<string>();
+
+	/**
 	 * @param tokenSource The token source whose deliveries trigger validation.
 	 * @param _getContext Returns the document context for a URI, or `undefined` when
 	 * none is loaded. Injected as a function to avoid a construction-order cycle with
@@ -71,7 +77,7 @@ export class DocumentDiagnosticsService implements vscode.Disposable {
 		private readonly _getContext: (uri: string) => IDocumentContext | undefined
 	) {
 		this._subscriptions.push(
-			tokenSource.onDidDeliverTokens(delivery => this._validateIfInScope(delivery.uri)),
+			tokenSource.onDidDeliverTokens(delivery => this._handleTokenDelivery(delivery)),
 			vscode.window.onDidChangeVisibleTextEditors(editors => {
 				for (const editor of editors) {
 					this._validate(editor.document);
@@ -119,23 +125,29 @@ export class DocumentDiagnosticsService implements vscode.Disposable {
 	 * @param uris The files to validate.
 	 * @param onProgress Optional callback invoked once per file with the number
 	 * processed so far and the total, for status bar progress.
+	 * @param token Optional token that stops the validation before the next file.
 	 * @returns The number of files validated and how many have at least one error.
 	 */
 	async diagnoseFiles(
 		uris: readonly vscode.Uri[],
-		onProgress?: (processed: number, total: number) => void
+		onProgress?: (processed: number, total: number) => void,
+		token?: vscode.CancellationToken
 	): Promise<{ validated: number; filesWithErrors: number }> {
 		let validated = 0;
 		let filesWithErrors = 0;
 
 		// Validation is CPU-bound; yield between files so a workspace-wide pass
 		// does not block the extension host.
-		const yieldBudget = createYieldBudget();
+		const eventLoop = createEventLoopYielder();
 
 		for (let i = 0; i < uris.length; i++) {
 			const uri = uris[i];
 
-			await yieldBudget.maybeYield();
+			await eventLoop.yieldIfBusy();
+
+			if (token?.isCancellationRequested) {
+				break;
+			}
 
 			onProgress?.(i + 1, uris.length);
 
@@ -197,6 +209,41 @@ export class DocumentDiagnosticsService implements vscode.Disposable {
 		}
 
 		this._collection.delete(document.uri);
+	}
+
+	/**
+	 * Validates a document whose tokens were delivered. An edit is validated right
+	 * away, so that errors show as soon as possible. A document load is validated
+	 * after the event loop has polled for I/O: requests that only need the tokens,
+	 * such as go to definition, are answered before the diagnostics are computed.
+	 * @param delivery The token delivery.
+	 */
+	private _handleTokenDelivery(delivery: TokenDelivery): void {
+		if (delivery.consumed) {
+			this._validateAfterYield(delivery.uri);
+		} else {
+			this._pendingLoadValidations.delete(delivery.uri);
+			this._validateIfInScope(delivery.uri);
+		}
+	}
+
+	/**
+	 * Validates the document for a URI once the event loop has polled for I/O,
+	 * unless an edit validated it in the meantime.
+	 * @param uri The document URI.
+	 */
+	private async _validateAfterYield(uri: string): Promise<void> {
+		if (this._pendingLoadValidations.has(uri)) {
+			return;
+		}
+
+		this._pendingLoadValidations.add(uri);
+
+		await yieldToEventLoop();
+
+		if (this._pendingLoadValidations.delete(uri)) {
+			this._validateIfInScope(uri);
+		}
 	}
 
 	/**
@@ -281,13 +328,17 @@ export class DocumentDiagnosticsService implements vscode.Disposable {
 		}
 
 		try {
-			if (isTokenizedDocumentContext(context)) {
+			if (context.isTokenized()) {
 				this._collection.set(uri, this._computeDiagnostics(uri, context, content, positionAt));
 			} else {
 				// Structurally parsed documents (RDF/XML): the parse either succeeds
 				// or the catch below reports the failure, matching the previous
-				// language server behavior.
-				new XmlParser().parse(content);
+				// language server behavior. A text the document context has just
+				// parsed without error is not parsed a second time.
+				if (!(context instanceof XmlDocument && context.isParsedFrom(content))) {
+					new XmlParser().parse(content);
+				}
+
 				this._collection.set(uri, []);
 			}
 		} catch (e) {
@@ -332,12 +383,7 @@ export class DocumentDiagnosticsService implements vscode.Disposable {
 
 			tokens = lexingResult.tokens;
 			lexErrors = lexingResult.errors;
-
-			const parser = ParserFactory.getParser(context.syntax);
-
-			parser.parse(lexingResult.parseTokens, false);
-
-			errors = [...parser.errors, ...parser.semanticErrors];
+			errors = this._getSyntaxErrors(context.syntax, lexingResult);
 		}
 
 		const linters = context.syntax === RdfSyntax.Sparql
@@ -351,6 +397,35 @@ export class DocumentDiagnosticsService implements vscode.Disposable {
 		];
 
 		return diagnostics.map(d => this._toVscodeDiagnostic(d));
+	}
+
+	/**
+	 * Returns the syntax errors of a lexed document. A Turtle document is read
+	 * with the quad reader first, the way the document context reads it (see
+	 * `TurtleDocument._analyze`): a document the reader accepts has no syntax
+	 * errors, and only a rejected one goes through the grammar parser with error
+	 * recovery, which lists every error but costs far more.
+	 * @param syntax The syntax of the document.
+	 * @param lexingResult The tokens of the document.
+	 * @returns The parser and semantic errors.
+	 */
+	private _getSyntaxErrors(syntax: RdfSyntax, lexingResult: TriplateLexingResult): IRecognitionException[] {
+		if (syntax === RdfSyntax.Turtle && !lexingResult.template) {
+			try {
+				new TurtleQuadReader().read(lexingResult.tokens);
+
+				return [];
+			} catch {
+				// A syntax error, or the reader giving up (e.g. on a pathologically nested
+				// document): the grammar parser reports what it finds.
+			}
+		}
+
+		const parser = ParserFactory.getParser(syntax);
+
+		parser.parse(lexingResult.parseTokens, false);
+
+		return [...parser.errors, ...parser.semanticErrors];
 	}
 
 	/**
@@ -489,6 +564,7 @@ export class DocumentDiagnosticsService implements vscode.Disposable {
 	}
 
 	dispose(): void {
+		this._pendingLoadValidations.clear();
 		this._collection.dispose();
 
 		for (const subscription of this._subscriptions) {

@@ -23,6 +23,7 @@ vi.mock('tsyringe', () => ({
 import * as vscode from 'vscode';
 import { XmlDocument } from '@src/languages/xml/xml-document';
 import { createXmlDocument } from '@src/utilities/mocks/factories';
+import { XmlParser } from '@src/languages/xml/xml-parser';
 import { ServiceToken } from '@src/services/tokens';
 
 beforeEach(() => {
@@ -411,7 +412,9 @@ describe('XmlDocument', () => {
             expect(mockStore.loadFromXmlStream).toHaveBeenCalledWith(
                 '<rdf:RDF />',
                 expect.any(String),
-                false
+                false,
+                true,
+                expect.any(Function)
             );
         });
 
@@ -420,5 +423,32 @@ describe('XmlDocument', () => {
             const doc = makeDoc('file:///bad.xml');
             await expect(doc.loadTriples('bad xml')).resolves.not.toThrow();
         });
+    });
+});
+
+describe('XmlDocument.isParsedFrom', () => {
+    const text = '<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" />';
+
+    it('recognizes the text that was parsed last', () => {
+        const doc = createXmlDocument('file:///a.rdf');
+
+        expect(doc.isParsedFrom(text)).toBe(false);
+
+        doc.parse(text);
+
+        expect(doc.isParsedFrom(text)).toBe(true);
+        expect(doc.isParsedFrom(text + ' ')).toBe(false);
+    });
+
+    it('does not recognize a text whose parse failed', () => {
+        const doc = createXmlDocument('file:///a.rdf');
+
+        doc.parse(text);
+
+        vi.spyOn(XmlParser.prototype, 'parse').mockImplementationOnce(() => { throw new Error('unexpected end of input'); });
+
+        expect(() => doc.parse('<rdf:RDF')).toThrow();
+        expect(doc.isParsedFrom(text)).toBe(false);
+        expect(doc.isParsedFrom('<rdf:RDF')).toBe(false);
     });
 });

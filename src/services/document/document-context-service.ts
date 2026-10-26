@@ -6,7 +6,7 @@ import { IDocumentTokenSource, TokenDelivery } from '@src/services/document/docu
 import { getMaxCellSlugNumber } from '@src/services/notebook/notebook-cell-slugs';
 import { WorkspaceUri } from '@src/providers/workspace-uri';
 import { getConfig } from '@src/utilities/vscode/config';
-import { createYieldBudget } from '@src/utilities/scheduling';
+import { createEventLoopYielder } from '@src/utilities/scheduling';
 import { isTemplate } from 'triplate';
 import { getLog } from '@src/utilities/vscode/log';
 import { getErrorMessage } from '@src/utilities/error';
@@ -49,6 +49,17 @@ export class DocumentContextService {
 	private readonly _closedDocumentLanguages = new Map<string, string>();
 
 	/**
+	 * The last value sent for the `mentor.editor.cursorOnResource` context key, or
+	 * `undefined` before it was first set.
+	 */
+	private _cursorOnResource: boolean | undefined;
+
+	/**
+	 * The loads and triple reloads in progress, keyed by document URI.
+	 */
+	private readonly _pendingLoads = new Map<string, Promise<void>>();
+
+	/**
 	 * An event that is fired after the active document context has changed.
 	 */
 	readonly onDidChangeDocumentContext = this._onDidChangeDocumentContext.event;
@@ -75,11 +86,11 @@ export class DocumentContextService {
 			this._onDidChangeDocumentContext,
 			this
 		]);
+	}
 
-		// If there is an active editor on startup, load its document and set the active context.
-		this.handleActiveEditorChanged().then(() => {
-			this.activateDocument();
-		});
+	async loadActiveEditorAtStartup(): Promise<void> {
+		await this.handleActiveEditorChanged();
+		await this.activateDocument();
 	}
 
 	/**
@@ -159,7 +170,16 @@ export class DocumentContextService {
 	 * Called when the language server delivers updated tokens for an already-loaded document.
 	 * @param uri The document URI.
 	 */
-	private async _reloadContextTriples(uri: string): Promise<void> {
+	private _reloadContextTriples(uri: string): Promise<void> {
+		return this._trackLoad(uri, this._reloadTriples(uri));
+	}
+
+	/**
+	 * Loads the triples of an existing context again and runs the inference; see
+	 * {@link _reloadContextTriples}.
+	 * @param uri The document URI.
+	 */
+	private async _reloadTriples(uri: string): Promise<void> {
 		const context = this.contexts[uri];
 
 		if (!context?.isParsed) return;
@@ -168,13 +188,21 @@ export class DocumentContextService {
 
 		if (!doc) return;
 
+		// Loading and inference each take seconds for very large documents; give the
+		// event loop a turn in between when a phase used up the budget.
+		const eventLoop = createEventLoopYielder();
+
 		await context.loadTriples(doc.getText());
+		await eventLoop.yieldIfBusy();
+
+		// Verify the context wasn't replaced while yielding.
+		if (this.contexts[uri] !== context) return;
+
 		await context.infer();
 
 		// Verify the context wasn't replaced during the async operations.
 		if (this.contexts[uri] !== context) return;
 
-		context.predicateStats = this._vocabulary.getPredicateUsageStats(context.graphs);
 		context.activeLanguageTag = getConfig().get('definitionTree.defaultLanguageTag', context.primaryLanguage);
 
 		if (this.activeContext?.uri.toString() === uri) {
@@ -227,11 +255,46 @@ export class DocumentContextService {
 	 * the graph IRI uses the human-readable slug from the start (important for notebook cells).
 	 * @returns A promise that resolves to the document context or undefined if superseded/unsupported.
 	 */
-	async loadDocument(document: vscode.TextDocument, forceReload: boolean = false, slug?: string): Promise<IDocumentContext | undefined> {
+	loadDocument(document: vscode.TextDocument, forceReload: boolean = false, slug?: string): Promise<IDocumentContext | undefined> {
 		if (!document || !this._documentFactory.supportedLanguages.has(document.languageId)) {
-			return;
+			return Promise.resolve(undefined);
 		}
 
+		return this._trackLoad(document.uri.toString(), this._loadDocument(document, forceReload, slug));
+	}
+
+	isLoading(uri: string): boolean {
+		return this._pendingLoads.has(uri);
+	}
+
+	async waitUntilLoaded(uri: string): Promise<void> {
+		await this._pendingLoads.get(uri);
+	}
+
+	/**
+	 * Registers a load as the one in progress for a document until it settles.
+	 * @param uri The document URI.
+	 * @param load The load.
+	 * @returns The load.
+	 */
+	private _trackLoad<T>(uri: string, load: Promise<T>): Promise<T> {
+		const pending = load.then(() => undefined, () => undefined);
+
+		this._pendingLoads.set(uri, pending);
+
+		pending.then(() => {
+			if (this._pendingLoads.get(uri) === pending) {
+				this._pendingLoads.delete(uri);
+			}
+		});
+
+		return load;
+	}
+
+	/**
+	 * Loads a supported document into a context; see {@link loadDocument}.
+	 */
+	private async _loadDocument(document: vscode.TextDocument, forceReload: boolean, slug?: string): Promise<IDocumentContext | undefined> {
 		const uri = document.uri.toString();
 
 		let context = this.contexts[uri];
@@ -247,6 +310,13 @@ export class DocumentContextService {
 				this._reloadContextTriples(uri).catch(e => {
 					getLog().warn('Failed to reload context after slug update:', e);
 				});
+			}
+
+			// Indexing releases the tokens of files that are not open in an editor;
+			// the editor needs them back for its position-based features. The wait
+			// consumes the delivery, so the triples are not loaded again.
+			if (context.isTokenized() && !context.isParsed) {
+				await this._restoreTokens(uri, document);
 			}
 
 			// Compute the inference graph on the document, if it does not exist.
@@ -279,6 +349,12 @@ export class DocumentContextService {
 
 		const content = document.getText();
 
+		// Parsing, loading and inference each take long for large documents; give the
+		// event loop a turn in between when a phase used up the budget. The parse is
+		// counted, so that requests which only need the tokens (go to definition,
+		// hovers, document links) are answered before the triples are loaded.
+		const eventLoop = createEventLoopYielder();
+
 		// Check if the context already has parser output (from a language server notification
 		// that arrived early). If not, wait for tokens from the language server.
 		if (!context.isParsed) {
@@ -307,6 +383,8 @@ export class DocumentContextService {
 			}
 		}
 
+		await eventLoop.yieldIfBusy();
+
 		// Check if this load was superseded after awaiting tokens.
 		if (!this._tokenSource.isCurrentLoad(uri, generation)) {
 			return;
@@ -314,6 +392,7 @@ export class DocumentContextService {
 
 		// Tokens available, load triples into store.
 		await context.loadTriples(content);
+		await eventLoop.yieldIfBusy();
 
 		// Check if this load was superseded after loading triples.
 		if (!this._tokenSource.isCurrentLoad(uri, generation)) {
@@ -328,15 +407,27 @@ export class DocumentContextService {
 			return;
 		}
 
-		// Set the language tag statistics for the document, needed for rendering multi-language labels.
-		context.predicateStats = this._vocabulary.getPredicateUsageStats(context.graphs);
-
-		// We default to the user choice of the primary language tag as there might be multiple languages in the document.
+		// The language tag statistics were counted while the triples were loaded. We default to
+		// the user choice of the primary language tag, as a document may use several languages.
 		context.activeLanguageTag = getConfig().get('definitionTree.defaultLanguageTag', context.primaryLanguage);
 
 		this.contexts[uri] = context;
 
 		return context;
+	}
+
+	/**
+	 * Parses an open document whose tokens were released after indexing, so the
+	 * editor features that work on tokens are available again.
+	 * @param uri The document URI.
+	 * @param document The open document.
+	 */
+	private async _restoreTokens(uri: string, document: vscode.TextDocument): Promise<void> {
+		try {
+			await this._tokenSource.waitForTokens(uri, undefined, document);
+		} catch (e) {
+			getLog().warn(`Failed to restore the tokens of ${uri}:`, getErrorMessage(e));
+		}
 	}
 
 	/**
@@ -384,15 +475,21 @@ export class DocumentContextService {
 			this._contexts[key] = context;
 		}
 
+		// Lexing, parsing, loading and inference each take up to seconds for very large
+		// files; give the event loop a turn between them when a phase used up the budget.
+		const eventLoop = createEventLoopYielder();
+
 		// Parse the content in-process. This sets the context's tokens/parsed data
 		// exactly as a token-source delivery would, but without a text document.
 		context.parse(content);
+		await eventLoop.yieldIfBusy();
 
 		if (!this._tokenSource.isCurrentLoad(key, generation)) {
 			return;
 		}
 
 		await context.loadTriples(content);
+		await eventLoop.yieldIfBusy();
 
 		if (!this._tokenSource.isCurrentLoad(key, generation)) {
 			return;
@@ -405,10 +502,8 @@ export class DocumentContextService {
 			return;
 		}
 
-		// Set the language tag statistics for the document, needed for rendering multi-language labels.
-		context.predicateStats = this._vocabulary.getPredicateUsageStats(context.graphs);
-
-		// We default to the user choice of the primary language tag as there might be multiple languages in the document.
+		// The language tag statistics were counted while the triples were loaded. We default to
+		// the user choice of the primary language tag, as a document may use several languages.
 		context.activeLanguageTag = getConfig().get('definitionTree.defaultLanguageTag', context.primaryLanguage);
 
 		this._contexts[key] = context;
@@ -441,45 +536,45 @@ export class DocumentContextService {
 	async handleActiveEditorChanged(): Promise<void> {
 		const editor = vscode.window.activeTextEditor;
 
-		await this._setCursorOnResourceContext(editor);
+		// Every context key is an IPC round trip to the workbench, which is busy laying out
+		// a newly opened document. The keys only drive menus and buttons, so they are sent
+		// without holding up the load that all language features of the document wait for.
+		const contextKeysSet = this._setEditorContextKeys(editor);
 
-		if (!editor) {
-			await this._setConvertFileFormatContexts();
-			await this._setTriplateTemplateContext();
+		try {
+			await this._loadActiveEditorDocument(editor);
+		} finally {
+			await contextKeysSet;
+		}
+	}
+
+	/**
+	 * Sets the editor context keys that depend on the active editor, all at once.
+	 * @param editor The active editor, or `undefined` when there is none.
+	 */
+	private async _setEditorContextKeys(editor?: vscode.TextEditor): Promise<void> {
+		const document = editor?.document.uri ? editor.document : undefined;
+
+		await Promise.all([
+			this._setCursorOnResourceContext(editor),
+			this._setConvertFileFormatContexts(document?.languageId, document?.uri.toString()),
+			this._setTriplateTemplateContext(document)
+		]);
+	}
+
+	/**
+	 * Loads the document of the active editor, makes it the active context and fires
+	 * the context changed event.
+	 * @param editor The active editor, or `undefined` when there is none.
+	 */
+	private async _loadActiveEditorDocument(editor?: vscode.TextEditor): Promise<void> {
+		const uri = editor?.document.uri;
+
+		if (!editor || !uri || uri.toString() === this.activeContext?.uri.toString()) {
 			return;
 		}
 
-		const uri = editor.document.uri;
-
-		if (!uri) {
-			await this._setConvertFileFormatContexts();
-			await this._setTriplateTemplateContext();
-			return;
-		}
-
-		await this._setConvertFileFormatContexts(editor.document.languageId, uri.toString());
-		await this._setTriplateTemplateContext(editor.document);
-
-		if (uri.toString() === this.activeContext?.uri.toString()) return;
-
-		// For notebook cells, find the slug from the cell metadata so that the
-		// graph IRI uses the human-readable slug from the very first load.
-		let slug: string | undefined;
-
-		if (editor.document.uri.scheme === 'vscode-notebook-cell') {
-			const uriStr = editor.document.uri.toString();
-
-			for (const nb of vscode.workspace.notebookDocuments) {
-				const cell = nb.getCells().find(c => c.document.uri.toString() === uriStr);
-
-				if (cell) {
-					slug = cell.metadata?.slug as string | undefined;
-					break;
-				}
-			}
-		}
-
-		const context = await this.loadDocument(editor.document, false, slug);
+		const context = await this.loadDocument(editor.document, false, this._getNotebookCellSlug(editor.document));
 
 		if (context) {
 			this.activeContext = context;
@@ -494,6 +589,30 @@ export class DocumentContextService {
 	}
 
 	/**
+	 * Finds the slug of a notebook cell in the cell metadata, so that the graph IRI uses
+	 * the human-readable slug from the very first load.
+	 * @param document A text document.
+	 * @returns The slug, or `undefined` if the document is not a notebook cell or has no slug.
+	 */
+	private _getNotebookCellSlug(document: vscode.TextDocument): string | undefined {
+		if (document.uri.scheme !== 'vscode-notebook-cell') {
+			return undefined;
+		}
+
+		const uri = document.uri.toString();
+
+		for (const notebook of vscode.workspace.notebookDocuments) {
+			const cell = notebook.getCells().find(c => c.document.uri.toString() === uri);
+
+			if (cell) {
+				return cell.metadata?.slug as string | undefined;
+			}
+		}
+
+		return undefined;
+	}
+
+	/**
 	 * Sets the `mentor.editor.cursorOnResource` context key used to toggle visibility of the
 	 * "Describe Resource" editor context-menu item. Updated synchronously on every selection
 	 * change so the key is current when a right-click opens the menu.
@@ -503,8 +622,17 @@ export class DocumentContextService {
 		const uri = editor?.document?.uri?.toString();
 		const position = editor?.selection?.active;
 		const iri = uri && position ? this.contexts[uri]?.getIriAtPosition(position) : undefined;
+		const cursorOnResource = !!iri;
 
-		await vscode.commands.executeCommand('setContext', 'mentor.editor.cursorOnResource', !!iri);
+		// The selection changes on every keystroke and cursor move, while the key rarely
+		// does; only send the IPC call to the workbench when the value changes.
+		if (cursorOnResource === this._cursorOnResource) {
+			return;
+		}
+
+		this._cursorOnResource = cursorOnResource;
+
+		await vscode.commands.executeCommand('setContext', 'mentor.editor.cursorOnResource', cursorOnResource);
 	}
 
 	/**
@@ -540,17 +668,17 @@ export class DocumentContextService {
 		// the canonical RDF_LANGUAGE_IDS list so menu `when` clauses need not duplicate it.
 		const isRdfLanguage = languageId ? this._documentFactory.isRdfLanguage(languageId) : false;
 
-		await vscode.commands.executeCommand('setContext', 'mentor.command.convertFileFormat.executable', convertible);
-		await vscode.commands.executeCommand('setContext', 'mentor.editor.isRdfDocument', isRdfDocument);
-		await vscode.commands.executeCommand('setContext', 'mentor.editor.isMentorLanguage', isRdfLanguage);
-
-		for (const targetLanguageId of this._convertTargetLanguageIds) {
-			await vscode.commands.executeCommand(
+		// The keys are independent, so they are sent at once rather than one round trip after another.
+		await Promise.all([
+			vscode.commands.executeCommand('setContext', 'mentor.command.convertFileFormat.executable', convertible),
+			vscode.commands.executeCommand('setContext', 'mentor.editor.isRdfDocument', isRdfDocument),
+			vscode.commands.executeCommand('setContext', 'mentor.editor.isMentorLanguage', isRdfLanguage),
+			...this._convertTargetLanguageIds.map(targetLanguageId => vscode.commands.executeCommand(
 				'setContext',
 				`mentor.command.convertFileFormat.target.${targetLanguageId}`,
 				targets.has(targetLanguageId)
-			);
-		}
+			))
+		]);
 	}
 
 	/**
@@ -574,12 +702,12 @@ export class DocumentContextService {
 
 		// Each cell load pays a full parse, triple load and inference pass;
 		// yield between cells so a large notebook does not block the extension host.
-		const yieldBudget = createYieldBudget();
+		const eventLoop = createEventLoopYielder();
 
 		// Load all RDF cells in the notebook to ensure their graphs are created.
 		for (const cell of cells) {
 			if (this._documentFactory.isTripleSourceLanguage(cell.document.languageId)) {
-				await yieldBudget.maybeYield();
+				await eventLoop.yieldIfBusy();
 
 				const slug = cell.metadata?.slug as string | undefined;
 
@@ -596,14 +724,14 @@ export class DocumentContextService {
 	 * @param notebook The opened notebook document.
 	 */
 	async handleNotebookDocumentOpened(notebook: vscode.NotebookDocument): Promise<void> {
-		const yieldBudget = createYieldBudget();
+		const eventLoop = createEventLoopYielder();
 
 		for (const cell of notebook.getCells()) {
 			if (!this._documentFactory.supportedLanguages.has(cell.document.languageId)) {
 				continue;
 			}
 
-			await yieldBudget.maybeYield();
+			await eventLoop.yieldIfBusy();
 
 			const slug = cell.metadata?.slug as string | undefined;
 
@@ -736,6 +864,10 @@ export class DocumentContextService {
 		if (context && (context.isTemporary || isNotebookCell)) {
 			// Cleanup temporary / non-persisted document context generated by views.
 			this._deleteContext(uri);
+		} else if (context && context.isTokenized()) {
+			// The context stays in the index, but the closed editor no longer needs
+			// the tokens; opening the document again parses it anew.
+			context.releaseTokens();
 		}
 	}
 
@@ -806,6 +938,14 @@ export class DocumentContextService {
 
 		delete this._contexts[key];
 
-		this._store.deleteGraphs(context.graphs);
+		// A preset graph is owned by the store, which loads it at startup and on
+		// reindexing; the context only borrows it.
+		if (context.isPreset) {
+			return;
+		}
+
+		// The inference graphs go with the data graphs; leaving them behind kept
+		// the inferred triples of deleted and renamed files in the store for good.
+		this._store.deleteGraphs(context.graphs, true);
 	}
 }

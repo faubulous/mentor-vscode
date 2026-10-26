@@ -1,27 +1,22 @@
-import { DataFactory as N3DataFactory } from 'n3';
-import { DatasetCore } from '@rdfjs/types';
+import { DatasetCore, Literal, Term } from '@rdfjs/types';
+import { DataFactory } from 'rdf-data-factory';
 import { RdfStore } from 'rdf-stores';
-import { Store, XSD, RDF, RDFS } from '@faubulous/mentor-rdf';
+import { LanguageTagUsageStats, Store, XSD, RDF, RDFS } from '@faubulous/mentor-rdf';
 
 /**
  * An RDF/JS DataFactory extended with a `dataset()` method (DatasetCoreFactory),
  * as required by libraries that consume an RDF/JS environment such as shacl-engine.
  *
- * `literal()` tolerates `null` as the language/datatype argument: N3's literal()
- * throws when passed `null` (vs. `undefined`), but shacl-engine calls
- * `factory.literal(text, message.language || null)` when there is no language
- * tag, so `null` is normalized to `undefined` here. This is harmless for every
- * other caller.
+ * `literal()` must tolerate `null` as the language/datatype argument, because
+ * shacl-engine calls `factory.literal(text, message.language || null)` when there
+ * is no language tag. The rdf-data-factory implementation treats `null` like
+ * `undefined` and returns an `xsd:string` literal.
  */
-export const rdfDataFactory = {
-	...N3DataFactory,
-	literal(value: string, languageOrDataType?: any) {
-		return N3DataFactory.literal(value, languageOrDataType ?? undefined);
-	},
+export const rdfDataFactory = Object.assign(new DataFactory(), {
 	dataset(): DatasetCore {
 		return RdfStore.createDefault().asDataset();
 	}
-};
+});
 
 /**
  * The type of an RDF property derived from its range.
@@ -63,8 +58,8 @@ export function getPropertyTypeFromRange(rangeIri?: string): PropertyType {
 		case XSD.string:
 		case XSD.unsignedInt:
 		case XSD.unsignedShort:
-		case XSD.unsingedLong:
-		case XSD.usignedByte: {
+		case XSD.unsignedLong:
+		case XSD.unsignedByte: {
 			return 'dataProperty';
 		}
 		default: {
@@ -90,4 +85,20 @@ export function loadRdfContent(store: Store, content: string, graphUri: string, 
 	} else {
 		store.loadTurtle(content, graphUri, false, true);
 	}
+}
+
+/**
+ * Counts the language tag of a literal object in language tag usage statistics. Literals
+ * without a language tag are counted under the empty tag, other terms are ignored.
+ * @param stats The statistics to update.
+ * @param object The object of a triple.
+ */
+export function addLanguageTagUsage(stats: LanguageTagUsageStats, object: Term): void {
+	if (object.termType !== 'Literal') {
+		return;
+	}
+
+	const language = (object as Literal).language;
+
+	stats[language] = (stats[language] ?? 0) + 1;
 }

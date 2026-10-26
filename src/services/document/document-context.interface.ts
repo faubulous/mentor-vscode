@@ -1,16 +1,16 @@
 import * as vscode from 'vscode';
 import type { CstNode, ILexingError } from 'chevrotain';
-import { Range } from 'vscode-languageserver-types';
-import { Quad_Subject } from '@rdfjs/types';
-import { PredicateUsageStats } from '@faubulous/mentor-rdf';
+import { RangeIndex } from './range-index';
+import { Quad, Quad_Subject } from '@rdfjs/types';
+import { LanguageTagUsageStats } from '@faubulous/mentor-rdf';
 import { Label } from './document-context';
 import { BlankNodeIdGenerator, IRecognitionException, IToken, RdfSyntax } from '@faubulous/mentor-rdf-parsers';
 
 /**
  * The output of one parse pass over a document text: the token streams, the
- * concrete syntax tree and the collected errors. Captured by
+ * quads or the concrete syntax tree, and the collected errors. Captured by
  * {@link ITokenizedDocumentContext.parse} so that the diagnostics service and
- * the triple loader can share a single tokenization and grammar parse per edit
+ * the triple loader can share a single tokenization and analysis per edit
  * instead of re-deriving them from the same text.
  */
 export interface DocumentParseResult {
@@ -26,9 +26,10 @@ export interface DocumentParseResult {
 
 	/**
 	 * The tokens consumed by the grammar parser — placeholder tokens for
-	 * Triplate templates, identical to {@link tokens} otherwise.
+	 * Triplate templates, identical to {@link tokens} otherwise. Released
+	 * together with {@link cst}.
 	 */
-	readonly parseTokens: IToken[];
+	readonly parseTokens?: IToken[];
 
 	/**
 	 * Whether the text is a Triplate template.
@@ -36,10 +37,21 @@ export interface DocumentParseResult {
 	readonly template: boolean;
 
 	/**
-	 * The concrete syntax tree produced by the shared parser with error
-	 * recovery enabled.
+	 * The quads of a valid Turtle document, read straight from the tokens
+	 * without a syntax tree. Released once {@link IDocumentContext.loadTriples}
+	 * has consumed them. A document that holds quads has no errors and no
+	 * {@link cst}.
 	 */
-	readonly cst: CstNode;
+	readonly quads?: Quad[];
+
+	/**
+	 * The concrete syntax tree produced by the shared parser with error
+	 * recovery enabled, for a document that was not read into {@link quads}.
+	 * It is by far the largest part of the result and is released once
+	 * {@link IDocumentContext.loadTriples} has consumed it; the tokens and
+	 * errors stay for the diagnostics pass that follows.
+	 */
+	readonly cst?: CstNode;
 
 	/**
 	 * The characters the lexer could not match.
@@ -87,19 +99,19 @@ export interface IDocumentContext {
 	namespaces: { [key: string]: string };
 
 	/**
-	 * Maps prefixes to the location of their definition in the document.
+	 * Maps namespace IRIs to the location of their prefix definition in the document.
 	 */
-	namespaceDefinitions: { [key: string]: Range[] };
+	namespaceDefinitions: RangeIndex;
 
 	/**
 	 * Maps IRIs that appear as subjects to the locations where they appear in the document.
 	 */
-	subjects: { [key: string]: Range[] };
+	subjects: RangeIndex;
 
 	/**
 	 * Maps IRIs of all resources to the locations where they appear in the document.
 	 */
-	references: { [key: string]: Range[] };
+	references: RangeIndex;
 
 	/**
 	 * A human-readable slug used as the URI fragment for the document's graph IRI.
@@ -109,25 +121,29 @@ export interface IDocumentContext {
 	slug: string | undefined;
 
 	/**
-	 * Indicates if the document type is parsed using a tokenizing parser.
+	 * Indicates whether the document is parsed using a tokenizing parser and
+	 * thus provides access to its tokens.
 	 * @note XML documents are not tokenized.
+	 * @returns `true` if the context provides a token stream, narrowing it to {@link ITokenizedDocumentContext}.
 	 */
-	providesTokens: boolean;
+	isTokenized(): this is ITokenizedDocumentContext;
 
 	/**
 	 * Maps IRIs of subjects that have an asserted rdf:type to the location of the type assertion.
 	 */
-	typeAssertions: { [key: string]: Range[] };
+	typeAssertions: RangeIndex;
 
 	/**
 	 * Maps IRIs of subjects that are class or property definitions to the location of the definition.
 	 */
-	typeDefinitions: { [key: string]: Range[] };
+	typeDefinitions: RangeIndex;
 
 	/**
-	 * Information about the language tags used in the document.
+	 * The number of literals per language tag in the asserted triples of the document;
+	 * literals without a language tag are counted under the empty tag. Determines the
+	 * primary language and the languages offered for selection.
 	 */
-	predicateStats: PredicateUsageStats;
+	languageTagStats: LanguageTagUsageStats;
 
 	/**
 	 * The most often used language tag in the document.
@@ -168,6 +184,13 @@ export interface IDocumentContext {
 	 * Indicates whether the document is temporary and not persisted.
 	 */
 	readonly isTemporary: boolean;
+
+	/**
+	 * Indicates whether the document shows the read-only source of a preset graph
+	 * shipped with Mentor. Its graph is owned by the store, not by the document, and
+	 * it is not part of the workspace.
+	 */
+	readonly isPreset: boolean;
 
 	/**
 	 * Parses the given document text and updates the context's derived state
@@ -293,6 +316,15 @@ export interface ITokenizedDocumentContext extends IDocumentContext {
 	tokenize(text: string, blankNodeIdGenerator?: BlankNodeIdGenerator): IToken[];
 
 	/**
+	 * Tokenizes the current text of an open document for positional lookups, such as
+	 * completions. The result is cached per document version, so the providers that run
+	 * on the same keystroke share a single tokenization.
+	 * @param document The open text document of this context.
+	 * @returns The tokens of the document's current text.
+	 */
+	tokenizeDocument(document: vscode.TextDocument): IToken[];
+
+	/**
 	 * Sets the tokens of the document and updates the derived indexes
 	 * (namespaces, references, type assertions and definitions).
 	 * @param tokens An array of tokens.
@@ -307,13 +339,19 @@ export interface ITokenizedDocumentContext extends IDocumentContext {
 	 * @param text The current document text.
 	 */
 	getParseResult(text: string): DocumentParseResult | undefined;
-}
 
-/**
- * Indicates whether a document context is tokenized and thus provides access to its tokens.
- * @param context A document context.
- * @returns `true` if the context exposes a token stream, narrowing it to {@link ITokenizedDocumentContext}.
- */
-export function isTokenizedDocumentContext(context: IDocumentContext): context is ITokenizedDocumentContext {
-	return context.providesTokens;
+	/**
+	 * Drops the cached parse result. Called once no consumer will read it
+	 * again — after a file has been indexed and diagnosed, or when its editor
+	 * closes — so that only the tokens and the derived indexes stay in memory.
+	 * A later consumer re-derives the data from the text.
+	 */
+	releaseParseResult(): void;
+
+	/**
+	 * Drops the token stream and the cached parse result of a document that is
+	 * not open in an editor. The index maps and graphs stay, so the document
+	 * remains loaded; opening it in an editor parses it again.
+	 */
+	releaseTokens(): void;
 }

@@ -14,6 +14,8 @@ export enum ServiceToken {
 	DocumentFactory = "DocumentFactory",
 	/** Service for managing document contexts. */
 	DocumentContextService = "DocumentContextService",
+	/** Service that loads the read-only documents of the preset graphs on demand. */
+	PresetDocumentService = "PresetDocumentService",
 	/** Service that computes syntax and lint diagnostics for documents. */
 	DocumentDiagnosticsService = "DocumentDiagnosticsService",
 	/** Service for indexing workspace files. */
@@ -59,6 +61,8 @@ export enum ServiceToken {
 	UserFileStore = "UserFileStore",
 	/** Service for updating workspace: URI references across all indexed documents on rename. */
 	ReferenceUpdateService = "ReferenceUpdateService",
+	/** Service that extends the rename of an IRI to all other indexed documents. */
+	WorkspaceRenameService = "WorkspaceRenameService",
 	/** Controller for the custom Mentor settings panel. */
 	SettingsPanelController = "SettingsPanelController",
 	/** Generic navigation router between webview panels. */

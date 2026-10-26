@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import { any } from '@src/utilities';
 import { TreeNode, sortByLabel } from "@src/views/trees/tree-node";
 import { DefinitionTreeNode } from "../../definition-tree-node";
 import { IndividualNode } from "./individual-node";
@@ -28,30 +29,42 @@ export class IndividualsNode extends IndividualClassNode {
 		return [...individuals].length.toString();
 	}
 
-	override hasChildren(): boolean {
-		for (const _ of this.getChildren()) {
-			return true;
+	/**
+	 * Indicates whether the individuals are grouped by their types.
+	 */
+	private _showIndividualTypes(): boolean {
+		return this.settings.get('view.showIndividualTypes', true) === true;
+	}
+
+	/**
+	 * Get the IRIs of the resources that are listed below this node: the types of the individuals
+	 * if they are grouped by type, or the individuals otherwise.
+	 * @returns An iterator of resource IRIs.
+	 */
+	private _getChildIris(): IterableIterator<string> {
+		if (this._showIndividualTypes()) {
+			return this.vocabulary.getIndividualTypes(this.getOntologyGraphs(), undefined, this.getQueryOptions());
 		}
 
-		return false;
+		return this.vocabulary.getIndividuals(this.getDocumentGraphs(), undefined, this.getQueryOptions());
+	}
+
+	/**
+	 * Indicates whether there are individuals or individual types, stopping at the first one.
+	 * @returns `true` if the node has children, `false` otherwise.
+	 */
+	override hasChildren(): boolean {
+		return any(this._getChildIris());
 	}
 
 	override getChildren(): TreeNode[] {
 		const result = [];
-		const showIndividualTypes = this.settings.get('view.showIndividualTypes', true);
+		const showIndividualTypes = this._showIndividualTypes();
 
-		if (showIndividualTypes) {
-			const types = this.vocabulary.getIndividualTypes(this.getOntologyGraphs(), undefined, this.getQueryOptions());
-
-			for (let t of types) {
-				result.push(this.createChildNode(IndividualClassNode, t));
-			}
-		} else {
-			const individuals = this.vocabulary.getIndividuals(this.getDocumentGraphs(), undefined, this.getQueryOptions());
-
-			for (let i of individuals) {
-				result.push(this.createChildNode(IndividualNode, i));
-			}
+		for (const iri of this._getChildIris()) {
+			result.push(showIndividualTypes
+				? this.createChildNode(IndividualClassNode, iri)
+				: this.createChildNode(IndividualNode, iri));
 		}
 
 		return sortByLabel(result);

@@ -69,6 +69,7 @@ export const workspace = {
     readFile: async (_uri: any): Promise<Uint8Array> => { throw new Error('file not found'); },
     stat: async (_uri: any): Promise<any> => { throw new Error('file not found'); },
     writeFile: async (_uri: any, _content: Uint8Array): Promise<void> => {},
+    isWritableFileSystem: (scheme: string): boolean | undefined => (scheme === 'git' ? false : scheme === 'file' ? true : undefined),
   },
   getConfiguration: (section?: string) => ({
     get: (key: string, defaultValue?: any) => defaultValue,
@@ -551,8 +552,14 @@ export class WorkspaceEdit {
     this._entries.get(key)![1].push(edit);
   }
 
-  replace(uri: any, range: Range, newText: string): void {
-    this._push(uri, new TextEdit(range, newText));
+  replace(uri: any, range: Range, newText: string, metadata?: any): void {
+    const edit = new TextEdit(range, newText);
+
+    if (metadata) {
+      (edit as any).metadata = metadata;
+    }
+
+    this._push(uri, edit);
   }
 
   insert(uri: any, position: Position, newText: string): void {

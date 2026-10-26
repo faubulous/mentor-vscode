@@ -75,6 +75,8 @@ vi.mock('vscode', async () => {
 import * as vscode from 'vscode';
 import { DocumentDiagnosticsService } from '@src/services/document/document-diagnostics-service';
 import { TokenDelivery } from '@src/services/document/document-token-source.interface';
+import { XmlParser } from '@src/languages/xml/xml-parser';
+import { createXmlDocument } from '@src/utilities/mocks/factories';
 
 /**
  * Creates a document stub with a real offset → position conversion so the
@@ -95,11 +97,11 @@ function makeDocument(uri: string, text: string) {
 }
 
 function makeTurtleContext() {
-    return { providesTokens: true, syntax: RdfSyntax.Turtle, getParseResult: () => undefined } as any;
+    return { isTokenized: () => true, syntax: RdfSyntax.Turtle, getParseResult: () => undefined } as any;
 }
 
 function makeSparqlContext() {
-    return { providesTokens: true, syntax: RdfSyntax.Sparql, getParseResult: () => undefined } as any;
+    return { isTokenized: () => true, syntax: RdfSyntax.Sparql, getParseResult: () => undefined } as any;
 }
 
 function makeSetup(contextsByUri: Record<string, any>) {
@@ -111,7 +113,7 @@ function makeSetup(contextsByUri: Record<string, any>) {
     return {
         service,
         collection,
-        deliverTokens: (uri: string) => deliveryEmitter.fire({ uri, tokens: [], consumed: false }),
+        deliverTokens: (uri: string, consumed = false) => deliveryEmitter.fire({ uri, tokens: [], consumed }),
     };
 }
 
@@ -140,6 +142,60 @@ describe('DocumentDiagnosticsService', () => {
         deliverTokens(uri);
 
         expect(collection.set).toHaveBeenCalledWith(document.uri, []);
+    });
+
+    it('validates an edited document right away', () => {
+        const uri = 'file:///test.ttl';
+        const document = makeDocument(uri, INVALID_TURTLE);
+        env.textDocuments.push(document);
+
+        const { collection, deliverTokens } = makeSetup({ [uri]: makeTurtleContext() });
+
+        deliverTokens(uri, false);
+
+        expect(collection.set).toHaveBeenCalledOnce();
+    });
+
+    it('validates a loaded document after the event loop polled for I/O', async () => {
+        vi.useFakeTimers();
+
+        try {
+            const uri = 'file:///test.ttl';
+            const document = makeDocument(uri, INVALID_TURTLE);
+            env.textDocuments.push(document);
+
+            const { collection, deliverTokens } = makeSetup({ [uri]: makeTurtleContext() });
+
+            deliverTokens(uri, true);
+
+            expect(collection.set).not.toHaveBeenCalled();
+
+            await vi.runAllTimersAsync();
+
+            expect(collection.set).toHaveBeenCalledOnce();
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
+    it('drops a deferred load validation when an edit validates the document first', async () => {
+        vi.useFakeTimers();
+
+        try {
+            const uri = 'file:///test.ttl';
+            const document = makeDocument(uri, INVALID_TURTLE);
+            env.textDocuments.push(document);
+
+            const { collection, deliverTokens } = makeSetup({ [uri]: makeTurtleContext() });
+
+            deliverTokens(uri, true);
+            deliverTokens(uri, false);
+            await vi.runAllTimersAsync();
+
+            expect(collection.set).toHaveBeenCalledOnce();
+        } finally {
+            vi.useRealTimers();
+        }
     });
 
     it('publishes parse error diagnostics for an invalid visible document', () => {
@@ -248,7 +304,7 @@ describe('DocumentDiagnosticsService', () => {
         env.textDocuments.push(document);
         env.visibleTextEditors.push({ document });
 
-        const { collection, deliverTokens } = makeSetup({ [uri]: { providesTokens: false } });
+        const { collection, deliverTokens } = makeSetup({ [uri]: { isTokenized: () => false } });
 
         deliverTokens(uri);
 
@@ -426,6 +482,46 @@ describe('DocumentDiagnosticsService', () => {
             expect(result.validated).toBe(1);
         });
 
+        it('stops before the next file when cancelled', async () => {
+            const uriA = vscode.Uri.parse('file:///a.ttl');
+            const uriB = vscode.Uri.parse('file:///b.ttl');
+            env.textDocuments.push(makeDocument(uriA.toString(), VALID_TURTLE), makeDocument(uriB.toString(), VALID_TURTLE));
+
+            const { service } = makeSetup({ [uriA.toString()]: makeTurtleContext(), [uriB.toString()]: makeTurtleContext() });
+            const token = { isCancellationRequested: false } as vscode.CancellationToken;
+
+            const result = await service.diagnoseFiles([uriA, uriB], processed => {
+                (token as any).isCancellationRequested = processed === 1;
+            }, token);
+
+            expect(result.validated).toBe(1);
+        });
+
+        it('reads valid Turtle with the quad reader and only parses a document with errors', async () => {
+            const valid = vscode.Uri.parse('file:///valid.ttl');
+            const invalid = vscode.Uri.parse('file:///invalid.ttl');
+            env.textDocuments.push(makeDocument(valid.toString(), VALID_TURTLE), makeDocument(invalid.toString(), INVALID_TURTLE));
+
+            const { ParserFactory } = await import('@src/languages/parser-factory');
+            const getParser = vi.spyOn(ParserFactory, 'getParser');
+
+            try {
+                const { service, collection } = makeSetup({ [valid.toString()]: makeTurtleContext(), [invalid.toString()]: makeTurtleContext() });
+
+                await service.diagnoseFiles([valid]);
+
+                expect(getParser).not.toHaveBeenCalled();
+                expect(collection.set).toHaveBeenLastCalledWith(valid, []);
+
+                await service.diagnoseFiles([invalid]);
+
+                expect(getParser).toHaveBeenCalled();
+                expect(collection.set.mock.calls.at(-1)![1].length).toBeGreaterThan(0);
+            } finally {
+                getParser.mockRestore();
+            }
+        });
+
         it('counts files that have at least one error', async () => {
             const uri = vscode.Uri.parse('file:///bad.ttl');
             env.textDocuments.push(makeDocument(uri.toString(), INVALID_TURTLE));
@@ -469,5 +565,41 @@ describe('DocumentDiagnosticsService', () => {
 
             expect(collection.set).not.toHaveBeenCalled();
         });
+    });
+});
+
+describe('DocumentDiagnosticsService RDF/XML parsing', () => {
+    const uri = 'file:///indexed.rdf';
+    const content = '<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:ex="http://example.org/">\n  <ex:Thing rdf:about="http://example.org/a"/>\n</rdf:RDF>';
+
+    beforeEach(() => {
+        vi.restoreAllMocks();
+    });
+
+    it('does not parse a text again that the document context has parsed', () => {
+        const context = createXmlDocument(uri);
+
+        context.parse(content);
+
+        const { service, collection } = makeSetup({ [uri]: context });
+        const parse = vi.spyOn(XmlParser.prototype, 'parse');
+
+        service.diagnoseContent(vscode.Uri.parse(uri), content);
+
+        expect(parse).not.toHaveBeenCalled();
+        expect(collection.set).toHaveBeenLastCalledWith(expect.anything(), []);
+    });
+
+    it('parses a text that differs from the one the document context has parsed', () => {
+        const context = createXmlDocument(uri);
+
+        context.parse(content);
+
+        const { service } = makeSetup({ [uri]: context });
+        const parse = vi.spyOn(XmlParser.prototype, 'parse');
+
+        service.diagnoseContent(vscode.Uri.parse(uri), content.replace('/a"', '/b"'));
+
+        expect(parse).toHaveBeenCalledTimes(1);
     });
 });

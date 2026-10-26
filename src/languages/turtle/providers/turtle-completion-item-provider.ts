@@ -58,17 +58,25 @@ export class TurtleCompletionItemProvider extends TurtleFeatureProvider implemen
 	}
 
 	provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, t: vscode.CancellationToken, completion: vscode.CompletionContext): vscode.ProviderResult<vscode.CompletionItem[] | vscode.CompletionList> {
+		// The suggestions are read from the triple store; while the document is
+		// loading, its own triples may not be there yet.
+		const uri = document.uri.toString();
+
+		if (this._contextService.isLoading(uri)) {
+			return this._contextService.waitUntilLoaded(uri).then(() => this.provideCompletionItems(document, position, t, completion));
+		}
+
 		const context = this._contextService.getDocumentContext(document, TurtleDocument);
 
 		if (!context || t.isCancellationRequested) {
 			return null;
 		}
 
-		// Tokenize the current document text synchronously so that completions
-		// are always based on the up-to-date buffer content. This avoids waiting
-		// for token delivery from the language server and also makes completions
-		// work for documents that are not eagerly indexed (e.g. untitled documents).
-		const tokens = context.tokenize(document.getText());
+		// Tokenize the current document text so that completions are always based on
+		// the up-to-date buffer content, also for documents that are not indexed (e.g.
+		// untitled documents). The tokens are cached per document version and shared
+		// with the other providers that run on the same keystroke.
+		const tokens = context.tokenizeDocument(document);
 
 		// Fast typing cancels the previous request per keystroke; skip the store
 		// queries when the result would be discarded anyway.
@@ -257,7 +265,7 @@ export class TurtleCompletionItemProvider extends TurtleFeatureProvider implemen
 			}
 
 			for (const c of contexts) {
-				for (let subject of Object.keys(c.subjects)) {
+				for (const subject of c.subjects.keys()) {
 					this._addLocalPartCompletionItem(items, uri, subject);
 				}
 			}

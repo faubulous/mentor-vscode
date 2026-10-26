@@ -32,17 +32,20 @@ export class SparqlCompletionItemProvider extends TurtleCompletionItemProvider {
 	}
 
 	override async provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, t: vscode.CancellationToken, completion: vscode.CompletionContext): Promise<vscode.CompletionItem[] | vscode.CompletionList | null> {
+		// The suggestions are read from the triple store; see the Turtle provider.
+		await this._contextService.waitUntilLoaded(document.uri.toString());
+
 		const context = this._contextService.getDocumentContext(document, TurtleDocument);
 
 		if (!context) {
 			return null;
 		}
 
-		// Tokenize the current document text synchronously so that completions
-		// are always based on the up-to-date buffer content. This avoids waiting
-		// for token delivery from the language server and also makes completions
-		// work for documents that are not eagerly indexed (e.g. untitled documents).
-		const tokens = context.tokenize(document.getText());
+		// Tokenize the current document text so that completions are always based on
+		// the up-to-date buffer content, also for documents that are not indexed (e.g.
+		// untitled documents). The tokens are cached per document version and shared
+		// with the other providers that run on the same keystroke.
+		const tokens = context.tokenizeDocument(document);
 
 		const n = getTokenIndexAtPosition(tokens, position);
 

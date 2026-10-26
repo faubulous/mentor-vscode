@@ -1,12 +1,15 @@
 import * as vscode from 'vscode';
-import { Store, VocabularyRepository } from '@faubulous/mentor-rdf';
+import { LanguageTagUsageStats, Store, VocabularyRepository } from '@faubulous/mentor-rdf';
 import { IToken, RdfSyntax } from '@faubulous/mentor-rdf-parsers';
 import { ISettingsService } from '@src/services/core';
 import { DocumentContext } from '@src/services/document/document-context';
+import { ITokenizedDocumentContext } from '@src/services/document/document-context.interface';
+import { RangeIndex } from '@src/services/document/range-index';
 import { WorkspaceUri } from '@src/providers/workspace-uri';
 import { XmlParseResult } from '@src/languages/xml/xml-types';
 import { XmlParser } from '@src/languages/xml/xml-parser';
-import { getIriFromPrefixedName } from '@src/utilities';
+import { getIriFromPrefixedName, getTextFingerprint } from '@src/utilities';
+import { addLanguageTagUsage } from '@src/utilities/rdf';
 import { getLog } from '@src/utilities/vscode/log';
 
 /**
@@ -27,6 +30,12 @@ export class XmlDocument extends DocumentContext {
 	 */
 	private _textLiterals: vscode.Range[] = [];
 
+	/**
+	 * The fingerprint of the text that was last parsed without error, or `undefined`. Lets
+	 * the diagnostics pass recognize a text that is known to parse without keeping it.
+	 */
+	private _parsedTextFingerprint: string | undefined;
+
 	get isLoaded(): boolean {
 		return this._hasContent && this.graphs.length > 0;
 	}
@@ -35,7 +44,7 @@ export class XmlDocument extends DocumentContext {
 		return this._hasContent;
 	}
 
-	get providesTokens(): boolean {
+	isTokenized(): this is ITokenizedDocumentContext {
 		return false;
 	}
 
@@ -46,10 +55,22 @@ export class XmlDocument extends DocumentContext {
 	}
 
 	parse(text: string): IToken[] {
+		this._parsedTextFingerprint = undefined;
+
 		this.setParsedData(new XmlParser().parse(text));
+
+		this._parsedTextFingerprint = getTextFingerprint(text);
 
 		// RDF/XML documents are parsed structurally, not tokenized.
 		return [];
+	}
+
+	/**
+	 * Indicates whether the given text is the text that was last parsed without error.
+	 * @param text A text.
+	 */
+	isParsedFrom(text: string): boolean {
+		return this._parsedTextFingerprint !== undefined && this._parsedTextFingerprint === getTextFingerprint(text);
 	}
 
 	/**
@@ -59,11 +80,12 @@ export class XmlDocument extends DocumentContext {
 	setParsedData(data: XmlParseResult): void {
 		this.baseIri = data.baseIri;
 		this.namespaces = data.namespaces;
-		this.namespaceDefinitions = data.namespaceDefinitions;
-		this.subjects = data.subjects;
-		this.references = data.references;
-		this.typeAssertions = data.typeAssertions;
-		this.typeDefinitions = data.typeDefinitions;
+		// The parser result is transient; the context keeps the ranges packed.
+		this.namespaceDefinitions = RangeIndex.fromRecord(data.namespaceDefinitions);
+		this.subjects = RangeIndex.fromRecord(data.subjects);
+		this.references = RangeIndex.fromRecord(data.references);
+		this.typeAssertions = RangeIndex.fromRecord(data.typeAssertions);
+		this.typeDefinitions = RangeIndex.fromRecord(data.typeDefinitions);
 		this._textLiterals = data.textLiteralRanges.map(r => new vscode.Range(
 			new vscode.Position(r.start.line, r.start.character),
 			new vscode.Position(r.end.line, r.end.character)
@@ -271,13 +293,16 @@ export class XmlDocument extends DocumentContext {
 	 * @param data The file content.
 	 */
 	override async loadTriples(data: string): Promise<void> {
+		// Counted while the quads are added, instead of in a separate scan of the graph.
+		const languageTagStats: LanguageTagUsageStats = {};
+
 		try {
 			const graphUri = WorkspaceUri.toCanonicalString(this.graphIri);
 
-			// Delete old graphs to handle slug changes. loadFromXmlStream handles
-			// clearing the target graph itself via its clearGraph option.
+			// Delete old graphs and their inference graphs to handle slug changes.
+			// loadFromXmlStream clears the target graph itself via its clearGraph option.
 			if (this.graphs.length > 0) {
-				this._store.deleteGraphs([...this.graphs]);
+				this._store.deleteGraphs([...this.graphs], true);
 			}
 
 			// Initialize the graphs *before* trying to load the document so 
@@ -290,10 +315,12 @@ export class XmlDocument extends DocumentContext {
 			this._inferenceExecuted = false;
 
 			// Load triples from the RDF/XML content into the store.
-			await this._store.loadFromXmlStream(data, graphUri, false);
+			await this._store.loadFromXmlStream(data, graphUri, false, true, quad => addLanguageTagUsage(languageTagStats, quad.object));
 		} catch (e) {
 			// This is not a critical error because the graph might be invalid.
 			getLog().error('Failed to load triples from RDF/XML:', e);
 		}
+
+		this.languageTagStats = languageTagStats;
 	}
 }

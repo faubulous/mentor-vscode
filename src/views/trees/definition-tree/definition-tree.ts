@@ -8,7 +8,6 @@ import { TreeView } from '@src/views/trees/tree-view';
 import { DefinitionNodeProvider } from './definition-node-provider';
 import { DefinitionTreeNode } from './definition-tree-node';
 import { DefinitionNodeDecorationProvider } from './definition-node-decoration-provider';
-import { ShaclValidationService } from '@src/services/validation/shacl-validation-service';
 
 /**
  * Provides a combined explorer for classes, properties and individuals.
@@ -25,10 +24,6 @@ export class DefinitionTree implements TreeView {
 
 	private get _settings() {
 		return container.resolve<ISettingsService>(ServiceToken.SettingsService);
-	}
-
-	private get _validationService() {
-		return container.resolve<ShaclValidationService>(ServiceToken.ShaclValidationService);
 	}
 
 	/**
@@ -98,7 +93,9 @@ export class DefinitionTree implements TreeView {
 		return vscode.commands.registerCommand('mentor.e2e.getDefinitionTreeState', () => ({
 			visible: this.treeView.visible,
 			selection: this.treeView.selection.map(node => node.id),
-			activeContext: this._contextService.activeContext?.uri.toString()
+			activeContext: this._contextService.activeContext?.uri.toString(),
+			document: this.treeDataProvider.document?.uri.toString(),
+			rootCount: (this.treeDataProvider.getChildren(undefined) ?? []).length
 		}));
 	}
 
@@ -138,11 +135,13 @@ export class DefinitionTree implements TreeView {
 	}
 
 	private _registerValidationHandler(): vscode.Disposable {
-		// Validations fire per document (and on every edit that drops a stale
-		// result); coalesce the full tree rebuilds they trigger.
+		// The node icons are colored by SHACL severity, so the tree is rebuilt when a
+		// validation changes the severities of the active document. Validations fire for
+		// every document and on every edit that drops a result; most leave the severities
+		// unchanged and must not rebuild the tree. Coalesce the rebuilds that remain.
 		const debouncer = new Debouncer(250);
 
-		return this._validationService.onDidValidate(() => {
+		return this._decorationProvider.onDidChangeSeverities(() => {
 			debouncer.schedule(() => {
 				this.treeDataProvider.refresh(this._contextService.activeContext);
 			});

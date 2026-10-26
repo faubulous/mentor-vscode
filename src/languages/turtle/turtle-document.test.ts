@@ -46,7 +46,7 @@ function makeStore(): Store {
 
 import * as vscode from 'vscode';
 import type { Store } from '@faubulous/mentor-rdf';
-import { RdfSyntax, RdfToken, TurtleLexer, TurtleParser, TurtleReader, createFileBlankNodeIdGenerator } from '@faubulous/mentor-rdf-parsers';
+import { RdfSyntax, RdfToken, TurtleLexer, TurtleParser, TurtleQuadReader, TurtleReader, createFileBlankNodeIdGenerator } from '@faubulous/mentor-rdf-parsers';
 import { ParserFactory } from '@src/languages/parser-factory';
 import { TurtleDocument } from '@src/languages/turtle/turtle-document';
 import { createTurtleDocument, createMockTextDocument } from '@src/utilities/mocks/factories';
@@ -242,7 +242,7 @@ describe('TurtleDocument', () => {
                 makeToken(RdfToken.IRIREF.name, '<http://example.org/Thing>', { startLine: 1, startColumn: 1, endLine: 1, endColumn: 26 }),
             ];
             doc.setTokens(tokens as any);
-            expect(doc.references['http://example.org/Thing']).toBeDefined();
+            expect(doc.references.has('http://example.org/Thing')).toBe(true);
         });
 
         it('registers A token type assertions with subject', () => {
@@ -264,7 +264,7 @@ describe('TurtleDocument', () => {
                 makeToken(RdfToken.BLANK_NODE_LABEL.name, '_:b0', { startLine: 1, startColumn: 1, endLine: 1, endColumn: 4 }),
             ];
             doc.setTokens(tokens as any);
-            expect(doc.references['_:b0']).toBeDefined();
+            expect(doc.references.has('_:b0')).toBe(true);
         });
 
         it('registers LBRACKET reference when blankNodeId payload is present', () => {
@@ -276,7 +276,7 @@ describe('TurtleDocument', () => {
                 payload: { blankNodeId: '_:b1' },
             };
             doc.setTokens([bracket as any]);
-            expect(doc.references['_:b1']).toBeDefined();
+            expect(doc.references.has('_:b1')).toBe(true);
         });
 
         it('skips LBRACKET token when blankNodeId payload is absent', () => {
@@ -288,7 +288,7 @@ describe('TurtleDocument', () => {
                 payload: {},
             };
             doc.setTokens([bracket as any]);
-            expect(Object.keys(doc.references)).toHaveLength(0);
+            expect([...doc.references.keys()]).toHaveLength(0);
         });
 
         it('registers type assertion (PNAME_LN a OWL:Class pattern)', () => {
@@ -311,7 +311,7 @@ describe('TurtleDocument', () => {
             ];
             doc.setTokens(tokens as any);
             // owl:Class → OWL namespace → type definition registered
-            expect(doc.typeDefinitions['http://example.org/MyClass']).toBeDefined();
+            expect(doc.typeDefinitions.has('http://example.org/MyClass')).toBe(true);
         });
 
         it('registers IRIREF subject after PERIOD', () => {
@@ -321,7 +321,7 @@ describe('TurtleDocument', () => {
                 makeToken(RdfToken.IRIREF.name, '<http://example.org/Sub>', { startLine: 2, startColumn: 1, endLine: 2, endColumn: 24 }),
             ];
             doc.setTokens(tokens as any);
-            expect(doc.subjects['http://example.org/Sub']).toBeDefined();
+            expect(doc.subjects.has('http://example.org/Sub')).toBe(true);
         });
 
         it('handles A token at index 0 (no subject token — _handleTypeAssertion guard)', () => {
@@ -511,7 +511,8 @@ describe('TurtleDocument.parse — grammar parse failures', () => {
         const doc = makeDoc();
 
         // A recursive-descent parser exhausts the stack on a pathologically
-        // large document; the tokens are still valid and must survive.
+        // large document; the tokens are still valid and must survive. The
+        // text has a syntax error so that the grammar parser is reached.
         vi.spyOn(ParserFactory, 'getParser').mockReturnValue({
             parse: () => { throw new RangeError('Maximum call stack size exceeded'); },
             errors: [],
@@ -519,7 +520,7 @@ describe('TurtleDocument.parse — grammar parse failures', () => {
             input: [],
         } as any);
 
-        const text = '@prefix ex: <http://example.org/> .\nex:a ex:b ex:c .';
+        const text = '@prefix ex: <http://example.org/> .\nex:a ex:b .';
 
         expect(() => doc.parse(text)).not.toThrow();
 
@@ -543,16 +544,16 @@ describe('TurtleDocument.parse — grammar parse failures', () => {
             input: [],
         } as any);
 
-        const text = '@prefix ex: <http://example.org/> .\nex:a ex:b ex:c .';
+        const text = '@prefix ex: <http://example.org/> .\nex:a ex:b .';
 
         doc.parse(text);
 
         await expect(doc.loadTriples(text)).resolves.toBeUndefined();
     });
 
-    it('captures a reusable parse result when the grammar parse succeeds', () => {
+    it('captures a reusable syntax tree when the grammar parse succeeds', () => {
         const doc = makeDoc();
-        const text = '@prefix ex: <http://example.org/> .\nex:a ex:b ex:c .';
+        const text = '@prefix ex: <http://example.org/> .\nex:a ex:b .';
 
         doc.parse(text);
 
@@ -560,6 +561,339 @@ describe('TurtleDocument.parse — grammar parse failures', () => {
 
         expect(result).toBeDefined();
         expect(result!.cst).toBeDefined();
+        expect(result!.quads).toBeUndefined();
         expect(result!.tokens.length).toBeGreaterThan(0);
+    });
+});
+
+describe('TurtleDocument.parse — quad reader', () => {
+    const text = '@prefix ex: <http://example.org/> .\nex:a ex:b ex:c ; ex:d [ ex:e ex:f ] .';
+
+    beforeEach(() => {
+        vi.restoreAllMocks();
+
+        storeControl.shouldThrowLoad = false;
+        storeControl.reasoner = null;
+    });
+
+    it('reads a valid Turtle document without the grammar parser', async () => {
+        const doc = makeDoc();
+        const getParser = vi.spyOn(ParserFactory, 'getParser');
+
+        doc.parse(text);
+
+        const result = doc.getParseResult(text);
+
+        expect(result!.quads).toHaveLength(3);
+        expect(result!.cst).toBeUndefined();
+        expect(result!.parserErrors).toEqual([]);
+        expect(result!.semanticErrors).toEqual([]);
+
+        await doc.loadTriples(text);
+
+        expect(getParser).not.toHaveBeenCalled();
+        expect((doc as any)._store.add).toHaveBeenCalledTimes(3);
+        expect(doc.getParseResult(text)!.quads).toBeUndefined();
+    });
+
+    it('loads the same quads as the syntax tree reader', () => {
+        const doc = makeDoc();
+
+        doc.parse(text);
+
+        const tokens = new TurtleLexer(createFileBlankNodeIdGenerator(doc.uri.toString())).tokenize(text).tokens;
+        const expected = new TurtleReader().visit(new TurtleParser().parse(tokens)) as any[];
+        const render = (quads: any[]) => quads.map(q => `${q.subject.value} ${q.predicate.value} ${q.object.value}`);
+
+        expect(render(doc.getParseResult(text)!.quads!)).toEqual(render(expected));
+    });
+
+    it('falls back to the grammar parser for a document with a syntax error', async () => {
+        const doc = makeDoc();
+        const invalidText = '@prefix ex: <http://example.org/> .\nex:a ex:b ex:c .\nex:a ex:b .';
+
+        doc.parse(invalidText);
+
+        const result = doc.getParseResult(invalidText);
+
+        expect(result!.quads).toBeUndefined();
+        expect(result!.cst).toBeDefined();
+        expect(result!.parserErrors.length).toBeGreaterThan(0);
+
+        await doc.loadTriples(invalidText);
+
+        expect((doc as any)._store.add).not.toHaveBeenCalled();
+    });
+
+    it('reads the tokens again with the quad reader when the parse result was released', async () => {
+        const doc = makeDoc();
+        const getParser = vi.spyOn(ParserFactory, 'getParser');
+
+        doc.parse(text);
+        doc.releaseParseResult();
+
+        await doc.loadTriples(text);
+
+        expect(getParser).not.toHaveBeenCalled();
+        expect((doc as any)._store.add).toHaveBeenCalledTimes(3);
+    });
+
+    it('takes the grammar parser for a TriG document', async () => {
+        const doc = createTurtleDocument('file:///test.trig', RdfSyntax.TriG, { store: makeStore() });
+        const trigText = '@prefix ex: <http://example.org/> .\nex:g { ex:a ex:b ex:c . }';
+
+        doc.parse(trigText);
+
+        const result = doc.getParseResult(trigText);
+
+        expect(result!.quads).toBeUndefined();
+        expect(result!.cst).toBeDefined();
+    });
+});
+
+describe('TurtleDocument parse result lifecycle', () => {
+    const text = '@prefix ex: <http://example.org/> .\nex:a ex:b ex:c .';
+
+    beforeEach(() => {
+        vi.restoreAllMocks();
+
+        // Earlier suites leave the store stub in a throwing state; these tests need a working store.
+        storeControl.shouldThrowLoad = false;
+        storeControl.reasoner = null;
+    });
+
+    it('releases the quads once the triples are loaded and keeps the tokens and errors', async () => {
+        const doc = makeDoc();
+
+        doc.parse(text);
+
+        expect(doc.getParseResult(text)!.quads).toBeDefined();
+
+        await doc.loadTriples(text);
+
+        const result = doc.getParseResult(text);
+
+        expect(result).toBeDefined();
+        expect(result!.quads).toBeUndefined();
+        expect(result!.cst).toBeUndefined();
+        expect(result!.parseTokens).toBeUndefined();
+        expect(result!.tokens).toBe(doc.tokens);
+        expect(result!.lexErrors).toEqual([]);
+        expect(result!.parserErrors).toEqual([]);
+        expect(result!.semanticErrors).toEqual([]);
+    });
+
+    it('reads the tokens again when the triples are loaded a second time from the same text', async () => {
+        const doc = makeDoc();
+        const read = vi.spyOn(TurtleQuadReader.prototype, 'read');
+
+        doc.parse(text);
+
+        // The first load reuses the captured quads; they are released
+        // afterwards, so the second load has to read the tokens again.
+        await doc.loadTriples(text);
+        await doc.loadTriples(text);
+
+        expect(read).toHaveBeenCalledTimes(2);
+        expect(doc.graphs).toHaveLength(1);
+    });
+
+    it('releases the syntax tree of a document with syntax errors as well', async () => {
+        const doc = makeDoc();
+        const invalidText = '@prefix ex: <http://example.org/> .\nex:a ex:b .';
+
+        doc.parse(invalidText);
+
+        expect(doc.getParseResult(invalidText)!.parserErrors.length).toBeGreaterThan(0);
+
+        await doc.loadTriples(invalidText);
+
+        const result = doc.getParseResult(invalidText);
+
+        expect(result).toBeDefined();
+        expect(result!.cst).toBeUndefined();
+        expect(result!.parserErrors.length).toBeGreaterThan(0);
+    });
+
+    it('drops the whole parse result on releaseParseResult but keeps the tokens', () => {
+        const doc = makeDoc();
+
+        doc.parse(text);
+        doc.releaseParseResult();
+
+        expect(doc.getParseResult(text)).toBeUndefined();
+        expect(doc.tokens.length).toBeGreaterThan(0);
+        expect(doc.isParsed).toBe(true);
+    });
+});
+
+describe('TurtleDocument.releaseTokens', () => {
+    const text = '@prefix ex: <http://example.org/> .\nex:a ex:b ex:c .\nex:a a ex:Thing .';
+
+    beforeEach(() => {
+        vi.restoreAllMocks();
+
+        // Earlier suites leave the store stub in a throwing state; these tests need a working store.
+        storeControl.shouldThrowLoad = false;
+        storeControl.reasoner = null;
+    });
+
+    it('keeps the document loaded and its index maps after the tokens are released', async () => {
+        const doc = makeDoc();
+
+        doc.parse(text);
+
+        await doc.loadTriples(text);
+
+        expect(doc.isLoaded).toBe(true);
+        expect(doc.isParsed).toBe(true);
+
+        doc.releaseTokens();
+
+        expect(doc.isParsed).toBe(false);
+        expect(doc.tokens).toHaveLength(0);
+        expect(doc.getParseResult(text)).toBeUndefined();
+        expect(doc.isLoaded).toBe(true);
+        expect(doc.graphs).toHaveLength(1);
+        expect(doc.references.has('http://example.org/a')).toBe(true);
+        expect(doc.subjects.has('http://example.org/a')).toBe(true);
+        expect(doc.typeAssertions.has('http://example.org/a')).toBe(true);
+        expect(doc.namespaces['ex']).toBe('http://example.org/');
+    });
+
+    it('maps quad contexts from the text once the tokens are released', () => {
+        const doc = makeDoc();
+
+        doc.parse(text);
+
+        const fromTokens = doc.getQuadContexts();
+
+        doc.releaseTokens();
+
+        const fromText = doc.getQuadContextsForText(text);
+
+        expect(fromTokens.length).toBeGreaterThan(0);
+        expect(doc.getQuadContexts()).toEqual([]);
+        expect(fromText).toHaveLength(fromTokens.length);
+    });
+
+    it('is parsed again when new tokens are set', () => {
+        const doc = makeDoc();
+
+        doc.parse(text);
+        doc.releaseTokens();
+        doc.parse(text);
+
+        expect(doc.isParsed).toBe(true);
+        expect(doc.tokens.length).toBeGreaterThan(0);
+    });
+});
+
+describe('TurtleDocument language tag statistics', () => {
+    /**
+     * Creates a document with a real store and loads the given Turtle text.
+     */
+    async function load(text: string, doc = createTurtleDocument('file:///stats.ttl')) {
+        doc.parse(text);
+
+        await doc.loadTriples(text);
+
+        return doc;
+    }
+
+    it('counts the language tags of the loaded literals', async () => {
+        const doc = await load('@prefix ex: <http://example.org/> .\nex:a ex:p "A"@en , "B"@en , "C"@de , "D" ; ex:q ex:b .');
+
+        expect(doc.languageTagStats).toEqual({ en: 2, de: 1, '': 1 });
+        expect(doc.primaryLanguage).toBe('en');
+    });
+
+    it('replaces the statistics when the document is loaded again', async () => {
+        const doc = await load('@prefix ex: <http://example.org/> .\nex:a ex:p "A"@en .');
+
+        await load('@prefix ex: <http://example.org/> .\nex:a ex:p "A"@fr , "B"@fr .', doc);
+
+        expect(doc.languageTagStats).toEqual({ fr: 2 });
+        expect(doc.primaryLanguage).toBe('fr');
+    });
+
+    it('has no statistics when the document does not load', async () => {
+        const doc = await load('@prefix ex: <http://example.org/> .\nex:a ex:p "A"@en .');
+
+        await load('@prefix ex: <http://example.org/> .\nex:a ex:p .', doc);
+
+        expect(doc.languageTagStats).toEqual({});
+        expect(doc.primaryLanguage).toBeUndefined();
+    });
+});
+
+describe('TurtleDocument.tokenizeDocument', () => {
+    const text = '@prefix ex: <http://example.org/> .\nex:a ex:b ex:c .';
+
+    beforeEach(() => {
+        vi.restoreAllMocks();
+    });
+
+    it('tokenizes a document version only once', () => {
+        const doc = makeDoc();
+        const document = createMockTextDocument(text, { version: 3 });
+        const tokenize = vi.spyOn(doc, 'tokenize');
+
+        const first = doc.tokenizeDocument(document);
+        const second = doc.tokenizeDocument(document);
+
+        expect(tokenize).toHaveBeenCalledTimes(1);
+        expect(second).toBe(first);
+        expect(first.length).toBeGreaterThan(0);
+    });
+
+    it('tokenizes again when the document version changes', () => {
+        const doc = makeDoc();
+        const tokenize = vi.spyOn(doc, 'tokenize');
+
+        doc.tokenizeDocument(createMockTextDocument(text, { version: 3 }));
+        const tokens = doc.tokenizeDocument(createMockTextDocument(text + '\nex:d ex:e ex:f .', { version: 4 }));
+
+        expect(tokenize).toHaveBeenCalledTimes(2);
+        expect(tokens.some(t => t.image === 'ex:f')).toBe(true);
+    });
+
+    it('drops the cached tokens when the tokens are released', () => {
+        const doc = makeDoc();
+        const document = createMockTextDocument(text, { version: 3 });
+        const tokenize = vi.spyOn(doc, 'tokenize');
+
+        doc.tokenizeDocument(document);
+        doc.releaseTokens();
+        doc.tokenizeDocument(document);
+
+        expect(tokenize).toHaveBeenCalledTimes(2);
+    });
+});
+
+describe('TurtleDocument.getQuadContexts', () => {
+    beforeEach(() => {
+        vi.restoreAllMocks();
+        storeControl.shouldThrowLoad = false;
+    });
+
+    it('reads the quad contexts of a TriG document with its own grammar', () => {
+        const doc = createTurtleDocument('file:///test.trig', RdfSyntax.TriG, { store: makeStore() });
+
+        doc.parse('@prefix ex: <http://example.org/> .\nex:g { ex:a ex:b ex:c . }');
+
+        const quadContexts = doc.getQuadContexts();
+
+        expect(quadContexts).toHaveLength(1);
+        expect(quadContexts[0].subject.value).toBe('http://example.org/a');
+        expect(quadContexts[0].objectToken.image).toBe('ex:c');
+    });
+
+    it('reads the quad contexts of a Turtle document', () => {
+        const doc = makeDoc();
+
+        doc.parse('@prefix ex: <http://example.org/> .\nex:a ex:b ex:c ; ex:d ex:e .');
+
+        expect(doc.getQuadContexts().map(q => q.predicate.value)).toEqual(['http://example.org/b', 'http://example.org/d']);
     });
 });

@@ -11,6 +11,10 @@ export interface MentorE2eState {
 	workspaceFiles: string[];
 	/** The URIs of the documents that have a loaded context in the index. */
 	documentContexts: string[];
+	/** The IRIs of all graphs in the store, including the inference graphs. */
+	storeGraphs: string[];
+	/** The heap used by the extension host in megabytes, if the process API is available. */
+	heapUsedMb?: number;
 }
 
 /**
@@ -31,6 +35,14 @@ export async function activateMentor(): Promise<void> {
  */
 export function getMentorState(): Thenable<MentorE2eState> {
 	return vscode.commands.executeCommand<MentorE2eState>('mentor.e2e.getState');
+}
+
+/**
+ * Counts the triples of a graph in the store through the test-only command.
+ * @param graphIri The IRI of the graph.
+ */
+export function countGraphTriples(graphIri: string): Thenable<number> {
+	return vscode.commands.executeCommand<number>('mentor.e2e.countGraphTriples', graphIri);
 }
 
 /**

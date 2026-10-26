@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { VocabularyRepository } from '@faubulous/mentor-rdf';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
-import { IDocumentContextService } from '@src/services/document';
+import { IDocumentContextService, IPresetDocumentService } from '@src/services/document';
 import { ResourceDefinitionProvider } from '@src/providers';
 import { DefinitionTreeNode, getIriFromArgument } from '@src/views/trees/definition-tree/definition-tree-node';
 
@@ -57,6 +57,9 @@ export async function resolveShapeDefinitionLocations(arg: DefinitionTreeNode | 
 	if (shapeUris.length === 0) {
 		return undefined;
 	}
+
+	// The shapes may be defined in a preset shape graph, whose document is loaded on demand.
+	await container.resolve<IPresetDocumentService>(ServiceToken.PresetDocumentService).ensureLoaded();
 
 	const definitionProvider = new ResourceDefinitionProvider(contextService);
 	const locationsByKey = new Map<string, vscode.Location>();

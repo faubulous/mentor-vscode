@@ -10,8 +10,9 @@ import { getConfig } from '@src/utilities/vscode/config';
 import { isDocumentOpen } from '@src/utilities/vscode/editors';
 import { describeUriPath } from '@src/utilities/vscode/log';
 import { normalizeGlobPattern } from '@src/utilities/glob';
-import { createYieldBudget } from '@src/utilities/scheduling';
+import { createEventLoopYielder } from '@src/utilities/scheduling';
 import { getErrorMessage } from '@src/utilities/error';
+import { getHeapUsedMb } from '@src/utilities/runtime';
 import { CanonicalWorkspaceUri, WorkspaceUri } from '@src/providers/workspace-uri';
 
 /**
@@ -87,6 +88,11 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService, vscode
 	 * The timer that starts an indexing pass for pending file list changes, or `undefined`.
 	 */
 	private _fileListSyncTimer?: ReturnType<typeof setTimeout>;
+
+	/**
+	 * Cancels the workspace diagnostics that run after an indexing pass, or `undefined`.
+	 */
+	private _diagnosticsCancellation?: vscode.CancellationTokenSource;
 
 	/**
 	 * A promise that resolves when all background indexing tasks have 
@@ -256,6 +262,8 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService, vscode
 		clearTimeout(this._fileListSyncTimer);
 
 		this._fileListSyncTimer = undefined;
+
+		this._cancelWorkspaceDiagnostics();
 	}
 
 	/**
@@ -282,7 +290,44 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService, vscode
 			const summary = await this._runIndexingTasks(scanResult.targetFileUris, run);
 
 			this._finalizeIndexingRun(run.fileUris.length, scanResult.skippedFiles, summary, startTime);
+
+			if (run.diagnoseFiles) {
+				this._startWorkspaceDiagnostics(scanResult.targetFileUris);
+			}
 		}
+	}
+
+	/**
+	 * Validates the files of a finished indexing pass in the background, for the
+	 * workspace-wide problems overview of `index.diagnoseFiles`. Neither go to
+	 * definition nor the definition tree need the diagnostics, so they no longer
+	 * hold up the end of indexing. A new indexing pass cancels the validation.
+	 * @param uris The files the pass indexed.
+	 */
+	private _startWorkspaceDiagnostics(uris: readonly vscode.Uri[]): void {
+		this._cancelWorkspaceDiagnostics();
+
+		const cancellation = new vscode.CancellationTokenSource();
+
+		this._diagnosticsCancellation = cancellation;
+
+		this._diagnosticsService.diagnoseFiles(uris, undefined, cancellation.token).catch(error => {
+			this._statusLog.error(`Failed to diagnose the indexed files: ${getErrorMessage(error)}`, error);
+		}).finally(() => {
+			if (this._diagnosticsCancellation === cancellation) {
+				this._diagnosticsCancellation = undefined;
+			}
+
+			cancellation.dispose();
+		});
+	}
+
+	/**
+	 * Cancels the workspace diagnostics of the previous indexing pass, if they still run.
+	 */
+	private _cancelWorkspaceDiagnostics(): void {
+		this._diagnosticsCancellation?.cancel();
+		this._diagnosticsCancellation = undefined;
 	}
 
 	/**
@@ -293,6 +338,8 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService, vscode
 	 */
 	private _startIndexingRun(reindex: boolean): IndexingRun {
 		this._indexingFinished = false;
+
+		this._cancelWorkspaceDiagnostics();
 
 		vscode.commands.executeCommand('setContext', 'mentor.workspace.isIndexing', true);
 
@@ -448,12 +495,12 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService, vscode
 		// Parsing and inference are CPU-bound; with the reads prefetched, the
 		// per-file awaits resolve as microtasks and the loop would never return
 		// to the event loop, freezing the extension host for the whole pass.
-		const yieldBudget = createYieldBudget();
+		const eventLoop = createEventLoopYielder();
 
 		for (let index = 0; index < indexedUris.length; index++) {
 			const fileUri = indexedUris[index];
 
-			await yieldBudget.maybeYield();
+			await eventLoop.yieldIfBusy();
 
 			prefetch(index);
 
@@ -563,7 +610,12 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService, vscode
 			durationMs: duration,
 		};
 
-		this._statusLog.info(`Indexed ${successfulFiles} of ${totalFiles} files in ${duration} ms`);
+		// The heap figure makes the memory cost of an index visible in the output
+		// channel, so a workspace can be checked without a profiler attached.
+		const heapUsedMb = getHeapUsedMb();
+		const heapSuffix = heapUsedMb === undefined ? '' : ` (heap ${heapUsedMb} MB)`;
+
+		this._statusLog.info(`Indexed ${successfulFiles} of ${totalFiles} files in ${duration} ms${heapSuffix}`);
 
 		const parts = [`$(list-tree) Indexed ${successfulFiles} files`];
 
@@ -727,15 +779,27 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService, vscode
 
 		const loadMs = Math.round(performance.now() - loadStart);
 
-		// Compute syntax and lint diagnostics in-process from the content we already
-		// read (no openTextDocument), so `index.diagnoseFiles` gives the workspace-wide
-		// problems overview without the per-file document-open cost. The flag is
-		// snapshotted once per run instead of re-read per file.
-		if (run.diagnoseFiles) {
-			this._diagnosticsService.diagnoseContent(uri, content);
+		// A file that is not open in an editor is parsed again only when it is opened
+		// or changes, so from here on only its index maps and graphs need to stay in
+		// memory. The workspace diagnostics after the pass read the file again.
+		if (!openDocument) {
+			this._releaseTokens(uri);
 		}
 
 		return { readMs, loadMs };
+	}
+
+	/**
+	 * Releases the tokens and the parse result of an indexed file that is not open
+	 * in an editor, if its context keeps them.
+	 * @param uri The URI of the indexed file.
+	 */
+	private _releaseTokens(uri: vscode.Uri): void {
+		const context = this._contextService.contexts[uri.toString()];
+
+		if (context && context.isTokenized()) {
+			context.releaseTokens();
+		}
 	}
 
 	/**
@@ -753,10 +817,10 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService, vscode
 
 		// Each cell pays a full parse, triple load and inference pass; yield
 		// between cells so a large notebook does not block the extension host.
-		const yieldBudget = createYieldBudget();
+		const eventLoop = createEventLoopYielder();
 
 		for (const cell of notebook.getCells()) {
-			await yieldBudget.maybeYield();
+			await eventLoop.yieldIfBusy();
 
 			const lang = cell.document.languageId;
 
@@ -871,8 +935,8 @@ type IndexingRun = {
 	maxSize: number;
 
 	/**
-	 * Whether syntax/lint diagnostics are computed per indexed file. Snapshotted
-	 * once per run so the hot loop does not re-read the configuration per file.
+	 * Whether syntax/lint diagnostics are computed for the indexed files once the
+	 * run has finished. Snapshotted once per run.
 	 */
 	diagnoseFiles: boolean;
 

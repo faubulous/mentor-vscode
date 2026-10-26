@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import * as fs from 'fs';
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as vscode from 'vscode';
 
@@ -10,6 +11,9 @@ vi.mock('@src/languages', () => ({
 
 import { DocumentFactory } from '@src/services/document/document-factory';
 import { createTestStore, createTestVocabulary, createTestSettings } from '@src/utilities/mocks/factories';
+import { PresetGraphDocument } from '@src/languages/turtle/preset-graph-document';
+import { MentorVfsUri } from '@src/providers/mentor-vfs-uri';
+import { PRESET_GRAPHS } from '@src/services/core/preset-graphs';
 
 describe('DocumentFactory', () => {
 	let factory: DocumentFactory;
@@ -517,6 +521,14 @@ describe('DocumentFactory', () => {
 			expect(factory.create(uri, 'xml')).toBeDefined();
 		});
 
+		it('creates a PresetGraphDocument for the source of a preset graph', () => {
+			const graph = PRESET_GRAPHS.find(g => g.path === 'vocabularies/rdfs.ttl')!;
+			const context = factory.create(MentorVfsUri.toUri(graph), 'turtle');
+
+			expect(context).toBeInstanceOf(PresetGraphDocument);
+			expect((context as PresetGraphDocument).graph).toBe(graph);
+		});
+
 		it('infers language from file extension when languageId is omitted', () => {
 			// .ttl → turtle
 			expect(factory.create({ path: '/test/file.ttl' } as any)).toBeDefined();
@@ -528,6 +540,23 @@ describe('DocumentFactory', () => {
 
 		it('throws when language cannot be determined from the URI', () => {
 			expect(() => factory.create({ path: '/test/file.xyz' } as any)).toThrow('Unable to determine the document language');
+		});
+	});
+
+	describe('activation events in package.json', () => {
+		const manifest = JSON.parse(fs.readFileSync(new URL('../../../package.json', import.meta.url), 'utf8'));
+		const activationEvents: string[] = manifest.activationEvents;
+
+		it('keep activating Mentor in every window, so that its status bar items show up', () => {
+			expect(activationEvents).toContain('onStartupFinished');
+		});
+
+		it('activate Mentor at start-up in workspaces that contain a file the indexer reads', () => {
+			const event = activationEvents.find(e => e.startsWith('workspaceContains:'));
+			const extensions = /\{([^}]*)\}/.exec(event ?? '')?.[1].split(',').map(extension => `.${extension}`);
+
+			expect(event).toMatch(/^workspaceContains:\*\*\/\*\.\{[^}]+\}$/);
+			expect(extensions?.sort()).toEqual(Object.keys(factory.supportedExtensions).sort());
 		});
 	});
 });

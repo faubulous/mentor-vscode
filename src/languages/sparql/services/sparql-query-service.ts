@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { RdfSyntax, RdfToken } from '@faubulous/mentor-rdf-parsers';
 import { ParserFactory } from '@src/languages/parser-factory';
-import { QueryEngine } from "@comunica/query-sparql";
+import type { QueryEngine } from "@comunica/query-sparql";
 import { AsyncIterator } from 'asynciterator';
 import { Bindings, Quad } from "@rdfjs/types";
 import { AuthCredential } from '@src/services/core/credential';
@@ -13,7 +13,7 @@ import { ITripleStoreConfigService } from './triple-store-config-service.interfa
 import { WorkspaceUri } from "@src/providers/workspace-uri";
 import { CancellationError, withCancellation } from '@src/utilities/vscode/cancellation';
 import { getConfig } from '@src/utilities/vscode/config';
-import { SparqlQueryExecutionState, SparqlQueryType, SparqlRawResponse } from "./sparql-query-state";
+import { SparqlQueryExecutionState, SparqlQueryType, SparqlRawResponse, getQueryStateWithoutResult } from "./sparql-query-state";
 import { SparqlConnection } from './sparql-connection';
 
 /**
@@ -35,9 +35,15 @@ export class SparqlQueryService {
 	private readonly _historyStorageKey = 'mentor.sparql.queryHistory';
 
 	/**
-	 * The maximum number of entries to keep in the query history.
+	 * The maximum number of entries to persist, and the number of most recent entries that
+	 * keep their result and raw response in memory (see {@link _trimHistory}).
 	 */
 	private readonly _historyMaxEntries = 10;
+
+	/**
+	 * The maximum number of entries to keep in memory at all; older ones are dropped.
+	 */
+	private readonly _historyMaxTotalEntries = 100;
 
 	/**
 	 * The maximum number of characters of a raw response body to retain. Larger bodies are
@@ -51,13 +57,14 @@ export class SparqlQueryService {
 	private readonly _cancellationTokens = new Map<string, vscode.CancellationTokenSource>();
 
 	/**
-	 * The shared Comunica query engine, created lazily on the first query.
-	 * Constructing an engine builds its entire actor/mediator pipeline —
-	 * expensive, synchronous CPU on the shared extension host — while the engine
-	 * itself holds no per-query state (sources and options are passed per call),
-	 * so a single instance serves all queries.
+	 * The shared Comunica query engine, created lazily on the first query (see
+	 * {@link _getQueryEngine}). Constructing an engine builds its entire
+	 * actor/mediator pipeline — expensive, synchronous CPU on the shared extension
+	 * host — while the engine itself holds no per-query state (sources and options
+	 * are passed per call), so a single instance serves all queries. The promise is
+	 * cached so concurrent first queries share one module load and one engine.
 	 */
-	private _queryEngine: QueryEngine | undefined;
+	private _queryEngine: Promise<QueryEngine> | undefined;
 
 	private readonly _onDidHistoryChange = new vscode.EventEmitter<void>();
 
@@ -206,12 +213,26 @@ export class SparqlQueryService {
 	}
 
 	private async _persistQueryHistory(): Promise<void> {
-		// Filter the query history to exclude execution states that would not be valid after a restart.
+		// Exclude execution states that would not be valid after a restart. Only the
+		// metadata is persisted: writing results and raw responses to the workspace
+		// state after every execution cost megabytes per query, and a restored
+		// query re-runs when its tab is shown, as it does after a webview reload.
 		const filteredHistory = this._history
-			.filter(q => q && !q.isBackground && q.documentIri && !q.documentIri.startsWith('untitled'))
-			.slice(0, this._historyMaxEntries);
+			.filter(q => q && !q.isBackground && this._isPersistentDocumentIri(q.documentIri))
+			.slice(0, this._historyMaxEntries)
+			.map(getQueryStateWithoutResult);
 
 		await this._extensionContext.workspaceState.update(this._historyStorageKey, filteredHistory);
+	}
+
+	/**
+	 * Indicates whether a document IRI still identifies the same document after a
+	 * restart. Untitled documents are gone by then and notebook cell URIs change
+	 * with every session.
+	 * @param documentIri The document IRI of a history entry.
+	 */
+	private _isPersistentDocumentIri(documentIri: string | undefined): boolean {
+		return !!documentIri && !documentIri.startsWith('untitled') && !documentIri.startsWith('vscode-notebook-cell');
 	}
 
 	/**
@@ -463,9 +484,9 @@ export class SparqlQueryService {
 			options.timeout = timeout;
 		}
 
-		this._queryEngine ??= new QueryEngine();
+		const queryEngine = await this._getQueryEngine();
 
-		const preparedQuery = await this._queryEngine.query(query, options);
+		const preparedQuery = await queryEngine.query(query, options);
 
 		if (preparedQuery.resultType === 'boolean') {
 			const value = token
@@ -484,6 +505,27 @@ export class SparqlQueryService {
 		}
 
 		return { type: 'none' };
+	}
+
+	/**
+	 * Returns the shared Comunica query engine, loading the Comunica module on first
+	 * use. The module is imported dynamically so that it is not evaluated when the
+	 * extension activates: it makes up about half of the extension bundle, and
+	 * evaluating it costs noticeable time and heap even in sessions that never run a
+	 * query. The bundler inlines the module but defers its initialization until this
+	 * import runs. A failed load is not cached, so the next query retries.
+	 * @returns A promise that resolves to the shared query engine.
+	 */
+	private _getQueryEngine(): Promise<QueryEngine> {
+		this._queryEngine ??= import('@comunica/query-sparql')
+			.then(({ QueryEngine }) => new QueryEngine())
+			.catch(error => {
+				this._queryEngine = undefined;
+
+				throw error;
+			});
+
+		return this._queryEngine;
 	}
 
 	_getFetchHandler(
@@ -629,8 +671,29 @@ export class SparqlQueryService {
 		}
 
 		this._history.unshift(context);
+		this._trimHistory();
 
 		this._onDidHistoryChange.fire();
+	}
+
+	/**
+	 * Bounds the memory the history holds. Entries beyond the most recent
+	 * {@link _historyMaxEntries} drop their result and raw response — the results
+	 * webview keeps its own copy of what it displays — and the list itself is capped
+	 * at {@link _historyMaxTotalEntries} entries. A query that is still running keeps
+	 * its fields: its result is assigned before it is moved to the front on completion.
+	 */
+	private _trimHistory(): void {
+		for (const entry of this._history.slice(this._historyMaxEntries)) {
+			if (entry.endTime !== undefined) {
+				entry.result = undefined;
+				entry.rawResponse = undefined;
+			}
+		}
+
+		if (this._history.length > this._historyMaxTotalEntries) {
+			this._history.length = this._historyMaxTotalEntries;
+		}
 	}
 
 	/**

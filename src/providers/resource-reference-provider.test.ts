@@ -1,4 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { createRangeIndex } from '@src/utilities/mocks/factories';
+import { RangeIndex } from '@src/services/document/range-index';
 import * as vscode from 'vscode';
 
 vi.mock('vscode', async () => await import('@src/utilities/mocks/vscode'));
@@ -49,7 +51,7 @@ describe('ResourceReferenceProvider', () => {
 			'file:///test.ttl': {
 				uri: vscode.Uri.parse('file:///test.ttl'),
 				getIriAtPosition: vi.fn(() => null),
-				references: {},
+				references: new RangeIndex(),
 				isTemporary: false,
 			}
 		};
@@ -64,7 +66,7 @@ describe('ResourceReferenceProvider', () => {
 			'file:///test.ttl': {
 				uri: vscode.Uri.parse('file:///test.ttl'),
 				getIriAtPosition: vi.fn(() => 'http://example.org/Class'),
-				references: { 'http://example.org/Class': [range] },
+				references: createRangeIndex({ 'http://example.org/Class': [range] }),
 				isTemporary: false,
 			}
 		};
@@ -78,12 +80,12 @@ describe('ResourceReferenceProvider', () => {
 		mockContextService.contexts = {
 			'file:///a.ttl': {
 				uri: vscode.Uri.parse('file:///a.ttl'),
-				references: { 'http://example.org/Class': [range] },
+				references: createRangeIndex({ 'http://example.org/Class': [range] }),
 				isTemporary: false,
 			},
 			'file:///b.ttl': {
 				uri: vscode.Uri.parse('file:///b.ttl'),
-				references: { 'http://example.org/Class': [range] },
+				references: createRangeIndex({ 'http://example.org/Class': [range] }),
 				isTemporary: false,
 			},
 		};
@@ -96,11 +98,25 @@ describe('ResourceReferenceProvider', () => {
 		mockContextService.contexts = {
 			'file:///temp.ttl': {
 				uri: vscode.Uri.parse('file:///temp.ttl'),
-				references: { 'http://example.org/C': [range] },
+				references: createRangeIndex({ 'http://example.org/C': [range] }),
 				isTemporary: true,
 			},
 		};
 		const locations = provider.provideReferencesForIri('http://example.org/C');
 		expect(locations).toHaveLength(0);
+	});
+
+	it('skips the contexts of preset graphs when providing and counting references', () => {
+		const range = { start: { line: 1, character: 0 }, end: { line: 1, character: 10 } };
+		mockContextService.contexts = {
+			'mentor-vfs:/vocabularies/rdfs.ttl': {
+				uri: vscode.Uri.parse('mentor-vfs:/vocabularies/rdfs.ttl'),
+				references: createRangeIndex({ 'http://www.w3.org/2000/01/rdf-schema#label': [range] }),
+				isTemporary: false,
+				isPreset: true,
+			},
+		};
+		expect(provider.provideReferencesForIri('http://www.w3.org/2000/01/rdf-schema#label')).toHaveLength(0);
+		expect(provider.countReferencesForIri('http://www.w3.org/2000/01/rdf-schema#label')).toBe(0);
 	});
 });

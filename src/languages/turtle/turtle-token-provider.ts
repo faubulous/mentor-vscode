@@ -3,8 +3,8 @@ import { container } from 'tsyringe';
 import { VocabularyRepository } from '@faubulous/mentor-rdf';
 import { ServiceToken } from '@src/services/tokens';
 import { IDocumentContextService } from '@src/services/document';
-import { IPrefixLookupService } from '@src/services/document';
-import { IWorkspaceIndexerService } from '@src/services/core';
+import { IPrefixLookupService, IPresetDocumentService } from '@src/services/document';
+import { IWorkspaceIndexerService, IWorkspaceRenameService } from '@src/services/core';
 import { ShaclValidationService } from '@src/services/validation/shacl-validation-service';
 import { ISparqlConnectionRegistry, IDocumentConnectionService } from '@src/languages/sparql/services';
 import {
@@ -53,19 +53,21 @@ export class TurtleTokenProvider {
 		const vocabulary = container.resolve<VocabularyRepository>(ServiceToken.VocabularyRepository);
 		const prefixLookup = container.resolve<IPrefixLookupService>(ServiceToken.PrefixLookupService);
 		const workspaceIndexer = container.resolve<IWorkspaceIndexerService>(ServiceToken.WorkspaceIndexerService);
+		const presetDocuments = container.resolve<IPresetDocumentService>(ServiceToken.PresetDocumentService);
 		const validationService = container.resolve<ShaclValidationService>(ServiceToken.ShaclValidationService);
 		const connectionRegistry = container.resolve<ISparqlConnectionRegistry>(ServiceToken.SparqlConnectionRegistry);
 		const documentConnectionService = container.resolve<IDocumentConnectionService>(ServiceToken.DocumentConnectionService);
+		const renameService = container.resolve<IWorkspaceRenameService>(ServiceToken.WorkspaceRenameService);
 
 		this._codeActionsProvider = new TurtleCodeActionsProvider(contextService);
 		this._codelensProvider = new TurtleUsageCodeLensProvider(contextService, workspaceIndexer, vocabulary);
 		this._completionProvider = new TurtleCompletionItemProvider(contextService, vocabulary);
-		this._definitionProvider = new ResourceDefinitionProvider(contextService);
+		this._definitionProvider = new ResourceDefinitionProvider(contextService, workspaceIndexer, presetDocuments);
 		this._notebookSlugCodelensProvider = new NotebookCellSlugCodeLensProvider(contextService);
 		this._workspaceGraphDefinitionProvider = new WorkspaceGraphDefinitionProvider(contextService);
 		this._prefixCompletionProvider = new TurtlePrefixCompletionProvider((uri) => ` <${uri}> .`, contextService, prefixLookup);
 		this._referenceProvider = new ResourceReferenceProvider(contextService);
-		this._renameProvider = new TurtleRenameProvider(contextService);
+		this._renameProvider = new TurtleRenameProvider(contextService, renameService);
 		this._formattingProvider = new TurtleCodeFormattingProvider();
 		this._validationCodelensProvider = new TurtleValidationCodeLensProvider(contextService, workspaceIndexer, validationService);
 		this._connectionCodelensProvider = new TurtleConnectionCodeLensProvider(connectionRegistry, documentConnectionService);

@@ -4,6 +4,8 @@ import {
 	SparqlResultsPanelState,
 	reduceOnHistory,
 	reduceOnShowWelcome,
+	reduceOnQueryResult,
+	isRestorableQueryState,
 } from '@src/views/webviews/views/sparql-results/sparql-results-panel-state';
 
 const INITIAL: SparqlResultsPanelState = { renderKey: 0, activeQueries: [], activeTabIndex: 0 };
@@ -116,6 +118,19 @@ describe('reduceOnHistory', () => {
 	});
 });
 
+describe('reduceOnHistory tab references', () => {
+	it('keeps the references of the tabs it does not update, so their memoized views skip re-rendering', () => {
+		const other = query({ id: 'q0', documentIri: 'file:///z.sparql' });
+		const head = query({ id: 'q1', documentIri: 'file:///a.sparql' });
+		const state: SparqlResultsPanelState = { renderKey: 0, activeQueries: [other, head], activeTabIndex: 1 };
+
+		const next = reduceOnHistory(state, [query({ id: 'q2', documentIri: 'file:///a.sparql' })]);
+
+		expect(next.activeQueries[0]).toBe(other);
+		expect(next.activeQueries[1].id).toBe('q2');
+	});
+});
+
 describe('reduceOnShowWelcome', () => {
 	it('forces the welcome tab and clears any pending selection', () => {
 		const state: SparqlResultsPanelState = {
@@ -130,5 +145,51 @@ describe('reduceOnShowWelcome', () => {
 		expect(next.activeTabIndex).toBe(0);
 		expect(next.pendingSelectQueryId).toBeUndefined();
 		expect(next.activeQueries).toHaveLength(1); // tabs preserved
+	});
+});
+
+describe('isRestorableQueryState', () => {
+	it('accepts a cached state of the same execution that holds a result', () => {
+		const tab = query({ id: 'q1', endTime: 1 });
+		const cached = query({ id: 'q1', endTime: 1, result: { type: 'boolean', value: true } as any });
+
+		expect(isRestorableQueryState(tab, cached)).toBe(true);
+	});
+
+	it('accepts a cached state that holds an error or is still executing', () => {
+		const tab = query({ id: 'q1' });
+
+		expect(isRestorableQueryState(tab, query({ id: 'q1', endTime: 1, error: { message: 'failed' } }))).toBe(true);
+		expect(isRestorableQueryState(tab, query({ id: 'q1', endTime: undefined }))).toBe(true);
+	});
+
+	it('rejects a missing state, a finished state without outcome, and another execution or document', () => {
+		const tab = query({ id: 'q1', endTime: 1 });
+		const result = { type: 'boolean', value: true } as any;
+
+		expect(isRestorableQueryState(tab, undefined)).toBe(false);
+		expect(isRestorableQueryState(tab, query({ id: 'q1', endTime: 1 }))).toBe(false);
+		expect(isRestorableQueryState(tab, query({ id: 'q2', endTime: 1, result }))).toBe(false);
+		expect(isRestorableQueryState(tab, query({ id: 'q1', endTime: 1, result, documentIri: 'file:///b.sparql' }))).toBe(false);
+	});
+});
+
+describe('reduceOnQueryResult', () => {
+	it('applies the cached outcome to the tab and keeps its routing metadata', () => {
+		const tab = query({ id: 'q1', label: 'List Graphs', connectionId: 'c1', startTime: 5, endTime: 6 });
+		const state: SparqlResultsPanelState = { renderKey: 0, activeQueries: [query({ id: 'q0', documentIri: 'file:///z.sparql' }), tab], activeTabIndex: 2 };
+		const result = { type: 'boolean', value: true } as any;
+
+		const next = reduceOnQueryResult(state, query({ id: 'q1', startTime: 5, endTime: 6, result, label: undefined }));
+
+		expect(next.activeQueries[1]).toEqual(expect.objectContaining({ id: 'q1', label: 'List Graphs', connectionId: 'c1', result }));
+		expect(next.activeQueries[0]).toBe(state.activeQueries[0]);
+		expect(next.activeTabIndex).toBe(2);
+	});
+
+	it('returns the state unchanged when the tab was closed in the meantime', () => {
+		const state: SparqlResultsPanelState = { renderKey: 0, activeQueries: [query({ id: 'q0' })], activeTabIndex: 1 };
+
+		expect(reduceOnQueryResult(state, query({ id: 'q1', endTime: 1 }))).toBe(state);
 	});
 });

@@ -27,11 +27,17 @@ export class TurtlePrefixCompletionProvider extends TurtleFeatureProvider implem
 			return null;
 		}
 
-		// Tokenize the current document text synchronously so that completions
-		// are always based on the up-to-date buffer content. This avoids waiting
-		// for token delivery from the language server and also makes completions
-		// work for documents that are not eagerly indexed (e.g. untitled documents).
-		const tokens = context.tokenize(document.getText());
+		// Only prefix declarations are completed inline. Checking the current line first
+		// avoids tokenizing the document on the keystrokes of every other line.
+		if (!this._isPrefixDeclarationLine(document.lineAt(position.line).text)) {
+			return null;
+		}
+
+		// Tokenize the current document text so that completions are always based on
+		// the up-to-date buffer content, also for documents that are not indexed (e.g.
+		// untitled documents). The tokens are cached per document version and shared
+		// with the other providers that run on the same keystroke.
+		const tokens = context.tokenizeDocument(document);
 
 		if (token?.isCancellationRequested) {
 			return null;
@@ -75,5 +81,15 @@ export class TurtlePrefixCompletionProvider extends TurtleFeatureProvider implem
 		} else {
 			return [];
 		}
+	}
+
+	/**
+	 * Indicates whether a line may contain a prefix declaration, i.e. the Turtle `@prefix`
+	 * or the SPARQL `PREFIX` keyword (case-insensitive). The token check that follows decides
+	 * precisely; this only rules out the lines that certainly do not declare a prefix.
+	 * @param lineText The text of the line at the cursor.
+	 */
+	private _isPrefixDeclarationLine(lineText: string): boolean {
+		return /(^|\s)@?prefix\s/i.test(lineText);
 	}
 }

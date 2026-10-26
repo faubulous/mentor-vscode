@@ -176,6 +176,49 @@ describe('SparqlResultsController query history', () => {
 		expect(posts.every((m: any) => m.selectQueryId === 'q1')).toBe(true);
 	});
 
+	const bindingsResult = { type: 'bindings', columns: [], rows: [], namespaceMap: {} };
+	const rawResponse = { url: 'http://example.org/sparql', status: 200, statusText: 'OK', body: 'x' };
+
+	function lastHistoryPost(controller: SparqlResultsController): any {
+		return (controller as any).postMessage.mock.calls.at(-1)[0];
+	}
+
+	it('posts the result of the most recent query only, and never a raw response', () => {
+		history = [
+			{ id: 'q1', documentIri: 'file:///a.sparql', result: bindingsResult, rawResponse },
+			{ id: 'q2', documentIri: 'file:///b.sparql', result: bindingsResult, rawResponse },
+		];
+
+		const controller = makeController();
+
+		historyChangeHandler?.();
+
+		const message = lastHistoryPost(controller);
+
+		expect(message.id).toBe('PostSparqlQueryHistory');
+		expect(message.history[0].result).toBe(bindingsResult);
+		expect(message.history[1].result).toBeUndefined();
+		expect(message.history[1].documentIri).toBe('file:///b.sparql');
+		expect(message.history.every((entry: any) => entry.rawResponse === undefined)).toBe(true);
+	});
+
+	it('posts the result of the query being executed even when it is not the most recent', () => {
+		history = [
+			{ id: 'q1', documentIri: 'file:///a.sparql', result: bindingsResult, rawResponse },
+			{ id: 'q2', documentIri: 'file:///b.sparql', result: bindingsResult, rawResponse },
+		];
+
+		const controller = makeController();
+
+		(controller as any)._pendingSelectQueryId = 'q2';
+		historyChangeHandler?.();
+
+		const message = lastHistoryPost(controller);
+
+		expect(message.history[1].result).toBe(bindingsResult);
+		expect(message.history[1].rawResponse).toBeUndefined();
+	});
+
 	it('defers execution until a just-opened webview reports it is listening', async () => {
 		const controller = makeController();
 
@@ -264,5 +307,47 @@ describe('SparqlResultsController connection handlers', () => {
 		expect((controller as any).postMessage).toHaveBeenCalledWith(
 			expect.objectContaining({ id: 'TestSparqlConnectionResult', connectionId: 'conn-1', success: false, error: 'Connection refused' })
 		);
+	});
+});
+
+describe('SparqlResultsController GetSparqlQueryResult handler', () => {
+	/**
+	 * Sends a result request for the given query id and returns the posted reply.
+	 */
+	async function requestQueryResult(queryId: string) {
+		const controller = makeController();
+
+		await (controller as any).onDidReceiveMessage({ id: 'GetSparqlQueryResult', queryId });
+
+		expect((controller as any).postMessage).toHaveBeenCalledTimes(1);
+
+		return (controller as any).postMessage.mock.calls[0][0];
+	}
+
+	it('replies with the cached execution state of a known query, without the raw response', async () => {
+		const result = { type: 'bindings', columns: ['s'], rows: [] };
+
+		history = [
+			{ id: 'q2', documentIri: 'file:///b.sparql', startTime: 2, endTime: 3 },
+			{ id: 'q1', documentIri: 'file:///a.sparql', startTime: 0, endTime: 1, result, rawResponse: { body: '{}' } },
+		];
+
+		const reply = await requestQueryResult('q1');
+
+		expect(reply.id).toBe('PostSparqlQueryResult');
+		expect(reply.queryId).toBe('q1');
+		expect(reply.queryState).toEqual(expect.objectContaining({ id: 'q1', documentIri: 'file:///a.sparql', result }));
+		expect(reply.queryState.rawResponse).toBeUndefined();
+
+		// The history entry itself keeps its raw response for the "view raw response" command.
+		expect(history[1].rawResponse).toEqual({ body: '{}' });
+	});
+
+	it('replies without a state when the query is no longer in the history', async () => {
+		history = [{ id: 'q1', documentIri: 'file:///a.sparql', startTime: 0 }];
+
+		const reply = await requestQueryResult('unknown');
+
+		expect(reply).toEqual({ id: 'PostSparqlQueryResult', queryId: 'unknown', queryState: undefined });
 	});
 });
