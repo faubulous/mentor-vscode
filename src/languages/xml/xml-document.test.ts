@@ -25,6 +25,7 @@ import { XmlDocument } from '@src/languages/xml/xml-document';
 import { createXmlDocument } from '@src/utilities/mocks/factories';
 import { XmlParser } from '@src/languages/xml/xml-parser';
 import { ServiceToken } from '@src/services/tokens';
+import { OwlReasoner, Store } from '@faubulous/mentor-rdf';
 
 beforeEach(() => {
     vi.clearAllMocks();
@@ -406,21 +407,76 @@ describe('XmlDocument', () => {
     });
 
     describe('loadTriples', () => {
-        it('should call store.loadFromXmlStream with the document data', async () => {
-            const doc = makeDoc('file:///rdf.xml');
-            await doc.loadTriples('<rdf:RDF />');
-            expect(mockStore.loadFromXmlStream).toHaveBeenCalledWith(
-                '<rdf:RDF />',
-                expect.any(String),
-                false,
-                true,
-                expect.any(Function)
-            );
+        /**
+         * Returns an RDF/XML document that describes a resource with the given label.
+         */
+        function makeRdfXml(label: string): string {
+            return `<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#">
+  <rdf:Description rdf:about="http://example.org/a">
+    <rdfs:label>${label}</rdfs:label>
+    <rdfs:comment>A resource.</rdfs:comment>
+  </rdf:Description>
+</rdf:RDF>`;
+        }
+
+        /**
+         * Creates a document over a real store with a reasoner and spies on its inference.
+         */
+        function makeDocWithStore() {
+            const store = new Store(new OwlReasoner());
+            const executeInference = vi.spyOn(store, 'executeInference');
+            const doc = createXmlDocument('file:///rdf.xml', { store });
+
+            return { store, doc, executeInference };
+        }
+
+        /**
+         * Loads a text into the document as an edit does: load the triples, infer.
+         */
+        async function load(doc: XmlDocument, text: string): Promise<void> {
+            await doc.loadTriples(text);
+            await doc.infer();
+        }
+
+        it('loads the triples of the document into its graph', async () => {
+            const { store, doc } = makeDocWithStore();
+
+            await load(doc, makeRdfXml('A'));
+
+            expect(store.countQuads(null, null, null, store.dataFactory.namedNode(doc.graphs[0]))).toBe(2);
+            expect(doc.languageTagStats).toEqual({ '': 2 });
         });
 
-        it('should handle errors gracefully when loadFromXmlStream throws', async () => {
-            mockStore.loadFromXmlStream.mockRejectedValueOnce(new Error('parse error'));
-            const doc = makeDoc('file:///bad.xml');
+        it('only applies the triples that changed and re-executes inference after a change', async () => {
+            const { store, doc, executeInference } = makeDocWithStore();
+
+            await load(doc, makeRdfXml('A'));
+
+            const add = vi.spyOn(store, 'add');
+            const remove = vi.spyOn(store, 'delete');
+
+            await doc.loadTriples(makeRdfXml('B'));
+
+            expect(add).toHaveBeenCalledTimes(1);
+            expect(remove).toHaveBeenCalledTimes(1);
+
+            await doc.infer();
+
+            expect(executeInference).toHaveBeenCalledTimes(2);
+        });
+
+        it('does not re-execute inference when the triples did not change', async () => {
+            const { doc, executeInference } = makeDocWithStore();
+
+            await load(doc, makeRdfXml('A'));
+            await load(doc, makeRdfXml('A'));
+
+            expect(executeInference).toHaveBeenCalledTimes(1);
+        });
+
+        it('should handle errors gracefully when the document cannot be parsed', async () => {
+            const { doc } = makeDocWithStore();
+
             await expect(doc.loadTriples('bad xml')).resolves.not.toThrow();
         });
     });

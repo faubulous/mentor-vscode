@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import type { CstNode } from 'chevrotain';
-import { Quad, Quad_Subject, Quad_Object, Quad_Predicate } from '@rdfjs/types';
+import { Quad, Quad_Graph, Quad_Subject, Quad_Object, Quad_Predicate } from '@rdfjs/types';
 import { LanguageTagUsageStats, Store, Uri, VocabularyRepository, _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, RDF } from '@faubulous/mentor-rdf';
 import { BlankNodeIdGenerator, createFileBlankNodeIdGenerator, IToken, QuadContext, QuadReaderError, RdfSyntax, RdfToken, tokenizeWithTriplate, TriplateLexingResult, TurtleQuadReader, TurtleReader } from '@faubulous/mentor-rdf-parsers';
 import { ParserFactory } from '@src/languages/parser-factory';
@@ -17,8 +17,9 @@ import {
 	getTokenRange,
 	isPrefixTokenAtPosition
 } from '@src/utilities';
-import { addLanguageTagUsage } from '@src/utilities/rdf';
 import { PrefixedNameResolver } from '@src/languages/prefixed-name-resolver';
+import { addLanguageTagUsage, replaceGraphQuads } from '@src/utilities/rdf';
+import { getRangeFromToken } from '@src/utilities/vscode/tokens';
 
 /**
  * A document context for Turtle and TriG documents.
@@ -313,48 +314,33 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 	 * @param data The file content (not used, parsing uses existing tokens).
 	 */
 	public override async loadTriples(data: string): Promise<void> {
-		// Counted while the quads are added, instead of in a separate scan of the graph.
+		// Counted while the quads are read, instead of in a separate scan of the graph.
 		const languageTagStats: LanguageTagUsageStats = {};
 
+		const store = this._store;
+		const graphUri = WorkspaceUri.toCanonicalString(this.graphIri);
+
 		try {
-			const store = this._store;
-			const graphUri = WorkspaceUri.toCanonicalString(this.graphIri);
 			const g = store.dataFactory.namedNode(graphUri);
 
-			// Capture old graph URIs before resetting (needed to clean up slug changes).
-			const oldGraphs = [...this.graphs];
+			// The graphs of a previous graph IRI, e.g. before a notebook cell got its slug.
+			const previousGraphs = this.graphs.filter(uri => uri !== graphUri);
 
-			// Initialize the graphs *before* trying to load the document so 
+			// Initialize the graphs *before* trying to load the document so
 			// that they are initialized even when loading the document fails.
 			this.graphs.length = 0;
 			this.graphs.push(graphUri);
 
-			// Delete old graphs and their inference graphs (handles slug changes and
-			// stale triples removed from the document). Done after resetting
-			// this.graphs so the invariant holds on error.
-			store.deleteGraphs([...oldGraphs, graphUri], true);
+			if (previousGraphs.length > 0) {
+				store.deleteGraphs(previousGraphs, true);
+			}
 
-			// Reset inference flag so that infer() re-runs after each reload. This is
-			// essential when a slug update triggers a reload: the old inference graph
-			// (based on the opaque cell ID) was deleted above, and a fresh inference
-			// pass is needed to populate the slug-based graph.
-			this._inferenceExecuted = false;
+			const quads = this._readGraphQuads(data, g, languageTagStats);
 
-			// Reuse the quads or the CST captured by parse() when they were
-			// produced from exactly this content. An errored, stale or already
-			// released result reads the tokens again, which throws on errors,
-			// so invalid documents keep loading no triples.
-			const quads = this.getParseResult(data)?.quads ?? this._readQuads(data);
-
-			for (const q of quads) {
-				const s = q.subject as Quad_Subject;
-				const p = q.predicate as Quad_Predicate;
-				const o = q.object as Quad_Object;
-
-				const quad = store.dataFactory.quad(s, p, o, g);
-
-				store.add(quad);
-				addLanguageTagUsage(languageTagStats, o);
+			// Only the triples that changed are applied, so an edit does not replace all
+			// triples of a large document, and the inference re-runs only after a change.
+			if (replaceGraphQuads(store, g, quads)) {
+				this._inferenceExecuted = false;
 			}
 		} catch (e) {
 			// This is not a critical error because the graph might be invalid.
@@ -367,6 +353,33 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 		}
 
 		this.languageTagStats = languageTagStats;
+	}
+
+	/**
+	 * Reads the quads of the document into a graph and counts the language tags of their objects.
+	 * @param data The text being loaded.
+	 * @param graph The graph of the document.
+	 * @param languageTagStats The statistics to count the language tags in.
+	 * @returns The quads, or no quads when the document has errors, so that an invalid
+	 * document loads no triples.
+	 */
+	private _readGraphQuads(data: string, graph: Quad_Graph, languageTagStats: LanguageTagUsageStats): Quad[] {
+		let quads: Quad[];
+
+		try {
+			// Reuse the quads or the CST captured by parse() when they were produced
+			// from exactly this content. An errored, stale or already released result
+			// reads the tokens again, which throws on errors.
+			quads = this.getParseResult(data)?.quads ?? this._readQuads(data);
+		} catch {
+			return [];
+		}
+
+		return quads.map(q => {
+			addLanguageTagUsage(languageTagStats, q.object);
+
+			return this._store.dataFactory.quad(q.subject as Quad_Subject, q.predicate as Quad_Predicate, q.object as Quad_Object, graph);
+		});
 	}
 
 	/**

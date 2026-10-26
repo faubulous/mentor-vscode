@@ -1,4 +1,4 @@
-import { DatasetCore, Literal, Term } from '@rdfjs/types';
+import { BaseQuad, DatasetCore, Literal, Quad, Quad_Graph, Term } from '@rdfjs/types';
 import { DataFactory } from 'rdf-data-factory';
 import { RdfStore } from 'rdf-stores';
 import { LanguageTagUsageStats, Store, XSD, RDF, RDFS } from '@faubulous/mentor-rdf';
@@ -58,8 +58,8 @@ export function getPropertyTypeFromRange(rangeIri?: string): PropertyType {
 		case XSD.string:
 		case XSD.unsignedInt:
 		case XSD.unsignedShort:
-		case XSD.unsingedLong:
-		case XSD.usignedByte: {
+		case XSD.unsignedLong:
+		case XSD.unsignedByte: {
 			return 'dataProperty';
 		}
 		default: {
@@ -101,4 +101,94 @@ export function addLanguageTagUsage(stats: LanguageTagUsageStats, object: Term):
 	const language = (object as Literal).language;
 
 	stats[language] = (stats[language] ?? 0) + 1;
+}
+
+/**
+ * Updates the triples of a graph to the given quads. Only the quads that are not in the graph
+ * yet are added and only the quads that are no longer given are deleted, so a graph whose
+ * triples did not change is not modified at all and keeps its version in the store.
+ * @param store The store that holds the graph.
+ * @param graph The graph to update. The given quads must be in this graph.
+ * @param quads The quads the graph should contain.
+ * @returns `true` if the graph was changed, otherwise `false`.
+ */
+export function replaceGraphQuads(store: Store, graph: Quad_Graph, quads: Quad[]): boolean {
+	if (!store.hasGraph(graph)) {
+		for (const quad of quads) {
+			store.add(quad);
+		}
+
+		return quads.length > 0;
+	}
+
+	// The quads of the graph by their triple. The entry of a triple that is among the given
+	// quads is set to `undefined`, so the quads left in the map are the deleted ones.
+	const graphQuads = new Map<string, Quad | undefined>();
+
+	for (const quad of store.matchQuads(null, null, null, graph)) {
+		graphQuads.set(getTripleKey(quad), quad);
+	}
+
+	let changed = false;
+
+	for (const quad of quads) {
+		const key = getTripleKey(quad);
+
+		if (graphQuads.get(key) === undefined && !graphQuads.has(key)) {
+			store.add(quad);
+
+			changed = true;
+		}
+
+		graphQuads.set(key, undefined);
+	}
+
+	for (const quad of graphQuads.values()) {
+		if (quad) {
+			store.delete(quad);
+
+			changed = true;
+		}
+	}
+
+	return changed;
+}
+
+/**
+ * Returns a key that identifies the subject, predicate and object of a quad. The terms are
+ * separated by U+0000, which cannot occur in the keys of subjects and predicates; the object,
+ * whose literal value may contain it, comes last.
+ * @param quad A quad.
+ * @returns A key that is equal for two quads if and only if their triples are equal.
+ */
+function getTripleKey(quad: BaseQuad): string {
+	return getTermKey(quad.subject) + '\u0000' + getTermKey(quad.predicate) + '\u0000' + getTermKey(quad.object);
+}
+
+/**
+ * Returns a key that identifies a term.
+ * @param term A term.
+ * @returns A key that is equal for two terms if and only if the terms are equal.
+ */
+function getTermKey(term: Term): string {
+	switch (term.termType) {
+		case 'NamedNode': {
+			// IRIs contain neither spaces nor `"`, so they cannot be mistaken for the keys below.
+			return term.value;
+		}
+		case 'BlankNode': {
+			return ' ' + term.value;
+		}
+		case 'Literal': {
+			const literal = term as Literal;
+
+			// The language tag and the datatype IRI contain neither `^` nor U+0000, so the
+			// value, which may contain any character, can follow them unambiguously.
+			return '"' + literal.language + '^' + literal.datatype.value + '\u0000' + literal.value;
+		}
+		default: {
+			// Triple terms and other terms are rare; JSON escapes U+0000 in their values.
+			return term.termType + JSON.stringify(term.termType === 'Quad' ? getTripleKey(term as BaseQuad) : term.value);
+		}
+	}
 }

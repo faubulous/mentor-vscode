@@ -47,6 +47,7 @@ beforeEach(() => {
 		// assertions cover either path.
 		loadDocument: (...args: any[]) => mockLoadDocument(...args),
 		loadDocumentContent: (...args: any[]) => mockLoadDocument(...args),
+		waitUntilLoaded: vi.fn(async () => undefined),
 		removeDocuments: vi.fn((uris: vscode.Uri[]) => {
 			for (const uri of uris) {
 				delete mockContexts[uri.toString()];
@@ -152,20 +153,47 @@ describe('WorkspaceIndexerService', () => {
 			expect((service as any)._statusBarItem.text).toContain('$(list-tree)');
 		});
 
-		it('requests fresh parser output from the token source during reindex', async () => {
+		describe('during a reindex', () => {
 			const uri = vscode.Uri.parse('file:///w/test.ttl');
-			mockWorkspaceFileService.files = [uri];
-			(vscode.workspace as any).openTextDocument = vi.fn(async () => ({
-				uri,
-				languageId: 'turtle',
-				getText: vi.fn(() => ''),
-			}));
 
-			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockTokenSource, mockDiagnosticsService);
-			await service.indexWorkspace(true);
-			await service.waitForIndexed();
+			beforeEach(() => {
+				mockWorkspaceFileService.files = [uri];
+			});
 
-			expect(mockTokenSource.refreshTokens).toHaveBeenCalledWith(uri.toString());
+			/**
+			 * Reindexes the workspace with the given documents open in an editor.
+			 */
+			async function reindex(openDocuments: vscode.Uri[]): Promise<void> {
+				(vscode.workspace as any).textDocuments = openDocuments.map(u => ({ uri: u, languageId: 'turtle', getText: () => '' }));
+
+				const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockTokenSource, mockDiagnosticsService);
+
+				await service.indexWorkspace(true);
+				await service.waitForIndexed();
+			}
+
+			it('reloads an open document once through a token delivery', async () => {
+				await reindex([uri]);
+
+				expect(mockTokenSource.refreshTokens).toHaveBeenCalledWith(uri.toString());
+				expect(mockContextService.waitUntilLoaded).toHaveBeenCalledWith(uri.toString());
+				expect(mockLoadDocument).not.toHaveBeenCalled();
+			});
+
+			it('loads an open document from its content when it has no context to reload', async () => {
+				mockTokenSource.refreshTokens.mockReturnValue(false);
+
+				await reindex([uri]);
+
+				expect(mockLoadDocument).toHaveBeenCalledTimes(1);
+			});
+
+			it('loads a document that is not open from its content without a token delivery', async () => {
+				await reindex([]);
+
+				expect(mockTokenSource.refreshTokens).not.toHaveBeenCalled();
+				expect(mockLoadDocument).toHaveBeenCalledTimes(1);
+			});
 		});
 
 		it('should index all workspace files', async () => {

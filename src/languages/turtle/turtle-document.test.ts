@@ -27,6 +27,10 @@ function makeStore(): Store {
             quad: (s: any, p: any, o: any, g: any) => ({ subject: s, predicate: p, object: o, graph: g }),
         },
         add: vi.fn(),
+        delete: vi.fn(),
+        has: vi.fn(() => false),
+        hasGraph: vi.fn(() => false),
+        matchQuads: vi.fn(function* () { }),
         graphs: [],
     };
 
@@ -45,6 +49,7 @@ function makeStore(): Store {
 }
 
 import * as vscode from 'vscode';
+import { OwlReasoner, Store as RealStore } from '@faubulous/mentor-rdf';
 import type { Store } from '@faubulous/mentor-rdf';
 import { RdfSyntax, RdfToken, TurtleLexer, TurtleParser, TurtleQuadReader, TurtleReader, createFileBlankNodeIdGenerator } from '@faubulous/mentor-rdf-parsers';
 import { ParserFactory } from '@src/languages/parser-factory';
@@ -445,23 +450,92 @@ describe('TurtleDocument', () => {
             expect(executeInference).toHaveBeenCalledTimes(1);
         });
 
-        it('re-executes inference after loadTriples resets the flag', async () => {
-            const executeInference = vi.fn();
-            // Partial stub: only the members required by infer and loadTriples are provided.
-            const store = {
-                reasoner: { infer: vi.fn() },
-                executeInference,
-                deleteGraphs: vi.fn(),
-                dataFactory: { namedNode: (v: string) => ({ termType: 'NamedNode', value: v }), quad: vi.fn() },
-                add: vi.fn(),
-            } as unknown as Store;
-            const doc = createTurtleDocument('file:///test.ttl', RdfSyntax.Turtle, { store });
-            await doc.infer();
-            expect(executeInference).toHaveBeenCalledTimes(1);
-            // Simulate a slug update reload: loadTriples must reset the flag
-            await doc.loadTriples('');
-            await doc.infer();
-            expect(executeInference).toHaveBeenCalledTimes(2);
+        describe('after a reload', () => {
+            const prefixes = '@prefix ex: <http://example.org/> .\n';
+
+            /**
+             * Loads a text into the document as an edit does: parse, load the triples, infer.
+             */
+            async function load(doc: TurtleDocument, text: string): Promise<void> {
+                doc.parse(text);
+
+                await doc.loadTriples(text);
+                await doc.infer();
+            }
+
+            /**
+             * Creates a document over a real store with a reasoner and spies on its inference.
+             */
+            function makeDocWithReasoner() {
+                const store = new RealStore(new OwlReasoner());
+                const executeInference = vi.spyOn(store, 'executeInference');
+                const doc = createTurtleDocument('file:///test.ttl', RdfSyntax.Turtle, { store });
+
+                return { store, doc, executeInference };
+            }
+
+            it('re-executes inference when the triples changed', async () => {
+                const { doc, executeInference } = makeDocWithReasoner();
+
+                await load(doc, prefixes + 'ex:a a ex:B .');
+                await load(doc, prefixes + 'ex:a a ex:C .');
+
+                expect(executeInference).toHaveBeenCalledTimes(2);
+            });
+
+            it('does not re-execute inference or change the graph when the triples did not change', async () => {
+                const { store, doc, executeInference } = makeDocWithReasoner();
+
+                await load(doc, prefixes + 'ex:a a ex:B .');
+
+                const version = store.getGraphVersion(doc.graphs[0]);
+
+                // Whitespace and comments do not change the triples.
+                await load(doc, prefixes + '\n# A comment.\nex:a  a  ex:B .');
+
+                expect(executeInference).toHaveBeenCalledTimes(1);
+                expect(store.getGraphVersion(doc.graphs[0])).toBe(version);
+            });
+
+            it('only adds and deletes the triples that changed', async () => {
+                const { store, doc } = makeDocWithReasoner();
+
+                await load(doc, prefixes + 'ex:a ex:p "1" . ex:b ex:p "2" . ex:c ex:p "3" .');
+
+                const text = prefixes + 'ex:a ex:p "1" . ex:b ex:p "two" . ex:c ex:p "3" .';
+
+                doc.parse(text);
+
+                // The inference that follows a change writes to the store as well, so it is left out.
+                const add = vi.spyOn(store, 'add');
+                const remove = vi.spyOn(store, 'delete');
+
+                await doc.loadTriples(text);
+
+                expect(add).toHaveBeenCalledTimes(1);
+                expect(remove).toHaveBeenCalledTimes(1);
+                expect(store.countQuads(null, null, null, store.dataFactory.namedNode(doc.graphs[0]))).toBe(3);
+            });
+
+            it('deletes the graph of a previous graph IRI with its inference graph', async () => {
+                const { store, doc } = makeDocWithReasoner();
+                const deleteGraphs = vi.spyOn(store, 'deleteGraphs');
+
+                doc.graphs.push('urn:previous');
+
+                await load(doc, prefixes + 'ex:a a ex:B .');
+
+                expect(deleteGraphs).toHaveBeenCalledWith(['urn:previous'], true);
+            });
+
+            it('removes all triples when the document has errors', async () => {
+                const { store, doc } = makeDocWithReasoner();
+
+                await load(doc, prefixes + 'ex:a a ex:B .');
+                await load(doc, prefixes + 'ex:a a .');
+
+                expect(store.countQuads(null, null, null, store.dataFactory.namedNode(doc.graphs[0]))).toBe(0);
+            });
         });
     });
 
