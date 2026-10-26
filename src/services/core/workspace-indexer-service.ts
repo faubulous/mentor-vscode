@@ -150,11 +150,20 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService, vscode
 	}
 
 	/**
-	 * Requests fresh parser output for a document during re-indexing.
+	 * Loads an open document again during re-indexing through a token delivery: its current
+	 * text is parsed once, its triples are reloaded and its diagnostics are updated.
 	 * @param uri The document URI.
+	 * @returns `true` once the document is loaded again, or `false` if it has no context yet
+	 * and needs to be loaded from its content.
 	 */
-	private _refreshDocumentTokens(uri: string): void {
-		this._tokenSource.refreshTokens(uri);
+	private async _reloadOpenDocument(uri: string): Promise<boolean> {
+		if (!this._tokenSource.refreshTokens(uri)) {
+			return false;
+		}
+
+		await this._contextService.waitUntilLoaded(uri);
+
+		return true;
 	}
 
 	/**
@@ -767,14 +776,11 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService, vscode
 
 		// Load the document so that its graph is created and can be used for showing definitions, descriptions etc..
 		const loadStart = performance.now();
-		await this._contextService.loadDocumentContent(uri, content, run.reindex);
 
-		if (run.reindex) {
-			// Refresh editor tokens for an open document; a no-op for files not
-			// open in an editor. Strictly after the load: the delivery triggers a
-			// triple reload on the same context and graph, and running it
-			// concurrently would interleave deleteGraphs/add on one graph.
-			this._refreshDocumentTokens(uri.toString());
+		// An open document is reloaded through a token delivery, which also updates its
+		// diagnostics and editor features; loading its content first parsed and loaded it twice.
+		if (!(openDocument && run.reindex && await this._reloadOpenDocument(uri.toString()))) {
+			await this._contextService.loadDocumentContent(uri, content, run.reindex);
 		}
 
 		const loadMs = Math.round(performance.now() - loadStart);
@@ -839,12 +845,12 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService, vscode
 				// graphIri is slug-based from the very first loadTriples call.
 				const slug = cell.metadata?.slug as string | undefined;
 
-				await this._contextService.loadDocument(cell.document, reindex, slug);
+				// A cell is reloaded through a token delivery like an open document (see
+				// _indexTextDocument), unless its slug changed and its graph IRI with it.
+				const isReloadable = reindex && this._contextService.contexts[cellUri]?.slug === slug;
 
-				if (reindex) {
-					// Strictly after the load — the delivery triggers a triple reload
-					// on the same context and graph (see _indexTextDocument).
-					this._refreshDocumentTokens(cellUri);
+				if (!(isReloadable && await this._reloadOpenDocument(cellUri))) {
+					await this._contextService.loadDocument(cell.document, reindex, slug);
 				}
 			} catch (error) {
 				// Log and rethrow so the background settlement can count failures accurately.
