@@ -4,6 +4,8 @@ import { Store, VocabularyRepository } from '@faubulous/mentor-rdf';
 import { RdfSyntax } from '@faubulous/mentor-rdf-parsers';
 import { ISettingsService } from '@src/services/core/settings-service.interface';
 import { TurtleDocument, SparqlDocument, XmlDocument } from '@src/languages';
+import { PresetGraphDocument } from '@src/languages/turtle/preset-graph-document';
+import { MentorVfsUri } from '@src/providers/mentor-vfs-uri';
 import { IDocumentContext } from './document-context.interface';
 import { ILanguageInfo } from './document-factory.interface';
 import { RDF_LANGUAGE_IDS } from './document-languages';
@@ -171,6 +173,12 @@ export class DocumentFactory {
 
 		if (!language) {
 			throw new Error('Unable to determine the document language: ' + documentUri.toString());
+		}
+
+		const presetGraph = MentorVfsUri.getGraph(documentUri);
+
+		if (presetGraph) {
+			return new PresetGraphDocument(documentUri, presetGraph, this._store, this._vocabulary, this._settings);
 		}
 
 		switch (language) {

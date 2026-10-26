@@ -213,6 +213,7 @@ export function createMockDocumentContext(overrides?: Partial<IDocumentContext>)
 		isParsed: false,
 		isLoaded: false,
 		isTemporary: false,
+		isPreset: false,
 		parse: () => [],
 		loadTriples: async () => { },
 		infer: async () => { },

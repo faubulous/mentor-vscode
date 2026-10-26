@@ -186,6 +186,13 @@ export interface IDocumentContext {
 	readonly isTemporary: boolean;
 
 	/**
+	 * Indicates whether the document shows the read-only source of a preset graph
+	 * shipped with Mentor. Its graph is owned by the store, not by the document, and
+	 * it is not part of the workspace.
+	 */
+	readonly isPreset: boolean;
+
+	/**
 	 * Parses the given document text and updates the context's derived state
 	 * (tokens or parse data, namespaces, references, type assertions). This is
 	 * the authoritative update path: token-based contexts use a file-scoped

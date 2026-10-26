@@ -6,8 +6,12 @@ vi.mock('@faubulous/mentor-rdf-serializers', () => ({}));
 let mockIndexWorkspace: ReturnType<typeof vi.fn<(...args: unknown[]) => unknown>>;
 let mockDiscoverFiles: ReturnType<typeof vi.fn<(...args: unknown[]) => unknown>>;
 let mockStoreClear: ReturnType<typeof vi.fn<(...args: unknown[]) => unknown>>;
-let mockStoreLoadFrameworkOntologies: ReturnType<typeof vi.fn<(...args: unknown[]) => unknown>>;
+let mockLoadFrameworkVocabularies: ReturnType<typeof vi.fn<(...args: unknown[]) => unknown>>;
 let mockLoadShapeGraphs: ReturnType<typeof vi.fn<(...args: unknown[]) => unknown>>;
+
+vi.mock('@src/services/core/preset-graphs', () => ({
+	loadFrameworkVocabularies: (...args: any[]) => mockLoadFrameworkVocabularies(...args),
+}));
 
 vi.mock('tsyringe', () => ({
 	container: {
@@ -15,7 +19,6 @@ vi.mock('tsyringe', () => ({
 			if (token === ServiceToken.Store) {
 				return {
 					clear: (...args: any[]) => mockStoreClear(...args),
-					loadFrameworkOntologies: (...args: any[]) => mockStoreLoadFrameworkOntologies(...args),
 				};
 			}
 
@@ -46,7 +49,7 @@ beforeEach(() => {
 	mockIndexWorkspace = vi.fn();
 	mockDiscoverFiles = vi.fn(async () => undefined);
 	mockStoreClear = vi.fn();
-	mockStoreLoadFrameworkOntologies = vi.fn(async () => undefined);
+	mockLoadFrameworkVocabularies = vi.fn();
 	mockLoadShapeGraphs = vi.fn(async () => undefined);
 });
 
@@ -76,7 +79,7 @@ describe('reindexWorkspace command', () => {
 		await reindexWorkspace.handler();
 
 		expect(mockStoreClear).toHaveBeenCalledOnce();
-		expect(mockStoreClear.mock.invocationCallOrder[0]).toBeLessThan(mockStoreLoadFrameworkOntologies.mock.invocationCallOrder[0]);
-		expect(mockStoreLoadFrameworkOntologies.mock.invocationCallOrder[0]).toBeLessThan(mockIndexWorkspace.mock.invocationCallOrder[0]);
+		expect(mockStoreClear.mock.invocationCallOrder[0]).toBeLessThan(mockLoadFrameworkVocabularies.mock.invocationCallOrder[0]);
+		expect(mockLoadFrameworkVocabularies.mock.invocationCallOrder[0]).toBeLessThan(mockIndexWorkspace.mock.invocationCallOrder[0]);
 	});
 });

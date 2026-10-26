@@ -938,6 +938,12 @@ export class DocumentContextService {
 
 		delete this._contexts[key];
 
+		// A preset graph is owned by the store, which loads it at startup and on
+		// reindexing; the context only borrows it.
+		if (context.isPreset) {
+			return;
+		}
+
 		// The inference graphs go with the data graphs; leaving them behind kept
 		// the inferred triples of deleted and renamed files in the store for good.
 		this._store.deleteGraphs(context.graphs, true);

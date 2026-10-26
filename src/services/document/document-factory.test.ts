@@ -11,6 +11,9 @@ vi.mock('@src/languages', () => ({
 
 import { DocumentFactory } from '@src/services/document/document-factory';
 import { createTestStore, createTestVocabulary, createTestSettings } from '@src/utilities/mocks/factories';
+import { PresetGraphDocument } from '@src/languages/turtle/preset-graph-document';
+import { MentorVfsUri } from '@src/providers/mentor-vfs-uri';
+import { PRESET_GRAPHS } from '@src/services/core/preset-graphs';
 
 describe('DocumentFactory', () => {
 	let factory: DocumentFactory;
@@ -516,6 +519,14 @@ describe('DocumentFactory', () => {
 
 		it('creates an XmlDocument for language xml', () => {
 			expect(factory.create(uri, 'xml')).toBeDefined();
+		});
+
+		it('creates a PresetGraphDocument for the source of a preset graph', () => {
+			const graph = PRESET_GRAPHS.find(g => g.path === 'vocabularies/rdfs.ttl')!;
+			const context = factory.create(MentorVfsUri.toUri(graph), 'turtle');
+
+			expect(context).toBeInstanceOf(PresetGraphDocument);
+			expect((context as PresetGraphDocument).graph).toBe(graph);
 		});
 
 		it('infers language from file extension when languageId is omitted', () => {

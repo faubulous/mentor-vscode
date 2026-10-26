@@ -105,4 +105,18 @@ describe('ResourceReferenceProvider', () => {
 		const locations = provider.provideReferencesForIri('http://example.org/C');
 		expect(locations).toHaveLength(0);
 	});
+
+	it('skips the contexts of preset graphs when providing and counting references', () => {
+		const range = { start: { line: 1, character: 0 }, end: { line: 1, character: 10 } };
+		mockContextService.contexts = {
+			'mentor-vfs:/vocabularies/rdfs.ttl': {
+				uri: vscode.Uri.parse('mentor-vfs:/vocabularies/rdfs.ttl'),
+				references: createRangeIndex({ 'http://www.w3.org/2000/01/rdf-schema#label': [range] }),
+				isTemporary: false,
+				isPreset: true,
+			},
+		};
+		expect(provider.provideReferencesForIri('http://www.w3.org/2000/01/rdf-schema#label')).toHaveLength(0);
+		expect(provider.countReferencesForIri('http://www.w3.org/2000/01/rdf-schema#label')).toBe(0);
+	});
 });

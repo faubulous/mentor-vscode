@@ -15,6 +15,7 @@ import { ITripleStoreConfigService, IDocumentConnectionService } from './languag
 import { IGraphManagementService } from './languages/sparql/services';
 import { ShaclValidationService } from './services/validation/shacl-validation-service';
 import { ShapeGraphService } from './services/validation/shape-graph-service';
+import { loadFrameworkVocabularies } from './services/core/preset-graphs';
 import { getConfig } from './utilities/vscode/config';
 import { getLog } from './utilities/vscode/log';
 import { NotebookSerializer } from './services/notebook/notebook-serializer';
@@ -57,14 +58,14 @@ export async function activateExtension(context: vscode.ExtensionContext) {
 	vscode.commands.executeCommand('setContext', 'mentor.isInitializing', false);
 
 	// Do not await this, to allow the extension to finish activating while the
-	// built-in graphs are loaded and the workspace initialization (shape loading,
+	// preset graphs are loaded and the workspace initialization (shape loading,
 	// indexing, startup validation) is still in progress. This may cause some
 	// language features to not be available until indexing is complete, but
 	// provides a better user experience overall. The workspace initialization
-	// starts once the built-in graphs are in the store, so the indexed documents'
+	// starts once the preset graphs are in the store, so the indexed documents'
 	// inference, the definition tree refresh after indexing and the startup
-	// validation all see the framework ontologies and preset shapes, as before.
-	const workspaceInitialized = loadBuiltInGraphs().then(() => initializeWorkspace());
+	// validation all see the framework vocabularies and preset shapes, as before.
+	const workspaceInitialized = loadPresetGraphs().then(() => initializeWorkspace());
 
 	// Load named graphs for connections with auto-loading enabled — deferred until
 	// the workspace initialization has settled. Even the graph-list queries pay
@@ -127,6 +128,7 @@ function registerProviders(context: vscode.ExtensionContext) {
 	new providers.WorkspaceFileSystemProvider(context);
 	new providers.TemplateFileSystemProvider(context);
 	new providers.UserFileSystemProvider(context, fileStore);
+	new providers.MentorVfsFileSystemProvider(context);
 	new providers.XsdAnyUriCodeActionProvider(context);
 	new providers.InferenceUriLinkProvider(context);
 	new providers.MentorUriHandler(context, store, prefixLookup, router);
@@ -212,7 +214,7 @@ function registerConfigurationListeners(context: vscode.ExtensionContext) {
 }
 
 /**
- * Loads the built-in graphs — the RDF framework ontologies and the bundled preset
+ * Loads the preset graphs — the RDF framework vocabularies and the bundled preset
  * shape graphs — into the store after activation has completed. Never rejects.
  *
  * Loading is about 110 ms of synchronous parsing and inference, so it must not
@@ -229,37 +231,28 @@ function registerConfigurationListeners(context: vscode.ExtensionContext) {
  *   indexing; the tree's rebuild after a document context change is debounced
  *   by 250 ms and thus normally runs after this load.
  * The reindex command does not depend on this function: it wipes the store and
- * reloads the framework ontologies and preset shapes itself.
+ * reloads the framework vocabularies and preset shapes itself.
  */
-async function loadBuiltInGraphs() {
+async function loadPresetGraphs() {
 	// Yield one macrotask first: the loaders are async but run synchronously up to
 	// their end, so without a yield they would still run inside `activate()` and
 	// delay the activation of the extension and of any pending command.
 	await new Promise<void>(resolve => setTimeout(resolve, 0));
 
 	try {
-		await loadFrameworkOntologies();
+		loadFrameworkVocabularies(container.resolve<Store>(ServiceToken.Store));
 		await loadShapeGraphs();
 	} catch (e) {
 		// This function is intentionally not awaited during activation; log instead
 		// of surfacing an unhandled rejection that could disrupt the extension host.
-		getLog().error('Loading the built-in graphs failed:', e);
+		getLog().error('Loading the preset graphs failed:', e);
 	}
 
-	// The framework ontologies and shape graphs were loaded directly into the
+	// The framework vocabularies and shape graphs were loaded directly into the
 	// store; publish the change so graph-count consumers (e.g. the SPARQL status
 	// bar, which rendered before any data existed) correct themselves right away
 	// instead of only after workspace indexing finishes.
 	container.resolve<IGraphManagementService>(ServiceToken.GraphManagementService).notifyWorkspaceGraphsChanged();
-}
-
-/**
- * Loads the RDF framework ontologies into the store, which are required
- * for providing completions and hovers for built-in concepts.
- */
-async function loadFrameworkOntologies() {
-	const store = container.resolve<Store>(ServiceToken.Store);
-	await store.loadFrameworkOntologies();
 }
 
 /**

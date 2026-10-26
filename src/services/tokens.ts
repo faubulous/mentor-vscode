@@ -14,6 +14,8 @@ export enum ServiceToken {
 	DocumentFactory = "DocumentFactory",
 	/** Service for managing document contexts. */
 	DocumentContextService = "DocumentContextService",
+	/** Service that loads the read-only documents of the preset graphs on demand. */
+	PresetDocumentService = "PresetDocumentService",
 	/** Service that computes syntax and lint diagnostics for documents. */
 	DocumentDiagnosticsService = "DocumentDiagnosticsService",
 	/** Service for indexing workspace files. */

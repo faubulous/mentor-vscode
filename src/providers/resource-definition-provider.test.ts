@@ -135,6 +135,108 @@ describe('ResourceDefinitionProvider', () => {
         });
     });
 
+    describe('provideDefinition with preset graphs', () => {
+        const range = { start: { line: 1, character: 0 }, end: { line: 1, character: 20 } };
+        const iri = 'http://www.w3.org/2000/01/rdf-schema#label';
+        const presetUri = vscode.Uri.parse('mentor-vfs:/vocabularies/rdfs.ttl');
+        const workspaceUri = vscode.Uri.parse('file:///ontology.ttl');
+
+        /**
+         * Creates a context that defines the resource through the given range indexes.
+         */
+        function makeContext(uri: vscode.Uri, options: { typeDefinitions?: RangeIndex, subjects?: RangeIndex, isPreset?: boolean } = {}) {
+            return {
+                uri,
+                isPreset: options.isPreset ?? false,
+                getIriAtPosition: vi.fn(() => iri),
+                typeDefinitions: options.typeDefinitions ?? new RangeIndex(),
+                typeAssertions: new RangeIndex(),
+                subjects: options.subjects ?? new RangeIndex(),
+                namespaceDefinitions: new RangeIndex(),
+                references: createRangeIndex({ [iri]: [range] }),
+            };
+        }
+
+        /**
+         * Creates a preset document service whose load adds the given context.
+         */
+        function makePresetDocuments(context?: ReturnType<typeof makeContext>) {
+            return {
+                ensureLoaded: vi.fn(async () => {
+                    if (context) {
+                        mockContextService.contexts[context.uri.toString()] = context;
+                    }
+                }),
+            };
+        }
+
+        it('loads the preset documents when no loaded context defines the resource', async () => {
+            const presetDocuments = makePresetDocuments(makeContext(presetUri, { typeDefinitions: createRangeIndex({ [iri]: [range] }), isPreset: true }));
+
+            mockContextService.contexts[docUriStr] = makeContext(docUri);
+
+            const result = await new ResourceDefinitionProvider(mockContextService as any, undefined, presetDocuments).provideDefinition({ uri: docUri } as any, pos) as vscode.Location;
+
+            expect(presetDocuments.ensureLoaded).toHaveBeenCalledTimes(1);
+            expect(result.uri.toString()).toBe(presetUri.toString());
+        });
+
+        it('does not load the preset documents when a workspace context defines the resource', () => {
+            const presetDocuments = makePresetDocuments();
+
+            mockContextService.contexts[docUriStr] = makeContext(docUri);
+            mockContextService.contexts[workspaceUri.toString()] = makeContext(workspaceUri, { typeDefinitions: createRangeIndex({ [iri]: [range] }) });
+
+            const result = new ResourceDefinitionProvider(mockContextService as any, undefined, presetDocuments).provideDefinition({ uri: docUri } as any, pos);
+
+            expect(presetDocuments.ensureLoaded).not.toHaveBeenCalled();
+            expect((result as vscode.Location).uri.toString()).toBe(workspaceUri.toString());
+        });
+
+        it('prefers a workspace definition over a preset definition', () => {
+            const primaryContext = makeContext(docUri);
+
+            // The preset context is registered first, so that only the precedence decides.
+            mockContextService.contexts[presetUri.toString()] = makeContext(presetUri, { typeDefinitions: createRangeIndex({ [iri]: [range] }), isPreset: true });
+            mockContextService.contexts[workspaceUri.toString()] = makeContext(workspaceUri, { typeDefinitions: createRangeIndex({ [iri]: [range] }) });
+
+            const result = provider.provideDefinitionForResource(primaryContext as any, iri);
+
+            expect((result as vscode.Location).uri.toString()).toBe(workspaceUri.toString());
+        });
+
+        it('accepts a subject as a definition in a preset context', () => {
+            const primaryContext = makeContext(docUri);
+
+            mockContextService.contexts[presetUri.toString()] = makeContext(presetUri, { subjects: createRangeIndex({ [iri]: [range] }), isPreset: true });
+
+            const result = provider.provideDefinitionForResource(primaryContext as any, iri);
+
+            expect((result as vscode.Location).uri.toString()).toBe(presetUri.toString());
+        });
+
+        it('does not accept a subject as a definition in a workspace context', () => {
+            const primaryContext = makeContext(docUri);
+
+            mockContextService.contexts[workspaceUri.toString()] = makeContext(workspaceUri, { subjects: createRangeIndex({ [iri]: [range] }) });
+
+            const result = provider.provideDefinitionForResource(primaryContext as any, iri);
+
+            expect((result as vscode.Location).uri.toString()).toBe(docUriStr);
+        });
+
+        it('falls back to the reference in the document when no preset graph defines the resource', async () => {
+            const presetDocuments = makePresetDocuments();
+
+            mockContextService.contexts[docUriStr] = makeContext(docUri);
+
+            const result = await new ResourceDefinitionProvider(mockContextService as any, undefined, presetDocuments).provideDefinition({ uri: docUri } as any, pos) as vscode.Location;
+
+            expect(presetDocuments.ensureLoaded).toHaveBeenCalledTimes(1);
+            expect(result.uri.toString()).toBe(docUriStr);
+        });
+    });
+
     describe('provideDefinitionForResource', () => {
         it('returns null when IRI has no definition, assertion, namespace, or reference', () => {
             const ctx = {
