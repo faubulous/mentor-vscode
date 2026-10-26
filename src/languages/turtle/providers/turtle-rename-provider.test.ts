@@ -165,6 +165,20 @@ describe('TurtleRenameProvider', () => {
             expect(getTextEdits(edits)).toHaveLength(2);
         });
 
+        it('renames a prefixed name with an escaped local name and the IRI reference of the same resource', async () => {
+            const context = makeDoc();
+            const text = '@prefix ex: <http://example.org/> .\nex:a\\-b ex:p <http://example.org/a-b> .\n';
+
+            context.parse(text);
+
+            const provider = makeProvider(context);
+            const edits = await provider.provideRenameEdits({ uri: docUri } as any, new Position(1, 4) as any, 'c');
+            const ranges = getTextEdits(edits).map(e => [e.range.start.line, e.range.start.character, e.range.end.character]);
+
+            // The local part of `ex:a\-b` (characters 3 to 7) and of `<http://example.org/a-b>` (33 to 36).
+            expect(ranges).toEqual([[1, 3, 7], [1, 33, 36]]);
+        });
+
         it('produces one edit for an IRI token that appears once in references', async () => {
             const context = makeDoc();
             // An IRIREF token at column 1 — setTokens registers it as a subject/reference

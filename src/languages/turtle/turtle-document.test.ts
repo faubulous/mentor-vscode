@@ -241,6 +241,25 @@ describe('TurtleDocument', () => {
             storeControl.shouldThrowLoad = false;
         });
 
+        it('indexes prefixed names with colons and escapes in the local name under the IRIs of their triples', () => {
+            const doc = makeDoc();
+            const text = '@prefix ex: <http://example.org/> .\n@prefix owl: <http://www.w3.org/2002/07/owl#> .\nex:a:b a owl:Class .\nex:a\\-b a owl:Class .\n';
+
+            doc.parse(text);
+
+            const subjects = (doc.getParseResult(text)?.quads ?? []).map(q => q.subject.value);
+
+            expect(subjects).toEqual(['http://example.org/a:b', 'http://example.org/a-b']);
+
+            for (const iri of subjects) {
+                expect(doc.references.has(iri), iri).toBe(true);
+                expect(doc.subjects.has(iri), iri).toBe(true);
+                expect(doc.typeDefinitions.has(iri), iri).toBe(true);
+            }
+
+            expect(doc.references.has('http://example.org/a\\-b')).toBe(false);
+        });
+
         it('resolves prefixed names with the prefix declared before them', () => {
             const doc = makeDoc();
 
@@ -259,6 +278,27 @@ describe('TurtleDocument', () => {
             ];
             doc.setTokens(tokens as any);
             expect(doc.references.has('http://example.org/Thing')).toBe(true);
+        });
+
+        it('does not index the names of prefix declarations as references to the namespace (#165)', () => {
+            for (const declaration of ['@prefix ex: <http://example.org/> .', 'PREFIX ex: <http://example.org/>']) {
+                const doc = makeDoc();
+
+                doc.parse(declaration + '\nex: a ex:Ontology .\n');
+
+                // Only the namespace used as a resource on line 2 is a reference to it.
+                expect(doc.references.getRanges('http://example.org'), declaration).toEqual([{ start: { line: 1, character: 0 }, end: { line: 1, character: 3 } }]);
+                expect(doc.namespaces['ex'], declaration).toBe('http://example.org/');
+            }
+        });
+
+        it('indexes the names that follow a namespace used as a subject', () => {
+            const doc = makeDoc();
+
+            doc.parse('@prefix ex: <http://example.org/> .\nex: ex:p ex:o .\n');
+
+            expect(doc.references.has('http://example.org/p')).toBe(true);
+            expect(doc.references.has('http://example.org/o')).toBe(true);
         });
 
         it('registers A token type assertions with subject', () => {
