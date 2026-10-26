@@ -119,4 +119,57 @@ describe('XmlParser', () => {
 				expect(result.references['http://www.w3.org/1999/02/22-rdf-syntax-ns#Description']).toBeUndefined();
 			});
 		});
+
+		describe('comments', () => {
+			const OWL_CLASS = 'http://www.w3.org/2002/07/owl#Class';
+
+			// Commented-out OWL/RDFS compatibility axioms, as in the ESWC ontology shipped with Jena.
+			const COMMENTED_RDF = `<?xml version="1.0"?>
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+         xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+         xmlns:owl="http://www.w3.org/2002/07/owl#">
+<!-- <rdf:Description xmlns:ex="http://example.org/" rdf:about="http://example.org/a"/> -->
+<!--
+    <owl:Class rdf:about="http://www.w3.org/2002/07/owl#Class">
+      <rdfs:subClassOf rdf:resource="http://www.w3.org/2000/01/rdf-schema#Class" />
+    </owl:Class>
+-->
+  <owl:Class rdf:about="http://example.org/Person"/> <!-- <owl:Class rdf:about="http://example.org/Hidden"/> -->
+</rdf:RDF>`;
+
+			it('does not index commented-out elements', () => {
+				const result = new XmlParser().parse(COMMENTED_RDF);
+
+				expect(result.subjects[OWL_CLASS]).toBeUndefined();
+				expect(result.typeAssertions[OWL_CLASS]).toBeUndefined();
+				expect(result.typeDefinitions[OWL_CLASS]).toBeUndefined();
+				expect(result.references['http://www.w3.org/2000/01/rdf-schema#Class']).toBeUndefined();
+				expect(result.subjects['http://example.org/Hidden']).toBeUndefined();
+			});
+
+			it('does not register commented-out namespace declarations', () => {
+				const result = new XmlParser().parse(COMMENTED_RDF);
+
+				expect(result.namespaces['ex']).toBeUndefined();
+				expect(result.subjects['http://example.org/a']).toBeUndefined();
+			});
+
+			it('keeps the positions of the markup after a comment', () => {
+				const result = new XmlParser().parse(COMMENTED_RDF);
+				const line = COMMENTED_RDF.split('\n')[10];
+				const column = line.indexOf('http://example.org/Person');
+
+				// The element after the comments and the element tag on the same line as a comment are indexed.
+				expect(result.subjects['http://example.org/Person']).toEqual([
+					{ start: { line: 10, character: column }, end: { line: 10, character: column + 'http://example.org/Person'.length } }
+				]);
+				expect(result.references[OWL_CLASS]).toHaveLength(1);
+			});
+
+			it('treats an unclosed comment as extending to the end of the document', () => {
+				const result = new XmlParser().parse(SIMPLE_RDF.replace('  <owl:Class', '  <!-- <owl:Class'));
+
+				expect(result.subjects['http://example.org/Person']).toBeUndefined();
+			});
+		});
 	});
