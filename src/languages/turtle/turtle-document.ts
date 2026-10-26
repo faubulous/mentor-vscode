@@ -11,14 +11,14 @@ import { RangeIndex } from '@src/services/document/range-index';
 import { WorkspaceUri } from '@src/providers/workspace-uri';
 import {
 	getIriFromIriReference,
-	getIriFromPrefixedName,
 	getIriFromToken,
 	getNamespaceDefinition,
 	getTokenAtPosition,
+	getTokenRange,
 	isPrefixTokenAtPosition
 } from '@src/utilities';
 import { addLanguageTagUsage } from '@src/utilities/rdf';
-import { getRangeFromToken } from '@src/utilities/vscode/tokens';
+import { PrefixedNameResolver } from './prefixed-name-resolver';
 
 /**
  * A document context for Turtle and TriG documents.
@@ -474,6 +474,8 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 
 		let previousToken: IToken | undefined;
 
+		const prefixedNames = new PrefixedNameResolver(this.namespaces);
+
 		tokens.forEach((t: IToken, i: number) => {
 			switch (t.tokenType.name) {
 				case RdfToken.PREFIX.name:
@@ -483,7 +485,9 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 					// Only set the namespace if it is preceeded by a prefix keyword.
 					if (ns) {
 						this.namespaces[ns.prefix] = ns.uri;
-						this.namespaceDefinitions.set(ns.uri, getRangeFromToken(t));
+						this.namespaceDefinitions.set(ns.uri, getTokenRange(t));
+
+						prefixedNames.clear();
 					}
 					break;
 				}
@@ -497,20 +501,18 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 							break;
 					}
 
-					let iri = getIriFromPrefixedName(this.namespaces, t.image);
+					// Without a trailing slash or hash, so that the IRIs are comparable
+					// with the vscode.Uri.toString() output.
+					const iri = prefixedNames.getNormalizedIri(t.image);
 
 					if (!iri) break;
-
-					// Remove any trailing slahes or hashes so that the IRIs are comparable
-					// with the vscode.Uri.toString() output.
-					iri = Uri.getNormalizedUri(iri);
 
 					if (previousToken) {
 						this._registerSubject(tokens, i, t, iri, previousToken);
 					}
 
-					this._handleTypeAssertion(tokens, t, iri, i);
-					this._handleTypeDefinition(tokens, t, iri, i);
+					this._handleTypeAssertion(tokens, iri, i, prefixedNames);
+					this._handleTypeDefinition(tokens, iri, i, prefixedNames);
 					this._handleResourceReference(tokens, t, iri);
 					break;
 				}
@@ -521,14 +523,14 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 						this._registerSubject(tokens, i, t, iri, previousToken);
 					}
 
-					this._handleTypeAssertion(tokens, t, iri, i);
-					this._handleTypeDefinition(tokens, t, iri, i);
+					this._handleTypeAssertion(tokens, iri, i, prefixedNames);
+					this._handleTypeDefinition(tokens, iri, i, prefixedNames);
 					this._handleResourceReference(tokens, t, iri);
 					break;
 				}
 				case RdfToken.A.name: {
-					this._handleTypeAssertion(tokens, t, RDF.type, i);
-					this._handleTypeDefinition(tokens, t, RDF.type, i);
+					this._handleTypeAssertion(tokens, RDF.type, i, prefixedNames);
+					this._handleTypeDefinition(tokens, RDF.type, i, prefixedNames);
 					break;
 				}
 				case RdfToken.LBRACKET.name: {
@@ -560,6 +562,27 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 		});
 	}
 
+	/**
+	 * Returns the IRI of an IRI, prefixed name or blank node token, as `getIriFromToken` does.
+	 * @param token A token.
+	 * @param prefixedNames The resolver of the prefixed names of the document.
+	 * @returns The IRI or blank node ID, or `undefined` if the token denotes no resource.
+	 */
+	private _getTokenIri(token: IToken, prefixedNames: PrefixedNameResolver): string | undefined {
+		switch (token.tokenType.name) {
+			case RdfToken.IRIREF.name: {
+				return getIriFromIriReference(token.image);
+			}
+			case RdfToken.PNAME_LN.name:
+			case RdfToken.PNAME_NS.name: {
+				return prefixedNames.getIri(token.image);
+			}
+			default: {
+				return token.payload?.blankNodeId;
+			}
+		}
+	}
+
 	private _registerSubject(tokens: IToken[], tokenIndex: number, token: IToken, iriOrBlankId: string, previousToken: IToken) {
 		const previousType = previousToken.tokenType.name;
 
@@ -579,35 +602,35 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 		}
 
 		if (isSubject) {
-			this.subjects.add(iriOrBlankId, getRangeFromToken(token));
+			this.subjects.add(iriOrBlankId, getTokenRange(token));
 		}
 	}
 
 	private _handleResourceReference(tokens: IToken[], token: IToken, iriOrBlankId: string) {
-		this.references.add(iriOrBlankId, getRangeFromToken(token));
+		this.references.add(iriOrBlankId, getTokenRange(token));
 	}
 
-	private _handleTypeAssertion(tokens: IToken[], token: IToken, uri: string, index: number) {
+	private _handleTypeAssertion(tokens: IToken[], uri: string, index: number, prefixedNames: PrefixedNameResolver) {
 		if (uri === RDF.type) {
 			const subjectToken = tokens[index - 1];
 
 			if (!subjectToken) return;
 
-			const subjectUri = getIriFromToken(this.namespaces, subjectToken);
+			const subjectUri = this._getTokenIri(subjectToken, prefixedNames);
 
 			if (!subjectUri) return;
 
-			this.typeAssertions.set(subjectUri, getRangeFromToken(subjectToken));
+			this.typeAssertions.set(subjectUri, getTokenRange(subjectToken));
 		}
 	}
 
-	private _handleTypeDefinition(tokens: IToken[], token: IToken, uri: string, index: number) {
+	private _handleTypeDefinition(tokens: IToken[], uri: string, index: number, prefixedNames: PrefixedNameResolver) {
 		if (uri == RDF.type) {
 			const subjectToken = tokens[index - 1];
 
 			if (!subjectToken) return;
 
-			const subjectUri = getIriFromToken(this.namespaces, subjectToken);
+			const subjectUri = this._getTokenIri(subjectToken, prefixedNames);
 
 			if (!subjectUri) return;
 
@@ -615,7 +638,7 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 
 			if (!objectToken) return;
 
-			const objectUri = getIriFromToken(this.namespaces, objectToken);
+			const objectUri = this._getTokenIri(objectToken, prefixedNames);
 
 			if (!objectUri) return;
 
@@ -629,7 +652,7 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 				case _SKOS:
 				case _SKOS_XL:
 				case _SH: {
-					this.typeDefinitions.set(subjectUri, getRangeFromToken(subjectToken));
+					this.typeDefinitions.set(subjectUri, getTokenRange(subjectToken));
 				}
 			}
 		}

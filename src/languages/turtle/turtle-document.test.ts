@@ -236,6 +236,17 @@ describe('TurtleDocument', () => {
             storeControl.shouldThrowLoad = false;
         });
 
+        it('resolves prefixed names with the prefix declared before them', () => {
+            const doc = makeDoc();
+
+            doc.parse('@prefix ex: <http://example.org/a/> .\nex:x a ex:C .\n@prefix ex: <http://example.org/b/> .\nex:x a ex:C .\n');
+
+            expect(doc.references.getRanges('http://example.org/a/x')).toEqual([{ start: { line: 1, character: 0 }, end: { line: 1, character: 4 } }]);
+            expect(doc.references.getRanges('http://example.org/b/x')).toEqual([{ start: { line: 3, character: 0 }, end: { line: 3, character: 4 } }]);
+            expect(doc.typeAssertions.has('http://example.org/a/x')).toBe(true);
+            expect(doc.typeAssertions.has('http://example.org/b/x')).toBe(true);
+        });
+
         it('registers IRIREF token references', () => {
             const doc = makeDoc();
             const tokens = [

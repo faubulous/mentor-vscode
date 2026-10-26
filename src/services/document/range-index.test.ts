@@ -62,6 +62,29 @@ describe('RangeIndex', () => {
 		expect(index.toRecord()).toEqual(record);
 	});
 
+	it('keeps the ranges of many keys apart when it grows', () => {
+		const index = new RangeIndex();
+		const keyCount = 1000;
+
+		// Interleave the keys, so that the chains of all keys grow at the same time.
+		for (let round = 0; round < 3; round++) {
+			for (let key = 0; key < keyCount; key++) {
+				index.add(`k${key}`, Range.create(key, round, key, round + 1));
+			}
+		}
+
+		index.set('k7', Range.create(70, 0, 70, 1));
+
+		expect(index.size).toBe(keyCount);
+		expect(index.count('k999')).toBe(3);
+		expect(index.getRanges('k500')).toEqual([0, 1, 2].map(round => Range.create(500, round, 500, round + 1)));
+		expect(index.getRanges('k7')).toEqual([Range.create(70, 0, 70, 1)]);
+
+		index.add('k7', Range.create(71, 0, 71, 1));
+
+		expect(index.getRanges('k7')).toEqual([Range.create(70, 0, 70, 1), Range.create(71, 0, 71, 1)]);
+	});
+
 	it('forgets everything on clear', () => {
 		const index = RangeIndex.fromRecord({ a: [first] });
 

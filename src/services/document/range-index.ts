@@ -8,13 +8,7 @@ const SLOTS_PER_CHUNK = 5;
 const NEXT_SLOT = 4;
 const END_OF_CHAIN = 0xFFFFFFFF;
 const INITIAL_CHUNK_CAPACITY = 64;
-
-/**
- * Chunk indices are packed as `head * CHAIN_FACTOR + tail` into one number per
- * key, which keeps the per-key bookkeeping to a single map entry. 2^26 chunks
- * per index is far beyond any document; the product stays a safe integer.
- */
-const CHAIN_FACTOR = 2 ** 26;
+const INITIAL_KEY_CAPACITY = 16;
 
 /**
  * Maps keys, such as IRIs or blank node identifiers, to the ranges where they
@@ -26,7 +20,15 @@ const CHAIN_FACTOR = 2 ** 26;
  * demand when ranges are read, so lookups by key stay O(1).
  */
 export class RangeIndex {
-	private readonly _chains = new Map<string, number>();
+	/**
+	 * The number of each key, which indexes the first and the last chunk of its chain.
+	 * Appending a range to a known key thus takes a single map lookup.
+	 */
+	private readonly _keyNumbers = new Map<string, number>();
+
+	private _heads = new Uint32Array(INITIAL_KEY_CAPACITY);
+
+	private _tails = new Uint32Array(INITIAL_KEY_CAPACITY);
 
 	private _chunks = new Uint32Array(INITIAL_CHUNK_CAPACITY * SLOTS_PER_CHUNK);
 
@@ -36,7 +38,7 @@ export class RangeIndex {
 	 * The number of keys in the index.
 	 */
 	get size(): number {
-		return this._chains.size;
+		return this._keyNumbers.size;
 	}
 
 	/**
@@ -60,7 +62,7 @@ export class RangeIndex {
 	 * The keys in the index, in insertion order.
 	 */
 	keys(): IterableIterator<string> {
-		return this._chains.keys();
+		return this._keyNumbers.keys();
 	}
 
 	/**
@@ -68,7 +70,7 @@ export class RangeIndex {
 	 * @param key The key.
 	 */
 	has(key: string): boolean {
-		return this._chains.has(key);
+		return this._keyNumbers.has(key);
 	}
 
 	/**
@@ -115,17 +117,14 @@ export class RangeIndex {
 	 * @param range The range to record.
 	 */
 	add(key: string, range: Range): void {
-		const chain = this._chains.get(key);
+		const keyNumber = this._keyNumbers.get(key);
 		const chunk = this._appendChunk(range);
 
-		if (chain === undefined) {
-			this._chains.set(key, chunk * CHAIN_FACTOR + chunk);
+		if (keyNumber === undefined) {
+			this._addKey(key, chunk);
 		} else {
-			const head = Math.floor(chain / CHAIN_FACTOR);
-			const tail = chain % CHAIN_FACTOR;
-
-			this._chunks[tail * SLOTS_PER_CHUNK + NEXT_SLOT] = chunk;
-			this._chains.set(key, head * CHAIN_FACTOR + chunk);
+			this._chunks[this._tails[keyNumber] * SLOTS_PER_CHUNK + NEXT_SLOT] = chunk;
+			this._tails[keyNumber] = chunk;
 		}
 	}
 
@@ -135,15 +134,17 @@ export class RangeIndex {
 	 * @param range The range to record.
 	 */
 	set(key: string, range: Range): void {
-		const head = this._headOf(key);
+		const keyNumber = this._keyNumbers.get(key);
 
-		if (head === END_OF_CHAIN) {
-			this.add(key, range);
+		if (keyNumber === undefined) {
+			this._addKey(key, this._appendChunk(range));
 		} else {
 			// Reuse the first chunk and cut the chain; chunks further down are only
 			// reclaimed by clear(), which is fine for the rare repeated set.
+			const head = this._heads[keyNumber];
+
 			this._writeChunk(head, range);
-			this._chains.set(key, head * CHAIN_FACTOR + head);
+			this._tails[keyNumber] = head;
 		}
 	}
 
@@ -151,7 +152,9 @@ export class RangeIndex {
 	 * Removes all keys and ranges.
 	 */
 	clear(): void {
-		this._chains.clear();
+		this._keyNumbers.clear();
+		this._heads = new Uint32Array(INITIAL_KEY_CAPACITY);
+		this._tails = new Uint32Array(INITIAL_KEY_CAPACITY);
 		this._chunks = new Uint32Array(INITIAL_CHUNK_CAPACITY * SLOTS_PER_CHUNK);
 		this._chunkCount = 0;
 	}
@@ -162,7 +165,7 @@ export class RangeIndex {
 	toRecord(): Record<string, Range[]> {
 		const record: Record<string, Range[]> = {};
 
-		for (const key of this._chains.keys()) {
+		for (const key of this._keyNumbers.keys()) {
 			record[key] = this.getRanges(key);
 		}
 
@@ -170,9 +173,39 @@ export class RangeIndex {
 	}
 
 	private _headOf(key: string): number {
-		const chain = this._chains.get(key);
+		const keyNumber = this._keyNumbers.get(key);
 
-		return chain === undefined ? END_OF_CHAIN : Math.floor(chain / CHAIN_FACTOR);
+		return keyNumber === undefined ? END_OF_CHAIN : this._heads[keyNumber];
+	}
+
+	/**
+	 * Adds a key whose chain consists of a single chunk, growing the storage by doubling.
+	 * @param key The key.
+	 * @param chunk The index of the chunk.
+	 */
+	private _addKey(key: string, chunk: number): void {
+		const keyNumber = this._keyNumbers.size;
+
+		if (keyNumber >= this._heads.length) {
+			this._heads = this._grow(this._heads);
+			this._tails = this._grow(this._tails);
+		}
+
+		this._keyNumbers.set(key, keyNumber);
+		this._heads[keyNumber] = chunk;
+		this._tails[keyNumber] = chunk;
+	}
+
+	/**
+	 * Returns a copy of an array with twice its length.
+	 * @param array The array to grow.
+	 */
+	private _grow(array: Uint32Array<ArrayBuffer>): Uint32Array<ArrayBuffer> {
+		const grown = new Uint32Array(array.length * 2);
+
+		grown.set(array);
+
+		return grown;
 	}
 
 	private _nextOf(chunk: number): number {
@@ -204,11 +237,7 @@ export class RangeIndex {
 	 */
 	private _appendChunk(range: Range): number {
 		if ((this._chunkCount + 1) * SLOTS_PER_CHUNK > this._chunks.length) {
-			const grown = new Uint32Array(this._chunks.length * 2);
-
-			grown.set(this._chunks);
-
-			this._chunks = grown;
+			this._chunks = this._grow(this._chunks);
 		}
 
 		const chunk = this._chunkCount++;
