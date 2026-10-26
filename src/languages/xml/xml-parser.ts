@@ -24,7 +24,9 @@ export class XmlParser {
 	 * @returns The parsed content data.
 	 */
 	parse(data: string): XmlParseResult {
-		const lines = data.split('\n');
+		// Comments are not markup: commented-out elements must not be indexed as resources.
+		const markup = this._blankOutComments(data);
+		const lines = markup.split('\n');
 		const result: XmlParseResult = {
 			namespaces: {},
 			namespaceDefinitions: {},
@@ -36,7 +38,7 @@ export class XmlParser {
 		};
 
 		// Parse DOCTYPE for entity definitions
-		this._parseDoctypeEntities(data, result);
+		this._parseDoctypeEntities(markup, result);
 
 		// Parse namespace definitions and xml:base
 		this._parseNamespaces(lines, result);
@@ -45,6 +47,17 @@ export class XmlParser {
 		this._parseElements(lines, result);
 
 		return result;
+	}
+
+	/**
+	 * Replaces the XML comments in a document with spaces. The line breaks are kept, so that
+	 * the ranges of the remaining markup are the same as in the document. A comment that is
+	 * not closed extends to the end of the document.
+	 * @param data The raw XML document text.
+	 * @returns The document text without comments.
+	 */
+	private _blankOutComments(data: string): string {
+		return data.replace(/<!--[\s\S]*?(-->|$)/g, comment => comment.replace(/[^\n]/g, ' '));
 	}
 
 	private _parseDoctypeEntities(data: string, result: XmlParseResult): void {
