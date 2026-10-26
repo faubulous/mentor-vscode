@@ -1,6 +1,7 @@
 import { Store } from '@faubulous/mentor-rdf';
 import basicOntologyShapes from '@src/ontologies/shapes/ontology-1.0.0.ttl';
 import basicTaxonomyShapes from '@src/ontologies/shapes/taxonomy-1.0.0.ttl';
+import { PresetGraph } from '@src/services/core/preset-graph';
 import { ONTOLOGY_SHAPES_URI, TAXONOMY_SHAPES_URI } from '../preset-definitions';
 
 /**
@@ -14,6 +15,15 @@ const PRESET_SHAPE_SOURCES: Record<string, string> = {
 };
 
 /**
+ * The bundled preset shape graphs. Inference is skipped: the graphs are only ever
+ * read as shape datasets.
+ */
+export const PRESET_SHAPE_GRAPHS: PresetGraph[] = [
+	{ path: 'shapes/ontology-1.0.0.ttl', graphIri: ONTOLOGY_SHAPES_URI, source: basicOntologyShapes, executeInference: false },
+	{ path: 'shapes/taxonomy-1.0.0.ttl', graphIri: TAXONOMY_SHAPES_URI, source: basicTaxonomyShapes, executeInference: false },
+];
+
+/**
  * Returns the bundled Turtle source for a preset shape graph, or `undefined` when
  * the preset id is unknown.
  */
@@ -23,10 +33,10 @@ export function getPresetShapeSource(presetId: string): string | undefined {
 
 /**
  * Loads the bundled SHACL shape graphs referenced by the built-in validation
- * presets into the store. Inference is skipped: the graphs are only ever read
- * as shape datasets.
+ * presets into the store.
  */
 export function loadPresetShapeGraphs(store: Store): void {
-	store.loadTurtle(basicOntologyShapes, ONTOLOGY_SHAPES_URI, false);
-	store.loadTurtle(basicTaxonomyShapes, TAXONOMY_SHAPES_URI, false);
+	for (const graph of PRESET_SHAPE_GRAPHS) {
+		store.loadTurtle(graph.source, graph.graphIri, graph.executeInference);
+	}
 }

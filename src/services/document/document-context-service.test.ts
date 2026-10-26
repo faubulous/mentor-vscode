@@ -41,6 +41,7 @@ function createMockContext(overrides: Partial<IDocumentContext> = {}): IDocument
 		isLoaded: true,
 		isParsed: false,
 		isTemporary: false,
+		isPreset: false,
 		isTokenized: () => false,
 		loadTriples: vi.fn(),
 		infer: vi.fn(),
@@ -221,6 +222,18 @@ describe('DocumentContextService', () => {
 
 			service.removeDocuments([vscode.Uri.parse('file:///w/unknown.ttl')]);
 
+			expect(mockStore.deleteGraphs).not.toHaveBeenCalled();
+		});
+
+		it('keeps the graph of a removed preset context, which is owned by the store', () => {
+			const { service, mockStore } = createService();
+			const uri = 'mentor-vfs:/vocabularies/rdfs.ttl';
+
+			service.contexts[uri] = createMockContext({ uri: vscode.Uri.parse(uri), graphs: ['http://www.w3.org/2000/01/rdf-schema#'], isPreset: true });
+
+			service.removeDocuments([vscode.Uri.parse(uri)]);
+
+			expect(service.contexts[uri]).toBeUndefined();
 			expect(mockStore.deleteGraphs).not.toHaveBeenCalled();
 		});
 	});

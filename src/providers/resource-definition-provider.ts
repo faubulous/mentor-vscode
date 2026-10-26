@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { IDocumentContextService } from '@src/services/document';
+import { IDocumentContextService, IPresetDocumentService } from '@src/services/document';
 import { IDocumentContext } from '@src/services/document/document-context.interface';
 import { IWorkspaceIndexerService } from '@src/services/core/workspace-indexer.interface';
 
@@ -11,10 +11,14 @@ export class ResourceDefinitionProvider {
 	 * @param _contextService The service that holds the loaded document contexts.
 	 * @param _indexer The workspace indexer. When given, a definition that is not loaded
 	 * yet is looked up once the workspace is indexed.
+	 * @param _presetDocuments The service that loads the documents of the preset graphs. When
+	 * given, a resource that is not defined in the workspace is looked up in the framework
+	 * vocabularies and the preset shape graphs.
 	 */
 	constructor(
 		private readonly _contextService: IDocumentContextService,
-		private readonly _indexer?: Pick<IWorkspaceIndexerService, 'indexingFinished' | 'waitForIndexed'>
+		private readonly _indexer?: Pick<IWorkspaceIndexerService, 'indexingFinished' | 'waitForIndexed'>,
+		private readonly _presetDocuments?: IPresetDocumentService
 	) { }
 
 	/**
@@ -43,11 +47,28 @@ export class ResourceDefinitionProvider {
 			const uri = document.uri.toString();
 
 			return this._indexer.waitForIndexed().then(() => {
-				return this.provideDefinitionForResource(this._contextService.contexts[uri] ?? context, iri);
+				return this._provideDefinitionIncludingPresets(this._contextService.contexts[uri] ?? context, iri);
 			});
 		}
 
-		return this.provideDefinitionForResource(context, iri);
+		return this._provideDefinitionIncludingPresets(context, iri);
+	}
+
+	/**
+	 * Get the definition of a resource. A resource that is not defined in a loaded context
+	 * is looked up in the preset graphs, whose documents are loaded on demand.
+	 * @param primaryContext The primary document context.
+	 * @param id The IRI or blank node ID of the resource.
+	 * @returns The definition of the resource, or `null` if no definition was found.
+	 */
+	private _provideDefinitionIncludingPresets(primaryContext: IDocumentContext, id: string): vscode.ProviderResult<vscode.Definition> {
+		if (this._presetDocuments && !this._isDefinedInLoadedContext(id)) {
+			return this._presetDocuments.ensureLoaded().then(() => {
+				return this.provideDefinitionForResource(primaryContext, id);
+			});
+		}
+
+		return this.provideDefinitionForResource(primaryContext, id);
 	}
 
 	/**
@@ -55,7 +76,28 @@ export class ResourceDefinitionProvider {
 	 * @param id The IRI or blank node ID of the resource.
 	 */
 	private _isDefinedInLoadedContext(id: string): boolean {
-		return Object.values(this._contextService.contexts).some(c => c.typeDefinitions.has(id));
+		return Object.values(this._contextService.contexts).some(c => this._definesResource(c, id));
+	}
+
+	/**
+	 * Indicates whether a document context defines a resource. In the documents of the preset
+	 * graphs, which only describe the resources they define, any subject counts as a definition:
+	 * the SPARQL syntax vocabulary types its built-in functions with a class of its own, and the
+	 * SKOS vocabulary asserts the types after the other properties of a subject.
+	 * @param context A document context.
+	 * @param id The IRI or blank node ID of the resource.
+	 */
+	private _definesResource(context: IDocumentContext, id: string): boolean {
+		return context.typeDefinitions.has(id) || (context.isPreset && context.subjects.has(id));
+	}
+
+	/**
+	 * Get the range of the definition of a resource in a context that defines it.
+	 * @param context A document context that defines the resource.
+	 * @param id The IRI or blank node ID of the resource.
+	 */
+	private _getDefinitionRange(context: IDocumentContext, id: string) {
+		return context.typeDefinitions.first(id) ?? (context.isPreset ? context.subjects.first(id) : undefined);
 	}
 
 	/**
@@ -70,15 +112,13 @@ export class ResourceDefinitionProvider {
 		let context = primaryContext;
 
 		if (!primaryContextOnly) {
-			// Find all contexts that define the IRI or blank node ID.
-			const contexts = this._getContextsDefiningResource(id, primaryContext);
+			// Use the first context that defines the IRI or blank node ID. Look for type
+			// assertions first, because sometimes namespaces are defined as rdf:type owl:Ontology.
+			const definingContext = this._getContextsDefiningResource(id, primaryContext)[0];
 
-			for (let c of contexts.filter(c => c.typeDefinitions.has(id))) {
-				// Look for type assertions first, because sometimes namespaces are defined as rdf:type owl:Ontology.
-				range = c.typeDefinitions.first(id);
-				context = c;
-
-				break;
+			if (definingContext) {
+				range = this._getDefinitionRange(definingContext, id);
+				context = definingContext;
 			}
 		}
 
@@ -97,18 +137,29 @@ export class ResourceDefinitionProvider {
 		return null;
 	}
 
-	private _getContextsDefiningResource(iriOrBlankId: string, primaryContext?: IDocumentContext): IDocumentContext[] {
+	/**
+	 * Get the contexts that define a resource, ordered by precedence: the primary context,
+	 * the workspace documents and finally the documents of the preset graphs, so that a
+	 * definition in the workspace takes precedence over one in a framework vocabulary.
+	 * @param id The IRI or blank node ID of the resource.
+	 * @param primaryContext The primary document context.
+	 * @returns The contexts that define the resource.
+	 */
+	private _getContextsDefiningResource(id: string, primaryContext?: IDocumentContext): IDocumentContext[] {
 		const result: IDocumentContext[] = [];
+		const presetContexts: IDocumentContext[] = [];
 		const contexts = Object.values(this._contextService.contexts);
 
-		for (const c of contexts.filter(c => c.typeDefinitions.has(iriOrBlankId))) {
+		for (const c of contexts.filter(c => this._definesResource(c, id))) {
 			if (primaryContext && c == primaryContext) {
 				result.unshift(c);
+			} else if (c.isPreset) {
+				presetContexts.push(c);
 			} else {
 				result.push(c);
 			}
 		}
 
-		return result;
+		return [...result, ...presetContexts];
 	}
 }

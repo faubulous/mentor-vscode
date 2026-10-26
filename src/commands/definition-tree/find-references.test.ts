@@ -22,7 +22,8 @@ vi.mock('tsyringe', () => ({
 	singleton: () => (t: any) => t,
 }));
 
-vi.mock('@faubulous/mentor-rdf', () => ({
+vi.mock('@faubulous/mentor-rdf', async (importOriginal) => ({
+	...await importOriginal<typeof import('@faubulous/mentor-rdf')>(),
 	VocabularyRepository: class {},
 }));
 

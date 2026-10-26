@@ -10,6 +10,7 @@ import { WorkspaceIndexerService } from './core/workspace-indexer-service';
 import { WorkspaceFileService } from './core/workspace-file-service';
 import { WorkspaceService } from './core/workspace-service';
 import { DocumentContextService } from './document/document-context-service';
+import { PresetDocumentService } from './document/preset-document-service';
 import { DocumentLintingService } from './document/document-linting-service';
 import { NotebookController } from './notebook/notebook-controller';
 import { DocumentTokenSource } from './document/document-token-source';
@@ -90,6 +91,9 @@ export function configureServiceContainer(context: vscode.ExtensionContext): voi
 
 	const documentContextService = new DocumentContextService(context, store, vocabularyRepository, documentFactory, documentTokenSource);
 	container.registerInstance(ServiceToken.DocumentContextService, documentContextService);
+
+	const presetDocumentService = new PresetDocumentService(documentContextService);
+	container.registerInstance(ServiceToken.PresetDocumentService, presetDocumentService);
 
 	const workspaceRenameService = new WorkspaceRenameService(documentContextService);
 	container.registerInstance(ServiceToken.WorkspaceRenameService, workspaceRenameService);
@@ -232,8 +236,12 @@ export function configureServiceContainer(context: vscode.ExtensionContext): voi
 				indexingFinished: workspaceIndexerService.indexingFinished,
 				workspaceFiles: workspaceFileService.files.map(file => file.toString()),
 				documentContexts: Object.keys(documentContextService.contexts),
+				storeGraphs: store.getGraphs(),
 				heapUsedMb: getHeapUsedMb(),
 			})),
+			vscode.commands.registerCommand('mentor.e2e.countGraphTriples', (graphIri: string) => {
+				return store.countQuads(null, null, null, store.dataFactory.namedNode(graphIri));
+			}),
 			vscode.commands.registerCommand('mentor.e2e.setNotebookConnection', async (notebookUri: string, connectionId: string) => {
 				const notebook = vscode.workspace.notebookDocuments.find(nb => nb.uri.toString() === notebookUri);
 

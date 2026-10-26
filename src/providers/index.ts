@@ -1,4 +1,6 @@
 export * from './mentor-uri-handler';
+export * from './mentor-vfs-file-system-provider';
+export * from './mentor-vfs-uri';
 export * from './inference-uri-link-provider';
 export * from './inference-uri';
 export * from './notebook-cell-slug-codelens-provider';

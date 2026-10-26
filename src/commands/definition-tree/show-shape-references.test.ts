@@ -6,10 +6,12 @@ const {
 	mockActivateDocument,
 	mockActiveContext,
 	mockGetShapes,
+	mockEnsureLoaded,
 } = vi.hoisted(() => ({
 	mockActivateDocument: vi.fn(),
 	mockActiveContext: { graphs: ['urn:g1'] },
 	mockGetShapes: vi.fn(function*(): Generator<string, void, unknown> {}),
+	mockEnsureLoaded: vi.fn(async () => undefined),
 }));
 
 vi.mock('tsyringe', () => ({
@@ -26,6 +28,11 @@ vi.mock('tsyringe', () => ({
 					getShapes: mockGetShapes,
 				};
 			}
+			if (token === ServiceToken.PresetDocumentService) {
+				return {
+					ensureLoaded: mockEnsureLoaded,
+				};
+			}
 			return {};
 		}),
 	},
@@ -34,7 +41,8 @@ vi.mock('tsyringe', () => ({
 	singleton: () => (t: any) => t,
 }));
 
-vi.mock('@faubulous/mentor-rdf', () => ({
+vi.mock('@faubulous/mentor-rdf', async (importOriginal) => ({
+	...await importOriginal<typeof import('@faubulous/mentor-rdf')>(),
 	VocabularyRepository: class {},
 }));
 
@@ -115,6 +123,8 @@ describe('showShapeReferences', () => {
 
 		await showShapeReferences.handler('urn:ex#Res');
 
+		// Shapes may be defined in a preset shape graph, whose document is loaded on demand.
+		expect(mockEnsureLoaded.mock.invocationCallOrder[0]).toBeLessThan((ResourceDefinitionProvider.prototype.provideDefinitionForResource as any).mock.invocationCallOrder[0]);
 		expect(showTextDocumentSpy).not.toHaveBeenCalled();
 		expect(execSpy).toHaveBeenCalledWith(
 			'editor.action.peekLocations',

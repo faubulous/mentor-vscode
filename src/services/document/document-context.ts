@@ -141,6 +141,10 @@ export abstract class DocumentContext implements IDocumentContext {
 		return this.uri.scheme == 'git' || this.uri.scheme == 'untitled';
 	}
 
+	get isPreset(): boolean {
+		return false;
+	}
+
 	abstract parse(text: string): IToken[];
 
 	abstract loadTriples(data: string): Promise<void>;

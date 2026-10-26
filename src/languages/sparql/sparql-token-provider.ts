@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { VocabularyRepository } from '@faubulous/mentor-rdf';
 import { ServiceToken } from '@src/services/tokens';
-import { IDocumentContextService, IPrefixLookupService } from '@src/services/document';
+import { IDocumentContextService, IPrefixLookupService, IPresetDocumentService } from '@src/services/document';
 import { IWorkspaceIndexerService, IWorkspaceRenameService } from '@src/services/core';
 import {
 	ISparqlConnectionRegistry,
@@ -49,12 +49,13 @@ export class SparqlTokenProvider {
 		const graphService = container.resolve<IGraphManagementService>(ServiceToken.GraphManagementService);
 		const renameService = container.resolve<IWorkspaceRenameService>(ServiceToken.WorkspaceRenameService);
 		const workspaceIndexer = container.resolve<IWorkspaceIndexerService>(ServiceToken.WorkspaceIndexerService);
+		const presetDocuments = container.resolve<IPresetDocumentService>(ServiceToken.PresetDocumentService);
 
 		const codeActionsProvider = new TurtleCodeActionsProvider(contextService);
 		const codeLensProvider = new SparqlCodeLensProvider(connectionRegistry, documentConnectionService, storeConfigService, queryService);
 		const notebookSlugCodelensProvider = new NotebookCellSlugCodeLensProvider(contextService);
 		const completionProvider = new SparqlCompletionItemProvider(contextService, vocabulary, connectionRegistry, documentConnectionService, graphService);
-		const definitionProvider = new ResourceDefinitionProvider(contextService, workspaceIndexer);
+		const definitionProvider = new ResourceDefinitionProvider(contextService, workspaceIndexer, presetDocuments);
 		const workspaceGraphDefinitionProvider = new WorkspaceGraphDefinitionProvider(contextService);
 		const formattingProvider = new SparqlCodeFormattingProvider();
 		const prefixCompletionProvider = new TurtlePrefixCompletionProvider((uri) => ` <${uri}>`, contextService, prefixLookup);
