@@ -9,7 +9,7 @@ import { WorkspaceUri } from '@src/providers/workspace-uri';
 import { XmlParseResult } from '@src/languages/xml/xml-types';
 import { XmlParser } from '@src/languages/xml/xml-parser';
 import { getIriFromPrefixedName, getTextFingerprint } from '@src/utilities';
-import { addLanguageTagUsage } from '@src/utilities/rdf';
+import { addLanguageTagUsage, replaceGraphQuads } from '@src/utilities/rdf';
 import { getLog } from '@src/utilities/vscode/log';
 
 /**
@@ -296,29 +296,36 @@ export class XmlDocument extends DocumentContext {
 		// Counted while the quads are added, instead of in a separate scan of the graph.
 		const languageTagStats: LanguageTagUsageStats = {};
 
+		const graphUri = WorkspaceUri.toCanonicalString(this.graphIri);
+
+		// The graphs of a previous graph IRI, e.g. before a notebook cell got its slug.
+		const previousGraphs = this.graphs.filter(uri => uri !== graphUri);
+
+		// Initialize the graphs *before* trying to load the document so
+		// that they are initialized even when loading the document fails.
+		this.graphs.length = 0;
+		this.graphs.push(graphUri);
+
+		if (previousGraphs.length > 0) {
+			this._store.deleteGraphs(previousGraphs, true);
+		}
+
+		// The RDF/XML parser writes into a store: parse into a separate one, so that
+		// only the triples that changed are applied to the graph of the document.
+		const parsed = new Store();
+
 		try {
-			const graphUri = WorkspaceUri.toCanonicalString(this.graphIri);
-
-			// Delete old graphs and their inference graphs to handle slug changes.
-			// loadFromXmlStream clears the target graph itself via its clearGraph option.
-			if (this.graphs.length > 0) {
-				this._store.deleteGraphs([...this.graphs], true);
-			}
-
-			// Initialize the graphs *before* trying to load the document so 
-			// that they are initialized even when loading the document fails.
-			this.graphs.length = 0;
-			this.graphs.push(graphUri);
-
-			// Reset inference flag: loadFromXmlStream clears both the source graph and
-			// the inference graph, so inference must re-run after each reload.
-			this._inferenceExecuted = false;
-
-			// Load triples from the RDF/XML content into the store.
-			await this._store.loadFromXmlStream(data, graphUri, false, true, quad => addLanguageTagUsage(languageTagStats, quad.object));
+			await parsed.loadFromXmlStream(data, graphUri, false, true, quad => addLanguageTagUsage(languageTagStats, quad.object));
 		} catch (e) {
-			// This is not a critical error because the graph might be invalid.
+			// This is not a critical error because the graph might be invalid. The
+			// triples read before the error are loaded, as before.
 			getLog().error('Failed to load triples from RDF/XML:', e);
+		}
+
+		const g = this._store.dataFactory.namedNode(graphUri);
+
+		if (replaceGraphQuads(this._store, g, Array.from(parsed.matchQuads(null, null, null, g)))) {
+			this._inferenceExecuted = false;
 		}
 
 		this.languageTagStats = languageTagStats;
