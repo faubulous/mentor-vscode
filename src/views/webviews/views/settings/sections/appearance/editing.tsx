@@ -6,31 +6,31 @@ import { useBulkScopeMenuItems } from '../../hooks/use-bulk-scope-menu-items';
 import { MENTOR_SETTINGS_SOURCE } from '../../settings-types';
 import type { SettingsSectionDescriptor } from '../../settings-section-descriptor';
 
-export const editorFormEditorSection = {
-	id: 'editor.formEditor',
-	label: 'Form Editor',
-	component: EditorFormEditorSection,
+export const appearanceEditingSection = {
+	id: 'appearance.editing',
+	label: 'Editing',
+	component: EditingSection,
 	keys: [
 		'formEditor.enabled',
 	],
 } as const satisfies SettingsSectionDescriptor;
 
 /**
- * The settings of the experimental form based editor.
+ * How documents are edited: the experimental form based editor.
  */
-function EditorFormEditorSection({ keys, settings, onUpdate, setScope, onBulkScope }: SettingsSectionProps) {
+function EditingSection({ keys, settings, onUpdate, setScope, onBulkScope }: SettingsSectionProps) {
 	const rowProps = useSettingRowProps(MENTOR_SETTINGS_SOURCE, settings, setScope);
 	const menuItems = useBulkScopeMenuItems(MENTOR_SETTINGS_SOURCE, [...keys], settings, onBulkScope);
 
 	return (
 		<div>
-			<SectionHeader title={editorFormEditorSection.label} menuItems={menuItems} variant="title" />
+			<SectionHeader title={appearanceEditingSection.label} menuItems={menuItems} variant="title" />
 			<SettingRow {...rowProps('formEditor.enabled')}>
 				<vscode-checkbox
 					checked={settings['formEditor.enabled']?.value === true}
 					onChange={(e: any) => onUpdate(MENTOR_SETTINGS_SOURCE, 'formEditor.enabled', (e.target as HTMLInputElement).checked)}
 				>
-					Enabled
+					Enable the form editor
 				</vscode-checkbox>
 			</SettingRow>
 		</div>
