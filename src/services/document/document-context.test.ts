@@ -43,9 +43,10 @@ vi.mock('tsyringe', () => ({
 /** The services injected into the document context under test. */
 // Partial stub: only `matchAll` is exercised by the label/description queries under test.
 const mockStore = {
+    version: 0,
     matchAll: (graphUris: any, subject: any, predicate: any, object: any) =>
         mockStoreMatchAll(graphUris, subject, predicate, object),
-} as unknown as Store;
+} as unknown as Store & { version: number };
 
 // Partial stub: only `get` is read (live label-style lookups).
 const mockSettings = { get: (k: string, d?: any) => mockSettingsGet(k, d) } as unknown as ISettingsService;
@@ -588,5 +589,67 @@ describe('DocumentContext – getTextDocument', () => {
         (vscode.workspace.textDocuments as any[]).push(mockTextDoc);
         const doc = makeDoc(uri);
         expect(doc.getTextDocument()).toBe(mockTextDoc);
+    });
+});
+
+// ---------------------------------------------------------------------------
+// getResourceLabel / getResourceDescription – memo
+// ---------------------------------------------------------------------------
+describe('DocumentContext – annotation memo', () => {
+    beforeEach(() => {
+        mockSettingsGet = (key: string, defaultValue?: any) => {
+            if (key === 'view.definitionTree.labelStyle') return TreeLabelStyle.AnnotatedLabels;
+            return defaultValue;
+        };
+    });
+
+    it('resolves a label once per store version', () => {
+        const calls: any[] = [];
+        mockStoreMatchAll = (...args: any[]) => {
+            calls.push(args);
+            return [{ object: { termType: 'Literal', value: 'Thing', language: 'en' } }];
+        };
+
+        const doc = makeDoc();
+
+        expect(doc.getResourceLabel('http://example.org/Thing').value).toBe('Thing');
+        expect(doc.getResourceLabel('http://example.org/Thing').value).toBe('Thing');
+        expect(calls).toHaveLength(1);
+
+        mockStore.version++;
+        doc.getResourceLabel('http://example.org/Thing');
+
+        expect(calls).toHaveLength(2);
+    });
+
+    it('forgets labels when the active language changes', () => {
+        let calls = 0;
+        mockStoreMatchAll = () => {
+            calls++;
+            return [{ object: { termType: 'Literal', value: 'Thing', language: 'en' } }];
+        };
+
+        const doc = makeDoc();
+
+        doc.getResourceLabel('http://example.org/Thing');
+        doc.activeLanguageTag = 'de';
+        doc.getResourceLabel('http://example.org/Thing');
+
+        expect(calls).toBe(2);
+    });
+
+    it('remembers that a resource has no description', () => {
+        let calls = 0;
+        mockStoreMatchAll = () => {
+            calls++;
+            return [];
+        };
+
+        const doc = makeDoc();
+
+        expect(doc.getResourceDescription('http://example.org/Thing')).toBeUndefined();
+        expect(doc.getResourceDescription('http://example.org/Thing')).toBeUndefined();
+        // The two graph scopes of the first resolution only.
+        expect(calls).toBe(2);
     });
 });

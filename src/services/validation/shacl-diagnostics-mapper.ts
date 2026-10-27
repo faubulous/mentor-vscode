@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { SH } from '@faubulous/mentor-rdf';
 import { QuadContext, IToken } from '@faubulous/mentor-rdf-parsers';
-import { countLeadingWhitespace, countTrailingWhitespace } from '@src/utilities';
+import { countLeadingWhitespace, countTrailingWhitespace, hasSourcePosition } from '@src/utilities';
 import { IDocumentContext } from '@src/services/document/document-context.interface';
 import { getLocalPartAndQuery } from '@src/utilities/uri';
 import { ShaclValidationResult, ShaclValidationResultEntry } from './shacl-validation-service';
@@ -113,13 +113,18 @@ export class ShaclDiagnosticsMapper {
 
 	/**
 	 * Indexes quad contexts by their subject, predicate and object values. The first quad
-	 * context of a statement wins, as with a search from the start of the document.
+	 * context of a statement wins, as with a search from the start of the document. Quad
+	 * contexts without a source position are skipped.
 	 * @param quadContexts The quad contexts of the document, if available.
 	 */
 	private _indexQuadContexts(quadContexts?: QuadContext[]): Map<string, QuadContext> {
 		const index = new Map<string, QuadContext>();
 
 		for (const quadContext of quadContexts ?? []) {
+			if (!hasSourcePosition(quadContext.objectToken)) {
+				continue;
+			}
+
 			const key = this._getQuadKey(quadContext.subject.value, quadContext.predicate.value, quadContext.object.value);
 
 			if (!index.has(key)) {

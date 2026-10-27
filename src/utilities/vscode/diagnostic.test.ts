@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest';
-import { getPrefixesWithErrorCode } from '@src/utilities/vscode/diagnostic';
+import { describe, it, expect, afterEach } from 'vitest';
+import * as vscode from 'vscode';
+import { getPrefixesWithErrorCode, hasBlockingErrors } from '@src/utilities/vscode/diagnostic';
 
 function makeDocument(textByRange: Map<string, string> | string) {
 	return {
@@ -103,5 +104,46 @@ describe('getPrefixesWithErrorCode', () => {
 			const result = getPrefixesWithErrorCode(doc as any, [], 'UndefinedNamespacePrefixError');
 			expect(result).toEqual([]);
 		});
+	});
+});
+
+describe('hasBlockingErrors', () => {
+	const uri = vscode.Uri.parse('file:///doc.ttl');
+	const collections: vscode.DiagnosticCollection[] = [];
+
+	/**
+	 * Publish diagnostics for the document the way a diagnostics service does.
+	 */
+	function publish(...diagnostics: Partial<vscode.Diagnostic>[]) {
+		const collection = vscode.languages.createDiagnosticCollection('test');
+
+		collection.set(uri, diagnostics as vscode.Diagnostic[]);
+		collections.push(collection);
+	}
+
+	afterEach(() => {
+		collections.splice(0).forEach(collection => collection.dispose());
+	});
+
+	it('reports a syntax error', () => {
+		publish({ severity: vscode.DiagnosticSeverity.Error, source: 'mentor' });
+
+		expect(hasBlockingErrors(uri)).toBe(true);
+	});
+
+	it('ignores SHACL violations, which describe valid syntax', () => {
+		publish({ severity: vscode.DiagnosticSeverity.Error, source: 'SHACL' }, { severity: vscode.DiagnosticSeverity.Error, source: 'shacl-engine' });
+
+		expect(hasBlockingErrors(uri)).toBe(false);
+	});
+
+	it('ignores warnings and hints', () => {
+		publish({ severity: vscode.DiagnosticSeverity.Warning, source: 'mentor' }, { severity: vscode.DiagnosticSeverity.Hint });
+
+		expect(hasBlockingErrors(uri)).toBe(false);
+	});
+
+	it('reports no errors for a document without diagnostics', () => {
+		expect(hasBlockingErrors(uri)).toBe(false);
 	});
 });

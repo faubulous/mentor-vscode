@@ -42,10 +42,20 @@ export class WebviewComponentFactory {
 	 * @returns The initialized webview view.
 	 */
 	createView(view: vscode.WebviewView): vscode.WebviewView {
-		view.webview.options = this._getWebviewOptions();
-		view.webview.html = this._getWebviewHtml(view.webview);
+		this.configureWebview(view.webview);
 
 		return view;
+	}
+
+	/**
+	 * Applies the standard webview options and the Mentor HTML shell to a webview that was
+	 * created by VS Code rather than by this factory, such as the panel handed to a custom
+	 * editor provider.
+	 * @param webview The webview to configure.
+	 */
+	configureWebview(webview: vscode.Webview): void {
+		webview.options = this._getWebviewOptions();
+		webview.html = this._getWebviewHtml(webview);
 	}
 	
 	private _getIconPath(theme: string, iconName: string): vscode.Uri {

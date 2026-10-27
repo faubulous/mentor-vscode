@@ -77,6 +77,7 @@ export function configureServiceContainer(context: vscode.ExtensionContext): voi
 	const documentTokenSource = new DocumentTokenSource(getContext);
 
 	context.subscriptions.push(documentTokenSource);
+	container.registerInstance(ServiceToken.DocumentTokenSource, documentTokenSource);
 
 	const documentContextService = new DocumentContextService(context, store, vocabularyRepository, documentFactory, documentTokenSource);
 	container.registerInstance(ServiceToken.DocumentContextService, documentContextService);

@@ -37,6 +37,7 @@ import {
 	getTokenBeforePosition,
 	isPrefixTokenAtPosition,
 	getTokenRange,
+	hasSourcePosition,
 } from '@src/utilities/tokens';
 
 function makeToken(typeName: string, image: string, startLine = 1, startColumn = 1, endLine = 1, endColumn = 10, payload?: any): any {
@@ -550,6 +551,45 @@ describe('getTokenRange', () => {
 		expect(range.start.character).toBe(2);
 		// endCharacter 6 - 1 trailing space + 1 = 6.
 		expect(range.end.character).toBe(6);
+	});
+});
+
+describe('hasSourcePosition', () => {
+	it('accepts a token with real positions', () => {
+		const token = { startOffset: 10, endOffset: 15, startLine: 1, endLine: 1, startColumn: 3, endColumn: 8 } as IToken;
+
+		expect(hasSourcePosition(token)).toBe(true);
+	});
+
+	it('accepts a token that only carries line and column information', () => {
+		const token = { startLine: 4, endLine: 4, startColumn: 1, endColumn: 9 } as unknown as IToken;
+
+		expect(hasSourcePosition(token)).toBe(true);
+	});
+
+	it('rejects the synthetic token emitted for quads without a source representation', () => {
+		const token = {
+			image: '',
+			startOffset: Infinity,
+			endOffset: Infinity,
+			startLine: Infinity,
+			endLine: Infinity,
+			startColumn: Infinity,
+			endColumn: Infinity,
+			tokenType: { name: 'SYNTHETIC' }
+		} as unknown as IToken;
+
+		expect(hasSourcePosition(token)).toBe(false);
+	});
+
+	it('rejects a token whose offsets are infinite even without the synthetic token type', () => {
+		const token = { startOffset: Infinity, endOffset: Infinity } as unknown as IToken;
+
+		expect(hasSourcePosition(token)).toBe(false);
+	});
+
+	it('rejects an undefined token', () => {
+		expect(hasSourcePosition(undefined)).toBe(false);
 	});
 });
 

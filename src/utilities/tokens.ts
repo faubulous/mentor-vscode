@@ -466,3 +466,30 @@ export function isTypeAssertionObject(tokens: IToken[], tokenIndex: number, pref
 		}
 	}
 }
+/**
+ * Indicate whether a token carries a real source position. Readers emit synthetic tokens
+ * with infinite offsets for quads that have no direct representation in the source text,
+ * such as the inner triples of an object-position blank node property list.
+ * @param token The token to inspect.
+ * @returns `true` if the token maps to a location in the source text, `false` otherwise.
+ */
+export function hasSourcePosition(token: IToken | undefined): boolean {
+	if (!token) {
+		return false;
+	}
+
+	if (token.tokenType?.name === 'SYNTHETIC') {
+		return false;
+	}
+
+	const positions = [
+		token.startOffset,
+		token.startLine,
+		token.startColumn,
+		token.endOffset,
+		token.endLine,
+		token.endColumn
+	];
+
+	return positions.every(position => position === undefined || Number.isFinite(position));
+}

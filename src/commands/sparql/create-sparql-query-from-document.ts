@@ -5,6 +5,7 @@ import { ServiceToken } from '@src/services/tokens';
 import { IDocumentConnectionService, ITripleStoreConfigService } from '@src/languages/sparql/services';
 import { IDocumentContextService } from '@src/services/document';
 import { WorkspaceUri } from '@src/providers';
+import { resolveActiveRdfDocument } from '@src/utilities/vscode/active-rdf-document';
 
 /**
  * Creates an untitled SPARQL document that queries the RDF document in the active editor.
@@ -16,15 +17,15 @@ import { WorkspaceUri } from '@src/providers';
  */
 export const createSparqlQueryFromDocument = {
 	id: 'mentor.command.createSparqlQueryFromDocument',
-	handler: async (): Promise<void> => {
-		const editor = vscode.window.activeTextEditor;
+	handler: async (uri?: vscode.Uri): Promise<void> => {
+		const document = await resolveActiveRdfDocument(uri);
 
-		if (!editor) {
+		if (!document) {
 			vscode.window.showErrorMessage('No active editor found.');
 			return;
 		}
 
-		const documentUri = editor.document.uri;
+		const documentUri = document.uri;
 
 		const storeConfigService = container.resolve<ITripleStoreConfigService>(ServiceToken.StoreConfigService);
 		const documentConnectionService = container.resolve<IDocumentConnectionService>(ServiceToken.DocumentConnectionService);
@@ -56,14 +57,14 @@ export const createSparqlQueryFromDocument = {
 			return;
 		}
 
-		const document = await vscode.workspace.openTextDocument({ content, language: 'sparql' });
+		const queryDocument = await vscode.workspace.openTextDocument({ content, language: 'sparql' });
 
-		await vscode.window.showTextDocument(document);
+		await vscode.window.showTextDocument(queryDocument);
 
 		// Bind the generated query to the store the source document targets, so executing it does
 		// not silently fall back to the workspace store.
 		if (!isWorkspaceStore) {
-			await documentConnectionService.setQuerySourceForDocument(document.uri, connection.id);
+			await documentConnectionService.setQuerySourceForDocument(queryDocument.uri, connection.id);
 		}
 	}
 };
