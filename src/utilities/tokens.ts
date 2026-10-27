@@ -497,23 +497,23 @@ export function hasSourcePosition(token: IToken | undefined): boolean {
 }
 
 /**
- * Indicate whether a token carries no syntax of its own. Whitespace is not part of the token
- * stream, so comments are the only trivia.
+ * Indicate whether a token is a comment, which carries no syntax of its own.
  * @param token The token to inspect.
+ * @returns `true` if the token is a comment, `false` otherwise.
  */
-export function isTriviaToken(token: IToken | undefined): boolean {
+export function isCommentToken(token: IToken | undefined): boolean {
 	return token?.tokenType?.name === RdfToken.COMMENT.name;
 }
 
 /**
- * Find the next token that is not trivia.
+ * Find the next token that is not a comment.
  * @param tokens The token stream.
  * @param index The index to start after.
  * @returns The index of the token, or `-1` if there is none.
  */
-export function nextNonTriviaIndex(tokens: readonly IToken[], index: number): number {
+export function nextNonCommentIndex(tokens: readonly IToken[], index: number): number {
 	for (let i = index + 1; i < tokens.length; i++) {
-		if (!isTriviaToken(tokens[i])) {
+		if (!isCommentToken(tokens[i])) {
 			return i;
 		}
 	}
@@ -522,14 +522,14 @@ export function nextNonTriviaIndex(tokens: readonly IToken[], index: number): nu
 }
 
 /**
- * Find the previous token that is not trivia.
+ * Find the previous token that is not a comment.
  * @param tokens The token stream.
  * @param index The index to start before.
  * @returns The index of the token, or `-1` if there is none.
  */
-export function previousNonTriviaIndex(tokens: readonly IToken[], index: number): number {
+export function previousNonCommentIndex(tokens: readonly IToken[], index: number): number {
 	for (let i = index - 1; i >= 0; i--) {
-		if (!isTriviaToken(tokens[i])) {
+		if (!isCommentToken(tokens[i])) {
 			return i;
 		}
 	}

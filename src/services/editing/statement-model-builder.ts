@@ -3,7 +3,7 @@ import { Term } from '@rdfjs/types';
 import { RDF } from '@faubulous/mentor-rdf';
 import { getResourceId } from './resource-id';
 import { CollectionItemSpan, ObjectSpan, PredicateGroup, StatementModel, SubjectBlock } from './statement-model';
-import { hasSourcePosition, isTriviaToken, nextNonTriviaIndex, previousNonTriviaIndex, tokenEnd } from '@src/utilities/tokens';
+import { hasSourcePosition, isCommentToken, nextNonCommentIndex, previousNonCommentIndex, tokenEnd } from '@src/utilities/tokens';
 
 /**
  * The tokens that open a bracketed construct, with the token that closes each.
@@ -91,12 +91,12 @@ export class StatementModelBuilder {
 		const last = blocks[blocks.length - 1];
 
 		if (!last) {
-			return this._tokens.filter(isTriviaToken);
+			return this._tokens.filter(isCommentToken);
 		}
 
 		const end = last.terminator ? tokenEnd(last.terminator) : last.end;
 
-		return this._tokens.filter(token => isTriviaToken(token) && token.startOffset >= end && !this._endsLineOf(token, end));
+		return this._tokens.filter(token => isCommentToken(token) && token.startOffset >= end && !this._endsLineOf(token, end));
 	}
 
 	/**
@@ -111,7 +111,7 @@ export class StatementModelBuilder {
 	 * that ends the line of the token before belongs to that line, not to what follows it.
 	 */
 	private _leadingCommentsBefore(tokenIndex: number): IToken[] {
-		const previousIndex = previousNonTriviaIndex(this._tokens, tokenIndex);
+		const previousIndex = previousNonCommentIndex(this._tokens, tokenIndex);
 		const previous = previousIndex >= 0 ? this._tokens[previousIndex] : undefined;
 
 		return this._tokens
@@ -385,11 +385,11 @@ export class StatementModelBuilder {
 		const name = token.tokenType?.name ?? '';
 
 		if (STRING_TOKEN_NAMES.has(name)) {
-			const next = nextNonTriviaIndex(this._tokens, index);
+			const next = nextNonCommentIndex(this._tokens, index);
 			const nextName = this._tokens[next]?.tokenType?.name;
 
 			if (nextName === RdfToken.DCARET.name) {
-				const datatype = nextNonTriviaIndex(this._tokens, next);
+				const datatype = nextNonCommentIndex(this._tokens, next);
 
 				return datatype >= 0 ? datatype : next;
 			}
@@ -445,7 +445,7 @@ export class StatementModelBuilder {
 		for (let i = block.endTokenIndex + 1; i < this._tokens.length; i++) {
 			const token = this._tokens[i];
 
-			if (isTriviaToken(token)) {
+			if (isCommentToken(token)) {
 				continue;
 			}
 
