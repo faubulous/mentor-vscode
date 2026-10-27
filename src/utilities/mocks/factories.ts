@@ -312,6 +312,67 @@ export function createMockTextDocument(content = '', options?: { uri?: string | 
 }
 
 /**
+ * A text document whose text and version follow the edits applied to it.
+ */
+export interface EditableTextDocument extends vscode.TextDocument {
+	/**
+	 * Replace the text, as an applied edit does, raising the version.
+	 * @param text The new text.
+	 */
+	setText(text: string): void;
+}
+
+/**
+ * Create a {@link vscode.TextDocument} over an in-memory string that an edit can change, as the
+ * workspace changes a document when {@link applyWorkspaceEditTo} stands in for `applyEdit`.
+ * @param content The initial text.
+ * @param options The URI, language and version of the document.
+ * @returns The document.
+ */
+export function createEditableTextDocument(content = '', options?: { uri?: string | vscode.Uri; languageId?: string; version?: number }): EditableTextDocument {
+	let inner = createMockTextDocument(content, options);
+
+	return {
+		...inner,
+		get version() {
+			return inner.version;
+		},
+		get lineCount() {
+			return inner.lineCount;
+		},
+		getText: range => inner.getText(range),
+		positionAt: offset => inner.positionAt(offset),
+		offsetAt: position => inner.offsetAt(position),
+		lineAt: (lineOrPosition: number | vscode.Position) => inner.lineAt(lineOrPosition as number),
+		setText: text => {
+			inner = createMockTextDocument(text, { ...options, version: inner.version + 1 });
+		}
+	};
+}
+
+/**
+ * Apply the text edits of a workspace edit to an editable document, as the workspace would. Use
+ * it as the implementation of a spy on `vscode.workspace.applyEdit`.
+ * @param edit The workspace edit.
+ * @param document The document the edits are for.
+ * @returns `true`, as the workspace answers.
+ */
+export function applyWorkspaceEditTo(edit: vscode.WorkspaceEdit, document: EditableTextDocument): boolean {
+	const edits = edit.get(document.uri)
+		.map(textEdit => ({ start: document.offsetAt(textEdit.range.start), end: document.offsetAt(textEdit.range.end), newText: textEdit.newText }))
+		.sort((a, b) => b.start - a.start);
+	let text = document.getText();
+
+	for (const { start, end, newText } of edits) {
+		text = text.slice(0, start) + newText + text.slice(end);
+	}
+
+	document.setText(text);
+
+	return true;
+}
+
+/**
  * Create a fully-typed {@link vscode.TextEditor} stub around a text document.
  */
 export function createMockTextEditor(document?: vscode.TextDocument): vscode.TextEditor {

@@ -695,6 +695,18 @@
         "category": "Mentor"
       },
       {
+        "command": "mentor.command.openFormEditor",
+        "title": "Open in Form Editor",
+        "icon": "$(list-tree)",
+        "category": "Mentor"
+      },
+      {
+        "command": "mentor.command.openTextEditor",
+        "title": "Open in Text Editor",
+        "icon": "$(code)",
+        "category": "Mentor"
+      },
+      {
         "command": "mentor.command.executeSparqlQueryFromActiveEditor",
         "title": "Execute SPARQL Query",
         "icon": "$(run-query)",
@@ -1044,7 +1056,7 @@
       "editor/title": [
         {
           "command": "mentor.command.validateDocument",
-          "when": "mentor.editor.isRdfDocument && config.mentor.shacl.enabled",
+          "when": "(mentor.editor.isRdfDocument || activeCustomEditorId == 'mentor.formEditor') && config.mentor.shacl.enabled",
           "group": "navigation@-3"
         },
         {
@@ -1059,13 +1071,23 @@
         },
         {
           "command": "mentor.command.createSparqlQueryFromDocument",
-          "when": "mentor.editor.isRdfDocument",
+          "when": "mentor.editor.isRdfDocument || activeCustomEditorId == 'mentor.formEditor'",
           "group": "navigation@-1"
         },
         {
           "command": "mentor.command.addActiveEditorToNotebook",
-          "when": "mentor.editor.isRdfDocument || editorLangId == 'sparql'",
+          "when": "mentor.editor.isRdfDocument || editorLangId == 'sparql' || activeCustomEditorId == 'mentor.formEditor'",
           "group": "navigation@0"
+        },
+        {
+          "command": "mentor.command.openFormEditor",
+          "when": "mentor.editor.isRdfDocument && config.mentor.formEditor.enabled && !activeCustomEditorId == 'mentor.formEditor'",
+          "group": "navigation@1"
+        },
+        {
+          "command": "mentor.command.openTextEditor",
+          "when": "activeCustomEditorId == 'mentor.formEditor'",
+          "group": "navigation@1"
         }
       ],
       "view/title": [
@@ -1322,6 +1344,14 @@
         {
           "command": "mentor.command.sortDocumentSemanticallySubmenu",
           "when": "false"
+        },
+        {
+          "command": "mentor.command.openFormEditor",
+          "when": "mentor.editor.isRdfDocument && config.mentor.formEditor.enabled && !activeCustomEditorId == 'mentor.formEditor'"
+        },
+        {
+          "command": "mentor.command.openTextEditor",
+          "when": "activeCustomEditorId == 'mentor.formEditor'"
         }
       ],
       "notebook/toolbar": [
@@ -2339,8 +2369,36 @@
             "description": "The default N-Quads document template to be used when creating a new N-Quads document.",
             "default": "",
             "editPresentation": "multilineText"
+          },
+          "mentor.formEditor.enabled": {
+            "type": "boolean",
+            "default": false,
+            "title": "Enable Form Editor",
+            "description": "Register the form based editor for RDF documents, which the editor title bar switches to. Takes effect after the window is reloaded.",
+            "experimental": true
           }
         }
+      }
+    ],
+    "customEditors": [
+      {
+        "viewType": "mentor.formEditor",
+        "displayName": "Form Editor",
+        "selector": [
+          {
+            "filenamePattern": "*.ttl"
+          },
+          {
+            "filenamePattern": "*.trig"
+          },
+          {
+            "filenamePattern": "*.nt"
+          },
+          {
+            "filenamePattern": "*.nq"
+          }
+        ],
+        "priority": "option"
       }
     ]
   }

@@ -54,6 +54,8 @@ export { loginMicrosoftAuthProvider } from './login-microsoft-auth-provider';
 export { manageShaclShapes } from './validation/manage-shacl-shapes';
 export { manageSparqlConnections } from './sparql/manage-sparql-connections';
 export { openDocument } from './document/open-document';
+export { openFormEditor } from './document/open-form-editor';
+export { openTextEditor } from './document/open-text-editor';
 export { openFileFromLanguage } from './document/open-file-from-language';
 export { openGraph } from './sparql/open-graph';
 export { openInBrowser } from './definition-tree/open-in-browser';

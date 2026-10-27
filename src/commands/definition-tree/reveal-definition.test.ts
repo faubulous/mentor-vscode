@@ -9,6 +9,7 @@ const { mockActivateDocument, mockActiveContext } = vi.hoisted(() => ({
 
 vi.mock('tsyringe', () => ({
 	container: {
+		isRegistered: vi.fn(() => false),
 		resolve: vi.fn((token: string) => {
 			if (token === ServiceToken.DocumentContextService) return {
 				activateDocument: mockActivateDocument,

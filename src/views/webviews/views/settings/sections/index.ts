@@ -8,6 +8,7 @@ import { editorGeneralSection } from './editor/general';
 import { editorTemplatesSection } from './editor/templates';
 import { editorFormattingSection } from './editor/formatting';
 import { editorSortingSection } from './editor/sorting';
+import { editorFormEditorSection } from './editor/form-editor';
 import { validationGeneralSection } from './validation/general';
 import { validationProfilesSection } from './validation/profiles';
 import { queryGeneralSection } from './query/general';
@@ -40,6 +41,7 @@ export const SETTINGS_GROUPS = [
 			editorTemplatesSection,
 			editorFormattingSection,
 			editorSortingSection,
+			editorFormEditorSection,
 		],
 	},
 	{
