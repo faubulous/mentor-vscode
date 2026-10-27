@@ -74,14 +74,9 @@ describe('ConceptSchemeNode', () => {
 	});
 
 	describe('getIconColor', () => {
-		it('should return the color of the node kind for a resource, whatever its namespace', () => {
+		it('should return ThemeColor mentor.color.class', () => {
 			const color = makeNode(ConceptSchemeNode).getIconColor();
 			expect(color).toBeInstanceOf(vscode.ThemeColor);
-			expect((color as any).id).toBe('mentor.color.class');
-		});
-
-		it('should return the color of the node kind for a row that denotes no resource', () => {
-			const color = makeNode(ConceptSchemeNode, 'mentor:schemes').getIconColor();
 			expect((color as any).id).toBe('mentor.color.class');
 		});
 	});

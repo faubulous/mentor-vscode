@@ -79,7 +79,7 @@ export class ParameterNode extends DefinitionTreeNode {
 		return new vscode.ThemeIcon('mention', this.getIconColor());
 	}
 
-	override getDefaultIconColor() {
+	override getIconColor() {
 		return new vscode.ThemeColor("mentor.color.class");
 	}
 }

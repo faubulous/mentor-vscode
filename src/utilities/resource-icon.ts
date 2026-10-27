@@ -5,12 +5,8 @@
  * Note: Do not import from 'vscode' here. This file is bundled into the form editor webview.
  */
 
-import { RDF, RDFS, XSD } from '@faubulous/mentor-rdf';
+import { _SH, OWL, RDF, RDFS, SH, SKOS, XSD } from '@faubulous/mentor-rdf';
 import type { ValueKind } from '@src/utilities/value-kind';
-
-const _OWL = 'http://www.w3.org/2002/07/owl#';
-const _SH = 'http://www.w3.org/ns/shacl#';
-const _SKOS = 'http://www.w3.org/2004/02/skos/core#';
 
 /**
  * The glyph shown for a property whose range says nothing more specific.
@@ -83,24 +79,24 @@ export function getPropertyIconName(rangeIri?: string, valueKind?: ValueKind): s
  * range through {@link getPropertyIconName}.
  */
 const TYPE_ICONS: [string, string][] = [
-	[`${_OWL}Ontology`, 'rdf-ontology'],
-	[`${_SKOS}ConceptScheme`, 'rdf-concept-scheme'],
-	[`${_SKOS}Concept`, 'rdf-concept'],
-	[`${_SH}NodeShape`, 'rdf-shape'],
-	[`${_SH}PropertyShape`, 'rdf-shape-property'],
-	[`${_OWL}NamedIndividual`, 'rdf-individual'],
-	[`${_OWL}Class`, 'rdf-class'],
-	[`${RDFS.Class}`, 'rdf-class'],
-	[`${RDF.List}`, 'rdf-list']
+	[OWL.Ontology, 'rdf-ontology'],
+	[SKOS.ConceptScheme, 'rdf-concept-scheme'],
+	[SKOS.Concept, 'rdf-concept'],
+	[SH.NodeShape, 'rdf-shape'],
+	[SH.PropertyShape, 'rdf-shape-property'],
+	[OWL.NamedIndividual, 'rdf-individual'],
+	[OWL.Class, 'rdf-class'],
+	[RDFS.Class, 'rdf-class'],
+	[RDF.List, 'rdf-list']
 ];
 
 /**
  * The types that make a resource a property.
  */
 const PROPERTY_TYPES = new Set([
-	`${_OWL}ObjectProperty`,
-	`${_OWL}DatatypeProperty`,
-	`${_OWL}AnnotationProperty`,
+	OWL.ObjectProperty,
+	OWL.DatatypeProperty,
+	OWL.AnnotationProperty,
 	RDF.Property
 ]);
 
@@ -163,7 +159,7 @@ function getInferredIconName(
 ): string | undefined {
 	const predicates = new Set(predicateIris);
 
-	if (predicates.has(`${_SH}path`)) {
+	if (predicates.has(SH.path)) {
 		return datatypeIri ? getPropertyIconName(datatypeIri) : 'rdf-shape-property';
 	}
 
@@ -172,7 +168,7 @@ function getInferredIconName(
 	}
 
 	// The head of a collection, which the writer spelled as `( … )`.
-	if (predicates.has(`${RDF.first}`)) {
+	if (predicates.has(RDF.first)) {
 		return 'rdf-list';
 	}
 

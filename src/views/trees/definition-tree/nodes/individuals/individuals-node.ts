@@ -22,15 +22,13 @@ export class IndividualsNode extends IndividualClassNode {
 	}
 
 	override getDescription(): string {
-		const graphs = this.getDocumentGraphs();
-		const options = this.getQueryOptions();
-		const individuals = this.vocabulary.getIndividuals(graphs, undefined, options);
-
-		return [...individuals].length.toString();
+		return this.getMemberIris().length.toString();
 	}
 
+	/**
+	 * The individuals the node lists and counts.
+	 */
 	override getMemberIris(): string[] {
-		// The individuals the count of the node tells about.
 		return [...this.vocabulary.getIndividuals(this.getDocumentGraphs(), undefined, this.getQueryOptions())];
 	}
 

@@ -56,14 +56,15 @@ export class ConceptsNode extends ConceptClassNode {
 	}
 
 	override getDescription(): string {
-		// Note: This counts exactly the set of concepts that can be reached by expanding this node.
-		this._conceptCount ??= [...this._getConcepts()].length;
+		this._conceptCount ??= this.getMemberIris().length;
 
 		return this._conceptCount.toString();
 	}
 
+	/**
+	 * The concepts the node lists and counts: exactly the set that can be reached by expanding it.
+	 */
 	override getMemberIris(): string[] {
-		// The concepts the count of the node tells about.
 		return [...this._getConcepts()];
 	}
 

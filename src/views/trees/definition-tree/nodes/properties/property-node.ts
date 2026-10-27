@@ -61,7 +61,7 @@ export class PropertyNode extends DefinitionTreeNode {
 		return getPropertyIconName(rangeIri);
 	}
 
-	override getDefaultIconColor() {
+	override getIconColor() {
 		const rangeIri = this.getRange(this.uri);
 
 		return this.getIconColorFromRange(rangeIri);
