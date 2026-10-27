@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { Store, VocabularyRepository } from '@faubulous/mentor-rdf';
-import { RdfSyntax } from '@faubulous/mentor-rdf-parsers';
+import { QuadContext, RdfSyntax } from '@faubulous/mentor-rdf-parsers';
+import { DocumentReader } from '@src/services/editing/document-reader';
 import { ISettingsService } from '@src/services/core/settings-service.interface';
 import { IDocumentContextService } from '@src/services/document/document-context-service.interface';
 import { IDocumentContext, ITokenizedDocumentContext } from '@src/services/document/document-context.interface';
@@ -514,4 +515,80 @@ export function createStatusBarRecorder(): StatusBarRecorder {
 		items,
 		byPriority: (priority: number) => [...items].reverse().find(item => item.priority === priority),
 	};
+}
+
+/**
+ * Read the quad contexts of a Turtle text the way the document context does.
+ * @param text The Turtle text.
+ * @returns The quad contexts.
+ * @throws {Error} If the text does not parse.
+ */
+export function readTurtleQuadContexts(text: string): QuadContext[] {
+	const read = new DocumentReader(RdfSyntax.Turtle).read(text);
+
+	if (!read.ok) {
+		throw new Error(read.message);
+	}
+
+	return read.quadContexts;
+}
+
+/**
+ * What a resolving document context answers with.
+ */
+export interface ResolvingDocumentContextOptions {
+	/**
+	 * Prefix to namespace IRI, as the document declares them.
+	 */
+	namespaces?: Record<string, string>;
+
+	/**
+	 * The labels of IRIs, as the store would resolve them.
+	 */
+	labels?: Record<string, string>;
+
+	/**
+	 * The descriptions of IRIs, as the store would resolve them.
+	 */
+	descriptions?: Record<string, string>;
+
+	/**
+	 * The label every blank node resolves to, as a property shape is named by its path.
+	 */
+	blankNodeLabel?: string;
+
+	/**
+	 * The language the document is read in.
+	 */
+	activeLanguage?: string;
+
+	/**
+	 * The predicates labels and descriptions are read from.
+	 */
+	predicates?: { label: string[]; description: string[] };
+}
+
+/**
+ * Create a tokenized Turtle document context that resolves labels, descriptions and prefixes from
+ * explicit maps, as the builders of the form editor need.
+ * @param options What the context answers with.
+ * @returns The context.
+ */
+export function createResolvingDocumentContext(options: ResolvingDocumentContextOptions = {}): ITokenizedDocumentContext {
+	const namespaces = options.namespaces ?? {};
+	const labels = options.labels ?? {};
+	const descriptions = options.descriptions ?? {};
+	const context = createMockDocumentContext({
+		namespaces,
+		activeLanguageTag: options.activeLanguage,
+		predicates: options.predicates ?? { label: [], description: [] },
+		getPrefixForNamespaceIri: namespaceIri => Object.entries(namespaces).find(([, iri]) => iri === namespaceIri)?.[0],
+		getResourceLabel: iri => ({
+			value: labels[iri] ?? (iri.includes(':') ? '' : (options.blankNodeLabel ?? '')),
+			language: undefined
+		}),
+		getResourceDescription: iri => (descriptions[iri] ? { value: descriptions[iri], language: undefined } : undefined)
+	});
+
+	return { ...context, syntax: RdfSyntax.Turtle } as ITokenizedDocumentContext;
 }
