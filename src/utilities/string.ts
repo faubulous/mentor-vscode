@@ -165,3 +165,15 @@ export function indentBefore(text: string, offset: number): string | undefined {
 
 	return /^[ \t]*$/.test(prefix) ? prefix : undefined;
 }
+
+/**
+ * Turn a local name into words: camel case is split, underscores and dashes become spaces.
+ * @param local The local name.
+ * @param lower Whether to lower-case the result, as for property names.
+ * @returns The words.
+ */
+export function humanize(local: string, lower: boolean): string {
+	const words = local.replace(/([a-z0-9])([A-Z])/g, '$1 $2').replace(/[_-]+/g, ' ');
+
+	return lower ? words.toLowerCase() : words;
+}
