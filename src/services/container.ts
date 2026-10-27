@@ -1,10 +1,9 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
-import { Store, OwlReasoner, GraphUriGenerator, VocabularyRepository } from '@faubulous/mentor-rdf';
+import { Store, OwlReasoner, VocabularyRepository } from '@faubulous/mentor-rdf';
 import { getHeapUsedMb } from '@src/utilities/runtime';
-import { Quad_Graph } from '@rdfjs/types';
 import { ServiceToken } from './tokens';
-import { InferenceUri } from '../providers/inference-uri';
+import { InferenceGraphUriGenerator } from '@src/utilities/rdf';
 import { DocumentFactory } from './document/document-factory';
 import { WorkspaceIndexerService } from './core/workspace-indexer-service';
 import { WorkspaceFileService } from './core/workspace-file-service';
@@ -43,16 +42,6 @@ import { SettingsMigrationService } from './core/settings-migration-service';
 import { DocumentQueryTemplateMigration, IndexExcludeFilesMigration, LegacyTemplateFormatMigration } from './core/migrations/';
 
 /**
- * Graph URI generator that creates inference URIs for RDF graphs.
- */
-class MentorGraphUriGenerator implements GraphUriGenerator {
-	getGraphUri(uri: string | Quad_Graph): string {
-		const value = typeof uri === 'string' ? uri : uri.value;
-		return InferenceUri.toInferenceUri(value);
-	}
-}
-
-/**
  * Configures the service container with all necessary services and dependencies for the extension.
  * @param context The VS Code extension context, used for registering services that require access to the extension's lifecycle and storage.
  */
@@ -64,7 +53,7 @@ export function configureServiceContainer(context: vscode.ExtensionContext): voi
 	const settingsService = new SettingsService();
 	container.registerInstance(ServiceToken.SettingsService, settingsService);
 
-	const reasoner = new OwlReasoner(new MentorGraphUriGenerator());
+	const reasoner = new OwlReasoner(InferenceGraphUriGenerator);
 	const store = new Store(reasoner);
 
 	container.registerInstance(ServiceToken.Store, store);

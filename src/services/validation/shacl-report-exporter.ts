@@ -1,6 +1,6 @@
 import { Store } from '@faubulous/mentor-rdf';
 import { getSeverityLabel } from '@src/utilities/shacl';
-import { rdfDataFactory } from '@src/utilities/rdf';
+import { RdfDataFactory } from '@src/utilities/rdf';
 import { ShaclValidationResult } from './shacl-validator-engine';
 
 /**
@@ -54,7 +54,7 @@ export async function serializeReportAsTurtle(result: ShaclValidationResult): Pr
 	const tempGraphUri = 'urn:shacl:report';
 
 	for (const q of result.reportDataset) {
-		tempStore.add(rdfDataFactory.quad(q.subject, q.predicate, q.object, rdfDataFactory.namedNode(tempGraphUri)));
+		tempStore.add(RdfDataFactory.quad(q.subject, q.predicate, q.object, RdfDataFactory.namedNode(tempGraphUri)));
 	}
 
 	return tempStore.serializeGraph(tempGraphUri, 'text/turtle', undefined, {
