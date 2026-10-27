@@ -1,7 +1,7 @@
 import { DatasetCore } from '@rdfjs/types';
 import { Validator, ValidationResult } from 'shacl-engine';
 import { Store } from '@faubulous/mentor-rdf';
-import { rdfDataFactory } from '@src/utilities/rdf';
+import { RdfDataFactory } from '@src/utilities/rdf';
 
 /**
  * Result of a SHACL validation operation.
@@ -133,7 +133,7 @@ export class ShaclValidatorEngine {
 		// small file, so time it separately from the data-graph validation.
 		const shapesDataset = this._store.getDataset(sorted, false);
 		const startTime = performance.now();
-		const validator = new Validator(shapesDataset, { factory: rdfDataFactory });
+		const validator = new Validator(shapesDataset, { factory: RdfDataFactory });
 		const duration = Math.round(performance.now() - startTime);
 
 		this._log?.(`Compiled validator for ${sorted.length} shape graph${sorted.length === 1 ? '' : 's'} in ${duration} ms`);

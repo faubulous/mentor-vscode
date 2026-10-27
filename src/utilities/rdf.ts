@@ -5,26 +5,28 @@ import { GraphUriGenerator, LanguageTagUsageStats, Store, XSD, RDF, RDFS } from 
 import { InferenceUri } from '@src/providers/inference-uri';
 
 /**
- * An RDF/JS DataFactory extended with a `dataset()` method (DatasetCoreFactory),
- * as required by libraries that consume an RDF/JS environment such as shacl-engine.
+ * The shared RDF/JS DataFactory of the extension, extended with a `dataset()` method
+ * (DatasetCoreFactory) as required by libraries that consume an RDF/JS environment such as
+ * shacl-engine.
  *
  * `literal()` must tolerate `null` as the language/datatype argument, because
  * shacl-engine calls `factory.literal(text, message.language || null)` when there
  * is no language tag. The rdf-data-factory implementation treats `null` like
  * `undefined` and returns an `xsd:string` literal.
  */
-export const rdfDataFactory = Object.assign(new DataFactory(), {
+export const RdfDataFactory = Object.assign(new DataFactory(), {
 	dataset(): DatasetCore {
 		return RdfStore.createDefault().asDataset();
 	}
 });
 
 /**
- * Names the inference graphs of the store the way Mentor does, `<graph>?inference`, so that an
- * inference graph sorts after its source graph and the prefixes of the source keep working. The
- * store asks it which graphs are inference graphs when a query leaves inferred triples out.
+ * The shared graph URI generator of the store's reasoner. It names the inference graphs the way
+ * Mentor does, `<graph>?inference`, so that an inference graph sorts after its source graph and
+ * the prefixes of the source keep working, and it tells the store which graphs are inference
+ * graphs when a query leaves inferred triples out.
  */
-export const inferenceGraphUriGenerator: GraphUriGenerator = {
+export const InferenceGraphUriGenerator: GraphUriGenerator = {
 	getGraphUri(uri: string | Quad_Graph): string {
 		return InferenceUri.toInferenceUri(getGraphUriValue(uri));
 	},
