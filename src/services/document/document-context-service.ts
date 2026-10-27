@@ -512,6 +512,27 @@ export class DocumentContextService {
 	}
 
 	/**
+	 * Make the context of a document the active one and publish the change. Editors that are
+	 * not text editors, such as the form editor, have no active text editor to drive the
+	 * context change, so they activate their document explicitly to keep the definition tree,
+	 * the language selection and context-driven refreshes on the document being looked at.
+	 * @param document The document whose context should become active.
+	 * @returns A promise that resolves to the activated context or `undefined` if unsupported.
+	 */
+	async activateContextForDocument(document: vscode.TextDocument): Promise<IDocumentContext | undefined> {
+		const context = await this.loadDocument(document);
+
+		if (!context) {
+			return undefined;
+		}
+
+		this.activeContext = context;
+		this._onDidChangeDocumentContext.fire(context);
+
+		return context;
+	}
+
+	/**
 	 * Activate the document associated with the active context in the editor.
 	 * If the active context's document is not currently open in the editor, it will be opened.
 	 * @returns A promise that resolves to the active text editor or `undefined`.

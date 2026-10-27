@@ -65,6 +65,14 @@ export interface IDocumentContextService {
 	loadDocument(document: vscode.TextDocument, forceReload?: boolean): Promise<IDocumentContext | undefined>;
 
 	/**
+	 * Make the context of a document the active one and publish the change. Used by editors
+	 * that are not text editors, such as the form editor.
+	 * @param document The document whose context should become active.
+	 * @returns A promise that resolves to the activated context or `undefined` if unsupported.
+	 */
+	activateContextForDocument(document: vscode.TextDocument): Promise<IDocumentContext | undefined>;
+
+	/**
 	 * Loads the document of the editor that is active when the extension starts and
 	 * makes it the active context. Called once, after all views and providers have
 	 * subscribed to {@link onDidChangeDocumentContext}, so that none of them misses

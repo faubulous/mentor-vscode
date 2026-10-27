@@ -1,13 +1,14 @@
 import * as vscode from 'vscode';
 import { getFileName } from '@src/utilities';
 import { findOpenNotebookByUri } from '@src/utilities/vscode/notebook';
+import { resolveActiveRdfDocument } from '@src/utilities/vscode/active-rdf-document';
 
 export const addActiveEditorToNotebook = {
 	id: 'mentor.command.addActiveEditorToNotebook',
-	handler: async () => {
-		const editor = vscode.window.activeTextEditor;
+	handler: async (uri?: vscode.Uri) => {
+		const document = await resolveActiveRdfDocument(uri);
 
-		if (!editor) {
+		if (!document) {
 			vscode.window.showErrorMessage('No active editor found.');
 			return;
 		}
@@ -32,7 +33,7 @@ export const addActiveEditorToNotebook = {
 			return;
 		}
 
-		const cellData = getEditorCellData(editor);
+		const cellData = getEditorCellData(document);
 
 		if (selectedAction.action === 'create-new') {
 			await createNewNotebook(cellData);
@@ -52,9 +53,7 @@ type ActionItem = vscode.QuickPickItem & {
 	notebookUri?: vscode.Uri;
 };
 
-function getEditorCellData(editor: vscode.TextEditor): vscode.NotebookCellData {
-	const document = editor.document;
-
+function getEditorCellData(document: vscode.TextDocument): vscode.NotebookCellData {
 	return new vscode.NotebookCellData(
 		vscode.NotebookCellKind.Code,
 		document.getText(),

@@ -5,11 +5,7 @@ import { ParserFactory } from '@src/languages/parser-factory';
 import { QuadContextSerializer, TurtleSerializer, QuadSortingStrategy } from '@faubulous/mentor-rdf-serializers';
 import { ServiceToken } from '@src/services/tokens';
 import { IDocumentContextService } from '@src/services/document';
-
-function isShaclDiagnostic(diagnostic: vscode.Diagnostic): boolean {
-	return typeof diagnostic.source === 'string'
-		&& diagnostic.source.toLowerCase().includes('shacl');
-}
+import { hasBlockingErrors } from '@src/utilities/vscode/diagnostic';
 
 /**
  * Sorts the active RDF document according to a given sorting strategy using the StatementSerializer.
@@ -29,10 +25,7 @@ export async function sortDocument(documentUri: vscode.Uri | undefined, strategy
 	const document = vscode.workspace.textDocuments.find(doc => doc.uri.toString() === targetUri.toString())
 		?? await vscode.workspace.openTextDocument(targetUri);
 
-	const diagnostics = vscode.languages.getDiagnostics(document.uri);
-	const hasErrors = diagnostics.some((d) => d.severity === vscode.DiagnosticSeverity.Error && !isShaclDiagnostic(d));
-
-	if (hasErrors) {
+	if (hasBlockingErrors(document.uri)) {
 		await vscode.window.showErrorMessage('This document has syntax errors and cannot be sorted.');
 		return;
 	}

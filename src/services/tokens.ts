@@ -16,6 +16,8 @@ export enum ServiceToken {
 	DocumentContextService = "DocumentContextService",
 	/** Service that loads the read-only documents of the preset graphs on demand. */
 	PresetDocumentService = "PresetDocumentService",
+	/** Source of parsed tokens for open documents. */
+	DocumentTokenSource = "DocumentTokenSource",
 	/** Service that computes syntax and lint diagnostics for documents. */
 	DocumentDiagnosticsService = "DocumentDiagnosticsService",
 	/** Service for indexing workspace files. */

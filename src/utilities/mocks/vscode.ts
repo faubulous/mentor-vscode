@@ -220,7 +220,63 @@ export const window = {
   }),
   registerFileDecorationProvider: (_provider: any) => ({ dispose: () => {} }),
   registerUriHandler: (_handler: any) => ({ dispose: () => {} }),
+  registerCustomEditorProvider: (_viewType: string, _provider: any, _options?: any) => ({ dispose: () => {} }),
+  createWebviewPanel: (_viewType: string, _title: string, _column?: any, _options?: any) => createMockWebviewPanel(),
+  tabGroups: {
+    activeTabGroup: { activeTab: undefined as any, tabs: [] as any[] },
+    all: [] as any[],
+    onDidChangeTabs: (handler: any) => _getEventEmitter('onDidChangeTabs').event(handler),
+    onDidChangeTabGroups: (handler: any) => _getEventEmitter('onDidChangeTabGroups').event(handler),
+  },
 };
+
+/**
+ * Test-only: creates a webview panel stub whose messages can be observed and injected.
+ */
+export function createMockWebviewPanel() {
+  const messageEmitter = new EventEmitter<any>();
+  const disposeEmitter = new EventEmitter<any>();
+  const viewStateEmitter = new EventEmitter<any>();
+
+  return {
+    viewType: 'mock',
+    title: '',
+    iconPath: undefined as any,
+    active: true,
+    visible: true,
+    viewColumn: 1,
+    webview: {
+      html: '',
+      options: {},
+      cspSource: 'vscode-webview://mock',
+      asWebviewUri: (uri: any) => uri,
+      postMessage: async (message: any) => {
+        (viewStateEmitter as any).__posted?.push(message);
+        return true;
+      },
+      onDidReceiveMessage: (handler: any) => messageEmitter.event(handler),
+      __receive: (message: any) => messageEmitter.fire(message),
+    },
+    onDidDispose: (handler: any) => disposeEmitter.event(handler),
+    onDidChangeViewState: (handler: any) => viewStateEmitter.event(handler),
+    reveal: () => {},
+    dispose: () => disposeEmitter.fire(undefined),
+  };
+}
+
+/**
+ * The kind of resource shown by a tab that hosts a custom editor.
+ */
+export class TabInputCustom {
+  constructor(public readonly uri: any, public readonly viewType: string) { }
+}
+
+/**
+ * The kind of resource shown by a tab that hosts a text editor.
+ */
+export class TabInputText {
+  constructor(public readonly uri: any) { }
+}
 
 export const StatusBarAlignment = {
   Left: 1,
@@ -258,6 +314,7 @@ export const languages = {
 
     return _diagnosticCollections.flatMap(collection => collection.get(uri) ?? []);
   },
+  onDidChangeDiagnostics: (handler: any) => _getEventEmitter('onDidChangeDiagnostics').event(handler),
   registerCodeActionsProvider: (_selector: any, _provider: any) => ({ dispose: () => {} }),
   registerCodeLensProvider: (_selector: any, _provider: any) => ({ dispose: () => {} }),
   registerCompletionItemProvider: (_selector: any, _provider: any, ..._triggers: string[]) => ({ dispose: () => {} }),

@@ -179,10 +179,55 @@ export abstract class DocumentContext implements IDocumentContext {
 		this.namespaces[newPrefix] = uri;
 	}
 
+	/**
+	 * Labels and descriptions already resolved, valid for one store version, language selection,
+	 * label style and predicate configuration. Snapshot and completion builders ask for the same
+	 * resources over and over; each miss costs one store lookup per label predicate and graph.
+	 */
+	private _annotationMemo?: { key: string; labels: Map<string, Label>; descriptions: Map<string, Label | undefined> };
+
+	/**
+	 * Get the memo for the current store version and label settings, dropping a stale one.
+	 */
+	private _getAnnotationMemo(treeLabelStyle: TreeLabelStyle | undefined): { labels: Map<string, Label>; descriptions: Map<string, Label | undefined> } {
+		const key = [
+			this._store.version,
+			this.activeLanguageTag ?? '',
+			this.primaryLanguage ?? '',
+			treeLabelStyle ?? '',
+			this.predicates.label.join(','),
+			this.predicates.description.join(',')
+		].join('|');
+
+		if (!this._annotationMemo || this._annotationMemo.key !== key) {
+			this._annotationMemo = { key, labels: new Map(), descriptions: new Map() };
+		}
+
+		return this._annotationMemo;
+	}
+
 	getResourceLabel(subjectUri: string): Label {
+		const treeLabelStyle = this._settings.get<TreeLabelStyle>('view.definitionTree.labelStyle', TreeLabelStyle.AnnotatedLabels);
+		const memo = this._getAnnotationMemo(treeLabelStyle);
+		const cached = memo.labels.get(subjectUri);
+
+		if (cached) {
+			return cached;
+		}
+
+		const label = this._resolveResourceLabel(subjectUri, treeLabelStyle);
+
+		memo.labels.set(subjectUri, label);
+
+		return label;
+	}
+
+	/**
+	 * Resolve the label of a resource from the store or its IRI, without the memo.
+	 */
+	private _resolveResourceLabel(subjectUri: string, treeLabelStyle: TreeLabelStyle | undefined): Label {
 		// TODO: Fix #10 in mentor-rdf; Refactor node identifiers to be node instances instead of strings.
 		const subject = subjectUri.includes(':') ? new NamedNode(subjectUri) : new BlankNode(subjectUri);
-		const treeLabelStyle = this._settings.get<TreeLabelStyle>('view.definitionTree.labelStyle', TreeLabelStyle.AnnotatedLabels);
 
 		switch (treeLabelStyle) {
 			case TreeLabelStyle.AnnotatedLabels: {
@@ -312,6 +357,24 @@ export abstract class DocumentContext implements IDocumentContext {
 	}
 
 	getResourceDescription(subjectUri: string): Label | undefined {
+		const treeLabelStyle = this._settings.get<TreeLabelStyle>('view.definitionTree.labelStyle', TreeLabelStyle.AnnotatedLabels);
+		const memo = this._getAnnotationMemo(treeLabelStyle);
+
+		if (memo.descriptions.has(subjectUri)) {
+			return memo.descriptions.get(subjectUri);
+		}
+
+		const description = this._resolveResourceDescription(subjectUri);
+
+		memo.descriptions.set(subjectUri, description);
+
+		return description;
+	}
+
+	/**
+	 * Resolve the description of a resource from the store, without the memo.
+	 */
+	private _resolveResourceDescription(subjectUri: string): Label | undefined {
 		// TODO: Fix #10 in mentor-rdf; This is a hack: we need to return nodes from the Mentor RDF API instead of strings.
 		const subject = subjectUri.includes(':') ? new NamedNode(subjectUri) : new BlankNode(subjectUri);
 		const predicates = this.predicates.description.map(p => new NamedNode(p));

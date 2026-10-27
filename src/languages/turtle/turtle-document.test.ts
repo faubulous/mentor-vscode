@@ -997,6 +997,8 @@ describe('TurtleDocument.tokenizeDocument', () => {
 });
 
 describe('TurtleDocument.getQuadContexts', () => {
+    const text = '@prefix ex: <http://example.org/> .\nex:a ex:b ex:c ; ex:d "e" .';
+
     beforeEach(() => {
         vi.restoreAllMocks();
         storeControl.shouldThrowLoad = false;
@@ -1020,5 +1022,29 @@ describe('TurtleDocument.getQuadContexts', () => {
         doc.parse('@prefix ex: <http://example.org/> .\nex:a ex:b ex:c ; ex:d ex:e .');
 
         expect(doc.getQuadContexts().map(q => q.predicate.value)).toEqual(['http://example.org/b', 'http://example.org/d']);
+    });
+
+    it('parses tokens set without a parse only once', () => {
+        const doc = makeDoc();
+
+        doc.setTokens(doc.tokenize(text));
+
+        const getParser = vi.spyOn(ParserFactory, 'getParser');
+        const first = doc.getQuadContexts();
+        const second = doc.getQuadContexts();
+
+        expect(getParser).toHaveBeenCalledTimes(1);
+        expect(second).toEqual(first);
+        expect(second).not.toBe(first);
+    });
+
+    it('reads the quad contexts again when the tokens are replaced', () => {
+        const doc = makeDoc();
+
+        doc.parse(text);
+        doc.getQuadContexts();
+        doc.parse('@prefix ex: <http://example.org/> .\nex:a ex:f ex:c .');
+
+        expect(doc.getQuadContexts().map(context => context.predicate.value)).toEqual(['http://example.org/f']);
     });
 });

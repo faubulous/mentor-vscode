@@ -3,13 +3,14 @@ import { container } from 'tsyringe';
 import { IWorkspaceIndexerService } from '@src/services/core';
 import { ServiceToken } from '@src/services/tokens';
 import { ShaclValidationService } from '@src/services/validation/shacl-validation-service';
+import { resolveActiveRdfDocument } from '@src/utilities/vscode/active-rdf-document';
 
 export const validateDocument = {
 	id: 'mentor.command.validateDocument',
-	handler: async () => {
-		const editor = vscode.window.activeTextEditor;
+	handler: async (uri?: vscode.Uri) => {
+		const document = await resolveActiveRdfDocument(uri);
 
-		if (!editor) {
+		if (!document) {
 			return;
 		}
 
@@ -20,14 +21,14 @@ export const validateDocument = {
 		const validationService = container.resolve<ShaclValidationService>(ServiceToken.ShaclValidationService);
 
 		// If no SHACL shapes are configured for this document, open shape configuration first.
-		const effectiveShapes = validationService.getEffectiveShapeGraphs(editor.document.uri);
+		const effectiveShapes = validationService.getEffectiveShapeGraphs(document.uri);
 
 		if (effectiveShapes.length === 0) {
 			await vscode.commands.executeCommand('mentor.command.manageShaclShapes');
 			return;
 		}
 
-		const result = await validationService.validateDocument(editor.document.uri);
+		const result = await validationService.validateDocument(document.uri);
 
 		if (!result) {
 			return;
