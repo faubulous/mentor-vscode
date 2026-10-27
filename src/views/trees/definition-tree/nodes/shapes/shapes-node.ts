@@ -17,15 +17,13 @@ export class ShapesNode extends ShapeClassNode {
 	}
 
 	override getDescription(): string {
-		const graphs = this.getDocumentGraphs();
-		const options = this.getQueryOptions();
-		const shapes = this.vocabulary.getShapes(graphs, undefined, options);
-
-		return [...shapes].length.toString();
+		return this.getMemberIris().length.toString();
 	}
 
+	/**
+	 * The shapes the node lists and counts.
+	 */
 	override getMemberIris(): string[] {
-		// The shapes the count of the node tells about.
 		return [...this.vocabulary.getShapes(this.getDocumentGraphs(), undefined, this.getQueryOptions())];
 	}
 

@@ -1,29 +1,28 @@
 import { describe, expect, it } from 'vitest';
+import { OWL, RDF, SH, SKOS, XSD } from '@faubulous/mentor-rdf';
 import * as fs from 'fs';
 import * as path from 'path';
 import { getDatatypeIconName, getPropertyIconName, getResourceIconName } from './resource-icon';
 
-const OWL = 'http://www.w3.org/2002/07/owl#';
-const RDF = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#';
-const SH = 'http://www.w3.org/ns/shacl#';
-const SKOS = 'http://www.w3.org/2004/02/skos/core#';
-const XSD = 'http://www.w3.org/2001/XMLSchema#';
-
 /**
- * The glyph names the bundled Mentor icon font carries.
+ * The glyph names the Mentor icon font carries, read from the glyph sources the font is built
+ * from (`media/glyphs/u<codepoint>-<name>.svg`), so the test needs no build output.
  */
 function readMentorIconNames(): Set<string> {
-	const file = path.resolve(__dirname, '../../media/mentor-icons.json');
+	const glyphs = path.resolve(__dirname, '../../media/glyphs');
+	const names = fs.readdirSync(glyphs)
+		.map(file => /^u[0-9a-f]{4}-(.+)\.svg$/i.exec(file)?.[1])
+		.filter((name): name is string => name !== undefined);
 
-	return new Set(Object.keys(JSON.parse(fs.readFileSync(file, 'utf8'))));
+	return new Set(names);
 }
 
 describe('getResourceIconName', () => {
 	it('names a glyph for every kind of resource Mentor shows', () => {
 		const types = [
-			`${OWL}Ontology`, `${OWL}Class`, `${OWL}NamedIndividual`, `${SKOS}Concept`,
-			`${SKOS}ConceptScheme`, `${SH}NodeShape`, `${SH}PropertyShape`,
-			`${OWL}ObjectProperty`, `${OWL}DatatypeProperty`, `${OWL}AnnotationProperty`, `${RDF}Property`
+			OWL.Ontology, OWL.Class, OWL.NamedIndividual, SKOS.Concept,
+			SKOS.ConceptScheme, SH.NodeShape, SH.PropertyShape,
+			OWL.ObjectProperty, OWL.DatatypeProperty, OWL.AnnotationProperty, RDF.Property
 		];
 
 		for (const type of types) {
@@ -38,13 +37,13 @@ describe('getResourceIconName', () => {
 
 		const names = new Set<string | undefined>([
 			...[
-				`${OWL}Ontology`, `${OWL}Class`, `${OWL}NamedIndividual`, `${SKOS}Concept`,
-				`${SKOS}ConceptScheme`, `${SH}NodeShape`, `${SH}PropertyShape`, `${RDF}List`,
-				`${OWL}ObjectProperty`, `${OWL}DatatypeProperty`, `${OWL}AnnotationProperty`, `${RDF}Property`
+				OWL.Ontology, OWL.Class, OWL.NamedIndividual, SKOS.Concept,
+				SKOS.ConceptScheme, SH.NodeShape, SH.PropertyShape, RDF.List,
+				OWL.ObjectProperty, OWL.DatatypeProperty, OWL.AnnotationProperty, RDF.Property
 			].map(type => getResourceIconName([type])),
 			...[
-				undefined, `${XSD}string`, `${XSD}integer`, `${XSD}date`, `${XSD}dateTime`,
-				`${XSD}boolean`, `${XSD}base64Binary`, `${RDF}langString`
+				undefined, XSD.string, XSD.integer, XSD.date, XSD.dateTime,
+				XSD.boolean, XSD.base64Binary, RDF.langString
 			].map(range => getPropertyIconName(range))
 		]);
 
@@ -63,11 +62,11 @@ describe('getResourceIconName', () => {
 
 describe('getPropertyIconName', () => {
 	it('shows the kind of value a property takes', () => {
-		expect(getPropertyIconName(`${XSD}string`)).toBe('symbol-text');
-		expect(getPropertyIconName(`${XSD}integer`)).toBe('symbol-number');
-		expect(getPropertyIconName(`${XSD}dateTime`)).toBe('calendar');
-		expect(getPropertyIconName(`${XSD}boolean`)).toBe('symbol-boolean');
-		expect(getPropertyIconName(`${XSD}base64Binary`)).toBe('file-binary');
+		expect(getPropertyIconName(XSD.string)).toBe('symbol-text');
+		expect(getPropertyIconName(XSD.integer)).toBe('symbol-number');
+		expect(getPropertyIconName(XSD.dateTime)).toBe('calendar');
+		expect(getPropertyIconName(XSD.boolean)).toBe('symbol-boolean');
+		expect(getPropertyIconName(XSD.base64Binary)).toBe('file-binary');
 	});
 
 	it('falls back to the object property glyph for an undeclared or unknown range', () => {
@@ -78,18 +77,18 @@ describe('getPropertyIconName', () => {
 
 describe('getDatatypeIconName', () => {
 	it('names the shape of the values a datatype holds', () => {
-		expect(getDatatypeIconName(`${XSD}date`)).toBe('calendar');
-		expect(getDatatypeIconName(`${XSD}dateTime`)).toBe('calendar');
-		expect(getDatatypeIconName(`${XSD}boolean`)).toBe('symbol-boolean');
-		expect(getDatatypeIconName(`${XSD}base64Binary`)).toBe('file-binary');
-		expect(getDatatypeIconName(`${XSD}integer`)).toBe('symbol-number');
-		expect(getDatatypeIconName(`${XSD}decimal`)).toBe('symbol-number');
+		expect(getDatatypeIconName(XSD.date)).toBe('calendar');
+		expect(getDatatypeIconName(XSD.dateTime)).toBe('calendar');
+		expect(getDatatypeIconName(XSD.boolean)).toBe('symbol-boolean');
+		expect(getDatatypeIconName(XSD.base64Binary)).toBe('file-binary');
+		expect(getDatatypeIconName(XSD.integer)).toBe('symbol-number');
+		expect(getDatatypeIconName(XSD.decimal)).toBe('symbol-number');
 	});
 
 	it('treats a literal without a datatype as the text it is', () => {
 		expect(getDatatypeIconName()).toBe('symbol-text');
-		expect(getDatatypeIconName(`${XSD}string`)).toBe('symbol-text');
-		expect(getDatatypeIconName(`${RDF}langString`)).toBe('symbol-text');
+		expect(getDatatypeIconName(XSD.string)).toBe('symbol-text');
+		expect(getDatatypeIconName(RDF.langString)).toBe('symbol-text');
 	});
 
 	it('names no glyph for a datatype it does not know', () => {

@@ -14,7 +14,7 @@ export class CollectionClassNode extends ClassNodeBase {
 		return new vscode.ThemeIcon(isOrdered ? 'rdf-collection-ordered' : 'rdf-collection', this.getIconColor());
 	}
 
-	override getDefaultIconColor() {
+	override getIconColor() {
 		return new vscode.ThemeColor("mentor.color.concept");
 	}
 

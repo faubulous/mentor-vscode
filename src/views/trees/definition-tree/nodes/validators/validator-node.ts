@@ -10,7 +10,7 @@ export class ValidatorNode extends DefinitionTreeNode {
 		return new vscode.ThemeIcon('rdf-class', this.getIconColor());
 	}
 
-	override getDefaultIconColor() {
+	override getIconColor() {
 		return new vscode.ThemeColor("mentor.color.class");
 	}
 

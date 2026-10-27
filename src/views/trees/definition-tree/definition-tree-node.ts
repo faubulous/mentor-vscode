@@ -65,7 +65,7 @@ export class DefinitionTreeNode extends TreeNodeBase {
 	}
 
 	getCommand(): vscode.Command | undefined {
-		// The node itself, so the command can ask a type or section node for its members.
+		// The node itself, so a command can ask a section or type node for the resources it stands for.
 		return {
 			command: 'mentor.command.revealDefinition',
 			title: '',
@@ -74,10 +74,12 @@ export class DefinitionTreeNode extends TreeNodeBase {
 	}
 
 	/**
-	 * Get the resources a type or section node lists, which a form editor narrows to when the node
-	 * is chosen, as the individuals of a class or the properties of a property type.
+	 * Get the resources a section or type node stands for: the ones its description counts, such as
+	 * the classes of the document under the classes node or the individuals of a class. Unlike
+	 * {@link getChildren}, which returns the next level of the tree, this lists every resource
+	 * below the node, flat and each once, whatever the hierarchy puts between them.
 	 * @returns The IRIs or blank node identifiers of the resources, or nothing for a node that
-	 * stands for a single definition, which is revealed instead.
+	 * stands for a single definition.
 	 */
 	getMemberIris(): string[] | undefined {
 		return undefined;
