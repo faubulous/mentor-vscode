@@ -1,8 +1,9 @@
 import * as vscode from "vscode";
-import { XSD, RDF, RDFS, VocabularyRepository } from '@faubulous/mentor-rdf';
+import { RDFS, VocabularyRepository } from '@faubulous/mentor-rdf';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
 import { any, getPropertyTypeFromRange } from '@src/utilities';
+import { getPropertyIconName } from '@src/utilities/resource-icon';
 import { TreeNode, sortByLabel } from "@src/views/trees/tree-node";
 import { DefinitionTreeNode } from "../../definition-tree-node";
 
@@ -51,45 +52,13 @@ export class PropertyNode extends DefinitionTreeNode {
 		return new vscode.ThemeColor('mentor.color.' + this.getPropertyType(rangeIri));
 	}
 
+	/**
+	 * Get the icon glyph of a property from its range, shared with the form editor.
+	 * @param rangeIri The IRI of the property's range or datatype, if known.
+	 * @returns The name of the icon to show.
+	 */
 	getIconNameFromRange(rangeIri?: string) {
-		switch (rangeIri) {
-			case XSD.date:
-			case XSD.dateTime: {
-				return 'calendar';
-			}
-			case XSD.boolean: {
-				return 'symbol-boolean';
-			}
-			case XSD.base64Binary: {
-				return 'file-binary';
-			}
-			case XSD.byte:
-			case XSD.decimal:
-			case XSD.double:
-			case XSD.float:
-			case XSD.int:
-			case XSD.integer:
-			case XSD.short:
-			case XSD.nonNegativeInteger:
-			case XSD.nonPositiveInteger:
-			case XSD.negativeInteger:
-			case XSD.positiveInteger:
-			case XSD.long:
-			case XSD.unsignedInt:
-			case XSD.unsignedShort:
-			case XSD.unsignedLong:
-			case XSD.unsignedByte: {
-				return 'symbol-number';
-			}
-			case XSD.string:
-			case RDF.langString:
-			case RDFS.Literal: {
-				return 'symbol-text';
-			}
-			default: {
-				return 'rdf-object-property';
-			}
-		}
+		return getPropertyIconName(rangeIri);
 	}
 
 	override getIconColor() {

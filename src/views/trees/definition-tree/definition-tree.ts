@@ -62,6 +62,7 @@ export class DefinitionTree implements TreeView {
 			this._registerActiveLanguageHandler(),
 			this._registerPredicateSettingsHandler(),
 			this._registerRefreshCommand(),
+			this._registerRevealCommand(),
 			this._registerEditorSelectionHandler(),
 			this.treeView.onDidChangeVisibility(e => {
 				if (e.visible) {
@@ -127,6 +128,18 @@ export class DefinitionTree implements TreeView {
 			this._updateView();
 			this._updateViewTitle();
 			this.treeDataProvider.refresh(this._contextService.activeContext);
+		});
+	}
+
+	/**
+	 * The command other views call to select a resource in the tree without taking the focus from
+	 * them, as the form editor does for the card that holds the focus.
+	 */
+	private _registerRevealCommand(): vscode.Disposable {
+		return vscode.commands.registerCommand('mentor.command.revealInDefinitionTree', (iri: string) => {
+			if (this.treeView.visible && typeof iri === 'string') {
+				this._revealForUri(iri);
+			}
 		});
 	}
 

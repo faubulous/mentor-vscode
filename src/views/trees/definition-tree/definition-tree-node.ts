@@ -65,11 +65,54 @@ export class DefinitionTreeNode extends TreeNodeBase {
 	}
 
 	getCommand(): vscode.Command | undefined {
+		// The node itself, so a command can ask a section or type node for the resources it stands for.
 		return {
 			command: 'mentor.command.revealDefinition',
 			title: '',
-			arguments: [this.id, true]
+			arguments: [this, true]
 		};
+	}
+
+	/**
+	 * Get the resources a section or type node stands for: the ones its description counts, such as
+	 * the classes of the document under the classes node or the individuals of a class. Unlike
+	 * {@link getChildren}, which returns the next level of the tree, this lists every resource
+	 * below the node, flat and each once, whatever the hierarchy puts between them.
+	 * @returns The IRIs or blank node identifiers of the resources, or nothing for a node that
+	 * stands for a single definition.
+	 */
+	getMemberIris(): string[] | undefined {
+		return undefined;
+	}
+
+	/**
+	 * Collect the resources of the nodes below this one that pass a test, walking the whole
+	 * subtree once, as a hierarchy of classes may list a node more than once.
+	 * @param isMember Whether a node stands for a resource the node lists.
+	 * @returns The IRIs or blank node identifiers of those resources, each once.
+	 */
+	protected collectMemberIris(isMember: (node: DefinitionTreeNode) => boolean): string[] {
+		const members = new Set<string>();
+		const visited = new Set<string>();
+		const pending = this.getChildren() as DefinitionTreeNode[];
+
+		while (pending.length > 0) {
+			const node = pending.pop()!;
+
+			if (visited.has(node.id)) {
+				continue;
+			}
+
+			visited.add(node.id);
+
+			if (isMember(node)) {
+				members.add(node.uri);
+			}
+
+			pending.push(...node.getChildren() as DefinitionTreeNode[]);
+		}
+
+		return [...members];
 	}
 
 	getContextValue(): string {

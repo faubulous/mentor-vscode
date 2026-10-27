@@ -22,11 +22,14 @@ export class PropertiesNode extends PropertyClassNode {
 	}
 
 	override getDescription(): string {
-		const graphs = this.getOntologyGraphs();
-		const options = this.getQueryOptions();
-		const properties = [...this.vocabulary.getProperties(graphs, options)];
+		return this.getMemberIris().length.toString();
+	}
 
-		return properties.length.toString();
+	/**
+	 * The properties the node lists and counts.
+	 */
+	override getMemberIris(): string[] {
+		return [...this.vocabulary.getProperties(this.getOntologyGraphs(), this.getQueryOptions())];
 	}
 
 	override hasChildren(): boolean {

@@ -17,13 +17,15 @@ export class CollectionsNode extends CollectionClassNode {
 	}
 
 	override getDescription(): string {
-		const graphs = this.getDocumentGraphs();
-		const options = this.getQueryOptions();
+		return this.getMemberIris().length.toString();
+	}
 
-		// Note: The description shows the total number of collections, not only the root collections.
-		const collections = [...this.vocabulary.getCollections(graphs, options)];
-
-		return collections.length.toString();
+	/**
+	 * The collections the node lists and counts.
+	 * Note: The description shows the total number of collections, not only the root collections.
+	 */
+	override getMemberIris(): string[] {
+		return [...this.vocabulary.getCollections(this.getDocumentGraphs(), this.getQueryOptions())];
 	}
 
 	override hasChildren(): boolean {

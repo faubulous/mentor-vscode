@@ -6,7 +6,7 @@
    version="1.1"
    id="svg1"
    sodipodi:docname="ue001-rdf-class.svg"
-   inkscape:version="1.4.2 (ebf0e940d0, 2025-05-08)"
+   inkscape:version="1.4.4 (dcaf3e7d9e, 2026-05-05)"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns="http://www.w3.org/2000/svg"
@@ -24,10 +24,10 @@
      inkscape:pagecheckerboard="0"
      inkscape:deskcolor="#d1d1d1"
      inkscape:zoom="45.254834"
-     inkscape:cx="7.1815532"
+     inkscape:cx="17.025805"
      inkscape:cy="9.2144852"
-     inkscape:window-width="1920"
-     inkscape:window-height="1051"
+     inkscape:window-width="2304"
+     inkscape:window-height="1224"
      inkscape:window-x="0"
      inkscape:window-y="0"
      inkscape:window-maximized="1"
@@ -49,11 +49,13 @@
     </rdf:RDF>
   </metadata>
   <g
-     id="path2"
-     style="opacity:1">
+     id="path3"
+     style="fill:#000000"
+     transform="translate(9.0820312,2.0898438)">
     <path
-       id="path4"
-       style="baseline-shift:baseline;display:inline;overflow:visible;vector-effect:none;enable-background:accumulate;stop-color:#000000;stop-opacity:1"
-       d="M 8 2.8828125 C 5.1757575 2.8828125 2.8828125 5.1757576 2.8828125 8 C 2.8828128 10.824242 5.1757577 13.117186 8 13.117188 C 10.824242 13.117188 13.117185 10.824242 13.117188 8 C 13.117188 5.1757575 10.824243 2.8828123 8 2.8828125 z M 8 4.1015625 C 10.155374 4.1015628 11.898436 5.8446263 11.898438 8 C 11.898435 10.155374 10.155374 11.898435 8 11.898438 C 5.8446261 11.898438 4.1015628 10.155374 4.1015625 8 C 4.1015625 5.8446261 5.844626 4.1015625 8 4.1015625 z " />
+       id="path8"
+       style="baseline-shift:baseline;display:inline;overflow:visible;vector-effect:none;fill:#000000;stroke-linejoin:round;enable-background:accumulate;stop-color:#000000;stop-opacity:1"
+       d="m -1.0820315,1.3261718 c -2.5228633,0 -4.5839844,2.0611211 -4.5839843,4.5839844 0,2.5228634 2.061121,4.5839848 4.5839843,4.5839848 2.5228634,0 4.5839839,-2.0611214 4.5839849,-4.5839848 0,-2.5228633 -2.0611215,-4.5839844 -4.5839849,-4.5839844 z m 0,1.5703126 c 1.6731942,0 3.0136719,1.3404776 3.0136719,3.0136718 0,1.6731942 -1.3404777,3.0136719 -3.0136719,3.0136719 -1.6731942,0 -3.0136718,-1.3404777 -3.0136719,-3.0136719 0,-1.6731942 1.3404777,-3.0136718 3.0136719,-3.0136718 z"
+       sodipodi:nodetypes="ssssssssss" />
   </g>
 </svg>

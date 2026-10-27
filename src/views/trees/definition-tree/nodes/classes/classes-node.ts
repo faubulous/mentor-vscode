@@ -20,13 +20,15 @@ export class ClassesNode extends ClassNode {
 	}
 
 	override getDescription(): string {
-		const graphs = this.getOntologyGraphs();
-		const options = this.getQueryOptions();
+		return this.getMemberIris().length.toString();
+	}
 
-		// Note: We only want to display the number of classes defined in the document, hence {@link getDocumentGraphs}.
-		const classes = [...this.vocabulary.getClasses(graphs, options)];
-
-		return classes.length.toString();
+	/**
+	 * The classes the node lists and counts.
+	 * Note: We only want to display the number of classes defined in the document, hence {@link getDocumentGraphs}.
+	 */
+	override getMemberIris(): string[] {
+		return [...this.vocabulary.getClasses(this.getOntologyGraphs(), this.getQueryOptions())];
 	}
 
 	override getSubClassIris(): IterableIterator<string> {

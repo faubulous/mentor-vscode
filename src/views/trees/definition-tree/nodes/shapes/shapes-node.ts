@@ -17,11 +17,14 @@ export class ShapesNode extends ShapeClassNode {
 	}
 
 	override getDescription(): string {
-		const graphs = this.getDocumentGraphs();
-		const options = this.getQueryOptions();
-		const shapes = this.vocabulary.getShapes(graphs, undefined, options);
+		return this.getMemberIris().length.toString();
+	}
 
-		return [...shapes].length.toString();
+	/**
+	 * The shapes the node lists and counts.
+	 */
+	override getMemberIris(): string[] {
+		return [...this.vocabulary.getShapes(this.getDocumentGraphs(), undefined, this.getQueryOptions())];
 	}
 
 	override getTooltip(): vscode.MarkdownString | undefined {
