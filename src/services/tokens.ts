@@ -20,6 +20,8 @@ export enum ServiceToken {
 	DocumentTokenSource = "DocumentTokenSource",
 	/** Provider of the form based RDF editor, registered when the experimental setting is on. */
 	FormEditorProvider = "FormEditorProvider",
+	/** Opens RDF documents in the form editor when it is the configured default view. */
+	FormEditorDefaultView = "FormEditorDefaultView",
 	/** Service that computes syntax and lint diagnostics for documents. */
 	DocumentDiagnosticsService = "DocumentDiagnosticsService",
 	/** Service for indexing workspace files. */
