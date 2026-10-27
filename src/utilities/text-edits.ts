@@ -1,4 +1,23 @@
-import { TextEditSpec } from './text-edit-spec';
+/**
+ * A replacement of one range of the document text, addressed by offsets into the text the edit
+ * was synthesized against. `end` is exclusive; an insertion has `start === end`.
+ */
+export interface TextEditSpec {
+	/**
+	 * The offset the replaced range starts at.
+	 */
+	start: number;
+
+	/**
+	 * The offset the replaced range ends at, exclusive.
+	 */
+	end: number;
+
+	/**
+	 * The text that replaces the range.
+	 */
+	newText: string;
+}
 
 /**
  * Sort edits by position so they can be applied in one pass.

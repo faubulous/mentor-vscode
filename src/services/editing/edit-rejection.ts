@@ -1,10 +1,17 @@
-import { EditRejectionReason } from '../form-editor-edit-operation';
+import { EditRejectionReason } from './edit-operation';
 
 /**
  * Why an edit was not applied, in a form the webview can show.
  */
 export interface EditRejection {
+	/**
+	 * Why the edit was not applied.
+	 */
 	reason: EditRejectionReason;
+
+	/**
+	 * The explanation shown to the user.
+	 */
 	message: string;
 }
 

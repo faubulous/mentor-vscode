@@ -1,6 +1,5 @@
-import { FocusHint, TermRef } from '../form-editor-model';
-import { TextEditSpec } from './text-edit-spec';
-import { sortTextEdits } from './text-edit-applier';
+import { TextEditSpec, sortTextEdits } from '@src/utilities/text-edits';
+import { TermRef } from './term-ref';
 
 /**
  * A term to look for when verifying an edit. Blank node identifiers are assigned per parse and
@@ -12,10 +11,24 @@ export type TermPattern = TermRef | { kind: 'anyBlankNode' };
  * How often a statement is expected to change between the text before and after an edit.
  */
 export interface QuadExpectation {
+	/**
+	 * The subject to match.
+	 */
 	subject: TermPattern;
+
+	/**
+	 * The predicate IRI to match.
+	 */
 	predicate: string;
+
+	/**
+	 * The object to match.
+	 */
 	object: TermPattern;
-	/** The expected change of the number of matching statements. */
+
+	/**
+	 * The expected change of the number of matching statements.
+	 */
 	delta: number;
 }
 
@@ -23,33 +36,63 @@ export interface QuadExpectation {
  * The items a collection must hold, in order, once the edit is applied.
  */
 export interface CollectionOrderExpectation {
-	/** The subject holding the collection. */
+	/**
+	 * The subject holding the collection.
+	 */
 	parent: TermPattern;
 	predicate: string;
 	items: TermPattern[];
 }
 
 /**
+ * Which cell of a row the focus goes to after an edit.
+ */
+export type FocusTarget = 'subject' | 'predicate' | 'value' | 'addProperty';
+
+/**
  * Where the focus should go after the edit, relative to one of the plan's edits. The absolute
  * offset is only known once every edit of the plan is placed, see {@link resolveFocusOffset}.
  */
 export interface FocusRequest {
+	/**
+	 * The edit the focus is relative to.
+	 */
 	edit: TextEditSpec;
-	/** The offset of the focused term within the inserted text of the edit. */
+
+	/**
+	 * The offset of the focused term within the inserted text of the edit.
+	 */
 	offsetWithin: number;
-	target: FocusHint['target'];
+	target: FocusTarget;
 }
 
 /**
  * The text edits an operation resolves to, together with what must hold once they are applied.
  */
 export interface EditPlan {
+	/**
+	 * The text edits to apply.
+	 */
 	edits: TextEditSpec[];
+
+	/**
+	 * What must hold for the statements once the edits are applied.
+	 */
 	expectations: QuadExpectation[];
-	/** The collections whose order the edit decides. */
+
+	/**
+	 * The collections whose order the edit decides.
+	 */
 	orderExpectations: CollectionOrderExpectation[];
-	/** The expected change of the total number of statements. */
+
+	/**
+	 * The expected change of the total number of statements.
+	 */
 	quadCountDelta: number;
+
+	/**
+	 * Where the focus should go afterwards, when the operation decides it.
+	 */
 	focus?: FocusRequest;
 }
 

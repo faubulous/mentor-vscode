@@ -1,5 +1,11 @@
 import { Term } from '@rdfjs/types';
-import { ResourceId, TermRef } from './form-editor-model';
+import { TermRef } from './term-ref';
+
+/**
+ * Identifier of a resource within one document revision. Blank node identifiers are assigned
+ * by the parser in token order, so they are only valid for the revision they were built from.
+ */
+export type ResourceId = string;
 
 /**
  * Build the identifier of a resource named by an IRI, as the form editor names its resources.

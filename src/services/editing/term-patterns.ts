@@ -1,6 +1,6 @@
 import { Term } from '@rdfjs/types';
 import { RDF, XSD } from '@faubulous/mentor-rdf';
-import { TermRef } from '../form-editor-model';
+import { TermRef } from './term-ref';
 import { TermPattern } from './edit-plan';
 
 /**

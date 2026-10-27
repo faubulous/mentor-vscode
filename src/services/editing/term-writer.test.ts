@@ -1,19 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { RDF, XSD } from '@faubulous/mentor-rdf';
+import { _RDF, _XSD, RDF, XSD } from '@faubulous/mentor-rdf';
 import { RdfSyntax } from '@faubulous/mentor-rdf-parsers';
 import { EditRejectionError } from './edit-rejection';
 import { TermWriter, TermWriterOptions } from './term-writer';
 
 const EX = 'http://example.org/';
-const RDF_NS = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#';
-const XSD_NS = 'http://www.w3.org/2001/XMLSchema#';
 
 /**
  * A writer for a Turtle document that declares the ex, rdf and xsd prefixes and writes `a`.
  */
 function writer(overrides: Partial<TermWriterOptions> = {}): TermWriter {
 	return new TermWriter({
-		namespaces: { ex: EX, rdf: RDF_NS, xsd: XSD_NS },
+		namespaces: { ex: EX, rdf: _RDF, xsd: _XSD },
 		syntax: RdfSyntax.Turtle,
 		useTypeKeyword: true,
 		blankNodeLabels: new Map(),

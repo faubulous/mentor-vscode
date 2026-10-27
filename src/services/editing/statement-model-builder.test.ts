@@ -3,10 +3,10 @@ import { describe, expect, it, vi } from 'vitest';
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 
 import { RdfSyntax } from '@faubulous/mentor-rdf-parsers';
-import { getIriResourceId } from '../resource-id';
-import { readDocument } from './document-reader';
+import { getIriResourceId } from './resource-id';
+import { DocumentReader } from './document-reader';
 import { StatementModel, TokenSpan } from './statement-model';
-import { buildStatementModel } from './statement-model-builder';
+import { StatementModelBuilder } from './statement-model-builder';
 
 const EX = 'http://example.org/';
 const PREAMBLE = `@prefix ex: <${EX}> .\n\n`;
@@ -16,13 +16,13 @@ const PREAMBLE = `@prefix ex: <${EX}> .\n\n`;
  */
 function modelOf(body: string): StatementModel {
 	const text = PREAMBLE + body;
-	const read = readDocument(RdfSyntax.Turtle, text);
+	const read = new DocumentReader(RdfSyntax.Turtle).read(text);
 
 	if (!read.ok) {
 		throw new Error(read.message);
 	}
 
-	return buildStatementModel(text, read.tokens, read.quadContexts);
+	return new StatementModelBuilder(text, read.tokens, read.quadContexts).build();
 }
 
 /**
@@ -32,7 +32,7 @@ function textOf(model: StatementModel, span: TokenSpan): string {
 	return model.text.slice(span.start, span.end);
 }
 
-describe('buildStatementModel', () => {
+describe('StatementModelBuilder', () => {
 	it('groups the statements of a subject by predicate in document order', () => {
 		const model = modelOf('ex:s ex:p ex:a , ex:b ;\n    ex:q "x" .\n');
 		const [block] = model.blocks;

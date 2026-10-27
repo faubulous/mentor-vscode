@@ -1,10 +1,9 @@
 import { IToken, QuadContext, RdfToken } from '@faubulous/mentor-rdf-parsers';
 import { Term } from '@rdfjs/types';
 import { RDF } from '@faubulous/mentor-rdf';
-import { hasSourcePosition } from '@src/utilities/tokens';
-import { getResourceId } from '../resource-id';
+import { getResourceId } from './resource-id';
 import { CollectionItemSpan, ObjectSpan, PredicateGroup, StatementModel, SubjectBlock } from './statement-model';
-import { isTriviaToken, nextNonTriviaIndex, previousNonTriviaIndex, tokenEnd } from './token-scan';
+import { hasSourcePosition, isTriviaToken, nextNonTriviaIndex, previousNonTriviaIndex, tokenEnd } from '@src/utilities/tokens';
 
 /**
  * The tokens that open a bracketed construct, with the token that closes each.
@@ -26,22 +25,11 @@ const STRING_TOKEN_NAMES = new Set([
 ]);
 
 /**
- * Build the statement model of a document.
- * @param text The document text the tokens were read from.
- * @param tokens The token stream, including comment tokens.
- * @param quadContexts The quad contexts read from the tokens.
- * @returns The statement model.
- */
-export function buildStatementModel(text: string, tokens: IToken[], quadContexts: QuadContext[]): StatementModel {
-	return new StatementModelBuilder(text, tokens, quadContexts).build();
-}
-
-/**
  * Builds the {@link StatementModel}. Statements are grouped by the identity of their subject and
  * predicate tokens, which the reader shares between the statements of one written block, so the
  * grouping follows the text rather than the graph.
  */
-class StatementModelBuilder {
+export class StatementModelBuilder {
 	private readonly _tokenIndexByOffset = new Map<number, number>();
 
 	private readonly _matchingClose = new Map<number, number>();
@@ -52,6 +40,12 @@ class StatementModelBuilder {
 
 	private readonly _graphBlocks: { open: IToken; close: IToken }[] = [];
 
+	/**
+	 * Create a builder for a document.
+	 * @param _text The document text the tokens were read from.
+	 * @param _tokens The token stream, including comment tokens.
+	 * @param _quadContexts The quad contexts read from the tokens.
+	 */
 	constructor(
 		private readonly _text: string,
 		private readonly _tokens: IToken[],

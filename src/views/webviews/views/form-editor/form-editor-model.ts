@@ -5,27 +5,25 @@
  * 'vscode'.
  */
 
-import type { ValueKindHint } from '@src/utilities/value-kind-hint';
+import type { ValueKindHint } from '@src/utilities/value-kind';
+import type { FocusTarget } from '@src/services/editing/edit-plan';
+import type { ResourceId } from '@src/services/editing/resource-id';
+import type { TermRef } from '@src/services/editing/term-ref';
 
-/**
- * A term in wire form.
- */
-export type TermRef =
-	| { kind: 'iri'; iri: string }
-	| { kind: 'bnode'; id: string }
-	| { kind: 'literal'; value: string; datatype?: string; language?: string };
-
-/**
- * Identifier of a resource within one document revision. Blank node identifiers are assigned
- * by the parser in token order, so they are only valid for the revision they were built from.
- */
-export type ResourceId = string;
+export type { ResourceId, TermRef };
 
 /**
  * A position in the document, used to reveal a term in the text editor.
  */
 export interface DocumentPosition {
+	/**
+	 * The line, zero based.
+	 */
 	line: number;
+
+	/**
+	 * The character within the line, zero based.
+	 */
 	character: number;
 }
 
@@ -33,27 +31,55 @@ export interface DocumentPosition {
  * A term together with everything the webview needs to render it without a round trip.
  */
 export interface TermView {
+	/**
+	 * The term itself.
+	 */
 	term: TermRef;
-	/** Resolved human readable label, for IRIs and blank nodes. */
+
+	/**
+	 * Resolved human readable label, for IRIs and blank nodes.
+	 */
 	label?: string;
-	/** Language of the label, used to mark values shown from a fallback language. */
+
+	/**
+	 * Language of the label, used to mark values shown from a fallback language.
+	 */
 	labelLanguage?: string;
-	/** Prefixed form when a prefix is declared for the term's namespace. */
+
+	/**
+	 * Prefixed form when a prefix is declared for the term's namespace.
+	 */
 	prefixedName?: string;
-	/** The glyph that marks what kind of resource an IRI object denotes. */
+
+	/**
+	 * The glyph that marks what kind of resource an IRI object denotes.
+	 */
 	iconName?: string;
-	/** Set when the object is a blank node that has its own form. */
+
+	/**
+	 * Set when the object is a blank node that has its own form.
+	 */
 	nested?: NestedResourceRef;
-	/** Set when the object is an RDF collection, whose items replace it. */
+
+	/**
+	 * Set when the object is an RDF collection, whose items replace it.
+	 */
 	collection?: CollectionView;
-	/** Where the term starts in the document, when a source position is known. */
+
+	/**
+	 * Where the term starts in the document, when a source position is known.
+	 */
 	position?: DocumentPosition;
+
 	/**
 	 * The source offset of the term's token, which pins the value to exactly the statement the
 	 * row was rendered from, even among duplicates.
 	 */
 	anchor?: number;
-	/** Whether the term can be edited. Constructs such as RDF 1.2 annotations are read-only. */
+
+	/**
+	 * Whether the term can be edited. Constructs such as RDF 1.2 annotations are read-only.
+	 */
 	editable: boolean;
 }
 
@@ -61,13 +87,29 @@ export interface TermView {
  * Reference from an object position to the blank node resource it denotes.
  */
 export interface NestedResourceRef {
+	/**
+	 * The identifier of the nested resource.
+	 */
 	id: ResourceId;
+
+	/**
+	 * How many properties the nested resource has.
+	 */
 	propertyCount: number;
-	/** The label of the node, resolved as the definition tree resolves it. */
+
+	/**
+	 * The label of the node, resolved as the definition tree resolves it.
+	 */
 	label?: string;
-	/** The label of the type it asserts, when it asserts one. */
+
+	/**
+	 * The label of the type it asserts, when it asserts one.
+	 */
 	typeLabel?: string;
-	/** The glyph that marks what kind of node this is. */
+
+	/**
+	 * The glyph that marks what kind of node this is.
+	 */
 	iconName: string;
 }
 
@@ -76,6 +118,9 @@ export interface NestedResourceRef {
  * values a predicate may simply carry.
  */
 export interface CollectionView {
+	/**
+	 * The items of the collection, in order.
+	 */
 	items: TermView[];
 }
 
@@ -83,9 +128,19 @@ export interface CollectionView {
  * A predicate and its object list, in document order.
  */
 export interface PropertyView {
+	/**
+	 * The predicate of the property.
+	 */
 	predicate: TermView;
+
+	/**
+	 * The values of the predicate, in document order.
+	 */
 	values: TermView[];
-	/** What kind of values the predicate takes, when the host could tell. */
+
+	/**
+	 * What kind of values the predicate takes, when the host could tell.
+	 */
 	valueKind?: ValueKindHint;
 }
 
@@ -94,36 +149,95 @@ export interface PropertyView {
  * in the webview at once, so it must stay cheap for thousands of resources.
  */
 export interface ResourceSummary {
+	/**
+	 * The identifier of the resource within the snapshot.
+	 */
 	id: ResourceId;
+
+	/**
+	 * The term naming the resource.
+	 */
 	term: TermRef;
+
+	/**
+	 * The human readable label, resolved from the configured label predicates.
+	 */
 	label: string;
+
+	/**
+	 * The language of the label, when it was read from a language tagged literal.
+	 */
 	labelLanguage?: string;
-	/** Human readable description, resolved from the configured description predicates. */
+
+	/**
+	 * Human readable description, resolved from the configured description predicates.
+	 */
 	description?: string;
+
+	/**
+	 * The prefixed name of an IRI resource, when a prefix is declared for its namespace.
+	 */
 	prefixedName?: string;
-	/** The glyph that marks what kind of resource this is. */
+
+	/**
+	 * The glyph that marks what kind of resource this is.
+	 */
 	iconName: string;
-	/** The labels of the types the resource asserts, in document order. */
+
+	/**
+	 * The labels of the types the resource asserts, in document order.
+	 */
 	typeLabels?: string[];
-	/** The type the definition is shown and pinned by: the first it asserts, past `owl:NamedIndividual`. */
+
+	/**
+	 * The type the definition is shown and pinned by: the first it asserts, past `owl:NamedIndividual`.
+	 */
 	typeIri?: string;
-	/** The label of {@link typeIri}. */
+
+	/**
+	 * The label of {@link typeIri}.
+	 */
 	typeLabel?: string;
+
 	/**
 	 * Set for a term of another vocabulary that the document only declares, with its type and
 	 * nothing of its own, as Protégé writes them; the view can hide these.
 	 */
 	externalDeclaration?: boolean;
-	/** How often other statements refer to the resource, across the indexed documents. IRIs only. */
+
+	/**
+	 * How often other statements refer to the resource, across the indexed documents. IRIs only.
+	 */
 	usageCount?: number;
+
+	/**
+	 * How many properties the resource has.
+	 */
 	propertyCount: number;
+
+	/**
+	 * How many values the resource has across its properties.
+	 */
 	valueCount: number;
-	/** Anonymous blank nodes referenced exactly once from an object position. */
+
+	/**
+	 * Anonymous blank nodes referenced exactly once from an object position.
+	 */
 	nested: boolean;
-	/** The graph the resource is described in, for TriG documents. */
+
+	/**
+	 * The graph the resource is described in, for TriG documents.
+	 */
 	graph?: string;
-	/** Whether the document names the resource with one of the configured label predicates. */
+
+	/**
+	 * Whether the document names the resource with one of the configured label predicates.
+	 */
 	hasLabel: boolean;
+
+	/**
+	 * Where the resource starts in the document, when a source position is known.
+	 */
 	position?: DocumentPosition;
 }
 
@@ -131,17 +245,44 @@ export interface ResourceSummary {
  * The properties of a single resource, loaded on demand.
  */
 export interface ResourceDetail {
+	/**
+	 * The identifier of the resource within the snapshot.
+	 */
 	id: ResourceId;
+
+	/**
+	 * The term naming the resource.
+	 */
 	term: TermRef;
-	/** Human readable description, resolved from the configured description predicates. */
+
+	/**
+	 * Human readable description, resolved from the configured description predicates.
+	 */
 	description?: string;
-	/** The labels of the types the resource asserts, in document order. */
+
+	/**
+	 * The labels of the types the resource asserts, in document order.
+	 */
 	typeLabels?: string[];
-	/** The predicate the label was read from, when the document states one for the resource. */
+
+	/**
+	 * The predicate the label was read from, when the document states one for the resource.
+	 */
 	labelPredicate?: string;
-	/** The predicate the description was read from, when the document states one for the resource. */
+
+	/**
+	 * The predicate the description was read from, when the document states one for the resource.
+	 */
 	descriptionPredicate?: string;
+
+	/**
+	 * The properties of the resource, in document order.
+	 */
 	properties: PropertyView[];
+
+	/**
+	 * Where the resource starts in the document, when a source position is known.
+	 */
 	position?: DocumentPosition;
 }
 
@@ -149,10 +290,24 @@ export interface ResourceDetail {
  * A namespace declaration in the document.
  */
 export interface NamespaceInfo {
+	/**
+	 * The declared prefix.
+	 */
 	prefix: string;
+
+	/**
+	 * The namespace IRI the prefix stands for.
+	 */
 	iri: string;
-	/** Number of terms in the document that use this namespace. */
+
+	/**
+	 * Number of terms in the document that use this namespace.
+	 */
 	usageCount: number;
+
+	/**
+	 * Where the declaration starts in the document, when a source position is known.
+	 */
 	position?: DocumentPosition;
 }
 
@@ -162,7 +317,14 @@ export interface NamespaceInfo {
  * rows are. A resource that has neither gets its label or description written with these.
  */
 export interface AnnotationScheme {
+	/**
+	 * The predicate most resources are labelled with.
+	 */
 	label?: TermView;
+
+	/**
+	 * The predicate most resources are described with.
+	 */
 	description?: TermView;
 }
 
@@ -170,8 +332,19 @@ export interface AnnotationScheme {
  * A parse or validation problem that prevents editing.
  */
 export interface DocumentProblem {
+	/**
+	 * What is wrong.
+	 */
 	message: string;
+
+	/**
+	 * The line of the problem, zero based.
+	 */
 	line: number;
+
+	/**
+	 * The character of the problem within its line, zero based.
+	 */
 	character: number;
 }
 
@@ -180,7 +353,14 @@ export interface DocumentProblem {
  * by a writable text document at all, such as a query result or a remote store.
  */
 export interface ReadOnlyReason {
+	/**
+	 * Why the document cannot be edited.
+	 */
 	reason: 'syntaxErrors' | 'template' | 'unsupportedSyntax' | 'noWriteBack';
+
+	/**
+	 * The explanation shown to the user.
+	 */
 	message: string;
 }
 
@@ -189,40 +369,108 @@ export interface ReadOnlyReason {
  * the re-parsed document, because an edit can renumber blank nodes and shift value indices.
  */
 export interface FocusHint {
-	/** The resource that received the edit, or the resource that was created. */
+	/**
+	 * The resource that received the edit, or the resource that was created.
+	 */
 	resourceId: ResourceId;
-	/** The resource holding a newly created nested node, so the webview can expand it. */
+
+	/**
+	 * The resource holding a newly created nested node, so the webview can expand it.
+	 */
 	parentId?: ResourceId;
-	/** The property row of the edited value, in the order of the resource detail. */
+
+	/**
+	 * The property row of the edited value, in the order of the resource detail.
+	 */
 	propertyIndex?: number;
-	/** The value within the property row, in the order of the resource detail. */
+
+	/**
+	 * The value within the property row, in the order of the resource detail.
+	 */
 	valueIndex?: number;
-	/** The item within a collection value. */
+
+	/**
+	 * The item within a collection value.
+	 */
 	itemIndex?: number;
-	/** Which cell of the row to focus. A `comment` is the run of comment lines holding the edit. */
-	target: 'subject' | 'predicate' | 'value' | 'addProperty';
+
+	/**
+	 * Which cell of the row to focus. A `comment` is the run of comment lines holding the edit.
+	 */
+	target: FocusTarget;
 }
 
 /**
  * Everything the webview needs to render a document except the per-resource properties.
  */
 export interface DocumentSnapshot {
-	/** Version of the text document this snapshot was built from. */
+	/**
+	 * Version of the text document this snapshot was built from.
+	 */
 	version: number;
+
+	/**
+	 * The URI of the document.
+	 */
 	uri: string;
+
+	/**
+	 * The file name of the document, shown as its title.
+	 */
 	fileName: string;
+
+	/**
+	 * The syntax of the document.
+	 */
 	syntax: string;
+
+	/**
+	 * The base IRI of the document, when it declares one.
+	 */
 	baseIri?: string;
+
+	/**
+	 * The namespace declarations of the document.
+	 */
 	namespaces: NamespaceInfo[];
+
+	/**
+	 * The predicates the document names and describes its resources with.
+	 */
 	annotationScheme: AnnotationScheme;
+
+	/**
+	 * The language the labels and descriptions are read in.
+	 */
 	activeLanguage?: string;
+
+	/**
+	 * The resources of the document, in document order.
+	 */
 	resources: ResourceSummary[];
-	/** The resource describing the document, such as its ontology, which heads the form. */
+
+	/**
+	 * The resource describing the document, such as its ontology, which heads the form.
+	 */
 	documentResourceId?: ResourceId;
-	/** Datatypes used in the document, offered when changing a literal's datatype. */
+
+	/**
+	 * Datatypes used in the document, offered when changing a literal's datatype.
+	 */
 	datatypes: string[];
+
+	/**
+	 * Why the document cannot be edited, when it cannot.
+	 */
 	readOnly?: ReadOnlyReason;
+
+	/**
+	 * The parse problems of the document.
+	 */
 	problems: DocumentProblem[];
-	/** The type most definitions have, which their entries do not repeat. */
+
+	/**
+	 * The type most definitions have, which their entries do not repeat.
+	 */
 	dominantTypeIri?: string;
 }
