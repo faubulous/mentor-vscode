@@ -1,3 +1,7 @@
+import { IToken, RdfToken } from '@faubulous/mentor-rdf-parsers';
+import { isBlank, lineEndOffset, lineStartOffset, nextLineStartOffset } from '@src/utilities/string';
+import { tokenEnd } from '@src/utilities/tokens';
+
 /**
  * A replacement of one range of the document text, addressed by offsets into the text the edit
  * was synthesized against. `end` is exclusive; an insertion has `start === end`.
@@ -94,4 +98,75 @@ export function shiftOffset(offset: number, edits: readonly TextEditSpec[]): num
 	}
 
 	return shifted;
+}
+
+/**
+ * Delete a range of the document while keeping the comments written inside it. Each comment stays
+ * on a line of its own: the text before it goes, and the deletion resumes on the next line.
+ * @param text The document text.
+ * @param tokens The token stream.
+ * @param start The start of the range.
+ * @param end The exclusive end of the range.
+ * @returns The edits that remove everything but the comments.
+ */
+export function deleteRange(text: string, tokens: readonly IToken[], start: number, end: number): TextEditSpec[] {
+	const comments = tokens.filter(
+		token => token.tokenType?.name === RdfToken.COMMENT.name && token.startOffset >= start && tokenEnd(token) <= end
+	);
+
+	if (comments.length === 0) {
+		return start < end ? [{ start, end, newText: '' }] : [];
+	}
+
+	const edits: TextEditSpec[] = [];
+	let cursor = start;
+
+	for (const comment of comments) {
+		// Keep one space in front of the comment so it does not glue to the value before it,
+		// unless the text before the deletion already ends in whitespace.
+		const keepSpace = text[comment.startOffset - 1] === ' ' && !/\s/.test(text[cursor - 1] ?? ' ');
+		const segmentEnd = keepSpace ? comment.startOffset - 1 : comment.startOffset;
+
+		if (segmentEnd > cursor) {
+			edits.push({ start: cursor, end: segmentEnd, newText: '' });
+		}
+
+		cursor = Math.min(end, nextLineStartOffset(text, tokenEnd(comment)));
+	}
+
+	// What follows the last comment is the indentation of the next value, which now leads its
+	// line; it stays so the line keeps its place in the block.
+	if (end > cursor && !isBlank(text, cursor, end)) {
+		edits.push({ start: cursor, end, newText: '' });
+	}
+
+	return edits;
+}
+
+/**
+ * Widen a deletion to the whole line when nothing but whitespace would remain on it, so a
+ * removed statement does not leave a blank line behind.
+ * @param text The document text.
+ * @param start The start of the deletion.
+ * @param end The exclusive end of the deletion.
+ * @returns The widened range, or the original one when other content shares the line.
+ */
+export function expandToWholeLines(text: string, start: number, end: number): { start: number; end: number } {
+	const lineStart = lineStartOffset(text, start);
+	const lineEnd = lineEndOffset(text, end);
+
+	if (!isBlank(text, lineStart, start) || !isBlank(text, end, lineEnd)) {
+		return { start, end };
+	}
+
+	const nextLine = nextLineStartOffset(text, end);
+
+	if (nextLine < text.length || lineStart === 0) {
+		return { start: lineStart, end: nextLine };
+	}
+
+	// The last line of the file: take the line break before it instead of the missing one after.
+	const breakLength = text[lineStart - 2] === '\r' ? 2 : 1;
+
+	return { start: lineStart - breakLength, end: nextLine };
 }

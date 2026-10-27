@@ -33,18 +33,6 @@ export interface QuadExpectation {
 }
 
 /**
- * The items a collection must hold, in order, once the edit is applied.
- */
-export interface CollectionOrderExpectation {
-	/**
-	 * The subject holding the collection.
-	 */
-	parent: TermPattern;
-	predicate: string;
-	items: TermPattern[];
-}
-
-/**
  * Which cell of a row the focus goes to after an edit.
  */
 export type FocusTarget = 'subject' | 'predicate' | 'value' | 'addProperty';
@@ -63,6 +51,9 @@ export interface FocusRequest {
 	 * The offset of the focused term within the inserted text of the edit.
 	 */
 	offsetWithin: number;
+	/**
+	 * Which cell of the row the focus goes to.
+	 */
 	target: FocusTarget;
 }
 
@@ -79,11 +70,6 @@ export interface EditPlan {
 	 * What must hold for the statements once the edits are applied.
 	 */
 	expectations: QuadExpectation[];
-
-	/**
-	 * The collections whose order the edit decides.
-	 */
-	orderExpectations: CollectionOrderExpectation[];
 
 	/**
 	 * The expected change of the total number of statements.
@@ -105,7 +91,6 @@ export function createPlan(plan: Partial<EditPlan>): EditPlan {
 	return {
 		edits: plan.edits ?? [],
 		expectations: plan.expectations ?? [],
-		orderExpectations: plan.orderExpectations ?? [],
 		quadCountDelta: plan.quadCountDelta ?? 0,
 		focus: plan.focus
 	};
@@ -124,7 +109,6 @@ export function mergePlans(plans: readonly EditPlan[]): EditPlan {
 	for (const plan of plans) {
 		merged.edits.push(...plan.edits);
 		merged.expectations.push(...plan.expectations);
-		merged.orderExpectations.push(...plan.orderExpectations);
 		merged.quadCountDelta += plan.quadCountDelta;
 		merged.focus = plan.focus ?? merged.focus;
 	}

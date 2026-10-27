@@ -57,6 +57,7 @@ export class TermWriter {
 
 	/**
 	 * Whether the syntax allows prefixed names, `a` and bare literals.
+	 * @returns `true` when the syntax abbreviates.
 	 */
 	get abbreviates(): boolean {
 		return this._serializer.abbreviates;

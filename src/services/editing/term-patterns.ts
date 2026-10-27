@@ -7,6 +7,7 @@ import { TermPattern } from './edit-plan';
  * Convert an RDF/JS term into the pattern that matches it after a re-parse. Blank node
  * identifiers change between parses, so a blank node matches any blank node.
  * @param term The term to convert.
+ * @returns The pattern matching the term.
  */
 export function toTermPattern(term: Term): TermPattern {
 	switch (term.termType) {
@@ -30,6 +31,7 @@ export function toTermPattern(term: Term): TermPattern {
 /**
  * Convert a wire term into a verification pattern.
  * @param term The term to convert.
+ * @returns The pattern matching the term.
  */
 export function toPatternFromRef(term: TermRef): TermPattern {
 	return term.kind === 'bnode' ? { kind: 'anyBlankNode' } : term;
@@ -40,6 +42,7 @@ export function toPatternFromRef(term: TermRef): TermPattern {
  * same literal, and language tags compare case-insensitively.
  * @param term The term read from the document.
  * @param pattern The pattern to match against.
+ * @returns `true` when the term matches.
  */
 export function matchesTermPattern(term: Term, pattern: TermPattern): boolean {
 	switch (pattern.kind) {
@@ -68,6 +71,8 @@ export function matchesTermPattern(term: Term, pattern: TermPattern): boolean {
 
 /**
  * Treat a missing datatype as `xsd:string`, which is what a plain literal carries.
+ * @param datatype The datatype IRI of a literal, if any.
+ * @returns The datatype IRI to compare by.
  */
 function _normalizeDatatype(datatype: string | undefined): string {
 	return !datatype || datatype === RDF.langString ? XSD.string : datatype;
