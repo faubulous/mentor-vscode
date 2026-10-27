@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { TextEditSpec } from '@src/utilities/text-edits';
 
 /**
  * Get the delta of lines caused by a workspace edit.
@@ -25,4 +26,22 @@ export function calculateLineOffset(edit: vscode.WorkspaceEdit): number {
 	}
 
 	return lineOffset;
+}
+
+/**
+ * Convert offset based edits into one workspace edit for a document, so that a user action is
+ * applied and undone as a single step.
+ * @param document The document the edits were synthesized against.
+ * @param edits The edits to convert.
+ */
+export function toWorkspaceEdit(document: vscode.TextDocument, edits: readonly TextEditSpec[]): vscode.WorkspaceEdit {
+	const workspaceEdit = new vscode.WorkspaceEdit();
+
+	for (const edit of edits) {
+		const range = new vscode.Range(document.positionAt(edit.start), document.positionAt(edit.end));
+
+		workspaceEdit.replace(document.uri, range, edit.newText);
+	}
+
+	return workspaceEdit;
 }
