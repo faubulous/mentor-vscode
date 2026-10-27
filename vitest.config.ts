@@ -21,6 +21,8 @@ export default defineConfig({
       tsconfig: './tsconfig.spec.json'
     },
     include: ['src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
+    // Host code runs in Node. A webview component test opts into jsdom with the docblock
+    // `// @vitest-environment jsdom` on its first line; see src/views/webviews/README.md.
     environment: 'node',
     globals: true,
     // The serializer's published dist uses directory imports (e.g. `./sorting`) that
@@ -34,7 +36,7 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'json-summary', 'html'],
-      include: ['src/**/*.ts'],
+      include: ['src/**/*.{ts,tsx}'],
       exclude: [
         'node_modules/',
         'dist/',
@@ -44,8 +46,8 @@ export default defineConfig({
         'vitest.config.ts',
         'jest.config.ts',
         '**/mocks/**',
-        '**/*.test.ts',
-        '**/*.spec.ts',
+        '**/*.test.{ts,tsx}',
+        '**/*.spec.{ts,tsx}',
         '**/*.browser.ts',
         '**/*.node.ts',
         'src/extension.ts',
