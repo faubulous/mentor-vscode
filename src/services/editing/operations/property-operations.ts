@@ -11,31 +11,18 @@ import { SynthesisContext } from '../synthesis-context';
 import { toPatternFromRef, toTermPattern } from '../term-patterns';
 
 /**
- * Add a statement with a predicate the subject does not carry yet, after its last predicate. A
- * nested block written on one line stays on one line; anything else puts the predicate on a line
- * of its own, indented like its neighbours. A predicate the subject already carries is handled by
- * the value operations, which append to its list instead.
+ * The `deleteProperty` operation of the edit contract.
  */
-
-/**
- * The text between the last statement of a block and a new predicate.
- */
-
 type DeletePropertyOperation = Extract<EditOperation, { op: 'deleteProperty' }>;
 
-type MovePropertyOperation = Extract<EditOperation, { op: 'moveProperty' }>;
-
 /**
- * Move a predicate with its values to stand before another predicate of the subject, or after the
- * last one. The groups of the block are rewritten in their new order while every separator between
- * them stays where it was, so a block written one predicate per line keeps its lines and its
- * indentation. No statement changes, so nothing is expected of the result beyond parsing.
+ * The `moveProperty` operation of the edit contract.
  */
+type MovePropertyOperation = Extract<EditOperation, { op: 'moveProperty' }>;
 
 /**
  * The offset of a group within the rewritten run of groups.
  */
-
 function _offsetOfGroup(texts: readonly string[], separators: readonly string[], index: number): number {
 	let offset = 0;
 
@@ -47,25 +34,6 @@ function _offsetOfGroup(texts: readonly string[], separators: readonly string[],
 }
 
 /**
- * The one block of the subject that writes both predicates, or the predicate alone when it is
- * moved to the end. A move stays within a block: it rearranges how one place is written.
- */
-
-/**
- * Remove a predicate with all its values from every block of the subject. Neighbouring removed
- * groups are deleted as one range so their ranges never overlap; a block that loses all its
- * groups follows the rules for deleting a lone value.
- */
-
-/**
- * Find the groups of a predicate across the blocks of a subject, in document order.
- * @param context The synthesis context.
- * @param subject The subject whose groups to find.
- * @param predicate The predicate of the groups.
- * @throws When the subject does not carry the predicate.
- */
-
-/**
  * Adds, moves and deletes the predicates of a subject.
  */
 export class PropertyOperations {
@@ -75,6 +43,12 @@ export class PropertyOperations {
 	 */
 	constructor(private readonly _context: SynthesisContext) { }
 
+	/**
+	 * Add a statement with a predicate the subject does not carry yet, after its last predicate. A
+	 * nested block written on one line stays on one line; anything else puts the predicate on a line
+	 * of its own, indented like its neighbours. A predicate the subject already carries is handled by
+	 * the value operations, which append to its list instead.
+	 */
 	newProperty(subject: TermRef, predicateIri: string, written: string): EditPlan {
 		const context = this._context;
 
@@ -90,6 +64,9 @@ export class PropertyOperations {
 		});
 	}
 
+	/**
+	 * The text between the last statement of a block and a new predicate.
+	 */
 	private _separator(block: SubjectBlock): string {
 		const context = this._context;
 
@@ -100,6 +77,12 @@ export class PropertyOperations {
 		return ` ;${context.style.eol}${context.styleDetector.predicateIndentFor(block)}`;
 	}
 
+	/**
+	 * Move a predicate with its values to stand before another predicate of the subject, or after the
+	 * last one. The groups of the block are rewritten in their new order while every separator between
+	 * them stays where it was, so a block written one predicate per line keeps its lines and its
+	 * indentation. No statement changes, so nothing is expected of the result beyond parsing.
+	 */
 	moveProperty(operation: MovePropertyOperation): EditPlan {
 		const context = this._context;
 
@@ -129,6 +112,10 @@ export class PropertyOperations {
 		});
 	}
 
+	/**
+	 * The one block of the subject that writes both predicates, or the predicate alone when it is
+	 * moved to the end. A move stays within a block: it rearranges how one place is written.
+	 */
 	private _blockHolding(subject: TermRef, predicate: string, before: string | undefined): SubjectBlock {
 		const context = this._context;
 
@@ -143,6 +130,11 @@ export class PropertyOperations {
 		return block;
 	}
 
+	/**
+	 * Remove a predicate with all its values from every block of the subject. Neighbouring removed
+	 * groups are deleted as one range so their ranges never overlap; a block that loses all its
+	 * groups follows the rules for deleting a lone value.
+	 */
 	deleteProperty(operation: DeletePropertyOperation): EditPlan {
 		const context = this._context;
 
@@ -171,6 +163,12 @@ export class PropertyOperations {
 		return plan;
 	}
 
+	/**
+	 * Find the groups of a predicate across the blocks of a subject, in document order.
+	 * @param subject The subject whose groups to find.
+	 * @param predicate The predicate of the groups.
+	 * @throws When the subject does not carry the predicate.
+	 */
 	findPredicateGroups(subject: TermRef, predicate: string): { block: SubjectBlock; group: PredicateGroup }[] {
 		const context = this._context;
 

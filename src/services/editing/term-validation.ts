@@ -1,7 +1,13 @@
 import { EditRejectionError } from './edit-rejection';
 
+/**
+ * The shape of a language tag: a primary subtag and optional subtags.
+ */
 const LANGUAGE_TAG = /^[a-zA-Z]{1,8}(-[a-zA-Z0-9]{1,8})*(--(ltr|rtl))?$/;
 
+/**
+ * The shape of a prefix name, as the Turtle grammar allows it.
+ */
 const PREFIX = /^(?:[A-Za-zÀ-￿](?:[\wÀ-￿.-]*[\wÀ-￿-])?)?$/;
 
 /**

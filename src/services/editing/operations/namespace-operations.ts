@@ -7,12 +7,14 @@ import { validateIri, validatePrefix } from '../term-validation';
 import { isTokenOfType, nextNonCommentTokenIndex, tokenEnd } from '@src/utilities/tokens';
 import { lineStartOffset, nextLineStartOffset } from '@src/utilities/string';
 
+/**
+ * The `addNamespace` operation of the edit contract.
+ */
 type AddNamespaceOperation = Extract<EditOperation, { op: 'addNamespace' }>;
 
 /**
  * A prefix declaration as written in the document.
  */
-
 interface PrefixDeclaration {
 	/**
 	 * The `@prefix` or `PREFIX` keyword opening the declaration.
@@ -41,24 +43,6 @@ interface PrefixDeclaration {
 }
 
 /**
- * Declare a namespace prefix, written in the directive style the document already uses and, when
- * the settings ask for it, in alphabetical order among the existing declarations.
- */
-
-/**
- * Collect the prefix declarations of the document in order.
- */
-
-/**
- * Write a declaration in the style of the document: `@prefix` when the document uses only that,
- * otherwise `PREFIX` in the case of the last declaration, which is also Mentor's default.
- */
-
-/**
- * Prefix declarations exist only in the syntaxes that abbreviate.
- */
-
-/**
  * Declares namespaces.
  */
 export class NamespaceOperations {
@@ -68,6 +52,10 @@ export class NamespaceOperations {
 	 */
 	constructor(private readonly _context: SynthesisContext) { }
 
+	/**
+	 * Declare a namespace prefix, written in the directive style the document already uses and, when
+	 * the settings ask for it, in alphabetical order among the existing declarations.
+	 */
 	addNamespace(operation: AddNamespaceOperation): EditPlan {
 		const context = this._context;
 
@@ -111,6 +99,9 @@ export class NamespaceOperations {
 		return createPlan({ edits: [{ start: 0, end: 0, newText: `${text}${eol}${separator}` }] });
 	}
 
+	/**
+	 * Collect the prefix declarations of the document in order.
+	 */
 	private _declarations(): PrefixDeclaration[] {
 		const context = this._context;
 
@@ -140,6 +131,10 @@ export class NamespaceOperations {
 		return declarations;
 	}
 
+	/**
+	 * Write a declaration in the style of the document: `@prefix` when the document uses only that,
+	 * otherwise `PREFIX` in the case of the last declaration, which is also Mentor's default.
+	 */
 	private _declarationText(declarations: PrefixDeclaration[], prefix: string, iri: string): string {
 		const turtleStyle = declarations.length > 0 && declarations.every(declaration => declaration.keyword.tokenType.name === RdfToken.TTL_PREFIX.name);
 
@@ -153,6 +148,9 @@ export class NamespaceOperations {
 		return `${upperCase ? 'PREFIX' : 'prefix'} ${prefix}: <${iri}>`;
 	}
 
+	/**
+	 * Prefix declarations exist only in the syntaxes that abbreviate.
+	 */
 	private _requireDirectives(): void {
 		const context = this._context;
 

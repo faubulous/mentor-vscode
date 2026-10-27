@@ -17,6 +17,9 @@ export const CLOSING_TOKEN_NAMES: Record<string, string> = {
 	[RdfToken.OPEN_ANNOTATION.name]: RdfToken.CLOSE_ANNOTATION.name
 };
 
+/**
+ * The token types of string literals, whose text may span lines.
+ */
 const STRING_TOKEN_NAMES = new Set([
 	RdfToken.STRING_LITERAL_QUOTE.name,
 	RdfToken.STRING_LITERAL_SINGLE_QUOTE.name,
