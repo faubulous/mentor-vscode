@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
 import { getConfig } from '@src/utilities/vscode/config';
-import { FormEditorDefaultView } from './form-editor-default-view';
+import { FormEditorAssociations } from './form-editor-associations';
 import { FormEditorProvider } from './form-editor-provider';
 
 /**
@@ -18,27 +18,25 @@ const RELOAD_ACTION = 'Reload Window';
 /**
  * Register the form editor when the experimental setting is on. The editor is contributed with
  * the `option` priority, so it never replaces the text editor unless the user asks for it, and
- * its provider and the default view are only registered while `mentor.formEditor.enabled` is on.
- * A change of the setting takes effect after a reload, which the user is offered.
+ * its provider is only registered while `mentor.formEditor.enabled` is on. A change of the
+ * setting takes effect after a reload, which the user is offered. The editor associations that
+ * make the form editor the default view follow the settings at all times, so turning the editor
+ * off also takes it out of the associations.
  * @param context The extension context.
  */
 export function registerFormEditor(context: vscode.ExtensionContext): void {
-	context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(event => {
-		if (event.affectsConfiguration(ENABLED_SETTING)) {
-			void _offerReload();
-		}
-	}));
+	context.subscriptions.push(
+		new FormEditorAssociations(),
+		vscode.workspace.onDidChangeConfiguration(event => {
+			if (event.affectsConfiguration(ENABLED_SETTING)) {
+				void _offerReload();
+			}
+		})
+	);
 
-	if (!getConfig('formEditor').get<boolean>('enabled', false)) {
-		return;
+	if (getConfig('formEditor').get<boolean>('enabled', false)) {
+		container.registerInstance(ServiceToken.FormEditorProvider, new FormEditorProvider(context));
 	}
-
-	container.registerInstance(ServiceToken.FormEditorProvider, new FormEditorProvider(context));
-
-	const defaultView = new FormEditorDefaultView();
-
-	container.registerInstance(ServiceToken.FormEditorDefaultView, defaultView);
-	context.subscriptions.push(defaultView);
 }
 
 /**
