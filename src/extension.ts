@@ -24,7 +24,7 @@ import * as commands from './commands';
 import * as trees from './views/trees';
 import * as webviews from './views/webviews';
 import * as providers from './providers';
-import { FormEditorProvider } from './views/webviews/views/form-editor';
+import { registerFormEditor } from './views/webviews/views/form-editor/form-editor-registration';
 
 /**
  * Shared activation logic for both browser and Node.js extension hosts.
@@ -153,18 +153,11 @@ function registerViews() {
 }
 
 /**
- * Registers the custom editors of the extension. The form editor is experimental: it is
- * contributed with the `option` priority, so it never replaces the text editor unless the user
- * asks for it, and its provider is only registered while the `mentor.formEditor.enabled` setting
- * is on.
+ * Registers the custom editors of the extension.
  * @param context The extension context.
  */
 function registerEditors(context: vscode.ExtensionContext) {
-	if (!getConfig('formEditor').get<boolean>('enabled', false)) {
-		return;
-	}
-
-	container.registerInstance(ServiceToken.FormEditorProvider, new FormEditorProvider(context));
+	registerFormEditor(context);
 }
 
 /**

@@ -225,6 +225,7 @@ export const window = {
   tabGroups: {
     activeTabGroup: { activeTab: undefined as any, tabs: [] as any[] },
     all: [] as any[],
+    close: async (_tabs: any, _preserveFocus?: boolean) => true,
     onDidChangeTabs: (handler: any) => _getEventEmitter('onDidChangeTabs').event(handler),
     onDidChangeTabGroups: (handler: any) => _getEventEmitter('onDidChangeTabGroups').event(handler),
   },

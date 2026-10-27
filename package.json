@@ -2376,6 +2376,21 @@
             "title": "Enable Form Editor",
             "description": "Register the form based editor for RDF documents, which the editor title bar switches to. Takes effect after the window is reloaded.",
             "experimental": true
+          },
+          "mentor.formEditor.defaultView": {
+            "type": "string",
+            "enum": [
+              "text",
+              "form"
+            ],
+            "enumDescriptions": [
+              "Open RDF documents in the text editor.",
+              "Open RDF documents in the form editor."
+            ],
+            "default": "text",
+            "title": "Default View",
+            "description": "Which view RDF documents open in while the form editor is enabled. The editor title bar switches between the text and the form view at any time.",
+            "experimental": true
           }
         }
       }
