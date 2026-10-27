@@ -82,9 +82,14 @@ describe('CollectionClassNode', () => {
 	});
 
 	describe('getIconColor', () => {
-		it('should return ThemeColor mentor.color.concept', () => {
+		it('should return the color of the node kind for a resource, whatever its namespace', () => {
 			const color = makeNode(CollectionClassNode).getIconColor();
 			expect(color).toBeInstanceOf(vscode.ThemeColor);
+			expect((color as any).id).toBe('mentor.color.concept');
+		});
+
+		it('should return the color of the node kind for a row that denotes no resource', () => {
+			const color = makeNode(CollectionClassNode, 'mentor:collections').getIconColor();
 			expect((color as any).id).toBe('mentor.color.concept');
 		});
 	});

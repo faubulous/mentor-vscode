@@ -129,6 +129,15 @@ export abstract class TreeNodeBase implements TreeNode {
 	}
 
 	getIconColor(): vscode.ThemeColor | undefined {
+		return this.getDefaultIconColor();
+	}
+
+	/**
+	 * Get the icon color to use when the node has no colour of its own, such as a grouping row
+	 * that does not denote a resource.
+	 * @returns The fallback icon color.
+	 */
+	getDefaultIconColor(): vscode.ThemeColor | undefined {
 		return new vscode.ThemeColor('descriptionForeground');
 	}
 }

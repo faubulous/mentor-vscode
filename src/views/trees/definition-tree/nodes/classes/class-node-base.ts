@@ -70,7 +70,7 @@ export abstract class ClassNodeBase extends DefinitionTreeNode {
 		return new vscode.ThemeIcon(iconName, iconColor);
 	}
 
-	override getIconColor() {
+	override getDefaultIconColor() {
 		return new vscode.ThemeColor("mentor.color.class");
 	}
 

@@ -40,6 +40,10 @@ export class PropertyClassNode extends ClassNodeBase {
 		return sortByLabel(result);
 	}
 
+	override getMemberIris(): string[] {
+		return this.collectMemberIris(node => node instanceof PropertyNode);
+	}
+
 	override getClassNode(iri: string) {
 		return this.createChildNode(PropertyClassNode, iri);
 	}

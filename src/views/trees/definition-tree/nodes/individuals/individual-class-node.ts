@@ -23,6 +23,10 @@ export class IndividualClassNode extends ClassNodeBase {
 		return sortByLabel(result);
 	}
 
+	override getMemberIris(): string[] {
+		return this.collectMemberIris(node => node instanceof IndividualNode);
+	}
+
 	override getClassNode(iri: string): DefinitionTreeNode {
 		return this.createChildNode(IndividualClassNode, iri);
 	}

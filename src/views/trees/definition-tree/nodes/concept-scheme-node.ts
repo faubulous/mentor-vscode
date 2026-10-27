@@ -12,7 +12,7 @@ export class ConceptSchemeNode extends GroupContainerNode {
 		return new vscode.ThemeIcon('rdf-concept-scheme', this.getIconColor());
 	}
 
-	override getIconColor() {
+	override getDefaultIconColor() {
 		return new vscode.ThemeColor("mentor.color.class");
 	}
 

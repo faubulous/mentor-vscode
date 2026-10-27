@@ -35,7 +35,7 @@ export class OntologyNode extends GroupContainerNode {
 		return new vscode.ThemeIcon('rdf-ontology', this.getIconColor());
 	}
 
-	override getIconColor() {
+	override getDefaultIconColor() {
 		return new vscode.ThemeColor("mentor.color.class");
 	}
 

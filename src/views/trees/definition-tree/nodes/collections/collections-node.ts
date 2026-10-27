@@ -26,6 +26,11 @@ export class CollectionsNode extends CollectionClassNode {
 		return collections.length.toString();
 	}
 
+	override getMemberIris(): string[] {
+		// The collections the count of the node tells about.
+		return [...this.vocabulary.getCollections(this.getDocumentGraphs(), this.getQueryOptions())];
+	}
+
 	override hasChildren(): boolean {
 		const graphs = this.getDocumentGraphs();
 		const options = this.getQueryOptions();
