@@ -1,8 +1,10 @@
+import { getBlankNodeIdFromToken } from '@faubulous/mentor-rdf-parsers';
 /**
  * Note: Do not add import from 'vscode' here. This file is used in the 
  * language server where vscode is not available.
  */
 import { RDF } from "@faubulous/mentor-rdf";
+import { TextEditSpec, shiftOffset } from '@src/utilities/text-edits';
 import { IToken, RdfToken } from "@faubulous/mentor-rdf-parsers";
 import { Range } from "vscode-languageserver-types";
 import { countLeadingWhitespace, countTrailingWhitespace } from "./string";
@@ -492,4 +494,104 @@ export function hasSourcePosition(token: IToken | undefined): boolean {
 	];
 
 	return positions.every(position => position === undefined || Number.isFinite(position));
+}
+
+/**
+ * Indicate whether a token is a comment, which carries no syntax of its own.
+ * @param token The token to inspect.
+ * @returns `true` if the token is a comment, `false` otherwise.
+ */
+export function isCommentToken(token: IToken | undefined): boolean {
+	return token?.tokenType?.name === RdfToken.COMMENT.name;
+}
+
+/**
+ * Find the next token that is not a comment.
+ * @param tokens The token stream.
+ * @param index The index to start after.
+ * @returns The index of the token, or `-1` if there is none.
+ */
+export function nextNonCommentTokenIndex(tokens: readonly IToken[], index: number): number {
+	for (let i = index + 1; i < tokens.length; i++) {
+		if (!isCommentToken(tokens[i])) {
+			return i;
+		}
+	}
+
+	return -1;
+}
+
+/**
+ * Find the previous token that is not a comment.
+ * @param tokens The token stream.
+ * @param index The index to start before.
+ * @returns The index of the token, or `-1` if there is none.
+ */
+export function previousNonCommentTokenIndex(tokens: readonly IToken[], index: number): number {
+	for (let i = index - 1; i >= 0; i--) {
+		if (!isCommentToken(tokens[i])) {
+			return i;
+		}
+	}
+
+	return -1;
+}
+
+/**
+ * Get the exclusive end offset of a token.
+ * @param token The token.
+ */
+export function tokenEnd(token: IToken): number {
+	return (token.endOffset ?? token.startOffset + token.image.length - 1) + 1;
+}
+
+/**
+ * Indicate whether a token is of one of the given types.
+ * @param token The token to inspect.
+ * @param names The token type names to accept.
+ */
+export function isTokenOfType(token: IToken | undefined, ...names: string[]): boolean {
+	const name = token?.tokenType?.name;
+
+	return name !== undefined && names.includes(name);
+}
+
+/**
+ * Work out how an edit renumbered the blank nodes of a document. The parser assigns identifiers
+ * in token order, so inserting a bracket early in the file renames every later node. A token
+ * that survives the edit is found again at its shifted offset, and the two identifiers are paired.
+ * @param before The tokens of the document before the edit.
+ * @param after The tokens of the document after the edit.
+ * @param edits The edits that were applied.
+ * @returns The pairs of old and new identifiers that differ.
+ */
+export function remapBlankNodeIds(before: readonly IToken[], after: readonly IToken[], edits: readonly TextEditSpec[]): [string, string][] {
+	const idsByOffset = new Map<number, string>();
+
+	for (const token of after) {
+		const id = getBlankNodeIdFromToken(token);
+
+		if (id) {
+			idsByOffset.set(token.startOffset, id);
+		}
+	}
+
+	const renamed: [string, string][] = [];
+
+	for (const token of before) {
+		const oldId = getBlankNodeIdFromToken(token);
+
+		if (!oldId) {
+			continue;
+		}
+
+		const offset = shiftOffset(token.startOffset, edits);
+		const newId = offset !== undefined ? idsByOffset.get(offset) : undefined;
+
+		if (newId && newId !== oldId) {
+			renamed.push([oldId, newId]);
+		}
+	}
+
+	return renamed;
 }
