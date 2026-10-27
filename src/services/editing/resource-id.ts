@@ -27,6 +27,23 @@ export function getResourceId(term: Term): ResourceId {
 }
 
 /**
+ * Build the identifier of a resource named by a term in wire form, so the form can address a
+ * resource it is about to create before the host has indexed it.
+ * @param term The term of the resource.
+ * @returns The resource identifier, or `undefined` for a literal, which names no resource.
+ */
+export function getTermRefResourceId(term: TermRef): ResourceId | undefined {
+	switch (term.kind) {
+		case 'bnode':
+			return `b:${term.id}`;
+		case 'iri':
+			return getIriResourceId(term.iri);
+		default:
+			return undefined;
+	}
+}
+
+/**
  * Convert an RDF/JS term to its wire representation.
  * @param term The term to convert.
  * @returns The term in wire form.
