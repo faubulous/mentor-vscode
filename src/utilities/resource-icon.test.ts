@@ -5,12 +5,16 @@ import * as path from 'path';
 import { getDatatypeIconName, getPropertyIconName, getResourceIconName } from './resource-icon';
 
 /**
- * The glyph names the bundled Mentor icon font carries.
+ * The glyph names the Mentor icon font carries, read from the glyph sources the font is built
+ * from (`media/glyphs/u<codepoint>-<name>.svg`), so the test needs no build output.
  */
 function readMentorIconNames(): Set<string> {
-	const file = path.resolve(__dirname, '../../media/mentor-icons.json');
+	const glyphs = path.resolve(__dirname, '../../media/glyphs');
+	const names = fs.readdirSync(glyphs)
+		.map(file => /^u[0-9a-f]{4}-(.+)\.svg$/i.exec(file)?.[1])
+		.filter((name): name is string => name !== undefined);
 
-	return new Set(Object.keys(JSON.parse(fs.readFileSync(file, 'utf8'))));
+	return new Set(names);
 }
 
 describe('getResourceIconName', () => {
