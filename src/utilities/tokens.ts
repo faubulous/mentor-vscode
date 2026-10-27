@@ -511,7 +511,7 @@ export function isCommentToken(token: IToken | undefined): boolean {
  * @param index The index to start after.
  * @returns The index of the token, or `-1` if there is none.
  */
-export function nextNonCommentIndex(tokens: readonly IToken[], index: number): number {
+export function nextNonCommentTokenIndex(tokens: readonly IToken[], index: number): number {
 	for (let i = index + 1; i < tokens.length; i++) {
 		if (!isCommentToken(tokens[i])) {
 			return i;
@@ -527,7 +527,7 @@ export function nextNonCommentIndex(tokens: readonly IToken[], index: number): n
  * @param index The index to start before.
  * @returns The index of the token, or `-1` if there is none.
  */
-export function previousNonCommentIndex(tokens: readonly IToken[], index: number): number {
+export function previousNonCommentTokenIndex(tokens: readonly IToken[], index: number): number {
 	for (let i = index - 1; i >= 0; i--) {
 		if (!isCommentToken(tokens[i])) {
 			return i;

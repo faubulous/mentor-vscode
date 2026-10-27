@@ -3,7 +3,7 @@ import { Term } from '@rdfjs/types';
 import { RDF } from '@faubulous/mentor-rdf';
 import { getResourceId } from './resource-id';
 import { CollectionItemSpan, ObjectSpan, PredicateGroup, StatementModel, SubjectBlock } from './statement-model';
-import { hasSourcePosition, isCommentToken, nextNonCommentIndex, previousNonCommentIndex, tokenEnd } from '@src/utilities/tokens';
+import { hasSourcePosition, isCommentToken, nextNonCommentTokenIndex, previousNonCommentTokenIndex, tokenEnd } from '@src/utilities/tokens';
 
 /**
  * The tokens that open a bracketed construct, with the token that closes each.
@@ -111,7 +111,7 @@ export class StatementModelBuilder {
 	 * that ends the line of the token before belongs to that line, not to what follows it.
 	 */
 	private _leadingCommentsBefore(tokenIndex: number): IToken[] {
-		const previousIndex = previousNonCommentIndex(this._tokens, tokenIndex);
+		const previousIndex = previousNonCommentTokenIndex(this._tokens, tokenIndex);
 		const previous = previousIndex >= 0 ? this._tokens[previousIndex] : undefined;
 
 		return this._tokens
@@ -385,11 +385,11 @@ export class StatementModelBuilder {
 		const name = token.tokenType?.name ?? '';
 
 		if (STRING_TOKEN_NAMES.has(name)) {
-			const next = nextNonCommentIndex(this._tokens, index);
+			const next = nextNonCommentTokenIndex(this._tokens, index);
 			const nextName = this._tokens[next]?.tokenType?.name;
 
 			if (nextName === RdfToken.DCARET.name) {
-				const datatype = nextNonCommentIndex(this._tokens, next);
+				const datatype = nextNonCommentTokenIndex(this._tokens, next);
 
 				return datatype >= 0 ? datatype : next;
 			}
