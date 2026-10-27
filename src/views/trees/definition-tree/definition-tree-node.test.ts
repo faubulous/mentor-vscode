@@ -75,7 +75,31 @@ describe('DefinitionTreeNode', () => {
 			const node = new DefinitionTreeNode(makeContext(), 'my-id', 'urn:x');
 			const cmd = node.getCommand();
 			expect(cmd?.command).toBe('mentor.command.revealDefinition');
-			expect(cmd?.arguments).toEqual(['my-id', true]);
+			expect(cmd?.arguments).toEqual([node, true]);
+		});
+	});
+
+	describe('getMemberIris', () => {
+		it('stands for a single definition by default', () => {
+			expect(new DefinitionTreeNode(makeContext(), 'id', 'urn:x').getMemberIris()).toBeUndefined();
+		});
+
+		it('collects the members of the whole subtree once each', () => {
+			class TypeNode extends DefinitionTreeNode {
+				members(): string[] {
+					return this.collectMemberIris(node => node.uri.startsWith('urn:member'));
+				}
+			}
+
+			const leaf = (id: string, uri: string) => new DefinitionTreeNode(makeContext(), id, uri);
+			const shared = leaf('shared', 'urn:member:c');
+			const subtype = leaf('sub', 'urn:type:sub');
+			const root = new TypeNode(makeContext(), 'root', 'urn:type:root');
+
+			subtype.getChildren = () => [leaf('b', 'urn:member:b'), shared];
+			root.getChildren = () => [leaf('a', 'urn:member:a'), subtype, shared];
+
+			expect(root.members().sort()).toEqual(['urn:member:a', 'urn:member:b', 'urn:member:c']);
 		});
 	});
 
@@ -288,5 +312,13 @@ describe('getIriFromArgument', () => {
 
 	it('should throw for invalid argument type', () => {
 		expect(() => getIriFromArgument(42 as any)).toThrow();
+	});
+});
+
+describe('DefinitionTreeNode icon color', () => {
+	it('gives a resource the default color, whatever its namespace', () => {
+		const node = new DefinitionTreeNode(makeContext(), 'x', 'http://example.org/vocab#Thing');
+
+		expect((node.getIconColor() as any).id).toBe('descriptionForeground');
 	});
 });

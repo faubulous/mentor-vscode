@@ -24,6 +24,11 @@ export class ShapesNode extends ShapeClassNode {
 		return [...shapes].length.toString();
 	}
 
+	override getMemberIris(): string[] {
+		// The shapes the count of the node tells about.
+		return [...this.vocabulary.getShapes(this.getDocumentGraphs(), undefined, this.getQueryOptions())];
+	}
+
 	override getTooltip(): vscode.MarkdownString | undefined {
 		return undefined;
 	}

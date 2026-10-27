@@ -62,6 +62,11 @@ export class ConceptsNode extends ConceptClassNode {
 		return this._conceptCount.toString();
 	}
 
+	override getMemberIris(): string[] {
+		// The concepts the count of the node tells about.
+		return [...this._getConcepts()];
+	}
+
 	override *getSubClassIris(): IterableIterator<string> {
 		const graphs = this.getDocumentGraphs();
 

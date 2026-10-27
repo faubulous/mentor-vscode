@@ -29,6 +29,11 @@ export class PropertiesNode extends PropertyClassNode {
 		return properties.length.toString();
 	}
 
+	override getMemberIris(): string[] {
+		// The properties the count of the node tells about.
+		return [...this.vocabulary.getProperties(this.getOntologyGraphs(), this.getQueryOptions())];
+	}
+
 	override hasChildren(): boolean {
 		const graphs = this.getOntologyGraphs();
 		const options = this.getQueryOptions();

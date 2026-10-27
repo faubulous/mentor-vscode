@@ -126,9 +126,14 @@ describe('OntologyNode', () => {
 	});
 
 	describe('getIconColor', () => {
-		it('should return ThemeColor mentor.color.class', () => {
+		it('should return the color of the node kind for a resource, whatever its namespace', () => {
 			const color = makeOntologyNode().getIconColor();
 			expect(color).toBeInstanceOf(vscode.ThemeColor);
+			expect((color as any).id).toBe('mentor.color.class');
+		});
+
+		it('should return the color of the node kind for a row that denotes no resource', () => {
+			const color = makeNode(OntologyNode, 'mentor:ontologies').getIconColor();
 			expect((color as any).id).toBe('mentor.color.class');
 		});
 	});

@@ -21,6 +21,10 @@ export class ShapeClassNode extends ClassNodeBase {
 		}
 	}
 
+	override getMemberIris(): string[] {
+		return this.collectMemberIris(node => node instanceof NodeShapeNode || node instanceof PropertyShapeNode);
+	}
+
 	override getClassNode(iri: string) {
 		return this.createChildNode(ShapeClassNode, iri);
 	}

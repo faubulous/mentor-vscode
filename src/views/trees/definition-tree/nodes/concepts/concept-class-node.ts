@@ -9,7 +9,7 @@ export class ConceptClassNode extends ClassNodeBase {
 		return new vscode.ThemeIcon('rdf-concept', this.getIconColor());
 	}
 
-	override getIconColor() {
+	override getDefaultIconColor() {
 		return new vscode.ThemeColor("mentor.color.concept");
 	}
 

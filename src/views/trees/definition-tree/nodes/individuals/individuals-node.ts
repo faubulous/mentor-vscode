@@ -29,6 +29,11 @@ export class IndividualsNode extends IndividualClassNode {
 		return [...individuals].length.toString();
 	}
 
+	override getMemberIris(): string[] {
+		// The individuals the count of the node tells about.
+		return [...this.vocabulary.getIndividuals(this.getDocumentGraphs(), undefined, this.getQueryOptions())];
+	}
+
 	/**
 	 * Indicates whether the individuals are grouped by their types.
 	 */

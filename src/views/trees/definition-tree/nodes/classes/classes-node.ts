@@ -29,6 +29,11 @@ export class ClassesNode extends ClassNode {
 		return classes.length.toString();
 	}
 
+	override getMemberIris(): string[] {
+		// The classes the count of the node tells about.
+		return [...this.vocabulary.getClasses(this.getOntologyGraphs(), this.getQueryOptions())];
+	}
+
 	override getSubClassIris(): IterableIterator<string> {
 		const graphs = this.getOntologyGraphs();
 		const options = this.getQueryOptions();

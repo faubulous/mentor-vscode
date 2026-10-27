@@ -9,7 +9,7 @@ export class IndividualNode extends DefinitionTreeNode {
 		return new vscode.ThemeIcon('rdf-individual', this.getIconColor());
 	}
 
-	override getIconColor() {
+	override getDefaultIconColor() {
 		return new vscode.ThemeColor("mentor.color.individual");
 	}
 }
