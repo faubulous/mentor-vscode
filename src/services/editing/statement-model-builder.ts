@@ -61,6 +61,7 @@ export class StatementModelBuilder {
 
 	/**
 	 * Build the model.
+	 * @returns The statement model of the document.
 	 */
 	build(): StatementModel {
 		this._buildCollections();
@@ -89,6 +90,8 @@ export class StatementModelBuilder {
 
 	/**
 	 * The comment tokens written after the last block, past its terminator.
+	 * @param blocks The blocks of the document.
+	 * @returns The trailing comment tokens.
 	 */
 	private _documentCommentsAfter(blocks: readonly SubjectBlock[]): IToken[] {
 		const last = blocks[blocks.length - 1];
@@ -104,6 +107,9 @@ export class StatementModelBuilder {
 
 	/**
 	 * Indicate whether a comment token stands on the line that holds an offset, ending it.
+	 * @param token The comment token.
+	 * @param offset The offset on the line.
+	 * @returns `true` when no line break lies between the offset and the token.
 	 */
 	private _endsLineOf(token: IToken, offset: number): boolean {
 		return !this._text.slice(offset, token.startOffset).includes('\n');
@@ -112,6 +118,8 @@ export class StatementModelBuilder {
 	/**
 	 * The comment lines written between the token before a token and the token itself. A comment
 	 * that ends the line of the token before belongs to that line, not to what follows it.
+	 * @param tokenIndex The index of the token the comments precede.
+	 * @returns The comment tokens.
 	 */
 	private _leadingCommentsBefore(tokenIndex: number): IToken[] {
 		const previousIndex = previousNonCommentTokenIndex(this._tokens, tokenIndex);
@@ -167,6 +175,8 @@ export class StatementModelBuilder {
 
 	/**
 	 * Indicate whether a quad is part of the chain that encodes a collection.
+	 * @param quad The statement to inspect.
+	 * @returns `true` for an `rdf:first` or `rdf:rest` statement of a written collection.
 	 */
 	private _isChainContext(quad: QuadContext): boolean {
 		return (quad.predicate.value === RDF.first || quad.predicate.value === RDF.rest) && this._chainSubjectTokens.has(quad.subjectToken);
@@ -196,6 +206,10 @@ export class StatementModelBuilder {
 
 	/**
 	 * Follow a collection chain from its head and build the item spans in order.
+	 * @param headId The identifier of the collection head.
+	 * @param firsts The `rdf:first` statements by subject.
+	 * @param rests The `rdf:rest` statements by subject.
+	 * @returns The item spans in order.
 	 */
 	private _walkChain(headId: string, firsts: Map<string, QuadContext>, rests: Map<string, QuadContext>): CollectionItemSpan[] {
 		const items: CollectionItemSpan[] = [];
@@ -227,6 +241,7 @@ export class StatementModelBuilder {
 
 	/**
 	 * Group the written statements into blocks and predicate groups.
+	 * @returns The blocks in document order.
 	 */
 	private _buildBlocks(): SubjectBlock[] {
 		const blocks: SubjectBlock[] = [];
@@ -270,6 +285,8 @@ export class StatementModelBuilder {
 
 	/**
 	 * Indicate whether every component of a quad is located in the token stream.
+	 * @param quad The statement to inspect.
+	 * @returns `true` when the subject, predicate and object tokens are all indexed.
 	 */
 	private _hasTokens(quad: QuadContext): boolean {
 		return [quad.subjectToken, quad.predicateToken, quad.objectToken].every(
@@ -281,6 +298,8 @@ export class StatementModelBuilder {
 	 * Build the key that tells the block a statement belongs to. The statements inside an inline
 	 * blank node and those written after it share the `[` as their subject token, so the key
 	 * records whether the predicate lies inside the brackets.
+	 * @param quad The statement to key.
+	 * @returns The key of the block.
 	 */
 	private _blockKey(quad: QuadContext): string {
 		return `${quad.subjectToken.startOffset}:${this._isInsideOwnBrackets(quad) ? 'nested' : 'top'}`;
@@ -288,6 +307,8 @@ export class StatementModelBuilder {
 
 	/**
 	 * Indicate whether a statement is written inside the brackets that open its blank node subject.
+	 * @param quad The statement to inspect.
+	 * @returns `true` when the predicate lies between the brackets of the subject.
 	 */
 	private _isInsideOwnBrackets(quad: QuadContext): boolean {
 		if (quad.subjectToken.tokenType?.name !== RdfToken.LBRACKET.name) {
@@ -302,6 +323,9 @@ export class StatementModelBuilder {
 
 	/**
 	 * Start a block for the subject of a statement.
+	 * @param quad The first statement of the block.
+	 * @param nested Whether the block is written inside brackets.
+	 * @returns The block holding no groups yet.
 	 */
 	private _createBlock(quad: QuadContext, nested: boolean): SubjectBlock {
 		const graph = quad.graph && quad.graph.termType !== 'DefaultGraph' ? quad.graph.value : undefined;
@@ -326,6 +350,8 @@ export class StatementModelBuilder {
 
 	/**
 	 * Start a predicate group for the predicate of a statement.
+	 * @param quad The first statement of the group.
+	 * @returns The group holding no objects yet.
 	 */
 	private _createGroup(quad: QuadContext): PredicateGroup {
 		const index = this._tokenIndexByOffset.get(quad.predicateToken.startOffset)!;
@@ -344,6 +370,8 @@ export class StatementModelBuilder {
 
 	/**
 	 * Build the span of the object of a statement.
+	 * @param quad The statement whose object to span.
+	 * @returns The span, or `undefined` when the object token is not indexed.
 	 */
 	private _toObjectSpan(quad: QuadContext): ObjectSpan | undefined {
 		const span = this._toSpan(quad.objectToken);
@@ -362,6 +390,8 @@ export class StatementModelBuilder {
 	/**
 	 * Build the span of a written term starting at a token: a literal with its datatype or
 	 * language tag, or a bracketed construct up to its closing token.
+	 * @param token The first token of the term.
+	 * @returns The span, or `undefined` when the token is not indexed.
 	 */
 	private _toSpan(token: IToken): { start: number; end: number; startTokenIndex: number; endTokenIndex: number } | undefined {
 		const startTokenIndex = this._tokenIndexByOffset.get(token.startOffset);
@@ -382,6 +412,8 @@ export class StatementModelBuilder {
 
 	/**
 	 * Find the last token of the term that starts at a token.
+	 * @param index The index of the first token of the term.
+	 * @returns The index of the last token of the term.
 	 */
 	private _termEndIndex(index: number): number {
 		const token = this._tokens[index];
@@ -409,6 +441,7 @@ export class StatementModelBuilder {
 
 	/**
 	 * Compute the extent, terminator and graph of a block once all its statements are known.
+	 * @param block The block to complete.
 	 */
 	private _finalizeBlock(block: SubjectBlock): void {
 		for (const group of block.groups) {
@@ -443,6 +476,7 @@ export class StatementModelBuilder {
 
 	/**
 	 * Find the `.` that ends a top level block, noting stray semicolons before it.
+	 * @param block The block to terminate.
 	 */
 	private _findTerminator(block: SubjectBlock): void {
 		for (let i = block.endTokenIndex + 1; i < this._tokens.length; i++) {
@@ -467,6 +501,9 @@ export class StatementModelBuilder {
 
 	/**
 	 * Collect the semicolon tokens between two token indices.
+	 * @param from The index of the token before the range.
+	 * @param to The index of the token after the range.
+	 * @returns The semicolon tokens.
 	 */
 	private _semicolonsBetween(from: number, to: number): IToken[] {
 		return this._tokens

@@ -21,6 +21,9 @@ type ReplaceStatementOperation = Extract<EditOperation, { op: 'replaceStatement'
 
 /**
  * The expectation that a statement of a nested node or list changes in number.
+ * @param quad The statement that changes.
+ * @param delta How its number changes.
+ * @returns The expectation.
  */
 function _nestedExpectation(quad: QuadContext, delta: number): QuadExpectation {
 	return { subject: toTermPattern(quad.subject), predicate: quad.predicate.value, object: toTermPattern(quad.object), delta };
@@ -42,6 +45,9 @@ export class StatementOperations {
 	 * as typed, one per line when the group was written so; further groups of the predicate in the
 	 * same block go, as the form shows one row per predicate. Comments written inside the group are
 	 * kept after the rewritten statement. Without a predicate the line adds a new one.
+	 * @param operation The statement to rewrite.
+	 * @returns The plan rewriting the statement.
+	 * @throws {EditRejectionError} If the text does not state one predicate, or the subject does not carry the predicate.
 	 */
 	replaceStatement(operation: ReplaceStatementOperation): EditPlan {
 		const context = this._context;
@@ -67,6 +73,9 @@ export class StatementOperations {
 
 	/**
 	 * Add the statement of a predicate the subject does not carry yet, after its last predicate.
+	 * @param operation The statement to add.
+	 * @returns The plan inserting the statement.
+	 * @throws {EditRejectionError} If the text has placeholders, or the subject already carries the predicate.
 	 */
 	private _synthesizeNewStatement(operation: ReplaceStatementOperation): EditPlan {
 		const context = this._context;
@@ -96,6 +105,10 @@ export class StatementOperations {
 
 	/**
 	 * Write the predicate and the objects of a parsed statement in the style of the group it replaces.
+	 * @param block The block holding the group.
+	 * @param group The group being replaced.
+	 * @param parsed The parsed statement.
+	 * @returns The statement text.
 	 */
 	private _writeStatement(block: SubjectBlock, group: PredicateGroup, parsed: ParsedStatement): string {
 		const context = this._context;
@@ -112,6 +125,9 @@ export class StatementOperations {
 	 * The edits replacing a group with the new statement. A comment written inside the group stays:
 	 * the statement replaces what precedes the first comment, and what follows it goes, except for
 	 * further comments, each of which keeps a line of its own.
+	 * @param group The group being replaced.
+	 * @param newText The statement text.
+	 * @returns The edits.
 	 */
 	private _replacementEdits(group: PredicateGroup, newText: string): TextEditSpec[] {
 		const context = this._context;
@@ -131,6 +147,9 @@ export class StatementOperations {
 
 	/**
 	 * The edits removing the further groups of the predicate in the block.
+	 * @param block The block holding the groups.
+	 * @param duplicates The groups to remove.
+	 * @returns The edits.
 	 */
 	private _duplicateDeletions(block: SubjectBlock, duplicates: PredicateGroup[]): TextEditSpec[] {
 		const context = this._context;
@@ -148,6 +167,11 @@ export class StatementOperations {
 	 * How the statements change: every pattern among the removed objects and their nested statements
 	 * counts down, every pattern among the parsed ones counts up, and what is written the same before
 	 * and after, such as a nested node kept through a placeholder, nets out.
+	 * @param subject The subject of the statement.
+	 * @param oldPredicate The predicate of the removed objects.
+	 * @param removed The objects the rewrite removes.
+	 * @param parsed The parsed statement.
+	 * @returns The net expectations.
 	 */
 	private _expectations(subject: TermPattern, oldPredicate: string, removed: readonly ObjectSpan[], parsed: ParsedStatement): QuadExpectation[] {
 		const context = this._context;

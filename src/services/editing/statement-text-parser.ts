@@ -102,7 +102,7 @@ export class StatementTextParser {
 	 * @param subject The subject the statement is about.
 	 * @param text The statement text.
 	 * @returns What the text states.
-	 * @throws When the text does not parse, or states more or less than one predicate of the subject.
+	 * @throws {EditRejectionError} If the text does not parse, or states more or less than one predicate of the subject.
 	 */
 	parse(subject: TermRef, text: string): ParsedStatement {
 		const context = this._context;
@@ -138,7 +138,7 @@ export class StatementTextParser {
 	 * @param text The statement text with placeholders.
 	 * @param group The group whose blank nodes the placeholders stand for.
 	 * @returns The statement text with the blank nodes written out.
-	 * @throws When the placeholders do not match the blank nodes of the group.
+	 * @throws {EditRejectionError} If the placeholders do not match the blank nodes of the group.
 	 */
 	spliceHoles(text: string, group: PredicateGroup): string {
 		const holes = StatementTextParser.findHoles(text);
@@ -165,6 +165,7 @@ export class StatementTextParser {
 
 	/**
 	 * The prefix declarations the statement may use, when the syntax has prefixes.
+	 * @returns The declarations as Turtle, or an empty string.
 	 */
 	private _prefixDeclarations(): string {
 		const context = this._context;
@@ -181,6 +182,9 @@ export class StatementTextParser {
 	/**
 	 * Write the subject the statement is parsed with. A blank node without a label is stood in for
 	 * by a placeholder, as the subject only serves to locate the statement.
+	 * @param subject The subject in wire form.
+	 * @returns The written subject.
+	 * @throws {EditRejectionError} If the subject cannot be written.
 	 */
 	private _writeSubject(subject: TermRef): string {
 		try {
@@ -197,7 +201,11 @@ export class StatementTextParser {
 	/**
 	 * Cut the written objects out of the parsed document: the text between the predicate and the
 	 * final period, split at the commas outside of nested nodes and lists.
-	 * @throws When the text goes on after the statement.
+	 * @param document The parsed document.
+	 * @param tokens The tokens of the document.
+	 * @param subjectOffset The offset of the subject in the document.
+	 * @returns The written objects in order.
+	 * @throws {EditRejectionError} If the text goes on after the statement.
 	 */
 	private _objectTexts(document: string, tokens: IToken[], subjectOffset: number): string[] {
 		const subjectIndex = tokens.findIndex(token => token.startOffset === subjectOffset);
@@ -230,6 +238,11 @@ export class StatementTextParser {
 
 	/**
 	 * The objects of a statement, provided its period ends the text.
+	 * @param tokens The tokens of the document.
+	 * @param index The index of the period.
+	 * @param objects The objects read so far.
+	 * @returns The objects.
+	 * @throws {EditRejectionError} If the period is not the last token.
 	 */
 	private static _requireLastToken(tokens: IToken[], index: number, objects: string[]): string[] {
 		if (index !== tokens.length - 1) {
@@ -241,6 +254,8 @@ export class StatementTextParser {
 
 	/**
 	 * How a token changes the nesting depth: opening brackets go down a level, closing ones come up.
+	 * @param token The token to inspect.
+	 * @returns `1`, `-1` or `0`.
 	 */
 	private static _depthChange(token: IToken): number {
 		const name = token.tokenType?.name ?? '';
@@ -255,6 +270,8 @@ export class StatementTextParser {
 	/**
 	 * The source text of every blank node written under a predicate, in document order: the objects
 	 * written as `[ ... ]` and the items of collections written so.
+	 * @param group The group whose blank nodes to collect.
+	 * @returns The source texts.
 	 */
 	private _blankNodeSources(group: PredicateGroup): string[] {
 		const modelText = this._context.model.text;
@@ -277,6 +294,8 @@ export class StatementTextParser {
 
 	/**
 	 * Indicate whether a token opens an inline blank node.
+	 * @param token The token to inspect.
+	 * @returns `true` for a `[`.
 	 */
 	private static _isBracketed(token: { tokenType?: { name: string } }): boolean {
 		return token.tokenType?.name === RdfToken.LBRACKET.name;
@@ -284,6 +303,9 @@ export class StatementTextParser {
 
 	/**
 	 * Match a placeholder at an offset of the text.
+	 * @param text The statement text.
+	 * @param index The offset to match at.
+	 * @returns The placeholder, or `undefined` when none starts there.
 	 */
 	private static _holeAt(text: string, index: number): StatementHole | undefined {
 		const match = /^\[\s*(?:…|\.\.\.)?\s*\]/.exec(text.slice(index));
@@ -294,6 +316,8 @@ export class StatementTextParser {
 	/**
 	 * Skip a string literal starting at an offset, honouring escapes and long quotes.
 	 * @returns The offset after the closing quote, or the text length for an unterminated literal.
+	 * @param text The statement text.
+	 * @param index The offset of the opening quote.
 	 */
 	private static _skipString(text: string, index: number): number {
 		const quote = text[index];

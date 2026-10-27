@@ -33,6 +33,7 @@ export function calculateLineOffset(edit: vscode.WorkspaceEdit): number {
  * applied and undone as a single step.
  * @param document The document the edits were synthesized against.
  * @param edits The edits to convert.
+ * @returns The workspace edit replacing each range.
  */
 export function toWorkspaceEdit(document: vscode.TextDocument, edits: readonly TextEditSpec[]): vscode.WorkspaceEdit {
 	const workspaceEdit = new vscode.WorkspaceEdit();

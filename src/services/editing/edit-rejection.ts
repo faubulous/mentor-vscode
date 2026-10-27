@@ -28,6 +28,7 @@ export class EditRejectionError extends Error {
 
 	/**
 	 * Convert the error into the plain rejection sent to the webview.
+	 * @returns The reason and message of the rejection.
 	 */
 	toRejection(): EditRejection {
 		return { reason: this.reason, message: this.message };
@@ -37,6 +38,7 @@ export class EditRejectionError extends Error {
 /**
  * Indicate whether a synthesis result is a rejection rather than a plan.
  * @param value The result to inspect.
+ * @returns `true` for a rejection.
  */
 export function isEditRejection(value: unknown): value is EditRejection {
 	return typeof value === 'object' && value !== null && 'reason' in value && 'message' in value && !('edits' in value);

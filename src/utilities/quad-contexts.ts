@@ -6,6 +6,7 @@ import { IToken } from '@faubulous/mentor-rdf-parsers';
  * @param quadContexts The quad contexts of the document.
  * @param start The start of the range.
  * @param end The exclusive end of the range.
+ * @returns The statements inside the range.
  */
 export function statementsWithin<T extends { subjectToken: IToken; objectToken: IToken }>(quadContexts: readonly T[], start: number, end: number): T[] {
 	return quadContexts.filter(
@@ -18,6 +19,7 @@ export function statementsWithin<T extends { subjectToken: IToken; objectToken: 
  * @param quadContexts The quad contexts of the document.
  * @param start The start of the range.
  * @param end The exclusive end of the range.
+ * @returns The number of statements inside the range.
  */
 export function countStatementsWithin(quadContexts: readonly { subjectToken: IToken; objectToken: IToken }[], start: number, end: number): number {
 	return statementsWithin(quadContexts, start, end).length;

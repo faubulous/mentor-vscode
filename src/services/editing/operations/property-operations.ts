@@ -22,6 +22,10 @@ type MovePropertyOperation = Extract<EditOperation, { op: 'moveProperty' }>;
 
 /**
  * The offset of a group within the rewritten run of groups.
+ * @param texts The texts of the groups in their new order.
+ * @param separators The separators between the groups.
+ * @param index The index of the group.
+ * @returns The offset of the group in the joined text.
  */
 function _offsetOfGroup(texts: readonly string[], separators: readonly string[], index: number): number {
 	let offset = 0;
@@ -48,6 +52,11 @@ export class PropertyOperations {
 	 * nested block written on one line stays on one line; anything else puts the predicate on a line
 	 * of its own, indented like its neighbours. A predicate the subject already carries is handled by
 	 * the value operations, which append to its list instead.
+	 * @param subject The subject to add the predicate to.
+	 * @param predicateIri The IRI of the predicate.
+	 * @param written The values as they are to appear in the text.
+	 * @returns The plan inserting the statement.
+	 * @throws {EditRejectionError} If the subject has no block in the document.
 	 */
 	newProperty(subject: TermRef, predicateIri: string, written: string): EditPlan {
 		const context = this._context;
@@ -66,6 +75,8 @@ export class PropertyOperations {
 
 	/**
 	 * The text between the last statement of a block and a new predicate.
+	 * @param block The block the predicate goes into.
+	 * @returns The separator text.
 	 */
 	private _separator(block: SubjectBlock): string {
 		const context = this._context;
@@ -82,6 +93,9 @@ export class PropertyOperations {
 	 * last one. The groups of the block are rewritten in their new order while every separator between
 	 * them stays where it was, so a block written one predicate per line keeps its lines and its
 	 * indentation. No statement changes, so nothing is expected of the result beyond parsing.
+	 * @param operation The predicate to move and where to.
+	 * @returns The plan rewriting the groups, or an empty plan when nothing moves.
+	 * @throws {EditRejectionError} If the subject does not write the predicates in one block.
 	 */
 	moveProperty(operation: MovePropertyOperation): EditPlan {
 		const context = this._context;
@@ -115,6 +129,11 @@ export class PropertyOperations {
 	/**
 	 * The one block of the subject that writes both predicates, or the predicate alone when it is
 	 * moved to the end. A move stays within a block: it rearranges how one place is written.
+	 * @param subject The subject whose block to find.
+	 * @param predicate The predicate to move.
+	 * @param before The predicate to move it before, if any.
+	 * @returns The block.
+	 * @throws {EditRejectionError} If no block of the subject carries the predicates.
 	 */
 	private _blockHolding(subject: TermRef, predicate: string, before: string | undefined): SubjectBlock {
 		const context = this._context;
@@ -134,6 +153,9 @@ export class PropertyOperations {
 	 * Remove a predicate with all its values from every block of the subject. Neighbouring removed
 	 * groups are deleted as one range so their ranges never overlap; a block that loses all its
 	 * groups follows the rules for deleting a lone value.
+	 * @param operation The predicate to remove.
+	 * @returns The plan removing the groups.
+	 * @throws {EditRejectionError} If the subject does not carry the predicate, or the predicate holds the last statement about the subject.
 	 */
 	deleteProperty(operation: DeletePropertyOperation): EditPlan {
 		const context = this._context;
@@ -167,7 +189,8 @@ export class PropertyOperations {
 	 * Find the groups of a predicate across the blocks of a subject, in document order.
 	 * @param subject The subject whose groups to find.
 	 * @param predicate The predicate of the groups.
-	 * @throws When the subject does not carry the predicate.
+	 * @returns The groups with the blocks holding them.
+	 * @throws {EditRejectionError} If the subject does not carry the predicate.
 	 */
 	findPredicateGroups(subject: TermRef, predicate: string): { block: SubjectBlock; group: PredicateGroup }[] {
 		const context = this._context;

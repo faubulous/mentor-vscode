@@ -55,6 +55,9 @@ export class NamespaceOperations {
 	/**
 	 * Declare a namespace prefix, written in the directive style the document already uses and, when
 	 * the settings ask for it, in alphabetical order among the existing declarations.
+	 * @param operation The namespace to declare.
+	 * @returns The plan inserting the declaration, or an empty plan when it is declared already.
+	 * @throws {EditRejectionError} If the syntax has no declarations, the prefix or IRI is not valid, or the prefix is declared for another namespace.
 	 */
 	addNamespace(operation: AddNamespaceOperation): EditPlan {
 		const context = this._context;
@@ -101,6 +104,7 @@ export class NamespaceOperations {
 
 	/**
 	 * Collect the prefix declarations of the document in order.
+	 * @returns The declarations in document order.
 	 */
 	private _declarations(): PrefixDeclaration[] {
 		const context = this._context;
@@ -134,6 +138,10 @@ export class NamespaceOperations {
 	/**
 	 * Write a declaration in the style of the document: `@prefix` when the document uses only that,
 	 * otherwise `PREFIX` in the case of the last declaration, which is also Mentor's default.
+	 * @param declarations The declarations the document already has.
+	 * @param prefix The prefix to declare.
+	 * @param iri The namespace IRI.
+	 * @returns The declaration text without a line break.
 	 */
 	private _declarationText(declarations: PrefixDeclaration[], prefix: string, iri: string): string {
 		const turtleStyle = declarations.length > 0 && declarations.every(declaration => declaration.keyword.tokenType.name === RdfToken.TTL_PREFIX.name);
@@ -150,6 +158,7 @@ export class NamespaceOperations {
 
 	/**
 	 * Prefix declarations exist only in the syntaxes that abbreviate.
+	 * @throws {EditRejectionError} If the syntax has no prefix declarations.
 	 */
 	private _requireDirectives(): void {
 		const context = this._context;

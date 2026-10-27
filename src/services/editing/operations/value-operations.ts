@@ -28,6 +28,11 @@ function _runDeletionRange(block: SubjectBlock, from: number, to: number): { sta
 
 /**
  * Build the expectation that a value of a block changes in number.
+ * @param block The block holding the value.
+ * @param group The group holding the value.
+ * @param span The span of the value.
+ * @param delta How its number changes.
+ * @returns The expectation.
  */
 function _expectation(block: SubjectBlock, group: PredicateGroup, span: ObjectSpan, delta: number): QuadExpectation {
 	return {
@@ -53,6 +58,8 @@ export class ValueOperations {
 	 * only value goes as well. The last statement of a subject is not removed silently: the webview
 	 * has to ask for the subject to be deleted.
 	 * @param location The value to remove.
+	 * @returns The plan removing the value.
+	 * @throws {EditRejectionError} If the value is not found, or is the last statement about the subject.
 	 */
 	deleteValue(location: ValueLocation): EditPlan {
 		const context = this._context;
@@ -79,6 +86,8 @@ export class ValueOperations {
 	 * @param subject The subject the value belongs to.
 	 * @param predicate The predicate the value belongs to.
 	 * @param written The value as it is to appear in the text.
+	 * @returns The plan inserting the value.
+	 * @throws {EditRejectionError} If the subject has no block in the document.
 	 */
 	appendWrittenValue(subject: TermRef, predicate: string, written: string): EditPlan {
 		const context = this._context;
@@ -104,6 +113,9 @@ export class ValueOperations {
 
 	/**
 	 * Find the last group of a predicate across the blocks of a subject.
+	 * @param subject The subject whose groups to search.
+	 * @param predicate The predicate of the group.
+	 * @returns The group with its block, or `undefined` when the subject does not carry the predicate.
 	 */
 	private _findLastGroup(subject: TermRef, predicate: string): { block: SubjectBlock; group: PredicateGroup } | undefined {
 		const context = this._context;
@@ -124,6 +136,8 @@ export class ValueOperations {
 	/**
 	 * The range removing one value of several: the value with the comma that joins it to its
 	 * neighbour, so the remaining values stay a well formed list.
+	 * @param resolved The value to remove.
+	 * @returns The range.
 	 */
 	private _valueDeletionRange(resolved: ResolvedValue): { start: number; end: number } {
 		const context = this._context;
@@ -144,6 +158,10 @@ export class ValueOperations {
 	/**
 	 * The range removing a predicate with its only value, including the semicolon that joins it to
 	 * the neighbouring predicate.
+	 * @param block The block holding the group.
+	 * @param group The group to remove.
+	 * @returns The range.
+	 * @throws {EditRejectionError} If the group holds the last statement about the subject.
 	 */
 	private _groupDeletionRange(block: SubjectBlock, group: PredicateGroup): { start: number; end: number } {
 		const context = this._context;
@@ -172,6 +190,7 @@ export class ValueOperations {
 	 * that the ranges never overlap and the separators between them go with them.
 	 * @param block The block the groups belong to.
 	 * @param removed The groups to remove.
+	 * @returns The ranges in document order.
 	 */
 	groupRunDeletionRanges(block: SubjectBlock, removed: readonly PredicateGroup[]): { start: number; end: number }[] {
 		if (removed.length === block.groups.length) {
@@ -203,6 +222,10 @@ export class ValueOperations {
 	 * The range removing the only predicate of a block. Inside a blank node the brackets stay, so
 	 * the node survives as `[ ]`; a top level subject with another block loses this one; otherwise
 	 * the deletion would remove the subject and is refused.
+	 * @param block The block holding the group.
+	 * @param group The only group of the block.
+	 * @returns The range.
+	 * @throws {EditRejectionError} If the deletion would remove the subject.
 	 */
 	private _onlyGroupDeletionRange(block: SubjectBlock, group: PredicateGroup): { start: number; end: number } {
 		const context = this._context;
@@ -223,6 +246,7 @@ export class ValueOperations {
 	/**
 	 * The range removing a whole top level block including its terminator.
 	 * @param block The block to remove.
+	 * @returns The range.
 	 */
 	blockDeletionRange(block: SubjectBlock): { start: number; end: number } {
 		const end = block.terminator ? tokenEnd(block.terminator) : block.end;

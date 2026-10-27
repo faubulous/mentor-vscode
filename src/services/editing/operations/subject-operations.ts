@@ -95,6 +95,9 @@ export function absorbBlankLine(text: string, range: { start: number; end: numbe
 
 /**
  * The leading whitespace of the line holding an offset.
+ * @param text The document text.
+ * @param offset An offset on the line.
+ * @returns The indentation.
  */
 function _lineIndentOf(text: string, offset: number): string {
 	const lineStart = text.lastIndexOf('\n', offset - 1) + 1;
@@ -104,6 +107,10 @@ function _lineIndentOf(text: string, offset: number): string {
 
 /**
  * The expectations a rename produces for one statement.
+ * @param quad The statement to inspect.
+ * @param oldIri The IRI being renamed.
+ * @param newIri The new IRI.
+ * @returns The expectations, or none when the statement does not mention the IRI.
  */
 function _renameExpectations(quad: SynthesisContext['model']['quadContexts'][number], oldIri: string, newIri: string): QuadExpectation[] {
 	const expectations: QuadExpectation[] = [];
@@ -138,6 +145,9 @@ export class SubjectOperations {
 	/**
 	 * Describe a new resource at the end of the document, or at the end of a graph block in TriG,
 	 * with one blank line before it. A resource needs at least one statement to exist in the text.
+	 * @param operation The resource to describe.
+	 * @returns The plan inserting the block.
+	 * @throws {EditRejectionError} If the resource is described already, or has no statement.
 	 */
 	addSubject(operation: AddSubjectOperation): EditPlan {
 		const context = this._context;
@@ -171,6 +181,9 @@ export class SubjectOperations {
 	 * Remove every statement about a resource. A named resource loses all its blocks, with the
 	 * comments that introduce them; an anonymous node written inline goes with the value that holds
 	 * it; a collection head cannot be removed on its own.
+	 * @param operation The resource to remove.
+	 * @returns The plan removing the statements.
+	 * @throws {EditRejectionError} If the resource is a collection or a list item, or has no block in the document.
 	 */
 	deleteSubject(operation: DeleteSubjectOperation): EditPlan {
 		const context = this._context;
@@ -211,6 +224,9 @@ export class SubjectOperations {
 	/**
 	 * Give a resource a new IRI wherever the document mentions it, in subject and object position
 	 * alike. Prefix and base declarations are left alone.
+	 * @param operation The resource and its new IRI.
+	 * @returns The plan rewriting every mention.
+	 * @throws {EditRejectionError} If the resource has no IRI, or the new IRI is described already.
 	 */
 	renameSubject(operation: RenameSubjectOperation): EditPlan {
 		const context = this._context;
@@ -251,6 +267,9 @@ export class SubjectOperations {
 	/**
 	 * Add an inline blank node as a value, written with its first statements so it exists as a
 	 * resource of its own that the form can open right away.
+	 * @param operation The value to add the node under.
+	 * @returns The plan inserting the node.
+	 * @throws {EditRejectionError} If the node has no statement, or the syntax has no inline blank nodes.
 	 */
 	addNestedNode(operation: AddNestedNodeOperation): EditPlan {
 		const context = this._context;
@@ -280,6 +299,10 @@ export class SubjectOperations {
 
 	/**
 	 * Write the statements of a new subject in the style of the document.
+	 * @param subject The subject of the block.
+	 * @param initial The statements of the block.
+	 * @param graph The graph the block goes into, if any.
+	 * @returns The text and the offset of the subject within it.
 	 */
 	private _writeBlock(subject: TermRef, initial: AddSubjectOperation['initial'], graph?: string): { text: string; subjectOffset: number } {
 		const context = this._context;
@@ -306,6 +329,7 @@ export class SubjectOperations {
 	/**
 	 * Where a new block goes at the end of the document: after the last content, separated by one
 	 * blank line, replacing whatever trailing whitespace the file has.
+	 * @returns The insertion point.
 	 */
 	documentEndInsertion(): BlockInsertion {
 		const context = this._context;
@@ -328,7 +352,8 @@ export class SubjectOperations {
 	 * about that resource, a blank line apart, inside whatever graph that block is in. A block that
 	 * omits its period receives one, because a block now follows it.
 	 * @param after The resource whose last block the new one follows.
-	 * @throws When the resource is not written in the document.
+	 * @returns The insertion point.
+	 * @throws {EditRejectionError} If the resource is not written in the document.
 	 */
 	afterBlockInsertion(after: TermRef): BlockInsertion {
 		const context = this._context;
@@ -356,6 +381,9 @@ export class SubjectOperations {
 	 * Where a new block goes inside a TriG graph block: before its closing brace, indented like the
 	 * statements already in it. A last statement that omits its period receives one, because a
 	 * statement now follows it.
+	 * @param graph The IRI of the graph.
+	 * @returns The insertion point.
+	 * @throws {EditRejectionError} If the graph is not written in the document.
 	 */
 	private _graphInsertion(graph: string): BlockInsertion {
 		const context = this._context;
@@ -383,6 +411,8 @@ export class SubjectOperations {
 
 	/**
 	 * Find an empty graph block by the label written before its opening brace.
+	 * @param graph The IRI of the graph.
+	 * @returns The graph block, or `undefined` when no block is labelled so.
 	 */
 	private _graphBlockByLabel(graph: string): { open: { startOffset: number }; close: { startOffset: number } } | undefined {
 		const context = this._context;
@@ -400,6 +430,9 @@ export class SubjectOperations {
 	/**
 	 * The location of the value holding an anonymous blank node. A node written as an item of a
 	 * list is not held by a value of its own and cannot be removed this way.
+	 * @param id The identifier of the blank node.
+	 * @returns The location of the value.
+	 * @throws {EditRejectionError} If the node is a list item or is not held by a value.
 	 */
 	private _parentLocation(id: string): ValueLocation {
 		const context = this._context;
@@ -456,6 +489,8 @@ export class SubjectOperations {
 	/**
 	 * Resolve the IRI a token denotes, or `undefined` for tokens that are not IRIs or that belong
 	 * to a prefix or base declaration.
+	 * @param index The index of the token.
+	 * @returns The IRI, or `undefined`.
 	 */
 	private _resolveIri(index: number): string | undefined {
 		const context = this._context;
@@ -482,6 +517,7 @@ export class SubjectOperations {
 
 	/**
 	 * Indicate whether the document is TriG.
+	 * @returns `true` for TriG.
 	 */
 	private _isTriG(): boolean {
 		const context = this._context;
