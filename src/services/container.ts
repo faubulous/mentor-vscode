@@ -1,10 +1,9 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
-import { Store, OwlReasoner, GraphUriGenerator, VocabularyRepository } from '@faubulous/mentor-rdf';
+import { Store, OwlReasoner, VocabularyRepository } from '@faubulous/mentor-rdf';
 import { getHeapUsedMb } from '@src/utilities/runtime';
-import { Quad_Graph } from '@rdfjs/types';
 import { ServiceToken } from './tokens';
-import { InferenceUri } from '../providers/inference-uri';
+import { MentorGraphUriGenerator } from './mentor-graph-uri-generator';
 import { DocumentFactory } from './document/document-factory';
 import { WorkspaceIndexerService } from './core/workspace-indexer-service';
 import { WorkspaceFileService } from './core/workspace-file-service';
@@ -41,16 +40,6 @@ import { WorkspaceRenameService } from './core/workspace-rename-service';
 import { WorkspaceFileOperationService } from '@src/services/core/workspace-file-operation-service';
 import { SettingsMigrationService } from './core/settings-migration-service';
 import { DocumentQueryTemplateMigration, IndexExcludeFilesMigration, LegacyTemplateFormatMigration } from './core/migrations/';
-
-/**
- * Graph URI generator that creates inference URIs for RDF graphs.
- */
-class MentorGraphUriGenerator implements GraphUriGenerator {
-	getGraphUri(uri: string | Quad_Graph): string {
-		const value = typeof uri === 'string' ? uri : uri.value;
-		return InferenceUri.toInferenceUri(value);
-	}
-}
 
 /**
  * Configures the service container with all necessary services and dependencies for the extension.
