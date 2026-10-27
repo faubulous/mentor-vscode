@@ -1,12 +1,12 @@
 /**
- * The view state persisted across reloads of the webview.
+ * Whether the open definitions can be edited; they are only read until Edit is chosen.
  */
-export interface PersistedViewState {
-	/**
-	 * The shape of the state, raised when it changes.
-	 */
-	version: 1;
+export type ViewMode = 'view' | 'edit';
 
+/**
+ * The fields of the view state that can change.
+ */
+export interface ViewStateChanges {
 	/**
 	 * The document the state belongs to.
 	 */
@@ -15,7 +15,7 @@ export interface PersistedViewState {
 	/**
 	 * The cards opened persistently, by the chevron. Transient opens are not remembered.
 	 */
-	openIds: string[];
+	openIds?: readonly string[];
 
 	/**
 	 * Whether the terms of other vocabularies the document only declares are hidden. A
@@ -24,37 +24,88 @@ export interface PersistedViewState {
 	hideExternalDeclarations?: boolean;
 
 	/**
-	 * Whether the open definitions can be edited; they are only read until Edit is chosen.
+	 * Whether the open definitions can be edited.
 	 */
-	mode?: 'view' | 'edit';
+	mode?: ViewMode;
 }
 
 /**
- * The state of a webview opened for the first time.
+ * The view state persisted across reloads of the webview. Immutable: a change returns the next
+ * state. A stored state written by another version of the editor, or half-way through an
+ * upgrade, may lack fields or hold them in another form; reading it never breaks the form.
  */
-export const INITIAL_VIEW_STATE: PersistedViewState = { version: 1, openIds: [] };
+export class PersistedViewState {
+	/**
+	 * The shape of the stored state, raised when it changes.
+	 */
+	static readonly VERSION = 1;
 
-/**
- * Read a stored view state of any shape. A state written by another version of the editor, or
- * half-way through an upgrade, may lack fields or hold them in another form; neither must break
- * the form.
- * @param stored What the webview host returned, which may be anything.
- * @returns The state, with every field the stored one lacks at its initial value.
- */
-export function readViewState(stored: unknown): PersistedViewState {
-	if (!stored || typeof stored !== 'object') {
-		return INITIAL_VIEW_STATE;
+	/**
+	 * The state of a webview opened for the first time.
+	 */
+	static readonly INITIAL = new PersistedViewState();
+
+	/**
+	 * Create a state.
+	 * @param openIds The cards opened persistently.
+	 * @param documentUri The document the state belongs to.
+	 * @param hideExternalDeclarations Whether external declarations are hidden.
+	 * @param mode Whether the open definitions can be edited.
+	 */
+	constructor(
+		readonly openIds: readonly string[] = [],
+		readonly documentUri?: string,
+		readonly hideExternalDeclarations?: boolean,
+		readonly mode?: ViewMode
+	) { }
+
+	/**
+	 * Read a stored view state of any shape.
+	 * @param stored What the webview host returned, which may be anything.
+	 * @returns The state, with every field the stored one lacks at its initial value.
+	 */
+	static read(stored: unknown): PersistedViewState {
+		if (!stored || typeof stored !== 'object') {
+			return PersistedViewState.INITIAL;
+		}
+
+		const state = stored as Record<string, unknown>;
+
+		return new PersistedViewState(
+			_stringArray(state.openIds) ?? [],
+			typeof state.documentUri === 'string' ? state.documentUri : undefined,
+			state.hideExternalDeclarations === true ? true : undefined,
+			state.mode === 'edit' ? 'edit' : undefined
+		);
 	}
 
-	const state = stored as Record<string, unknown>;
+	/**
+	 * Change some fields.
+	 * @param changes The fields and their new values.
+	 * @returns The next state.
+	 */
+	with(changes: ViewStateChanges): PersistedViewState {
+		return new PersistedViewState(
+			changes.openIds ?? this.openIds,
+			'documentUri' in changes ? changes.documentUri : this.documentUri,
+			'hideExternalDeclarations' in changes ? changes.hideExternalDeclarations : this.hideExternalDeclarations,
+			'mode' in changes ? changes.mode : this.mode
+		);
+	}
 
-	return {
-		version: 1,
-		documentUri: typeof state.documentUri === 'string' ? state.documentUri : undefined,
-		openIds: _stringArray(state.openIds) ?? [],
-		hideExternalDeclarations: state.hideExternalDeclarations === true ? true : undefined,
-		mode: state.mode === 'edit' ? 'edit' : undefined
-	};
+	/**
+	 * The plain form the webview host stores.
+	 * @returns The fields with the version of their shape.
+	 */
+	toJSON(): Record<string, unknown> {
+		return {
+			version: PersistedViewState.VERSION,
+			documentUri: this.documentUri,
+			openIds: [...this.openIds],
+			hideExternalDeclarations: this.hideExternalDeclarations,
+			mode: this.mode
+		};
+	}
 }
 
 /**

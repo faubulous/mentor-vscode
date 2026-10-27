@@ -1,11 +1,16 @@
 import { EditRejectionReason } from '@src/services/editing/edit-operation';
-import { CellKey } from '../services/cell-key';
-import { LineCaret } from './line-caret';
+import { ResourceId } from '../form-editor-model';
+import { CellKey } from './cell-key';
 
 /**
  * Why an edit of a cell failed, kept until the user dismisses it.
  */
 export interface CellError {
+	/**
+	 * The cell the error is shown for.
+	 */
+	cellKey: CellKey;
+
 	/**
 	 * The explanation shown to the user.
 	 */
@@ -16,16 +21,6 @@ export interface CellError {
 	 */
 	reason?: EditRejectionReason;
 }
-
-/**
- * An error together with the cell it is shown for.
- */
-export type CellErrorAt = CellError & {
-	/**
-	 * The cell the error belongs to.
-	 */
-	cellKey: CellKey;
-};
 
 /**
  * The cell being edited and how the editor was opened.
@@ -48,133 +43,131 @@ export interface EditingCell {
 }
 
 /**
- * The cell to focus once it exists, and where to put the caret when the cell is a text line.
- */
-export interface FocusRequest {
-	/**
-	 * The cell.
-	 */
-	cellKey: CellKey;
-
-	/**
-	 * Where the caret goes in a statement line.
-	 */
-	caret?: LineCaret;
-}
-
-/**
  * The transient state of editing: one open editor, one focus to restore, and the errors shown
- * under rows.
+ * under rows. Immutable: every transition returns the next state, or the state itself when
+ * nothing changes, so React can tell the two apart.
  */
-export interface EditingState {
+export class EditingState {
 	/**
-	 * The cell being edited, if any.
+	 * The state before anything is edited.
 	 */
-	editing?: EditingCell;
-
-	/**
-	 * The cell to focus once it exists, after an edit re-rendered the rows.
-	 */
-	focusRequest?: FocusRequest;
+	static readonly INITIAL = new EditingState();
 
 	/**
-	 * The errors shown, by cell.
+	 * Create a state.
+	 * @param editing The cell being edited, if any.
+	 * @param focusRequest The cell to focus once it exists, after an edit re-rendered the rows.
+	 * @param errors The errors shown, by the text form of their cell key.
 	 */
-	errors: Record<CellKey, CellError>;
-}
+	constructor(
+		readonly editing?: EditingCell,
+		readonly focusRequest?: CellKey,
+		readonly errors: ReadonlyMap<string, CellError> = new Map()
+	) { }
 
-/**
- * The transitions of the editing state.
- */
-export type EditingStateAction =
-	| { type: 'startEditing'; cell: EditingCell }
-	| { type: 'stopEditing'; cellKey?: CellKey }
-	| { type: 'requestFocus'; cellKey: CellKey; caret?: LineCaret }
-	| { type: 'focusFulfilled' }
-	| { type: 'setError'; cellKey: CellKey; message: string; reason?: EditRejectionReason }
-	| { type: 'clearError'; cellKey: CellKey };
-
-/**
- * The state before anything is edited.
- */
-export const INITIAL_EDITING_STATE: EditingState = { errors: {} };
-
-/**
- * Apply a transition to the editing state.
- * @param state The current state.
- * @param action The transition.
- * @returns The next state, the same object when nothing changed.
- */
-export function editingStateReducer(state: EditingState, action: EditingStateAction): EditingState {
-	switch (action.type) {
-		case 'startEditing':
-			return { ...state, editing: action.cell };
-		case 'stopEditing':
-			// A two step flow opens the next editor before the previous one reports it is done, so
-			// closing is scoped to the cell that asks for it.
-			if (!state.editing || (action.cellKey !== undefined && state.editing.cellKey !== action.cellKey)) {
-				return state;
-			}
-
-			return { ...state, editing: undefined };
-		case 'requestFocus':
-			return { ...state, focusRequest: { cellKey: action.cellKey, caret: action.caret } };
-		case 'focusFulfilled':
-			return state.focusRequest ? { ...state, focusRequest: undefined } : state;
-		case 'setError':
-			return { ...state, errors: { ...state.errors, [action.cellKey]: { message: action.message, reason: action.reason } } };
-		case 'clearError':
-			return _withoutError(state, action.cellKey);
-		default:
-			return state;
+	/**
+	 * Indicate whether a cell is being edited.
+	 * @param cellKey The cell.
+	 * @returns `true` when the cell's editor is open.
+	 */
+	isEditing(cellKey: CellKey): boolean {
+		return cellKey.equals(this.editing?.cellKey);
 	}
-}
 
-/**
- * Find the error shown under a property row, whichever of its cells it belongs to.
- * @param errors The errors by cell key.
- * @param resourceId The resource of the row.
- * @param propertyIndex The row.
- * @returns The error with its cell key, or `undefined` when the row has no error.
- */
-export function errorForRow(errors: Record<CellKey, CellError>, resourceId: string, propertyIndex: number): CellErrorAt | undefined {
-	const prefixes = [`${resourceId}|value|${propertyIndex}|`, `${resourceId}|predicate|${propertyIndex}|`, `${resourceId}|line|${propertyIndex}|`];
+	/**
+	 * Open the editor of a cell, closing any other.
+	 * @param cell The cell and how its editor opens.
+	 * @returns The next state.
+	 */
+	startEditing(cell: EditingCell): EditingState {
+		return new EditingState(cell, this.focusRequest, this.errors);
+	}
 
-	for (const [cellKey, error] of Object.entries(errors)) {
-		if (prefixes.some(prefix => cellKey.startsWith(prefix))) {
-			return { cellKey, ...error };
+	/**
+	 * Close the open editor. A two step flow opens the next editor before the previous one reports
+	 * it is done, so closing is scoped to the cell that asks for it.
+	 * @param cellKey When given, the editor only closes if this cell is the one being edited.
+	 * @returns The next state, the state itself when no editor closes.
+	 */
+	stopEditing(cellKey?: CellKey): EditingState {
+		if (!this.editing || (cellKey !== undefined && !this.isEditing(cellKey))) {
+			return this;
 		}
+
+		return new EditingState(undefined, this.focusRequest, this.errors);
 	}
 
-	return undefined;
-}
-
-/**
- * Find the error shown for a cell outside the property rows, such as the subject cell.
- * @param errors The errors by cell key.
- * @param cellKey The cell.
- * @returns The error with its cell key, or `undefined` when the cell has no error.
- */
-export function errorForCell(errors: Record<CellKey, CellError>, cellKey: CellKey): CellErrorAt | undefined {
-	const error = errors[cellKey];
-
-	return error ? { cellKey, ...error } : undefined;
-}
-
-/**
- * Remove the error of a cell.
- * @param state The current state.
- * @param cellKey The cell.
- * @returns The next state, the same object when the cell had no error.
- */
-function _withoutError(state: EditingState, cellKey: CellKey): EditingState {
-	if (!(cellKey in state.errors)) {
-		return state;
+	/**
+	 * Ask for the focus to move to a cell once it exists.
+	 * @param cellKey The cell.
+	 * @returns The next state.
+	 */
+	requestFocus(cellKey: CellKey): EditingState {
+		return new EditingState(this.editing, cellKey, this.errors);
 	}
 
-	const errors = { ...state.errors };
+	/**
+	 * Note that the requested focus was given.
+	 * @returns The next state, the state itself when no focus was requested.
+	 */
+	focusFulfilled(): EditingState {
+		return this.focusRequest ? new EditingState(this.editing, undefined, this.errors) : this;
+	}
 
-	delete errors[cellKey];
+	/**
+	 * Show an error for a cell.
+	 * @param cellKey The cell.
+	 * @param message The explanation shown to the user.
+	 * @param reason Why the edit was not applied, when the host said.
+	 * @returns The next state.
+	 */
+	withError(cellKey: CellKey, message: string, reason?: EditRejectionReason): EditingState {
+		const errors = new Map(this.errors);
 
-	return { ...state, errors };
+		errors.set(cellKey.toString(), { cellKey, message, reason });
+
+		return new EditingState(this.editing, this.focusRequest, errors);
+	}
+
+	/**
+	 * Remove the error shown for a cell.
+	 * @param cellKey The cell.
+	 * @returns The next state, the state itself when the cell had no error.
+	 */
+	withoutError(cellKey: CellKey): EditingState {
+		if (!this.errors.has(cellKey.toString())) {
+			return this;
+		}
+
+		const errors = new Map(this.errors);
+
+		errors.delete(cellKey.toString());
+
+		return new EditingState(this.editing, this.focusRequest, errors);
+	}
+
+	/**
+	 * Find the error shown under a property row, whichever of its cells it belongs to.
+	 * @param resourceId The resource of the row.
+	 * @param propertyIndex The row.
+	 * @returns The error, or `undefined` when the row has no error.
+	 */
+	errorForRow(resourceId: ResourceId, propertyIndex: number): CellError | undefined {
+		for (const error of this.errors.values()) {
+			if (error.cellKey.isInRow(resourceId, propertyIndex)) {
+				return error;
+			}
+		}
+
+		return undefined;
+	}
+
+	/**
+	 * Find the error shown for a cell outside the property rows, such as the subject cell.
+	 * @param cellKey The cell.
+	 * @returns The error, or `undefined` when the cell has no error.
+	 */
+	errorForCell(cellKey: CellKey): CellError | undefined {
+		return this.errors.get(cellKey.toString());
+	}
 }

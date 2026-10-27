@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ResourceDetail } from '../form-editor-model';
-import { MessagingDataProvider } from './messaging-data-provider';
+import { ResourceDataService } from './resource-data-service';
 
 /**
  * Create a resource detail with no properties.
@@ -10,18 +10,18 @@ function detail(id: string): ResourceDetail {
 }
 
 /**
- * Create a provider at document version 1, recording what it sends.
+ * Create a service at document version 1, recording what it sends.
  */
-function createProvider(): { provider: MessagingDataProvider; send: ReturnType<typeof vi.fn> } {
+function createService(): { service: ResourceDataService; send: ReturnType<typeof vi.fn> } {
 	const send = vi.fn();
-	const provider = new MessagingDataProvider(send);
+	const service = new ResourceDataService(send);
 
-	provider.setVersion(1);
+	service.setVersion(1);
 
-	return { provider, send };
+	return { service, send };
 }
 
-describe('MessagingDataProvider', () => {
+describe('ResourceDataService', () => {
 	beforeEach(() => {
 		vi.stubGlobal('requestAnimationFrame', undefined);
 		vi.useFakeTimers();
@@ -33,11 +33,11 @@ describe('MessagingDataProvider', () => {
 	});
 
 	it('coalesces concurrent requests into one message', () => {
-		const { provider, send } = createProvider();
+		const { service, send } = createService();
 
-		provider.request(['a']);
-		provider.request(['b']);
-		provider.request(['c']);
+		service.request(['a']);
+		service.request(['b']);
+		service.request(['c']);
 		vi.runAllTimers();
 
 		expect(send).toHaveBeenCalledTimes(1);
@@ -45,79 +45,79 @@ describe('MessagingDataProvider', () => {
 	});
 
 	it('does not request the same resource twice', () => {
-		const { provider, send } = createProvider();
+		const { service, send } = createService();
 
-		provider.request(['a']);
+		service.request(['a']);
 		vi.runAllTimers();
-		provider.request(['a']);
+		service.request(['a']);
 		vi.runAllTimers();
 
 		expect(send).toHaveBeenCalledTimes(1);
 	});
 
 	it('serves accepted detail and notifies subscribers', () => {
-		const { provider } = createProvider();
+		const { service } = createService();
 		const listener = vi.fn();
 
-		provider.subscribe(listener);
-		provider.accept(1, [detail('a')]);
+		service.subscribe(listener);
+		service.accept(1, [detail('a')]);
 
-		expect(provider.get('a')).toEqual(detail('a'));
+		expect(service.get('a')).toEqual(detail('a'));
 		expect(listener).toHaveBeenCalled();
 	});
 
 	it('ignores detail delivered for a superseded version', () => {
-		const { provider } = createProvider();
+		const { service } = createService();
 
-		provider.setVersion(2);
-		provider.accept(1, [detail('a')]);
+		service.setVersion(2);
+		service.accept(1, [detail('a')]);
 
-		expect(provider.get('a')).toBeUndefined();
+		expect(service.get('a')).toBeUndefined();
 	});
 
 	it('keeps the detail of the previous version as stale until the new one arrives', () => {
-		const { provider } = createProvider();
+		const { service } = createService();
 
-		provider.accept(1, [detail('a')]);
-		provider.setVersion(2);
+		service.accept(1, [detail('a')]);
+		service.setVersion(2);
 
-		expect(provider.get('a')).toBeUndefined();
-		expect(provider.getStale('a')).toEqual(detail('a'));
+		expect(service.get('a')).toBeUndefined();
+		expect(service.getStale('a')).toEqual(detail('a'));
 
-		provider.accept(2, [detail('a')]);
+		service.accept(2, [detail('a')]);
 
-		expect(provider.get('a')).toEqual(detail('a'));
-		expect(provider.getStale('a')).toBeUndefined();
+		expect(service.get('a')).toEqual(detail('a'));
+		expect(service.getStale('a')).toBeUndefined();
 	});
 
 	it('allows a resource to be requested again after a version change', () => {
-		const { provider, send } = createProvider();
+		const { service, send } = createService();
 
-		provider.request(['a']);
+		service.request(['a']);
 		vi.runAllTimers();
-		provider.setVersion(2);
-		provider.request(['a']);
+		service.setVersion(2);
+		service.request(['a']);
 		vi.runAllTimers();
 
 		expect(send).toHaveBeenCalledTimes(2);
 	});
 
 	it('stops tracking resources the host could not resolve', () => {
-		const { provider, send } = createProvider();
+		const { service, send } = createService();
 
-		provider.request(['gone']);
+		service.request(['gone']);
 		vi.runAllTimers();
-		provider.accept(1, [], ['gone']);
-		provider.request(['gone']);
+		service.accept(1, [], ['gone']);
+		service.request(['gone']);
 		vi.runAllTimers();
 
 		expect(send).toHaveBeenCalledTimes(2);
 	});
 
 	it('splits a large request into batches', () => {
-		const { provider, send } = createProvider();
+		const { service, send } = createService();
 
-		provider.request(Array.from({ length: 150 }, (_, index) => `r${index}`));
+		service.request(Array.from({ length: 150 }, (_, index) => `r${index}`));
 		vi.runAllTimers();
 
 		expect(send).toHaveBeenCalledTimes(2);
@@ -126,12 +126,12 @@ describe('MessagingDataProvider', () => {
 	});
 
 	it('removes subscribers', () => {
-		const { provider } = createProvider();
+		const { service } = createService();
 		const listener = vi.fn();
-		const unsubscribe = provider.subscribe(listener);
+		const unsubscribe = service.subscribe(listener);
 
 		unsubscribe();
-		provider.accept(1, [detail('a')]);
+		service.accept(1, [detail('a')]);
 
 		expect(listener).not.toHaveBeenCalled();
 	});

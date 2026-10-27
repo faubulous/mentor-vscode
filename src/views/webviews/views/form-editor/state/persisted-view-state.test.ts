@@ -1,28 +1,30 @@
 import { describe, expect, it } from 'vitest';
-import { INITIAL_VIEW_STATE, readViewState } from './persisted-view-state';
+import { PersistedViewState } from './persisted-view-state';
 
-describe('readViewState', () => {
+describe('PersistedViewState', () => {
 	it('starts from the initial state when nothing was stored', () => {
-		expect(readViewState(undefined)).toEqual(INITIAL_VIEW_STATE);
-		expect(readViewState('nonsense')).toEqual(INITIAL_VIEW_STATE);
+		expect(PersistedViewState.read(undefined)).toBe(PersistedViewState.INITIAL);
+		expect(PersistedViewState.read('nonsense')).toBe(PersistedViewState.INITIAL);
 	});
 
 	it('repairs a state that lacks fields or holds them in another form', () => {
-		expect(readViewState({ version: 1, font: 'mono' })).toEqual({ version: 1, documentUri: undefined, openIds: [], hideExternalDeclarations: undefined, mode: undefined });
-		expect(readViewState({ version: 1, openIds: ['i:a', 3] }).openIds).toEqual([]);
+		expect(PersistedViewState.read({ version: 1, font: 'mono' })).toEqual(new PersistedViewState());
+		expect(PersistedViewState.read({ version: 1, openIds: ['i:a', 3] }).openIds).toEqual([]);
+		expect(PersistedViewState.read({ version: 1, openIds: [], hideExternalDeclarations: 'yes' }).hideExternalDeclarations).toBeUndefined();
+		expect(PersistedViewState.read({ version: 1, openIds: [], mode: 'write' }).mode).toBeUndefined();
 	});
 
-	it('reads whether external declarations are hidden', () => {
-		expect(readViewState({ version: 1, openIds: [], hideExternalDeclarations: true }).hideExternalDeclarations).toBe(true);
-		expect(readViewState({ version: 1, openIds: [], hideExternalDeclarations: 'yes' }).hideExternalDeclarations).toBeUndefined();
+	it('round trips through the stored form', () => {
+		const state = new PersistedViewState(['x'], 'u', true, 'edit');
+
+		expect(state.toJSON()).toEqual({ version: 1, documentUri: 'u', openIds: ['x'], hideExternalDeclarations: true, mode: 'edit' });
+		expect(PersistedViewState.read(JSON.parse(JSON.stringify(state)))).toEqual(state);
 	});
 
-	it('keeps a current state as it is', () => {
-		expect(readViewState({ version: 1, documentUri: 'u', openIds: ['x'] })).toMatchObject({ version: 1, documentUri: 'u', openIds: ['x'] });
-	});
+	it('changes only the fields named', () => {
+		const state = new PersistedViewState(['x'], 'u', true, 'edit');
 
-	it('reads the mode, editing only when chosen', () => {
-		expect(readViewState({ version: 1, openIds: [], mode: 'edit' }).mode).toBe('edit');
-		expect(readViewState({ version: 1, openIds: [], mode: 'write' }).mode).toBeUndefined();
+		expect(state.with({ openIds: ['y'] })).toEqual(new PersistedViewState(['y'], 'u', true, 'edit'));
+		expect(state.with({ mode: undefined, hideExternalDeclarations: undefined })).toEqual(new PersistedViewState(['x'], 'u'));
 	});
 });

@@ -1,6 +1,5 @@
 import { useEffect, useMemo } from 'react';
-import { undoCommandOf } from '../services/native-undo';
-import { UndoRouter } from '../services/undo-router';
+import { UndoRoutingService } from '../services/undo-routing-service';
 
 /**
  * Route Ctrl+Z and its redo between the field being typed in and the document, following the
@@ -11,7 +10,7 @@ import { UndoRouter } from '../services/undo-router';
  * It tells whether the field took the key.
  */
 export function useUndoRouting(root: HTMLElement | null): (event: React.KeyboardEvent) => boolean {
-	const router = useMemo(() => new UndoRouter(), []);
+	const router = useMemo(() => new UndoRoutingService(), []);
 
 	useEffect(() => {
 		if (!root) {
@@ -40,7 +39,7 @@ export function useUndoRouting(root: HTMLElement | null): (event: React.Keyboard
 	}, [root, router]);
 
 	return useMemo(() => (event: React.KeyboardEvent) => {
-		const command = undoCommandOf(event);
+		const command = UndoRoutingService.commandOf(event);
 		const field = event.target;
 		const value = _valueOf(field);
 

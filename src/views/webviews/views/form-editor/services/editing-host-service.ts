@@ -1,6 +1,6 @@
 import { EditOperation } from '@src/services/editing/edit-operation';
 import { FormEditorHostMessage, FormEditorWebviewMessage } from '../form-editor-messages';
-import { EditOutcome, EditingHost, SubmittedEdit } from './editing-host';
+import { EditOutcome, IEditingHostService, SubmittedEdit } from './editing-host-service.interface';
 
 /**
  * An edit waiting for the host.
@@ -23,11 +23,11 @@ interface QueuedEdit {
 }
 
 /**
- * Implements the {@link EditingHost} over the webview message channel. Edits are sent one at a
- * time: the next one waits for the outcome of the previous one and is stamped with the version
- * the host reported by then, so a quick second edit is not rejected as stale.
+ * Implements the {@link IEditingHostService} over the webview message channel. Edits are sent one
+ * at a time: the next one waits for the outcome of the previous one and is stamped with the
+ * version the host reported by then, so a quick second edit is not rejected as stale.
  */
-export class MessagingEditingHost implements EditingHost {
+export class EditingHostService implements IEditingHostService {
 	private readonly _queue: QueuedEdit[] = [];
 
 	private _inFlight?: QueuedEdit;
@@ -37,7 +37,7 @@ export class MessagingEditingHost implements EditingHost {
 	private _version = -1;
 
 	/**
-	 * Create a host over the message channel.
+	 * Create the service over the message channel.
 	 * @param _post Posts a message to the extension host.
 	 */
 	constructor(private readonly _post: (message: FormEditorWebviewMessage) => void) { }
@@ -67,7 +67,7 @@ export class MessagingEditingHost implements EditingHost {
 	/**
 	 * Take in a message from the host.
 	 * @param message The message.
-	 * @returns `true` if the message was one this host handles.
+	 * @returns `true` if the message was one this service handles.
 	 */
 	accept(message: FormEditorHostMessage): boolean {
 		switch (message.id) {

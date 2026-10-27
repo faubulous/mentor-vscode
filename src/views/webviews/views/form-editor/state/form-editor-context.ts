@@ -1,6 +1,6 @@
 import { createContext, useContext } from 'react';
 import { AnnotationScheme, NamespaceInfo, ResourceSummary } from '../form-editor-model';
-import { EditingController } from './editing-controller';
+import { IEditingController } from './editing-controller.interface';
 
 /**
  * Everything the resource components need that is not part of the data itself. Held in a context
@@ -16,7 +16,7 @@ export interface FormEditorContextValue {
 	 * The means to edit. Absent for data that cannot be written back, such as a query result or
 	 * a document with syntax errors, in which case every editing affordance stays hidden.
 	 */
-	editing?: EditingController;
+	editing?: IEditingController;
 
 	/**
 	 * The namespace declarations of the document.

@@ -1,45 +1,59 @@
 import { describe, expect, it } from 'vitest';
-import { INITIAL_EDITING_STATE, editingStateReducer, errorForCell, errorForRow } from './editing-state';
+import { CellKey } from './cell-key';
+import { EditingState } from './editing-state';
 
-describe('editingStateReducer', () => {
+const a = new CellKey({ resourceId: 'i:s', column: 'line', propertyIndex: 0 });
+const b = new CellKey({ resourceId: 'i:s', column: 'line', propertyIndex: 1 });
+
+describe('EditingState', () => {
 	it('holds one editing cell at a time', () => {
-		let state = editingStateReducer(INITIAL_EDITING_STATE, { type: 'startEditing', cell: { cellKey: 'a', mode: 'replace', seed: 'x' } });
+		let state = EditingState.INITIAL.startEditing({ cellKey: a, mode: 'replace', seed: 'x' });
 
-		expect(state.editing).toEqual({ cellKey: 'a', mode: 'replace', seed: 'x' });
+		expect(state.editing).toEqual({ cellKey: a, mode: 'replace', seed: 'x' });
+		expect(state.isEditing(a)).toBe(true);
 
-		state = editingStateReducer(state, { type: 'startEditing', cell: { cellKey: 'b', mode: 'append' } });
-		expect(state.editing?.cellKey).toBe('b');
+		state = state.startEditing({ cellKey: b, mode: 'append' });
+		expect(state.isEditing(b)).toBe(true);
+		expect(state.isEditing(a)).toBe(false);
 
-		state = editingStateReducer(state, { type: 'stopEditing', cellKey: 'a' });
-		expect(state.editing?.cellKey).toBe('b');
+		expect(state.stopEditing(a)).toBe(state);
 
-		state = editingStateReducer(state, { type: 'stopEditing' });
+		state = state.stopEditing();
 		expect(state.editing).toBeUndefined();
+		expect(state.stopEditing()).toBe(state);
 	});
 
 	it('keeps a focus request until it is fulfilled', () => {
-		let state = editingStateReducer(INITIAL_EDITING_STATE, { type: 'requestFocus', cellKey: 'a' });
+		let state = EditingState.INITIAL.requestFocus(a);
 
-		expect(state.focusRequest).toEqual({ cellKey: 'a' });
+		expect(state.focusRequest).toBe(a);
 
-		state = editingStateReducer(state, { type: 'requestFocus', cellKey: 'b', caret: 'end' });
-		expect(state.focusRequest).toEqual({ cellKey: 'b', caret: 'end' });
+		state = state.requestFocus(b);
+		expect(state.focusRequest).toBe(b);
 
-		state = editingStateReducer(state, { type: 'focusFulfilled' });
+		state = state.focusFulfilled();
 		expect(state.focusRequest).toBeUndefined();
-		expect(editingStateReducer(state, { type: 'focusFulfilled' })).toBe(state);
+		expect(state.focusFulfilled()).toBe(state);
 	});
 
 	it('records and clears errors by cell', () => {
-		let state = editingStateReducer(INITIAL_EDITING_STATE, { type: 'setError', cellKey: 'i:s|line|1||', message: 'no', reason: 'notFound' });
+		let state = EditingState.INITIAL.withError(b, 'no', 'notFound');
 
-		expect(errorForRow(state.errors, 'i:s', 1)).toEqual({ cellKey: 'i:s|line|1||', message: 'no', reason: 'notFound' });
-		expect(errorForRow(state.errors, 'i:s', 0)).toBeUndefined();
-		expect(errorForCell(state.errors, 'i:s|line|1||')?.message).toBe('no');
-		expect(errorForCell(state.errors, 'i:s|subject|||')).toBeUndefined();
+		expect(state.errorForRow('i:s', 1)).toEqual({ cellKey: b, message: 'no', reason: 'notFound' });
+		expect(state.errorForRow('i:s', 0)).toBeUndefined();
+		expect(state.errorForCell(b)?.message).toBe('no');
+		expect(state.errorForCell(a)).toBeUndefined();
 
-		state = editingStateReducer(state, { type: 'clearError', cellKey: 'i:s|line|1||' });
-		expect(state.errors).toEqual({});
-		expect(editingStateReducer(state, { type: 'clearError', cellKey: 'i:s|line|1||' })).toBe(state);
+		state = state.withoutError(b);
+		expect(state.errors.size).toBe(0);
+		expect(state.withoutError(b)).toBe(state);
+	});
+
+	it('leaves the other parts alone on every transition', () => {
+		const state = EditingState.INITIAL.startEditing({ cellKey: a, mode: 'append' }).requestFocus(b).withError(a, 'x');
+
+		expect(state.stopEditing().focusRequest).toBe(b);
+		expect(state.focusFulfilled().editing?.cellKey).toBe(a);
+		expect(state.withoutError(a).editing?.cellKey).toBe(a);
 	});
 });

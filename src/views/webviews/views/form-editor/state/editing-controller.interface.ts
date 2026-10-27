@@ -1,8 +1,7 @@
 import { EditOperation } from '@src/services/editing/edit-operation';
 import { ResourceId } from '../form-editor-model';
-import { CellKey } from '../services/cell-key';
+import { CellKey } from './cell-key';
 import { EditingState } from './editing-state';
-import { LineCaret } from './line-caret';
 import { PendingEdit } from './pending-edits';
 
 /**
@@ -10,7 +9,7 @@ import { PendingEdit } from './pending-edits';
  * open an editor, hand an edit over and show its outcome. The form editor implements it over the
  * webview message channel; a host without write-back provides none, and the form is read-only.
  */
-export interface EditingController {
+export interface IEditingController {
 	/**
 	 * The transient state of editing.
 	 */
@@ -20,13 +19,6 @@ export interface EditingController {
 	 * Prefix to namespace IRI, for reading typed prefixed names.
 	 */
 	readonly namespaces: Record<string, string>;
-
-	/**
-	 * Indicate whether a cell is being edited.
-	 * @param cellKey The cell.
-	 * @returns `true` when the cell's editor is open.
-	 */
-	isEditing(cellKey: CellKey): boolean;
 
 	/**
 	 * Open the editor of a cell.
@@ -51,11 +43,10 @@ export interface EditingController {
 	submit(operations: EditOperation[], cellKey: CellKey, predictedFocus?: CellKey): void;
 
 	/**
-	 * Move the focus to a cell once it exists, placing the caret when the cell is a line.
+	 * Move the focus to a cell once it exists.
 	 * @param cellKey The cell.
-	 * @param caret Where the caret goes in a statement line.
 	 */
-	requestFocus(cellKey: CellKey, caret?: LineCaret): void;
+	requestFocus(cellKey: CellKey): void;
 
 	/**
 	 * Remove the error shown for a cell.

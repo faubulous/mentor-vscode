@@ -5,7 +5,17 @@
 export type UndoTarget = 'field' | 'document';
 
 /**
- * What the router remembers of the field that has the focus.
+ * The command a key asks for.
+ */
+export type UndoCommand = 'undo' | 'redo';
+
+/**
+ * The parts of a keyboard event that tell an undo or redo, shared by the DOM and React events.
+ */
+export type UndoKeyboardEvent = Pick<KeyboardEvent, 'key' | 'ctrlKey' | 'metaKey' | 'shiftKey'>;
+
+/**
+ * What the service remembers of the field that has the focus.
  */
 interface FieldHistory {
 	/**
@@ -27,14 +37,33 @@ interface FieldHistory {
 /**
  * Decides where Ctrl+Z and its redo go while the form has the focus. The browser keeps one undo
  * stack for the whole page, so asking it whether a field can undo answers for every field ever
- * typed in; the router instead follows the field that has the focus. Typing in it since it took
+ * typed in; the service instead follows the field that has the focus. Typing in it since it took
  * the focus is undone in the field, step by step, until the field is back at the value it had
  * before the typing; any further undo, and an undo in a field nobody typed in, goes to the
  * document. The value before the typing is taken as the typing starts, not as the field takes
  * the focus, because the form may still change the value then, as a literal gains its quotes.
  */
-export class UndoRouter {
+export class UndoRoutingService {
 	private readonly _fields = new WeakMap<object, FieldHistory>();
+
+	/**
+	 * Tell whether a key asks to undo or redo, as Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z and Ctrl/Cmd+Y do.
+	 * @param event The key event.
+	 * @returns The command the key asks for, or `undefined` for any other key.
+	 */
+	static commandOf(event: UndoKeyboardEvent): UndoCommand | undefined {
+		if (!(event.ctrlKey || event.metaKey)) {
+			return undefined;
+		}
+
+		const key = event.key.toLowerCase();
+
+		if (key === 'z') {
+			return event.shiftKey ? 'redo' : 'undo';
+		}
+
+		return key === 'y' ? 'redo' : undefined;
+	}
 
 	/**
 	 * A field took the focus.
@@ -82,7 +111,7 @@ export class UndoRouter {
 	 * @param value The value of the field now.
 	 * @returns Where the command goes.
 	 */
-	route(field: object | undefined, command: 'undo' | 'redo', value: string): UndoTarget {
+	route(field: object | undefined, command: UndoCommand, value: string): UndoTarget {
 		const history = field ? this._fields.get(field) : undefined;
 
 		if (!history) {

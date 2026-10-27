@@ -28,7 +28,7 @@ export interface SubmittedEdit {
  * message channel; another host, such as a sidebar of a visual editor, can implement it over
  * anything else. A host that cannot write back simply provides none, and the form is read-only.
  */
-export interface EditingHost {
+export interface IEditingHostService {
 	/**
 	 * The document version the host last reported.
 	 */

@@ -5,7 +5,7 @@ import { ResourceDetail, ResourceId } from '../form-editor-model';
  * be embedded outside the form editor, for example beside a query result, by providing the data
  * from somewhere other than a webview message channel.
  */
-export interface ResourceDataProvider {
+export interface IResourceDataService {
 	/**
 	 * Get the already loaded detail of a resource.
 	 * @param id The resource identifier.
@@ -15,7 +15,7 @@ export interface ResourceDataProvider {
 
 	/**
 	 * Get the detail of a resource as delivered for the previous document version, so a card can
-	 * keep showing its rows while the current version is loading. Optional: a provider without
+	 * keep showing its rows while the current version is loading. Optional: a service without
 	 * versions never has stale data.
 	 * @param id The resource identifier.
 	 * @returns The stale detail, or `undefined` when there is none.

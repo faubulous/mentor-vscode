@@ -1,5 +1,5 @@
 import { ResourceDetail, ResourceId } from '../form-editor-model';
-import { ResourceDataProvider } from './resource-data-provider';
+import { IResourceDataService } from './resource-data-service.interface';
 
 /**
  * The maximum number of resources asked for in one message.
@@ -12,7 +12,7 @@ const MAX_BATCH_SIZE = 100;
  * dropped whenever a new document version arrives because blank node identifiers are only valid
  * within the version they were built from.
  */
-export class MessagingDataProvider implements ResourceDataProvider {
+export class ResourceDataService implements IResourceDataService {
 	private readonly _loaded = new Map<ResourceId, ResourceDetail>();
 
 	private readonly _stale = new Map<ResourceId, ResourceDetail>();
@@ -28,7 +28,7 @@ export class MessagingDataProvider implements ResourceDataProvider {
 	private _flushHandle: number | undefined;
 
 	/**
-	 * Create a provider over the message channel.
+	 * Create the service over the message channel.
 	 * @param _send Posts a request for the given resources to the extension host.
 	 */
 	constructor(private readonly _send: (ids: ResourceId[]) => void) { }

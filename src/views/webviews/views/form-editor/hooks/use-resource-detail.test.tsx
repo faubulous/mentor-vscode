@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import { ResourceDetail } from '../form-editor-model';
-import { MessagingDataProvider } from '../state/messaging-data-provider';
+import { ResourceDataService } from '../services/resource-data-service';
 import { useResourceDetail } from './use-resource-detail';
 
 /**
@@ -14,19 +14,19 @@ function detail(id: string): ResourceDetail {
 
 describe('useResourceDetail', () => {
 	it('re-renders when the detail arrives and marks the previous version as stale while the next loads', () => {
-		const provider = new MessagingDataProvider(() => { });
+		const service = new ResourceDataService(() => { });
 
-		provider.setVersion(1);
+		service.setVersion(1);
 
-		const { result } = renderHook(() => useResourceDetail(provider, 'a'));
+		const { result } = renderHook(() => useResourceDetail(service, 'a'));
 
 		expect(result.current).toEqual({ detail: undefined, stale: true });
 
-		act(() => provider.accept(1, [detail('a')]));
+		act(() => service.accept(1, [detail('a')]));
 
 		expect(result.current).toEqual({ detail: detail('a'), stale: false });
 
-		act(() => provider.setVersion(2));
+		act(() => service.setVersion(2));
 
 		expect(result.current).toEqual({ detail: detail('a'), stale: true });
 	});
