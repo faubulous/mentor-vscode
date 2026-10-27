@@ -18,6 +18,8 @@ export enum ServiceToken {
 	PresetDocumentService = "PresetDocumentService",
 	/** Source of parsed tokens for open documents. */
 	DocumentTokenSource = "DocumentTokenSource",
+	/** Provider of the form based RDF editor, registered when the experimental setting is on. */
+	FormEditorProvider = "FormEditorProvider",
 	/** Service that computes syntax and lint diagnostics for documents. */
 	DocumentDiagnosticsService = "DocumentDiagnosticsService",
 	/** Service for indexing workspace files. */

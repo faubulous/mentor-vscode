@@ -353,6 +353,7 @@ const removeSourceMaps = () => {
       getReactViewConfig(args, 'sparql-results', 'sparql-results-notebook-renderer'),
       getReactViewConfig(args, 'sparql-results', 'sparql-results-panel'),
       getReactViewConfig(args, 'settings', 'settings-panel'),
+      getReactViewConfig(args, 'form-editor', 'form-editor'),
     ]
 
     console.log(`\nStarting build with ${configs.length} configuration(s)..`);
