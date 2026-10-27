@@ -1,7 +1,8 @@
 import { BaseQuad, DatasetCore, Literal, Quad, Quad_Graph, Term } from '@rdfjs/types';
 import { DataFactory } from 'rdf-data-factory';
 import { RdfStore } from 'rdf-stores';
-import { LanguageTagUsageStats, Store, XSD, RDF, RDFS } from '@faubulous/mentor-rdf';
+import { GraphUriGenerator, LanguageTagUsageStats, Store, XSD, RDF, RDFS } from '@faubulous/mentor-rdf';
+import { InferenceUri } from '@src/providers/inference-uri';
 
 /**
  * An RDF/JS DataFactory extended with a `dataset()` method (DatasetCoreFactory),
@@ -17,6 +18,28 @@ export const rdfDataFactory = Object.assign(new DataFactory(), {
 		return RdfStore.createDefault().asDataset();
 	}
 });
+
+/**
+ * Names the inference graphs of the store the way Mentor does, `<graph>?inference`, so that an
+ * inference graph sorts after its source graph and the prefixes of the source keep working. The
+ * store asks it which graphs are inference graphs when a query leaves inferred triples out.
+ */
+export const inferenceGraphUriGenerator: GraphUriGenerator = {
+	getGraphUri(uri: string | Quad_Graph): string {
+		return InferenceUri.toInferenceUri(getGraphUriValue(uri));
+	},
+	isInferenceGraphUri(uri: string | Quad_Graph): boolean {
+		return InferenceUri.isInferenceUri(getGraphUriValue(uri));
+	}
+};
+
+/**
+ * Returns the URI of a graph term, or the URI itself.
+ * @param uri A graph term or URI.
+ */
+function getGraphUriValue(uri: string | Quad_Graph): string {
+	return typeof uri === 'string' ? uri : uri.value;
+}
 
 /**
  * The type of an RDF property derived from its range.

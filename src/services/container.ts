@@ -3,7 +3,7 @@ import { container } from 'tsyringe';
 import { Store, OwlReasoner, VocabularyRepository } from '@faubulous/mentor-rdf';
 import { getHeapUsedMb } from '@src/utilities/runtime';
 import { ServiceToken } from './tokens';
-import { MentorGraphUriGenerator } from './mentor-graph-uri-generator';
+import { inferenceGraphUriGenerator } from '@src/utilities/rdf';
 import { DocumentFactory } from './document/document-factory';
 import { WorkspaceIndexerService } from './core/workspace-indexer-service';
 import { WorkspaceFileService } from './core/workspace-file-service';
@@ -53,7 +53,7 @@ export function configureServiceContainer(context: vscode.ExtensionContext): voi
 	const settingsService = new SettingsService();
 	container.registerInstance(ServiceToken.SettingsService, settingsService);
 
-	const reasoner = new OwlReasoner(new MentorGraphUriGenerator());
+	const reasoner = new OwlReasoner(inferenceGraphUriGenerator);
 	const store = new Store(reasoner);
 
 	container.registerInstance(ServiceToken.Store, store);

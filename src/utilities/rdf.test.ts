@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { Quad, Quad_Object } from '@rdfjs/types';
 import { LanguageTagUsageStats, Store } from '@faubulous/mentor-rdf';
-import { addLanguageTagUsage, rdfDataFactory, replaceGraphQuads } from '@src/utilities/rdf';
+import { addLanguageTagUsage, inferenceGraphUriGenerator, rdfDataFactory, replaceGraphQuads } from '@src/utilities/rdf';
 
 describe('addLanguageTagUsage', () => {
 	it('counts literals by their language tag and untagged literals under the empty tag', () => {
@@ -137,5 +137,26 @@ describe('replaceGraphQuads', () => {
 
 		expect(store.has(other)).toBe(true);
 		expect(getObjects(store)).toEqual([]);
+	});
+});
+
+describe('inferenceGraphUriGenerator', () => {
+	it('names the inference graph of a graph', () => {
+		expect(inferenceGraphUriGenerator.getGraphUri('file:///a.ttl')).toBe('file:///a.ttl?inference');
+		expect(inferenceGraphUriGenerator.getGraphUri('http://example.org/g?x=1')).toBe('http://example.org/g?x=1&inference');
+		expect(inferenceGraphUriGenerator.getGraphUri(rdfDataFactory.namedNode('file:///a.ttl'))).toBe('file:///a.ttl?inference');
+	});
+
+	it('recognises inference graph URIs', () => {
+		expect(inferenceGraphUriGenerator.isInferenceGraphUri('file:///a.ttl?inference')).toBe(true);
+		expect(inferenceGraphUriGenerator.isInferenceGraphUri(rdfDataFactory.namedNode('http://example.org/g?x=1&inference'))).toBe(true);
+		expect(inferenceGraphUriGenerator.isInferenceGraphUri('file:///a.ttl')).toBe(false);
+		expect(inferenceGraphUriGenerator.isInferenceGraphUri(rdfDataFactory.defaultGraph())).toBe(false);
+	});
+
+	it('recognises the graphs it names', () => {
+		for (const uri of ['file:///a.ttl', 'urn:x', 'http://example.org/g?x=1']) {
+			expect(inferenceGraphUriGenerator.isInferenceGraphUri(inferenceGraphUriGenerator.getGraphUri(uri))).toBe(true);
+		}
 	});
 });
