@@ -13,13 +13,14 @@ const FORM_EDITOR_LANGUAGE_IDS = new Set(['turtle', 'trig', 'ntriples', 'nquads'
  * Opens RDF documents in the form editor when the user configured it as the default view.
  *
  * The manifest contributes the editor with the `option` priority so that VS Code never replaces
- * the text editor on its own. Honouring a default therefore means reopening a document once it
- * appears as text. Only a document that was just opened as text is reopened: switching to a text
- * editor that was already open is the user moving between their tabs, not opening a document,
- * and is left alone, and so is a text editor opened beside a form of the same document, which is
- * a second view of it rather than a document to reopen. An explicit switch back to the text
- * editor, through "Open in Text Editor" or by replacing the form with the text editor, is
- * remembered for the rest of the session, so the choice is not immediately undone.
+ * the text editor on its own. Honouring a default therefore means reopening a document once a
+ * text editor tab opens for it. Only an opening tab is reopened: switching to a text editor that
+ * is already open is the user moving between their tabs, and is left alone. So is a text editor
+ * that opens while a form of the same document is open: it is either a second view of the
+ * document, or the text editor VS Code opens before it closes the form when the user reopens the
+ * document with the text editor; reopening it as a form would only undo what the user did. An
+ * explicit switch back to the text editor through "Open in Text Editor" is remembered for the
+ * rest of the session, so the choice is not undone the next time the document opens.
  */
 export class FormEditorDefaultView implements vscode.Disposable {
 	private readonly _subscriptions: vscode.Disposable[] = [];
@@ -29,24 +30,10 @@ export class FormEditorDefaultView implements vscode.Disposable {
 	private readonly _reopening = new Set<string>();
 
 	/**
-	 * The documents shown in text editors when the active editor last changed.
-	 */
-	private _textTabs = new Set<string>();
-
-	/**
-	 * The documents shown in form editors when the active editor last changed.
-	 */
-	private _formTabs = new Set<string>();
-
-	/**
-	 * Create the service and start watching the active editor.
+	 * Create the service and start watching the tabs.
 	 */
 	constructor() {
-		this._rememberTabs();
-
-		this._subscriptions.push(
-			vscode.window.onDidChangeActiveTextEditor(editor => void this._onDidChangeActiveTextEditor(editor))
-		);
+		this._subscriptions.push(vscode.window.tabGroups.onDidChangeTabs(event => this._onDidChangeTabs(event)));
 	}
 
 	/**
@@ -67,83 +54,40 @@ export class FormEditorDefaultView implements vscode.Disposable {
 	}
 
 	/**
-	 * Reopen a document in the form editor when it was just opened as text against the configured
-	 * default. The tabs are compared with those of the previous change, which tells a document
-	 * that was opened from one that was switched to.
-	 * @param editor The text editor that became active, if any.
+	 * Reopen the documents whose text editors opened.
+	 * @param event The tabs that opened and closed.
 	 */
-	private async _onDidChangeActiveTextEditor(editor?: vscode.TextEditor): Promise<void> {
-		const key = editor?.document.uri.toString();
-		const wasText = key !== undefined && this._textTabs.has(key);
-		const wasForm = key !== undefined && this._formTabs.has(key);
-
-		this._rememberTabs();
-
-		if (!editor || !key || !this._isEnabled() || !this._isCandidate(editor.document, key)) {
-			return;
+	private _onDidChangeTabs(event: vscode.TabChangeEvent): void {
+		for (const tab of event.opened) {
+			if (tab.input instanceof vscode.TabInputText) {
+				void this._onDidOpenTextTab(tab.input.uri);
+			}
 		}
+	}
 
-		// A text editor that was already open: the user is switching tabs, not opening a document.
-		if (wasText) {
-			return;
-		}
+	/**
+	 * Reopen a document in the form editor when a text editor opened for it against the
+	 * configured default.
+	 * @param uri The document the text editor opened for.
+	 */
+	private async _onDidOpenTextTab(uri: vscode.Uri): Promise<void> {
+		const key = uri.toString();
 
-		// The form was replaced by the text editor, which is the user choosing the text editor.
-		if (wasForm && !this._formTabs.has(key)) {
-			this._dismissed.add(key);
-			return;
-		}
-
-		// The form is still open elsewhere: the text editor was opened beside it, as a second view
-		// of the same document, and reopening it as a form would only take that view away again.
-		if (this._formTabs.has(key)) {
+		if (!this._isEnabled() || uri.scheme !== 'file' || this._dismissed.has(key) || this._reopening.has(key) || _isFormOpen(key)) {
 			return;
 		}
 
 		this._reopening.add(key);
 
 		try {
-			await switchEditorView(editor.document.uri, FormEditorProvider.viewType);
-			this._rememberTabs();
+			const document = await vscode.workspace.openTextDocument(uri);
+
+			if (FORM_EDITOR_LANGUAGE_IDS.has(document.languageId)) {
+				await switchEditorView(uri, FormEditorProvider.viewType);
+			}
 		} finally {
 			this._reopening.delete(key);
 		}
-	}
-
-	/**
-	 * Indicate whether a document is one the default applies to: an RDF document backed by a
-	 * file. An untitled buffer has nothing to reopen, and a reopen loop would fight the user's own
-	 * choice.
-	 * @param document The document.
-	 * @param key The string form of its URI.
-	 * @returns `true` when the default applies.
-	 */
-	private _isCandidate(document: vscode.TextDocument, key: string): boolean {
-		return FORM_EDITOR_LANGUAGE_IDS.has(document.languageId)
-			&& document.uri.scheme === 'file'
-			&& !this._dismissed.has(key)
-			&& !this._reopening.has(key);
-	}
-
-	/**
-	 * Take note of which documents are shown as text and which as forms.
-	 */
-	private _rememberTabs(): void {
-		const textTabs = new Set<string>();
-		const formTabs = new Set<string>();
-
-		for (const group of vscode.window.tabGroups.all) {
-			for (const tab of group.tabs) {
-				if (tab.input instanceof vscode.TabInputText) {
-					textTabs.add(tab.input.uri.toString());
-				} else if (tab.input instanceof vscode.TabInputCustom && tab.input.viewType === FormEditorProvider.viewType) {
-					formTabs.add(tab.input.uri.toString());
-				}
-			}
-		}
-
-		this._textTabs = textTabs;
-		this._formTabs = formTabs;
 	}
 
 	/**
@@ -153,4 +97,15 @@ export class FormEditorDefaultView implements vscode.Disposable {
 	private _isEnabled(): boolean {
 		return getConfig().get<string>('formEditor.defaultView') === 'form';
 	}
+}
+
+/**
+ * Indicate whether a document is open in a form editor.
+ * @param key The string form of the document URI.
+ * @returns `true` when a form editor tab shows the document.
+ */
+function _isFormOpen(key: string): boolean {
+	return vscode.window.tabGroups.all.some(group => group.tabs.some(tab =>
+		tab.input instanceof vscode.TabInputCustom && tab.input.viewType === FormEditorProvider.viewType && tab.input.uri.toString() === key
+	));
 }

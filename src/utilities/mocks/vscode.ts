@@ -41,6 +41,7 @@ export const __events = {
   fireDidChangeActiveTextEditor: (e: any) => _getEventEmitter('onDidChangeActiveTextEditor').fire(e),
   fireDidChangeVisibleTextEditors: (e: any) => _getEventEmitter('onDidChangeVisibleTextEditors').fire(e),
   fireDidChangeActiveNotebookEditor: (e: any) => _getEventEmitter('onDidChangeActiveNotebookEditor').fire(e),
+  fireDidChangeTabs: (e: any) => _getEventEmitter('onDidChangeTabs').fire(e),
 
   /**
    * Drops all listeners of all mock events.
