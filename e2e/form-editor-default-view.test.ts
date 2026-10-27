@@ -24,9 +24,7 @@ function viewTypesOf(uri: vscode.Uri): string[] {
 }
 
 /**
- * The documents these tests open. The other suites switch the fixture documents to the text
- * editor on purpose, which the default view remembers for the session, so these are written
- * fresh for this suite and removed afterwards.
+ * The documents these tests open, written fresh for this suite and removed afterwards.
  */
 const OWN_DOCUMENTS = ['data/default-view-a.ttl', 'data/default-view-b.ttl'];
 
@@ -38,15 +36,26 @@ function ownDocument(index: number): vscode.Uri {
 }
 
 /**
- * Set the default view for the rest of the test.
+ * The editor Turtle files are associated with, if any.
  */
-async function setDefaultView(view: string | undefined): Promise<void> {
-	await vscode.workspace.getConfiguration('mentor').update('formEditor.defaultView', view, vscode.ConfigurationTarget.Global);
+function turtleAssociation(): string | undefined {
+	return vscode.workspace.getConfiguration('workbench').get<Record<string, string>>('editorAssociations')?.['*.ttl'];
 }
 
 /**
- * With the form editor configured as the default view, opening an RDF document as text reopens it
- * in the form editor, and switching back to the text editor is respected for the session.
+ * Set the default view and wait until the editor associations follow it.
+ * @param view The default view, or `undefined` to reset the setting.
+ */
+async function setDefaultView(view: 'form' | undefined): Promise<void> {
+	await vscode.workspace.getConfiguration('mentor').update('formEditor.defaultView', view, vscode.ConfigurationTarget.Global);
+	await waitFor(() => (turtleAssociation() === FORM_EDITOR_VIEW_TYPE) === (view === 'form'), { label: `the editor associations to follow the default view '${view}'` });
+}
+
+/**
+ * With the form editor configured as the default view, the RDF file types are associated with it,
+ * so VS Code opens a document in the form editor right away and reveals an open form instead of
+ * opening a text editor beside it. A switch to the text editor is a one-off that VS Code leaves
+ * alone.
  */
 suite('form editor default view', () => {
 	suiteSetup(async () => {
@@ -70,38 +79,40 @@ suite('form editor default view', () => {
 		await vscode.commands.executeCommand('workbench.action.closeAllEditors');
 	});
 
-	test('opens an RDF document in the form editor by default', async () => {
-		const [uri] = await vscode.workspace.findFiles('data/instances.ttl', undefined, 1);
-
-		await setDefaultView('form');
-		await vscode.window.showTextDocument(await vscode.workspace.openTextDocument(uri));
-		await waitFor(() => viewTypesOf(uri).join(',') === FORM_EDITOR_VIEW_TYPE, { label: 'the document to reopen in the form editor' });
-
-		assert.strictEqual(vscode.window.activeTextEditor, undefined, 'the form editor must have replaced the text editor');
-	});
-
-	test('reopens every document opened in turn, in preview tabs as the explorer opens them', async () => {
-		const first = ownDocument(0);
-		const second = ownDocument(1);
-
-		await setDefaultView('form');
-		await vscode.commands.executeCommand('vscode.open', first, { preview: true });
-		await waitFor(() => viewTypesOf(first).join(',') === FORM_EDITOR_VIEW_TYPE, { label: 'the first document to reopen in the form editor' });
-
-		await vscode.commands.executeCommand('vscode.open', second, { preview: true });
-		await waitFor(() => viewTypesOf(second).join(',') === FORM_EDITOR_VIEW_TYPE, { label: 'the second document to reopen in the form editor' });
-	});
-
-	test('reopens a document whose form editor was closed before', async () => {
+	test('opens an RDF document in the form editor right away, without a text editor first', async () => {
 		const uri = ownDocument(0);
 
 		await setDefaultView('form');
 		await vscode.commands.executeCommand('vscode.open', uri);
-		await waitFor(() => viewTypesOf(uri).join(',') === FORM_EDITOR_VIEW_TYPE, { label: 'the document to reopen in the form editor' });
 
-		await vscode.commands.executeCommand('workbench.action.closeAllEditors');
+		assert.deepStrictEqual(viewTypesOf(uri), [FORM_EDITOR_VIEW_TYPE], 'the document must open in the form editor and nothing else');
+		assert.strictEqual(vscode.window.activeTextEditor, undefined, 'no text editor must have been opened for it');
+	});
+
+	test('reveals the open form of a document instead of opening a text editor beside it', async () => {
+		const first = ownDocument(0);
+		const second = ownDocument(1);
+
+		await setDefaultView('form');
+		await vscode.commands.executeCommand('vscode.open', first, { preview: false });
+		await waitFor(() => viewTypesOf(first).join(',') === FORM_EDITOR_VIEW_TYPE, { label: 'the first document to open in the form editor' });
+		await vscode.commands.executeCommand('vscode.open', second, { preview: false });
+		await waitFor(() => viewTypesOf(second).join(',') === FORM_EDITOR_VIEW_TYPE, { label: 'the second document to open in the form editor' });
+		await vscode.commands.executeCommand('vscode.open', first, { preview: false });
+		await new Promise(resolve => setTimeout(resolve, 500));
+
+		assert.deepStrictEqual(viewTypesOf(first), [FORM_EDITOR_VIEW_TYPE], 'the first document must still have exactly its form editor');
+		assert.deepStrictEqual(viewTypesOf(second), [FORM_EDITOR_VIEW_TYPE], 'the second document must keep its form editor');
+	});
+
+	test('opens an RDF document in the text editor again once the text editor is the default', async () => {
+		const uri = ownDocument(1);
+
+		await setDefaultView('form');
+		await setDefaultView(undefined);
 		await vscode.commands.executeCommand('vscode.open', uri);
-		await waitFor(() => viewTypesOf(uri).join(',') === FORM_EDITOR_VIEW_TYPE, { label: 'the document to reopen in the form editor a second time' });
+
+		assert.deepStrictEqual(viewTypesOf(uri), ['text']);
 	});
 
 	test('keeps the text editor the user switched to', async () => {
@@ -114,7 +125,7 @@ suite('form editor default view', () => {
 		await vscode.commands.executeCommand('mentor.command.openTextEditor', uri);
 		await waitFor(() => vscode.window.activeTextEditor?.document.uri.toString() === uri.toString(), { label: 'the text editor to become active' });
 
-		// Give the default view every chance to undo the switch, which it must not.
+		// Give anything that might undo the switch every chance, which nothing must.
 		await new Promise(resolve => setTimeout(resolve, 500));
 
 		assert.deepStrictEqual(viewTypesOf(uri), ['text'], 'the text editor the user switched to must stay');

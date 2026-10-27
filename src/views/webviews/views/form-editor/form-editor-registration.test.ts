@@ -13,7 +13,11 @@ import { registerFormEditor } from './form-editor-registration';
  * Configure the experimental flag.
  */
 function configureEnabled(enabled: boolean): void {
-	vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({ get: (key: string, fallback: unknown) => key === 'enabled' ? enabled : fallback } as unknown as vscode.WorkspaceConfiguration);
+	vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({
+		get: (key: string, fallback: unknown) => key === 'enabled' ? enabled : fallback,
+		inspect: () => undefined,
+		update: async () => { }
+	} as unknown as vscode.WorkspaceConfiguration);
 }
 
 /**
@@ -46,15 +50,13 @@ describe('registerFormEditor', () => {
 		registerFormEditor(createContext());
 
 		expect(container.isRegistered(ServiceToken.FormEditorProvider)).toBe(false);
-		expect(container.isRegistered(ServiceToken.FormEditorDefaultView)).toBe(false);
 	});
 
-	it('registers the provider and the default view while the flag is on', () => {
+	it('registers the provider while the flag is on', () => {
 		configureEnabled(true);
 		registerFormEditor(createContext());
 
 		expect(container.isRegistered(ServiceToken.FormEditorProvider)).toBe(true);
-		expect(container.isRegistered(ServiceToken.FormEditorDefaultView)).toBe(true);
 	});
 
 	it('offers to reload the window when the flag changes', async () => {
