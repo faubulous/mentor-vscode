@@ -35,5 +35,7 @@ describe('CellKey', () => {
 		expect(CellKey.fromFocusHint({ resourceId: 'i:x', target: 'predicate', propertyIndex: 2 }).toString()).toBe('i:x|line|2||');
 		expect(CellKey.fromFocusHint({ resourceId: 'b:2', parentId: 'i:x', target: 'addProperty' }).toString()).toBe('b:2|line|0||');
 		expect(CellKey.fromFocusHint({ resourceId: 'i:x', target: 'subject' }).toString()).toBe('i:x|subject|||');
+		expect(CellKey.fromFocusHint({ resourceId: 'i:x', target: 'comment' }).toString()).toBe('i:x|comment|||');
+		expect(CellKey.fromFocusHint({ resourceId: 'i:x', target: 'comment', propertyIndex: 2 }).toString()).toBe('i:x|comment|2||');
 	});
 });

@@ -4,7 +4,7 @@ vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 
 import { FocusHint } from '@src/views/webviews/views/form-editor/form-editor-model';
 import { createResolvingDocumentContext, readTurtleQuadContexts } from '@src/utilities/mocks/factories';
-import { FocusHintResolver, FocusPoint } from './focus-hint-resolver';
+import { DOCUMENT_RESOURCE_ID, FocusHintResolver, FocusPoint } from './focus-hint-resolver';
 import { ResourceIndexBuilder } from './resource-index-builder';
 
 const EX = 'http://example.org/';
@@ -44,6 +44,13 @@ describe('FocusHintResolver', () => {
 
 	it('resolves an item of a collection through the value holding it', () => {
 		expect(resolve('ex:s ex:p ( ex:a ex:b ) .\n', 'ex:b', 'value')).toEqual({ resourceId: `i:${EX}s`, propertyIndex: 0, valueIndex: 0, itemIndex: 1, target: 'value' });
+	});
+
+	it('resolves a comment to the resource it is written above, or to the document when it closes it', () => {
+		expect(resolve('# about s\nex:s ex:p ex:a ;\n    # about q\n    ex:q ex:b .\n', '# about q', 'comment')).toEqual({ resourceId: `i:${EX}s`, target: 'comment' });
+		expect(resolve('# about s\nex:s ex:p ex:a .\n', '# about s', 'comment')).toEqual({ resourceId: `i:${EX}s`, target: 'comment' });
+		expect(resolve('ex:s ex:p ex:a .\n\n# the end\n', '# the end', 'comment')).toEqual({ resourceId: DOCUMENT_RESOURCE_ID, target: 'comment' });
+		expect(resolve('ex:s ex:p ex:a .\n', 'ex:p', 'comment')).toBeUndefined();
 	});
 
 	it('resolves nothing at an offset without a term of the kind', () => {

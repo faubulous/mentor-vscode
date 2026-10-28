@@ -5,6 +5,12 @@ import { getResourceId } from '@src/services/editing/resource-id';
 import { FocusHint, PropertyView, TermView } from '@src/views/webviews/views/form-editor/form-editor-model';
 import { ResourceIndex, ResourceIndexEntry, ResourceIndexOptions } from './resource-index';
 import { ResourceViewBuilder } from './resource-view-builder';
+import { leadingCommentsOf } from './statement-comments';
+
+/**
+ * The resource identifier a focus on the comments closing the document is reported with.
+ */
+export const DOCUMENT_RESOURCE_ID = 'document';
 
 /**
  * Where an edit put the term the focus should move to, in the edited text.
@@ -70,6 +76,8 @@ export class FocusHintResolver {
 				return this._resolveSubject(point.offset);
 			case 'predicate':
 				return this._resolvePredicate(point.offset);
+			case 'comment':
+				return this._resolveComment(point.offset);
 			default:
 				return this._resolveValue(point.offset);
 		}
@@ -84,6 +92,24 @@ export class FocusHintResolver {
 		const entry = this._findEntry(quad => quad.subjectToken.startOffset === offset);
 
 		return entry ? { resourceId: entry.id, target: 'subject' } : undefined;
+	}
+
+	/**
+	 * Find the resource whose statements a comment starting at an offset is written above. A
+	 * comment the reader attached to the last statement but written after it closes the document.
+	 * @param offset The offset.
+	 * @returns The hint, or `undefined` when no comment starts there.
+	 */
+	private _resolveComment(offset: number): FocusHint | undefined {
+		const entry = this._findEntry(quad => leadingCommentsOf(quad).some(comment => comment.startOffset === offset));
+
+		if (entry) {
+			return { resourceId: entry.id, target: 'comment' };
+		}
+
+		const closesDocument = this._findEntry(quad => (quad.leadingComments ?? []).some(comment => comment.startOffset === offset));
+
+		return closesDocument ? { resourceId: DOCUMENT_RESOURCE_ID, target: 'comment' } : undefined;
 	}
 
 	/**

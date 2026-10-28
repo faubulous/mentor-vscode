@@ -105,3 +105,15 @@ describe('PendingEdits.applyTo', () => {
 		expect(PendingEdits.NONE.submit(pending([{ op: 'moveProperty', subject, predicate: `${EX}p`, before: `${EX}missing` }])).applyTo(detail)).toBe(detail);
 	});
 });
+
+describe('PendingEdits.applyTo comments', () => {
+	it('replaces and removes the comments of a row, and leaves other rows alone', () => {
+		const set = PendingEdits.NONE.submit(pending([{ op: 'setPropertyComments', subject, predicate: `${EX}q`, comments: ['one', 'two'] }]));
+		const cleared = PendingEdits.NONE.submit(pending([{ op: 'setPropertyComments', subject, predicate: `${EX}q`, comments: [] }]));
+		const other = PendingEdits.NONE.submit(pending([{ op: 'setPropertyComments', subject, predicate: `${EX}missing`, comments: ['x'] }]));
+
+		expect(set.applyTo(detail).properties.map(property => property.comments)).toEqual([undefined, ['one', 'two'], undefined]);
+		expect(cleared.applyTo(set.applyTo(detail)).properties[1].comments).toBeUndefined();
+		expect(other.applyTo(detail)).toBe(detail);
+	});
+});

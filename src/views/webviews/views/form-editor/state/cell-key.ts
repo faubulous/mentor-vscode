@@ -1,10 +1,10 @@
 import { FocusHint, ResourceId } from '../form-editor-model';
 
 /**
- * The column a cell belongs to. A `line` is a statement written as one line and a `draft` the
- * line a new statement is typed into.
+ * The column a cell belongs to. A `line` is a statement written as one line, a `draft` the line
+ * a new statement is typed into, and a `comment` a run of comment lines.
  */
-export type CellColumn = 'subject' | 'predicate' | 'value' | 'addProperty' | 'line' | 'draft';
+export type CellColumn = 'subject' | 'predicate' | 'value' | 'addProperty' | 'line' | 'draft' | 'comment';
 
 /**
  * The columns that make up a property row.
@@ -103,6 +103,8 @@ export class CellKey implements CellAddress {
 				return new CellKey({ resourceId: hint.resourceId, column: 'subject' });
 			case 'addProperty':
 				return new CellKey({ resourceId: hint.resourceId, column: 'line', propertyIndex: 0 });
+			case 'comment':
+				return new CellKey({ resourceId: hint.resourceId, column: 'comment', propertyIndex: hint.propertyIndex, valueIndex: hint.valueIndex });
 			default:
 				return new CellKey({ resourceId: hint.resourceId, column: 'line', propertyIndex: hint.propertyIndex ?? 0 });
 		}

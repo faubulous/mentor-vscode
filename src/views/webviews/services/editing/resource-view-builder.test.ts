@@ -223,3 +223,54 @@ describe('ResourceViewBuilder.buildPredicateView', () => {
 		});
 	});
 });
+
+describe('ResourceViewBuilder comments', () => {
+	it('carries the comments of a document to the things they were written about', () => {
+		const detail = detailOf(`
+			# The thing itself.
+			# Written over two lines.
+			ex:Thing a ex:Class ;
+			         # what it is called
+			         rdfs:label "First" , # a note on the line
+			                    # about the second one
+			                    "Second" .
+		`);
+		const [type, label] = detail.properties;
+
+		// What introduces a resource stands outside its card, so the summary carries it, not the detail.
+		expect(detail.comments).toBeUndefined();
+		expect(type.comments).toBeUndefined();
+		expect(label.comments).toEqual(['what it is called']);
+		expect(label.values[0].comments).toBeUndefined();
+		expect(label.values[1].comments).toEqual(['about the second one']);
+	});
+
+	it('gives a comment above a statement whose value is a blank node to that value, first or not', () => {
+		const detail = detailOf(`
+			ex:Shape a sh:NodeShape ;
+			    # the first one
+			    sh:property [ sh:path ex:a ] ;
+			    # the second one
+			    sh:property [ sh:path ex:b ] ;
+			    # about the class
+			    sh:class ex:Thing .
+		`);
+		const [, property, cls] = detail.properties;
+
+		expect(property.comments).toBeUndefined();
+		expect(property.values[0].comments).toEqual(['the first one']);
+		expect(property.values[1].comments).toEqual(['the second one']);
+		expect(cls.comments).toEqual(['about the class']);
+	});
+
+	it('keeps the comments of a node written inside another with its card', () => {
+		const nested = nestedDetailOf(`
+			ex:Thing ex:has [
+				# what the node is for
+				ex:p "x"
+			] .
+		`);
+
+		expect(nested.comments).toEqual(['what the node is for']);
+	});
+});

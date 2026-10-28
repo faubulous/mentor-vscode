@@ -23,6 +23,8 @@ vi.mock('@faubulous/mentor-rdf-parsers', () => ({
 }));
 
 import {
+	getCommentText,
+	splitCommentRuns,
 	getTokenPosition,
 	getIriFromIriReference,
 	getIriFromToken,
@@ -597,5 +599,23 @@ describe('getTokenIndexAtPosition on a lexed document', () => {
 		] as unknown as IToken[];
 
 		expect(getTokenIndexAtPosition(tokens, { line: 1, character: 0 })).toBe(2);
+	});
+});
+
+describe('getCommentText', () => {
+	it('strips the comment marker and one space, and trailing blanks', () => {
+		expect(getCommentText(makeToken('COMMENT', '# a note  '))).toBe('a note');
+		expect(getCommentText(makeToken('COMMENT', '#no space'))).toBe('no space');
+		expect(getCommentText(makeToken('COMMENT', '##  two'))).toBe(' two');
+		expect(getCommentText(makeToken('COMMENT', '#'))).toBe('');
+	});
+});
+
+describe('splitCommentRuns', () => {
+	it('groups comments on consecutive lines and starts a run after a gap', () => {
+		const comments = [makeToken('COMMENT', '# a', 1), makeToken('COMMENT', '# b', 2), makeToken('COMMENT', '# c', 4), makeToken('COMMENT', '# d', 5)];
+
+		expect(splitCommentRuns(comments).map(run => run.map((token: IToken) => token.image))).toEqual([['# a', '# b'], ['# c', '# d']]);
+		expect(splitCommentRuns([])).toEqual([]);
 	});
 });

@@ -450,6 +450,39 @@ export function isCommentToken(token: IToken | undefined): boolean {
 }
 
 /**
+ * Read the text a comment carries: what was written after the `#`, which is the comment itself
+ * rather than the syntax that marks it.
+ * @param token The comment token.
+ * @returns The text.
+ */
+export function getCommentText(token: IToken): string {
+	return token.image.replace(/^#+[ \t]?/, '').trimEnd();
+}
+
+/**
+ * Split comment tokens into runs of comments written on consecutive lines. A blank line between
+ * two comments, or anything else written between them, starts a new run.
+ * @param comments The comment tokens, in document order.
+ * @returns The runs, in document order; none for no comments.
+ */
+export function splitCommentRuns(comments: readonly IToken[]): IToken[][] {
+	const runs: IToken[][] = [];
+
+	for (const comment of comments) {
+		const run = runs[runs.length - 1];
+		const previous = run?.[run.length - 1];
+
+		if (previous && previous.startLine !== undefined && comment.startLine === previous.startLine + 1) {
+			run.push(comment);
+		} else {
+			runs.push([comment]);
+		}
+	}
+
+	return runs;
+}
+
+/**
  * Find the next token that is not a comment.
  * @param tokens The token stream.
  * @param index The index to start after.
