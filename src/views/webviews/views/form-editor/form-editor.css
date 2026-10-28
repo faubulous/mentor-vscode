@@ -763,10 +763,12 @@ body {
 
 /*
  * A resource value stands in an input box of its own as well, one per line, as the values typed
- * as text do. The box shows the focus of the pill, which is one thing the keys act on as a whole.
+ * as text do. The pill keeps its own width within the box, which shows the focus of the pill: one
+ * thing the keys act on as a whole, with the caret after it, where typing or Backspace acts.
  */
 .statement-line.is-editable .statement-value:has(> .value-pill) {
 	box-sizing: border-box;
+	align-items: flex-start;
 	width: 100%;
 	padding: 2px;
 	border: 1px solid var(--form-field-border);
@@ -780,11 +782,29 @@ body {
 }
 
 .statement-line.is-editable .statement-value > .value-pill {
+	position: relative;
 	line-height: 18px;
 }
 
 .statement-line.is-editable .statement-value > .value-pill:focus {
 	border-color: transparent;
+}
+
+.statement-line.is-editable .statement-value > .value-pill:focus::after {
+	content: '';
+	position: absolute;
+	top: 1px;
+	bottom: 1px;
+	right: -4px;
+	width: 1px;
+	background: var(--vscode-editorCursor-foreground, var(--vscode-foreground));
+	animation: form-caret-blink 1.06s steps(1) infinite;
+}
+
+@keyframes form-caret-blink {
+	50% {
+		opacity: 0;
+	}
 }
 
 /* Why a row was not written, under the row, with the means to dismiss it. */
