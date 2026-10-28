@@ -92,6 +92,12 @@ export interface ResourceIndex {
 	 * How often each resource stands as the object of a statement of the document.
 	 */
 	referenceCounts: Map<ResourceId, number>;
+
+	/**
+	 * The comments written after the last statement of the document, which close it, as the
+	 * lines of each run.
+	 */
+	trailingComments: string[][];
 }
 
 /**

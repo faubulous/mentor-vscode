@@ -175,3 +175,10 @@ describe('SnapshotBuilder', () => {
 		expect(snapshot.problems).toEqual([]);
 	});
 });
+
+describe('SnapshotBuilder comments', () => {
+	it('carries the comments closing the document, and none when there are none', () => {
+		expect(snapshotOf('ex:A a owl:Class .\n\n# The end.\n# Really.\n').trailingComments).toEqual([['The end.', 'Really.']]);
+		expect(snapshotOf('ex:A a owl:Class .').trailingComments).toBeUndefined();
+	});
+});

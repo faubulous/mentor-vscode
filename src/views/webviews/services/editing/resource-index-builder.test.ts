@@ -162,3 +162,38 @@ describe('ResourceIndexBuilder', () => {
 		expect(items.map(item => item.term.termType)).toEqual(['NamedNode', 'Literal', 'BlankNode']);
 	});
 });
+
+describe('ResourceIndexBuilder comments', () => {
+	it('carries the runs of comments above a resource on its summary', () => {
+		const index = indexOf(`
+			# About the file.
+
+			# The thing itself.
+			# Written over two lines.
+			ex:Thing a ex:Class .
+		`);
+
+		expect(index.summaries[0].comments).toEqual([['About the file.'], ['The thing itself.', 'Written over two lines.']]);
+	});
+
+	it('keeps the comments closing a document apart from the last resource', () => {
+		const index = indexOf(`
+			ex:Thing a ex:Class .
+
+			# That is all.
+			# Really.
+
+			# Postscript.
+		`);
+
+		expect(index.summaries[0].comments).toBeUndefined();
+		expect(index.trailingComments).toEqual([['That is all.', 'Really.'], ['Postscript.']]);
+	});
+
+	it('leaves a resource without comments unmarked', () => {
+		const index = indexOf('ex:Thing a ex:Class .\n');
+
+		expect(index.summaries[0].comments).toBeUndefined();
+		expect(index.trailingComments).toEqual([]);
+	});
+});

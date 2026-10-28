@@ -35,7 +35,7 @@ export interface QuadExpectation {
 /**
  * Which cell of a row the focus goes to after an edit.
  */
-export type FocusTarget = 'subject' | 'predicate' | 'value' | 'addProperty';
+export type FocusTarget = 'subject' | 'predicate' | 'value' | 'addProperty' | 'comment';
 
 /**
  * Where the focus should go after the edit, relative to one of the plan's edits. The absolute

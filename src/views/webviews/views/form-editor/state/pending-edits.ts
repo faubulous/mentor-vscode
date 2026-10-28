@@ -175,9 +175,26 @@ function _applyOperation(properties: PropertyView[], operation: EditOperation): 
 			return _deleteProperty(properties, operation.predicate);
 		case 'moveProperty':
 			return _moveProperty(properties, operation.predicate, operation.before);
+		case 'setPropertyComments':
+			return _setPropertyComments(properties, operation.predicate, operation.comments);
 		default:
 			return properties;
 	}
+}
+
+/**
+ * Replace the comment lines introducing the row of a predicate.
+ * @param properties The rows.
+ * @param predicate The predicate.
+ * @param comments The comment lines, none to remove them.
+ * @returns The rows with the comments replaced, the same array when there is no such row.
+ */
+function _setPropertyComments(properties: PropertyView[], predicate: string, comments: string[]): PropertyView[] {
+	if (!properties.some(property => _iriOf(property) === predicate)) {
+		return properties;
+	}
+
+	return properties.map(property => _iriOf(property) === predicate ? { ...property, comments: comments.length > 0 ? comments : undefined } : property);
 }
 
 /**

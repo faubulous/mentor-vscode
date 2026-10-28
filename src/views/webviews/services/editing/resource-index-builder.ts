@@ -7,6 +7,7 @@ import { getTokenPosition, hasSourcePosition, isTokenOfType } from '@src/utiliti
 import { DocumentPosition, NamespaceInfo, ResourceId } from '@src/views/webviews/views/form-editor/form-editor-model';
 import { CollectionItem, ResourceIndex, ResourceIndexEntry } from './resource-index';
 import { ResourceViewBuilder } from './resource-view-builder';
+import { trailingCommentRunsOf } from './statement-comments';
 
 /**
  * Builds the resource index of a document from its quad contexts. The quad contexts are used
@@ -55,6 +56,7 @@ export class ResourceIndexBuilder {
 			namespaces: this._buildNamespaces(),
 			datatypes: Array.from(this._datatypes).sort(),
 			referenceCounts: this._referenceCounts,
+			trailingComments: trailingCommentRunsOf(this._quadContexts),
 			...this._buildCollections()
 		};
 		const views = new ResourceViewBuilder(index, this._context);

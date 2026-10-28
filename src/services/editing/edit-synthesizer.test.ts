@@ -10,6 +10,7 @@ import { EditSynthesizer } from './edit-synthesizer';
 import { isEditRejection } from './edit-rejection';
 import { EditPlan } from './edit-plan';
 import { EditVerifier } from './edit-verifier';
+import { StatementLocator, ValueLocation } from './statement-locator';
 import { SynthesisInput } from './synthesis-context';
 import { applyTextEdits } from '@src/utilities/text-edits';
 
@@ -71,6 +72,17 @@ function edit(body: string, operations: EditOperation[], style?: Partial<Synthes
 const subject: TermRef = { kind: 'iri', iri: `${EX}s` };
 
 const iri = (name: string): TermRef => ({ kind: 'iri', iri: `${EX}${name}` });
+
+/**
+ * Locate a value of the test subject by its predicate name and its index under the predicate.
+ */
+function valueOf(body: string, predicateName: string, index: number): ValueLocation {
+	const context = new EditSynthesizer(inputOf(body)).createContext([]);
+	const predicate = `${EX}${predicateName}`;
+	const group = new StatementLocator(context.model).blocksOf(subject).flatMap(block => block.groups).find(candidate => candidate.predicateIri === predicate)!;
+
+	return { subject, predicate, anchor: group.objects[index].start };
+}
 const literal = (value: string, extra: Partial<Extract<TermRef, { kind: 'literal' }>> = {}): TermRef => ({ kind: 'literal', value, ...extra });
 
 describe('EditSynthesizer', () => {
@@ -430,3 +442,91 @@ describe('replaceStatement', () => {
 	});
 });
 
+describe('EditSynthesizer comments', () => {
+	const Q = `${EX}q`;
+
+	describe('setPropertyComments', () => {
+		it('writes the lines above the predicate', () => {
+			expect(edit(`ex:s ex:p ex:a ;\n    ex:q ex:b .\n`, [{ op: 'setPropertyComments', subject, predicate: Q, comments: ['one', 'two'] }]))
+				.toBe(`ex:s ex:p ex:a ;\n    # one\n    # two\n    ex:q ex:b .\n`);
+		});
+
+		it('replaces and removes an existing run', () => {
+			const body = `ex:s ex:p ex:a ;\n    # old\n    ex:q ex:b .\n`;
+
+			expect(edit(body, [{ op: 'setPropertyComments', subject, predicate: Q, comments: ['new'] }])).toBe(`ex:s ex:p ex:a ;\n    # new\n    ex:q ex:b .\n`);
+			expect(edit(body, [{ op: 'setPropertyComments', subject, predicate: Q, comments: [] }])).toBe(`ex:s ex:p ex:a ;\n    ex:q ex:b .\n`);
+		});
+
+		it('moves a predicate sharing the line of its subject onto a line of its own', () => {
+			expect(edit(`ex:s ex:p ex:a .\n`, [{ op: 'setPropertyComments', subject, predicate: `${EX}p`, comments: ['c'] }])).toBe(`ex:s\n    # c\n    ex:p ex:a .\n`);
+		});
+
+		it('focuses the predicate the lines introduce', () => {
+			const plan = new EditSynthesizer(inputOf(`ex:s ex:p ex:a ;\n    ex:q ex:b .\n`)).synthesize([{ op: 'setPropertyComments', subject, predicate: Q, comments: ['c'] }]);
+
+			expect(plan).toMatchObject({ focus: { target: 'predicate' } });
+		});
+	});
+
+	describe('setComment, addComment and deleteComment', () => {
+		it('writes and replaces the run above a resource', () => {
+			expect(edit(`ex:s ex:p ex:a .\n`, [{ op: 'setComment', at: { kind: 'resource', subject }, text: 'About s' }])).toBe(`# About s\nex:s ex:p ex:a .\n`);
+			expect(edit(`# old\n# lines\nex:s ex:p ex:a .\n`, [{ op: 'setComment', at: { kind: 'resource', subject }, text: 'About s\nreally' }])).toBe(`# About s\n# really\nex:s ex:p ex:a .\n`);
+		});
+
+		it('rewrites one of the runs above a resource that blank lines keep apart', () => {
+			const body = `# file\n\n# old\nex:s ex:p ex:a .\n`;
+
+			expect(edit(body, [{ op: 'setComment', at: { kind: 'resource', subject, run: 0 }, text: 'header' }])).toBe(`# header\n\n# old\nex:s ex:p ex:a .\n`);
+			expect(edit(body, [{ op: 'setComment', at: { kind: 'resource', subject, run: 1 }, text: 'new' }])).toBe(`# file\n\n# new\nex:s ex:p ex:a .\n`);
+			expect(edit(body, [{ op: 'setComment', at: { kind: 'resource', subject }, text: 'new' }])).toBe(`# file\n\n# new\nex:s ex:p ex:a .\n`);
+			expect(edit(body, [{ op: 'deleteComment', at: { kind: 'resource', subject, run: 2 } }])).toBe('rejected:notFound');
+		});
+
+		it('writes the run above a property', () => {
+			expect(edit(`ex:s ex:p ex:a ;\n    ex:q ex:b .\n`, [{ op: 'setComment', at: { kind: 'property', subject, predicate: Q }, text: 'c' }]))
+				.toBe(`ex:s ex:p ex:a ;\n    # c\n    ex:q ex:b .\n`);
+		});
+
+		it('writes the run above a later value, moving it onto a line of its own when it shares one', () => {
+			const twoLines = `ex:s ex:p ex:a,\n        ex:b .\n`;
+			const oneLine = `ex:s ex:p ex:a, ex:b .\n`;
+
+			expect(edit(twoLines, [{ op: 'setComment', at: { kind: 'value', at: valueOf(twoLines, 'p', 1) }, text: 'second' }]))
+				.toBe(`ex:s ex:p ex:a,\n        # second\n        ex:b .\n`);
+			expect(edit(oneLine, [{ op: 'setComment', at: { kind: 'value', at: valueOf(oneLine, 'p', 1) }, text: 'second' }]))
+				.toBe(`ex:s ex:p ex:a,\n        # second\n        ex:b .\n`);
+		});
+
+		it('rewrites and removes a run closing the document', () => {
+			const body = `ex:s ex:p ex:a .\n\n# one\n# two\n`;
+
+			expect(edit(body, [{ op: 'setComment', at: { kind: 'document', index: 1 }, text: 'new' }])).toBe(`ex:s ex:p ex:a .\n\n# new\n`);
+			expect(edit(body, [{ op: 'deleteComment', at: { kind: 'document', index: 0 } }])).toBe(`ex:s ex:p ex:a .\n`);
+			expect(edit(body, [{ op: 'deleteComment', at: { kind: 'document', index: 2 } }])).toBe('rejected:notFound');
+			expect(edit(`ex:s ex:p ex:a .\n\n# one\n\n# two\n`, [{ op: 'setComment', at: { kind: 'document', index: 1 }, text: 'new' }])).toBe(`ex:s ex:p ex:a .\n\n# one\n\n# new\n`);
+		});
+
+		it('removes the run above a resource with one blank line, and an empty text removes as well', () => {
+			expect(edit(`# About s\n\nex:s ex:p ex:a .\n`, [{ op: 'deleteComment', at: { kind: 'resource', subject } }])).toBe(`ex:s ex:p ex:a .\n`);
+			expect(edit(`# About s\nex:s ex:p ex:a .\n`, [{ op: 'setComment', at: { kind: 'resource', subject }, text: ' ' }])).toBe(`ex:s ex:p ex:a .\n`);
+			expect(edit(`ex:s ex:p ex:a .\n`, [{ op: 'deleteComment', at: { kind: 'resource', subject } }])).toBe('rejected:notFound');
+		});
+
+		it('adds a comment block after a resource, before one, and at the end of the document', () => {
+			const body = `ex:a ex:p ex:x .\n\nex:b ex:p ex:y .\n`;
+
+			expect(edit(body, [{ op: 'addComment', after: iri('a'), text: 'between' }])).toBe(`ex:a ex:p ex:x .\n\n# between\n\nex:b ex:p ex:y .\n`);
+			expect(edit(body, [{ op: 'addComment', before: iri('b'), text: 'between' }])).toBe(`ex:a ex:p ex:x .\n\n# between\n\nex:b ex:p ex:y .\n`);
+			expect(edit(body, [{ op: 'addComment', text: 'the end\nof it' }])).toBe(`ex:a ex:p ex:x .\n\nex:b ex:p ex:y .\n\n# the end\n# of it\n`);
+			expect(edit(body, [{ op: 'addComment', after: iri('missing'), text: 'x' }])).toBe('rejected:notFound');
+		});
+
+		it('focuses the written comment', () => {
+			const plan = new EditSynthesizer(inputOf(`ex:s ex:p ex:a .\n`)).synthesize([{ op: 'addComment', after: subject, text: 'end' }]);
+
+			expect(plan).toMatchObject({ focus: { target: 'comment' } });
+		});
+	});
+});

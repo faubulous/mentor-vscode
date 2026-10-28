@@ -111,6 +111,7 @@ export class SnapshotBuilder {
 				resources,
 				documentResourceId,
 				datatypes: index.datatypes,
+				trailingComments: index.trailingComments.length > 0 ? index.trailingComments : undefined,
 				readOnly: this._input.readOnly,
 				problems: this._input.problems ?? [],
 				dominantTypeIri: _dominantTypeOf(resources.filter(resource => resource.id !== documentResourceId))

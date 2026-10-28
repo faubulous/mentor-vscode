@@ -81,6 +81,11 @@ export interface TermView {
 	 * Whether the term can be edited. Constructs such as RDF 1.2 annotations are read-only.
 	 */
 	editable: boolean;
+
+	/**
+	 * The comment lines written above this value, when it does not stand first under its predicate.
+	 */
+	comments?: string[];
 }
 
 /**
@@ -142,6 +147,11 @@ export interface PropertyView {
 	 * What kind of values the predicate takes, when the host could tell.
 	 */
 	valueKind?: ValueKindHint;
+
+	/**
+	 * The comment lines written above the property, introducing it.
+	 */
+	comments?: string[];
 }
 
 /**
@@ -236,6 +246,12 @@ export interface ResourceSummary {
 	hasLabel: boolean;
 
 	/**
+	 * The comments written above the resource in the document, which stand over its card: the
+	 * lines of each run of comments, the runs being separated by blank lines.
+	 */
+	comments?: string[][];
+
+	/**
 	 * Where the resource starts in the document, when a source position is known.
 	 */
 	position?: DocumentPosition;
@@ -279,6 +295,13 @@ export interface ResourceDetail {
 	 * The properties of the resource, in document order.
 	 */
 	properties: PropertyView[];
+
+	/**
+	 * The comment lines written above the resource, for a node written inside another. A resource
+	 * of its own carries them on its summary instead, so they stand where they were written:
+	 * outside its card rather than within it.
+	 */
+	comments?: string[];
 
 	/**
 	 * Where the resource starts in the document, when a source position is known.
@@ -458,6 +481,12 @@ export interface DocumentSnapshot {
 	 * Datatypes used in the document, offered when changing a literal's datatype.
 	 */
 	datatypes: string[];
+
+	/**
+	 * The comments written after the last statement of the document, which close it, as the
+	 * lines of each run.
+	 */
+	trailingComments?: string[][];
 
 	/**
 	 * Why the document cannot be edited, when it cannot.

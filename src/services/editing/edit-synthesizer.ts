@@ -4,6 +4,7 @@ import { EditOperation } from './edit-operation';
 import { EditPlan, mergePlans } from './edit-plan';
 import { EditRejection, EditRejectionError } from './edit-rejection';
 import { LocalStyleDetector } from './local-style-detector';
+import { CommentOperations } from './operations/comment-operations';
 import { NamespaceOperations } from './operations/namespace-operations';
 import { PropertyOperations } from './operations/property-operations';
 import { StatementOperations } from './operations/statement-operations';
@@ -102,6 +103,14 @@ export class EditSynthesizer {
 				return new SubjectOperations(context).addNestedNode(operation);
 			case 'addNamespace':
 				return new NamespaceOperations(context).addNamespace(operation);
+			case 'setPropertyComments':
+				return new CommentOperations(context).setPropertyComments(operation);
+			case 'setComment':
+				return new CommentOperations(context).setComment(operation);
+			case 'addComment':
+				return new CommentOperations(context).addComment(operation);
+			case 'deleteComment':
+				return new CommentOperations(context).deleteComment(operation);
 			default:
 				throw new EditRejectionError('unsupportedConstruct', `The operation '${(operation as { op: string }).op}' is not supported.`);
 		}
