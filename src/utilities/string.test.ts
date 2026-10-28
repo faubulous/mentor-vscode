@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { countLeadingWhitespace, countTrailingWhitespace, findPosition, generateUniqueSlug, getTextFingerprint } from '@src/utilities/string';
+import { countLeadingWhitespace, countTrailingWhitespace, findPosition, generateUniqueSlug, getTextFingerprint, humanize } from '@src/utilities/string';
 
 describe('generateUniqueSlug', () => {
 	it('slugifies the display name', () => {
@@ -102,5 +102,14 @@ describe('getTextFingerprint', () => {
 	it('starts with the length of the text', () => {
 		expect(getTextFingerprint('abc')).toMatch(/^3:/);
 		expect(getTextFingerprint('')).toMatch(/^0:/);
+	});
+});
+
+describe('humanize', () => {
+	it('splits camel case and replaces underscores and dashes', () => {
+		expect(humanize('RecursiveClass', false)).toBe('Recursive Class');
+		expect(humanize('has_part', true)).toBe('has part');
+		expect(humanize('subClassOf', true)).toBe('sub class of');
+		expect(humanize('a-b', false)).toBe('a b');
 	});
 });

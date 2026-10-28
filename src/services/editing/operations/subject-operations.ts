@@ -1,6 +1,7 @@
 import { RdfToken } from '@faubulous/mentor-rdf-parsers';
 import { RdfSyntax } from '@faubulous/mentor-rdf-parsers';
-import { getIriFromIriReference, getIriFromPrefixedName } from '@src/utilities/tokens';
+import { getIriFromPrefixedName } from '@src/utilities/prefixed-name';
+import { getIriFromIriReference } from '@src/utilities/tokens';
 import { EditOperation } from '../edit-operation';
 import { TermRef } from '../term-ref';
 import { EditPlan, QuadExpectation, createPlan } from '../edit-plan';

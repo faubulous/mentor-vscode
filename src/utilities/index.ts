@@ -2,6 +2,7 @@ export * from './array';
 export * from './debounce';
 export * from './glob';
 export * from './iterator';
+export * from './prefixed-name';
 export * from './rdf';
 export * from './shacl';
 export * from './string';
