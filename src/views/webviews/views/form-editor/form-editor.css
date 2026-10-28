@@ -682,6 +682,142 @@ body {
 	color: var(--vscode-descriptionForeground);
 }
 
+/* ---------- Editable statements ---------- */
+
+/*
+ * Where the document can be written, the predicate and the values typed as text are input boxes
+ * that fill their column, as the fields of a form are, and a pill stands in a box of its own. The
+ * boxes keep the rows apart, so the rules between them go.
+ */
+.statement-list.is-editable {
+	--form-field-border: var(--vscode-input-border, var(--vscode-settings-textInputBorder, color-mix(in oklab, var(--vscode-foreground) 25%, transparent)));
+	--form-field-background: var(--vscode-input-background, transparent);
+}
+
+.statement-list.is-editable > .statement-line {
+	padding: 2px 0;
+	border-top: 0;
+}
+
+.statement-line.is-editable .statement-predicate {
+	padding-left: 0;
+}
+
+.statement-line.is-editable .statement-values {
+	position: relative;
+	gap: 4px;
+}
+
+.statement-line.is-editable .statement-value {
+	align-items: stretch;
+}
+
+.statement-line.is-editable .statement-value + .statement-value {
+	margin-top: 0;
+	padding-top: 0;
+	border-top: 0;
+}
+
+.input-field {
+	width: 100%;
+	max-width: none;
+}
+
+.input-field.is-predicate {
+	color: var(--vscode-descriptionForeground);
+}
+
+.input-field.is-predicate:focus-within {
+	color: var(--vscode-input-foreground, var(--vscode-foreground));
+}
+
+/*
+ * The field for a new value takes no room unless it has the focus or the statement has no values
+ * yet, or every statement would end in an empty box. Enter in a value, or a press on the free
+ * space below the values, bring it in.
+ */
+.statement-line.is-editable:not(.is-empty) .statement-value.is-new:not(:focus-within) {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	margin: 0;
+	padding: 0;
+	border: 0;
+	overflow: hidden;
+	opacity: 0;
+	pointer-events: none;
+}
+
+/* A literal: its text area, and after it, while it has one, the small field of its tag. */
+.literal-input {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	column-gap: 6px;
+	align-items: start;
+}
+
+.literal-input > .input-field.is-tag {
+	width: 8ch;
+	margin-top: 2px;
+}
+
+/*
+ * A resource value stands in an input box of its own as well, one per line, as the values typed
+ * as text do. The box shows the focus of the pill, which is one thing the keys act on as a whole.
+ */
+.statement-line.is-editable .statement-value:has(> .value-pill) {
+	box-sizing: border-box;
+	width: 100%;
+	padding: 2px;
+	border: 1px solid var(--form-field-border);
+	border-radius: 2px;
+	background: var(--form-field-background);
+	cursor: text;
+}
+
+.statement-line.is-editable .statement-value:has(> .value-pill:focus) {
+	border-color: var(--vscode-focusBorder);
+}
+
+.statement-line.is-editable .statement-value > .value-pill {
+	line-height: 18px;
+}
+
+.statement-line.is-editable .statement-value > .value-pill:focus {
+	border-color: transparent;
+}
+
+/* Why a row was not written, under the row, with the means to dismiss it. */
+.row-error {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	grid-column: 1 / -1;
+	margin-top: 4px;
+	color: var(--vscode-errorForeground);
+	font-size: 0.92em;
+}
+
+.row-error-message {
+	flex: 1 1 auto;
+	min-width: 0;
+	overflow-wrap: anywhere;
+}
+
+.row-error-dismiss {
+	display: inline-flex;
+	flex: none;
+	padding: 0;
+	border: 0;
+	background: none;
+	color: inherit;
+	cursor: pointer;
+}
+
+.row-error-dismiss:hover {
+	color: var(--vscode-foreground);
+}
+
 /* A narrow card puts the predicate above its values: side by side there is no width left for either. */
 .resource-card-body {
 	container: card-body / inline-size;

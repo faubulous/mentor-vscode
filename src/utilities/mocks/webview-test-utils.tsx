@@ -57,33 +57,64 @@ export interface WebviewTestHost<M extends WebviewMessage = WebviewMessage> {
 /**
  * A stand-in for a VS Code web component: a plain element with the properties the components
  * are read and written through. A checkbox toggles and announces a change when clicked, as the
- * real one does.
+ * real one does. A text field or text area wraps a native input, as the real one does in its
+ * shadow root, so its value, caret and focus behave.
  */
 class VscodeElementStub extends HTMLElement {
+	private readonly _wrapped?: HTMLInputElement | HTMLTextAreaElement;
+
 	/**
-	 * Create the element and give a checkbox its click behaviour.
+	 * Create the element and give a checkbox its click behaviour and a text input its native input.
 	 */
 	constructor() {
 		super();
 
-		if (this.tagName.toLowerCase() === 'vscode-checkbox') {
+		const tag = this.tagName.toLowerCase();
+
+		if (tag === 'vscode-checkbox') {
 			this.addEventListener('click', () => {
 				this.checked = !this.checked;
 				this.dispatchEvent(new Event('change', { bubbles: true }));
 			});
 		}
+
+		if (tag === 'vscode-textfield' || tag === 'vscode-textarea') {
+			this._wrapped = document.createElement(tag === 'vscode-textfield' ? 'input' : 'textarea');
+		}
 	}
 
 	/**
-	 * The value of the element, kept in its `value` attribute.
+	 * Make a text input focusable once it is in the document; an element may not gain attributes
+	 * while it is constructed.
+	 */
+	connectedCallback(): void {
+		if (this._wrapped && !this.hasAttribute('tabindex')) {
+			this.tabIndex = 0;
+		}
+	}
+
+	/**
+	 * The native input a text field or text area wraps.
+	 * @returns The input, or `undefined` for another element.
+	 */
+	get wrappedElement(): HTMLInputElement | HTMLTextAreaElement | undefined {
+		return this._wrapped;
+	}
+
+	/**
+	 * The value of the element: that of its native input, or else kept in its `value` attribute.
 	 * @returns The value.
 	 */
 	get value(): string {
-		return this.getAttribute('value') ?? '';
+		return this._wrapped ? this._wrapped.value : this.getAttribute('value') ?? '';
 	}
 
 	set value(value: string) {
-		this.setAttribute('value', String(value));
+		if (this._wrapped) {
+			this._wrapped.value = String(value);
+		} else {
+			this.setAttribute('value', String(value));
+		}
 	}
 
 	/**

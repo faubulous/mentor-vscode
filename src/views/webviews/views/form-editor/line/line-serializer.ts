@@ -52,7 +52,7 @@ export class LineSerializer {
 	 */
 	serializeProperty(property: PropertyView): LineModel {
 		const model: LineModel = { text: '', terms: {}, nestedNodes: [] };
-		const predicate = this._predicateText(property.predicate);
+		const predicate = this.serializePredicate(property.predicate);
 
 		model.terms[predicate] = property.predicate;
 
@@ -127,7 +127,7 @@ export class LineSerializer {
 	 * @param predicate The view of the predicate.
 	 * @returns The text.
 	 */
-	private _predicateText(predicate: TermView): string {
+	serializePredicate(predicate: TermView): string {
 		if (predicate.term.kind === 'iri') {
 			return predicate.term.iri === RDF_TYPE ? 'a' : predicate.prefixedName ?? formatIri(this._namespaces, predicate.term.iri);
 		}

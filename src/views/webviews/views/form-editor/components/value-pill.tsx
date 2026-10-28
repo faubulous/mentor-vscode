@@ -1,5 +1,5 @@
 import { KeyboardEvent, MouseEvent } from 'react';
-import { TermView } from '../form-editor-model';
+import { InputFieldBinding } from '../hooks/use-statement-editor';
 import { ResourceIcon } from './resource-icon';
 
 /**
@@ -12,25 +12,40 @@ const DEFAULT_PILL_ICON = 'mentor-rdf-individual';
  */
 export interface ValuePillProps {
 	/**
-	 * The resource the pill stands for.
+	 * The text of the pill.
 	 */
-	view: TermView;
+	label: string;
+
+	/**
+	 * The name told when the pointer rests on the pill, such as the IRI of the resource.
+	 */
+	title?: string;
+
+	/**
+	 * The icon the definition tree shows for the resource, when it is known.
+	 */
+	iconName?: string;
 
 	/**
 	 * Follows the pill to the resource; the pill is a link when given.
 	 */
 	onNavigate?: () => void;
+
+	/**
+	 * Wires the pill to the row it is a value of; the pill takes the focus as a whole when given.
+	 */
+	field?: InputFieldBinding;
 }
 
 /**
  * A resource value as a pill: the icon the definition tree shows for the resource, in the colour
- * the tree gives its kind, and its label, with its IRI told when the pointer rests on it.
- * @param props The resource and where the pill leads.
+ * the tree gives its kind, and its label, with its IRI told when the pointer rests on it. Read,
+ * the pill leads to the resource; edited, it is one value of its row, which the keys act on as a
+ * whole.
+ * @param props The resource and where the pill leads or belongs.
  * @returns The pill.
  */
-export function ValuePill({ view, onNavigate }: ValuePillProps): React.JSX.Element {
-	const title = view.term.kind === 'iri' ? view.term.iri : view.term.kind === 'bnode' ? `_:${view.term.id}` : undefined;
-
+export function ValuePill({ label, title, iconName, onNavigate, field }: ValuePillProps): React.JSX.Element {
 	const handleClick = (event: MouseEvent<HTMLSpanElement>): void => {
 		event.stopPropagation();
 		onNavigate?.();
@@ -44,9 +59,18 @@ export function ValuePill({ view, onNavigate }: ValuePillProps): React.JSX.Eleme
 	};
 
 	return (
-		<span className="value-pill" title={title} role={onNavigate ? 'link' : undefined} tabIndex={onNavigate ? 0 : undefined} onClick={onNavigate ? handleClick : undefined} onKeyDown={onNavigate ? handleKeyDown : undefined}>
-			<span className="value-pill-icon"><ResourceIcon iconName={view.iconName ?? DEFAULT_PILL_ICON} size={14} /></span>
-			<span className="value-pill-label">{view.label || view.prefixedName || title}</span>
+		<span
+			{...field}
+			className="value-pill"
+			title={title}
+			role={onNavigate ? 'link' : undefined}
+			tabIndex={onNavigate || field ? 0 : undefined}
+			aria-label={field ? label : undefined}
+			onClick={onNavigate ? handleClick : undefined}
+			onKeyDown={field?.onKeyDown ?? (onNavigate ? handleKeyDown : undefined)}
+		>
+			<span className="value-pill-icon"><ResourceIcon iconName={iconName ?? DEFAULT_PILL_ICON} size={14} /></span>
+			<span className="value-pill-label">{label}</span>
 		</span>
 	);
 }
