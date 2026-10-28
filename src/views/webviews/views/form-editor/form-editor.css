@@ -690,8 +690,9 @@ body {
  * boxes keep the rows apart, so the rules between them go.
  */
 .statement-list.is-editable {
-	--form-field-border: var(--vscode-input-border, var(--vscode-settings-textInputBorder, color-mix(in oklab, var(--vscode-foreground) 25%, transparent)));
-	--form-field-background: var(--vscode-input-background, transparent);
+	--form-field-height: 26px;
+	--form-field-border: var(--vscode-settings-textInputBorder, var(--vscode-settings-textInputBackground, #313131));
+	--form-field-background: var(--vscode-settings-textInputBackground, #313131);
 }
 
 .statement-list.is-editable > .statement-line {
@@ -718,9 +719,20 @@ body {
 	border-top: 0;
 }
 
+/*
+ * The fields are blocks, so a row starts at its top edge in both columns, and every box of one
+ * line of text is as tall as a VS Code text field. A text area grows with its lines from there:
+ * the inner text area fills the grid of its host, which the minimum height sizes.
+ */
 .input-field {
+	display: block;
 	width: 100%;
 	max-width: none;
+}
+
+.input-field.is-literal {
+	display: grid;
+	min-height: var(--form-field-height);
 }
 
 .input-field.is-predicate {
@@ -758,21 +770,22 @@ body {
 
 .literal-input > .input-field.is-tag {
 	width: 8ch;
-	margin-top: 2px;
 }
 
 /*
  * A resource value stands in an input box of its own as well, one per line, as the values typed
- * as text do. The pill keeps its own width within the box, which shows the focus of the pill: one
- * thing the keys act on as a whole, with the caret after it, where typing or Backspace acts.
+ * as text do, and as tall. The pill keeps its own width within the box, which shows the focus of
+ * the pill: one thing the keys act on as a whole, with the caret after it, where typing or
+ * Backspace acts.
  */
 .statement-line.is-editable .statement-value:has(> .value-pill) {
 	box-sizing: border-box;
 	align-items: flex-start;
 	width: 100%;
+	min-height: var(--form-field-height);
 	padding: 2px;
 	border: 1px solid var(--form-field-border);
-	border-radius: 2px;
+	border-radius: 4px;
 	background: var(--form-field-background);
 	cursor: text;
 }
