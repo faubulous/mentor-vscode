@@ -95,22 +95,22 @@ describe('LineLexer.valueGroups', () => {
 	});
 });
 
-describe('LineLexer.getDatatypeOf', () => {
+describe('LineLexer.bareDatatypeOf', () => {
 	it('recognises the Turtle shorthand literals', () => {
-		expect(LineLexer.getDatatypeOf('true')).toBe('xsd:boolean');
-		expect(LineLexer.getDatatypeOf('false')).toBe('xsd:boolean');
-		expect(LineLexer.getDatatypeOf('42')).toBe('xsd:integer');
-		expect(LineLexer.getDatatypeOf('-7')).toBe('xsd:integer');
-		expect(LineLexer.getDatatypeOf('1.5')).toBe('xsd:decimal');
-		expect(LineLexer.getDatatypeOf('.5')).toBe('xsd:decimal');
-		expect(LineLexer.getDatatypeOf('1e10')).toBe('xsd:double');
-		expect(LineLexer.getDatatypeOf('1.5E-3')).toBe('xsd:double');
+		expect(LineLexer.bareDatatypeOf('true')).toBe('xsd:boolean');
+		expect(LineLexer.bareDatatypeOf('false')).toBe('xsd:boolean');
+		expect(LineLexer.bareDatatypeOf('42')).toBe('xsd:integer');
+		expect(LineLexer.bareDatatypeOf('-7')).toBe('xsd:integer');
+		expect(LineLexer.bareDatatypeOf('1.5')).toBe('xsd:decimal');
+		expect(LineLexer.bareDatatypeOf('.5')).toBe('xsd:decimal');
+		expect(LineLexer.bareDatatypeOf('1e10')).toBe('xsd:double');
+		expect(LineLexer.bareDatatypeOf('1.5E-3')).toBe('xsd:double');
 	});
 
 	it('leaves words alone', () => {
-		expect(LineLexer.getDatatypeOf('abc')).toBeUndefined();
-		expect(LineLexer.getDatatypeOf('ex:Tree')).toBeUndefined();
-		expect(LineLexer.getDatatypeOf('')).toBeUndefined();
+		expect(LineLexer.bareDatatypeOf('abc')).toBeUndefined();
+		expect(LineLexer.bareDatatypeOf('ex:Tree')).toBeUndefined();
+		expect(LineLexer.bareDatatypeOf('')).toBeUndefined();
 	});
 });
 

@@ -5,10 +5,9 @@ import { LineModel } from './line-model';
 import { RDF_TYPE, XSD_NAMESPACE, XSD_STRING } from './well-known-iris';
 
 /**
- * The IRIs of the datatypes a number or boolean takes when written without quotes, by their
- * prefixed name.
+ * The datatypes of the bare numbers and booleans, by their shorthand name.
  */
-const XSD_DATATYPE_IRIS: Record<string, string> = {
+const BARE_DATATYPES: Record<string, string> = {
 	'xsd:boolean': `${XSD_NAMESPACE}boolean`,
 	'xsd:integer': `${XSD_NAMESPACE}integer`,
 	'xsd:decimal': `${XSD_NAMESPACE}decimal`,
@@ -142,9 +141,9 @@ export class LineSerializer {
 			return `"${LineSerializer.escapeLiteral(value)}"@${language}`;
 		}
 
-		const shorthandDatatype = LineLexer.getDatatypeOf(value);
+		const bare = LineLexer.bareDatatypeOf(value);
 
-		if (datatype && shorthandDatatype && XSD_DATATYPE_IRIS[shorthandDatatype] === datatype) {
+		if (datatype && bare && BARE_DATATYPES[bare] === datatype) {
 			return value;
 		}
 

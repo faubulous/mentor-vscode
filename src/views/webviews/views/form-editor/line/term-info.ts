@@ -1,5 +1,5 @@
 import { ValueKind } from '@src/utilities/value-kind';
-import { XsdDatatype } from './line-lexer';
+import { BareDatatype } from './line-lexer';
 
 /**
  * What the first token of a line denotes: a predicate with its label and range, or the reason
@@ -49,7 +49,7 @@ export interface ValueInfo {
 	/**
 	 * The datatype of a number or boolean written without quotes.
 	 */
-	datatype?: XsdDatatype;
+	datatype?: BareDatatype;
 
 	/**
 	 * Why the token is not a valid value.

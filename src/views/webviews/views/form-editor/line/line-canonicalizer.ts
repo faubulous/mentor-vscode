@@ -38,7 +38,7 @@ export class LineCanonicalizer {
 			return undefined;
 		}
 
-		if (token.kind === 'name' && !LineLexer.getDatatypeOf(token.text) && (range === 'literal' || (range === 'any' && !splitPrefixedName(token.text)))) {
+		if (token.kind === 'name' && !LineLexer.bareDatatypeOf(token.text) && (range === 'literal' || (range === 'any' && !splitPrefixedName(token.text)))) {
 			return `"${token.text}"`;
 		}
 

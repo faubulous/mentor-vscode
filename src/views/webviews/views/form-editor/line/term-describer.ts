@@ -250,7 +250,7 @@ export class TermDescriber {
 	 * @returns What it denotes.
 	 */
 	private _describeNamedValue(text: string): ValueInfo {
-		const datatype = LineLexer.getDatatypeOf(text);
+		const datatype = LineLexer.bareDatatypeOf(text);
 
 		if (datatype) {
 			return { kind: 'shorthandLiteral', datatype };

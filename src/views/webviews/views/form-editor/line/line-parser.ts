@@ -198,10 +198,10 @@ export class LineParser {
 	 * @returns The value, or the problem.
 	 */
 	private _parseName(token: LineToken): ParsedValue | LineProblem {
-		const datatype = LineLexer.getDatatypeOf(token.text);
+		const bare = LineLexer.bareDatatypeOf(token.text);
 
-		if (datatype) {
-			return { kind: 'term', term: { kind: 'literal', value: token.text, datatype: XSD_NAMESPACE + datatype.slice('xsd:'.length) } };
+		if (bare) {
+			return { kind: 'term', term: { kind: 'literal', value: token.text, datatype: XSD_NAMESPACE + bare.slice('xsd:'.length) } };
 		}
 
 		const iri = this._parseIri(token);

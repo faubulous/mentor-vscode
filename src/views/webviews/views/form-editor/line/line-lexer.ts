@@ -4,9 +4,9 @@ const PUNCTUATION = new Set([',', ';', '(', ')']);
 const TAG_CHARACTER = /[A-Za-z0-9-]/;
 
 /**
- * The XSD datatypes Turtle gives a number or boolean written without quotes, as prefixed names.
+ * The datatypes a bare number or boolean on a line stands for.
  */
-export type XsdDatatype = 'xsd:boolean' | 'xsd:integer' | 'xsd:decimal' | 'xsd:double';
+export type BareDatatype = 'xsd:boolean' | 'xsd:integer' | 'xsd:decimal' | 'xsd:double';
 
 /**
  * Splits the text of a statement line into tokens. Every character of the line belongs to
@@ -51,11 +51,12 @@ export class LineLexer {
 	}
 
 	/**
-	 * Get the datatype of a number or boolean written without quotes.
-	 * @param word The word.
+	 * Get the datatype a bare word stands for, when it is a number or a boolean written without
+	 * quotes.
+	 * @param word The bare word.
 	 * @returns The datatype, or `undefined` if the word is not a Turtle shorthand literal.
 	 */
-	static getDatatypeOf(word: string): XsdDatatype | undefined {
+	static bareDatatypeOf(word: string): BareDatatype | undefined {
 		if (word === 'true' || word === 'false') {
 			return 'xsd:boolean';
 		}
