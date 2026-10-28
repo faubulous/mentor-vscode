@@ -121,7 +121,7 @@ export function BlockList({ blocks, dataService, scrollElement, cardStates, pinn
 							style={{ position: 'absolute', top: 0, left: 0, width: '100%', transform: `translateY(${item.offset}px)` }}
 						>
 							{block.kind === 'resource'
-								? <ResourceCard summary={block.resource} expanded={cardStates.stateOf(block.id).open !== 'collapsed'} current={block.id === currentId} onToggle={onToggle} />
+								? <ResourceCard summary={block.resource} dataService={dataService} expanded={cardStates.stateOf(block.id).open !== 'collapsed'} current={block.id === currentId} onToggle={onToggle} />
 								: <CommentBlock text={block.text} />}
 						</div>
 					);

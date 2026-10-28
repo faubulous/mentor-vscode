@@ -149,6 +149,7 @@ function FormEditor(): React.JSX.Element {
 
 	const handleRevealInTextEditor = useCallback((line: number, character: number) => post({ id: 'RevealInTextEditor', position: { line, character } }), [post]);
 	const handleOpenTextEditor = useCallback(() => post({ id: 'ExecuteCommand', command: 'mentor.command.openTextEditor' }), [post]);
+	const handleOpenExternal = useCallback((iri: string) => post({ id: 'ExecuteCommand', command: 'vscode.open', args: [iri] }), [post]);
 	const handleRevealProblem = useCallback((problem: DocumentProblem) => handleRevealInTextEditor(problem.line, problem.character), [handleRevealInTextEditor]);
 
 	// The filter is the find of the form.
@@ -167,10 +168,11 @@ function FormEditor(): React.JSX.Element {
 		annotationScheme: snapshot?.annotationScheme,
 		onRevealInTextEditor: handleRevealInTextEditor,
 		onRevealResource: handleRevealResource,
+		onOpenExternal: handleOpenExternal,
 		revealedResourceId: revealedId,
 		dominantTypeIri: snapshot?.dominantTypeIri,
 		filterText
-	}), [snapshot, handleRevealInTextEditor, handleRevealResource, revealedId, filterText]);
+	}), [snapshot, handleRevealInTextEditor, handleRevealResource, handleOpenExternal, revealedId, filterText]);
 
 	if (!snapshot) {
 		return (
