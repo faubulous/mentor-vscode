@@ -55,12 +55,12 @@ export class LineCanonicalizer {
 	}
 
 	/**
-	 * Count the blank-node placeholders of a line.
+	 * Count the `[` markers typed on a line to add nested blank nodes.
 	 * @param text The text of the line.
-	 * @returns The number of placeholders.
+	 * @returns The number of markers.
 	 */
-	placeholderCount(text: string): number {
-		return this._lexer.tokenize(text).filter(token => token.kind === 'placeholder').length;
+	countNestedNodeMarkers(text: string): number {
+		return this._lexer.tokenize(text).filter(token => token.kind === 'nestedNode').length;
 	}
 
 	/**
@@ -87,24 +87,13 @@ export class LineCanonicalizer {
 	}
 
 	/**
-	 * Remove the placeholders a line has beyond the blank nodes it stands for, which the user
-	 * typed for new blank nodes, and bring the rest into canonical form.
-	 * @param text The canonical text of the line.
-	 * @param keep How many placeholders stand for existing blank nodes.
-	 * @returns The canonical text without the extra placeholders.
+	 * Remove the `[` markers typed on a line to add nested blank nodes, once the nodes are added,
+	 * and bring the rest into canonical form.
+	 * @param text The text of the line.
+	 * @returns The canonical text without the markers.
 	 */
-	removeExtraPlaceholders(text: string, keep: number): string {
-		let seen = 0;
-
-		const kept = this._lexer.tokenize(text).filter(token => {
-			if (token.kind !== 'placeholder') {
-				return true;
-			}
-
-			seen++;
-
-			return seen <= keep;
-		});
+	removeNestedNodeMarkers(text: string): string {
+		const kept = this._lexer.tokenize(text).filter(token => token.kind !== 'nestedNode');
 
 		return this.canonicalize(kept.map(token => token.text).join(''));
 	}

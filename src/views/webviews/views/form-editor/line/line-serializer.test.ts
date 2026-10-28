@@ -43,7 +43,7 @@ describe('LineSerializer.serializeProperty', () => {
 		expect(model.text).toBe('a owl:Class');
 		expect(model.terms.a).toBe(type);
 		expect(model.terms['owl:Class']).toBe(owlClass);
-		expect(model.placeholders).toEqual([]);
+		expect(model.nestedNodes).toEqual([]);
 	});
 
 	it('writes literals with their language or datatype', () => {
@@ -79,13 +79,22 @@ describe('LineSerializer.serializeProperty', () => {
 		expect(serializer.serializeProperty(property(iri(`${EXAMPLE_NAMESPACE}p`, 'ex:p'), [list, empty])).text).toBe('ex:p ( ex:a "b" ) ( )');
 	});
 
-	it('writes blank nodes as placeholders and collects them in order', () => {
+	it('leaves blank nodes off the line and collects them in order', () => {
 		const first = view({ kind: 'bnode', id: 'b1' });
 		const second = view({ kind: 'bnode', id: 'b2' });
 		const model = serializer.serializeProperty(property(iri(`${EXAMPLE_NAMESPACE}p`, 'ex:p'), [first, iri(`${EXAMPLE_NAMESPACE}a`, 'ex:a'), second]));
 
-		expect(model.text).toBe('ex:p […] ex:a […]');
-		expect(model.placeholders).toEqual([first, second]);
+		expect(model.text).toBe('ex:p ex:a');
+		expect(model.nestedNodes).toEqual([first, second]);
+	});
+
+	it('leaves blank nodes inside lists off the line as well', () => {
+		const nested = view({ kind: 'bnode', id: 'b1' });
+		const list = view({ kind: 'bnode', id: 'b2' }, { collection: { items: [iri(`${EXAMPLE_NAMESPACE}a`, 'ex:a'), nested] } });
+		const model = serializer.serializeProperty(property(iri(`${EXAMPLE_NAMESPACE}p`, 'ex:p'), [list]));
+
+		expect(model.text).toBe('ex:p ( ex:a )');
+		expect(model.nestedNodes).toEqual([nested]);
 	});
 
 	it('keeps Turtle escapes on the line', () => {
@@ -95,7 +104,7 @@ describe('LineSerializer.serializeProperty', () => {
 
 describe('LineSerializer.serializeValue', () => {
 	it('writes a value without collecting anything', () => {
-		expect(serializer.serializeValue(view({ kind: 'bnode', id: 'b1' }))).toBe('[…]');
+		expect(serializer.serializeValue(view({ kind: 'bnode', id: 'b1' }))).toBe('');
 		expect(serializer.serializeValue(literal('x'))).toBe('"x"');
 	});
 });
@@ -105,6 +114,11 @@ describe('LineSerializer.toStatementText', () => {
 		expect(serializer.toStatementText('a owl:Class owl:Thing')).toBe('a owl:Class, owl:Thing');
 		expect(serializer.toStatementText('rdfs:range ( ex:a ex:b ) ex:c')).toBe('rdfs:range ( ex:a ex:b ), ex:c');
 		expect(serializer.toStatementText('rdfs:label "a, b"@en "c"')).toBe('rdfs:label "a, b"@en, "c"');
+	});
+
+	it('appends a placeholder for every blank node the statement keeps', () => {
+		expect(serializer.toStatementText('a owl:Class', 2)).toBe('a owl:Class, […], […]');
+		expect(serializer.toStatementText('rdfs:label', 1)).toBe('rdfs:label […]');
 	});
 
 	it('leaves predicate-only lines and comments alone', () => {

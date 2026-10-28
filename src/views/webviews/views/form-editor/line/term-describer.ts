@@ -88,8 +88,8 @@ export class TermDescriber {
 				return { kind: 'literal' };
 			case 'languageTag':
 				return { kind: 'languageTag' };
-			case 'placeholder':
-				return { kind: 'placeholder' };
+			case 'nestedNode':
+				return { kind: 'nestedNode' };
 			case 'iri':
 				return this._describeIriValue(token.text);
 			case 'name':
@@ -127,7 +127,7 @@ export class TermDescriber {
 
 	/**
 	 * Indicate whether an item is deleted and skipped as a whole: a valid predicate, a resource,
-	 * or a blank-node placeholder.
+	 * or a `[` typed for a new nested node.
 	 * @param items The items of the line.
 	 * @param index The index of the item.
 	 * @returns `true` for an atomic item.
@@ -139,7 +139,7 @@ export class TermDescriber {
 			return (token.kind === 'name' || token.kind === 'iri') && this.describePredicate(token).error === undefined;
 		}
 
-		return token.kind === 'placeholder' || this.isResourceToken(token);
+		return token.kind === 'nestedNode' || this.isResourceToken(token);
 	}
 
 	/**

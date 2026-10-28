@@ -1,7 +1,7 @@
 /**
  * The kinds of token a statement line is made of.
  */
-export type LineTokenKind = 'whitespace' | 'punctuation' | 'name' | 'iri' | 'languageTag' | 'literal' | 'placeholder';
+export type LineTokenKind = 'whitespace' | 'punctuation' | 'name' | 'iri' | 'languageTag' | 'literal' | 'nestedNode';
 
 /**
  * What every token carries: its raw text and where it starts on the line.
@@ -108,11 +108,12 @@ export interface LiteralToken extends LineTokenBase {
 }
 
 /**
- * A placeholder for a blank node, which is edited in its own nested card and not on the line:
- * `[…]`, `[]` or `[ ]`.
+ * A `[`, `[]` or `[ ]` typed to add a nested blank node, which is edited in its own card below
+ * the line; the closing bracket may be missing while it is being typed. The blank nodes a
+ * statement already has are never written on the line.
  */
-export interface PlaceholderToken extends LineTokenBase {
-	kind: 'placeholder';
+export interface NestedNodeToken extends LineTokenBase {
+	kind: 'nestedNode';
 }
 
 /**
@@ -125,7 +126,7 @@ export type LineToken =
 	| IriToken
 	| LanguageToken
 	| LiteralToken
-	| PlaceholderToken;
+	| NestedNodeToken;
 
 /**
  * One value of a statement line: a single term, or a list `( … )` whose items are kept together

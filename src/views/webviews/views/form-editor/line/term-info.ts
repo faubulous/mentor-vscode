@@ -12,10 +12,10 @@ export type PredicateInfo =
 /**
  * The kinds a value token can be: a quoted literal, a dangling language tag, a number or boolean
  * written without quotes, an IRI reference outside the vocabulary, a vocabulary term, a resource
- * of this document, a prefixed name that is not described yet, a placeholder for a blank node,
- * or an error.
+ * of this document, a prefixed name that is not described yet, a `[` typed for a new nested
+ * node, or an error.
  */
-export type LineValueKind = 'literal' | 'languageTag' | 'shorthandLiteral' | 'externalResource' | 'vocabularyTerm' | 'documentResource' | 'newResource' | 'placeholder' | 'error';
+export type LineValueKind = 'literal' | 'languageTag' | 'shorthandLiteral' | 'externalResource' | 'vocabularyTerm' | 'documentResource' | 'newResource' | 'nestedNode' | 'error';
 
 /**
  * The kinds of value that denote a resource.

@@ -44,10 +44,10 @@ describe('LineCanonicalizer.canonicalize', () => {
 		expect(canonicalizer.canonicalize('ex:p "1"^^xsd:int')).toBe('ex:p "1"^^xsd:int');
 	});
 
-	it('keeps lists and placeholders', () => {
+	it('keeps lists and the markers for new nested nodes', () => {
 		expect(canonicalizer.canonicalize('rdfs:range (ex:a "b")')).toBe('rdfs:range ( ex:a "b" )');
 		expect(canonicalizer.canonicalize('ex:p ( )')).toBe('ex:p ( )');
-		expect(canonicalizer.canonicalize('ex:p   […]  ex:Tree')).toBe('ex:p […] ex:Tree');
+		expect(canonicalizer.canonicalize('ex:p   []  ex:Tree')).toBe('ex:p [] ex:Tree');
 	});
 
 	it('trims comments and empties blank lines', () => {
@@ -74,14 +74,14 @@ describe('LineCanonicalizer.hasValues', () => {
 	});
 });
 
-describe('placeholders', () => {
-	it('counts the blank-node placeholders of a line', () => {
-		expect(canonicalizer.placeholderCount('ex:p […] ex:a [] [ ]')).toBe(3);
-		expect(canonicalizer.placeholderCount('ex:p ex:a')).toBe(0);
+describe('nested-node markers', () => {
+	it('counts the markers typed for new nested nodes', () => {
+		expect(canonicalizer.countNestedNodeMarkers('ex:p [] ex:a [ ] [')).toBe(3);
+		expect(canonicalizer.countNestedNodeMarkers('ex:p ex:a')).toBe(0);
 	});
 
-	it('removes the placeholders beyond the existing blank nodes', () => {
-		expect(canonicalizer.removeExtraPlaceholders('ex:p […] ex:a []', 1)).toBe('ex:p […] ex:a');
-		expect(canonicalizer.removeExtraPlaceholders('ex:p []', 0)).toBe('ex:p');
+	it('removes the markers once the nodes are added', () => {
+		expect(canonicalizer.removeNestedNodeMarkers('ex:p [] ex:a [')).toBe('ex:p ex:a');
+		expect(canonicalizer.removeNestedNodeMarkers('ex:p []')).toBe('ex:p');
 	});
 });

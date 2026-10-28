@@ -48,11 +48,11 @@ describe('TermDescriber.rangeOf', () => {
 });
 
 describe('TermDescriber.describeValue', () => {
-	it('classifies literals, tags, numbers and placeholders', () => {
+	it('classifies literals, tags, numbers and nested-node markers', () => {
 		expect(describer.describeValue(token('"x"'))).toEqual({ kind: 'literal' });
 		expect(describer.describeValue(token('@en'))).toEqual({ kind: 'languageTag' });
 		expect(describer.describeValue(token('42'))).toEqual({ kind: 'shorthandLiteral', datatype: 'xsd:integer' });
-		expect(describer.describeValue(token('[…]'))).toEqual({ kind: 'placeholder' });
+		expect(describer.describeValue(token('[]'))).toEqual({ kind: 'nestedNode' });
 	});
 
 	it('classifies resources by where they come from', () => {
@@ -82,7 +82,7 @@ describe('TermDescriber.tokenIri', () => {
 describe('resource and atomic tokens', () => {
 	it('rings every kind of resource', () => {
 		const resourceKinds: LineValueKind[] = ['vocabularyTerm', 'documentResource', 'newResource', 'externalResource'];
-		const otherKinds: LineValueKind[] = ['literal', 'languageTag', 'shorthandLiteral', 'placeholder', 'error'];
+		const otherKinds: LineValueKind[] = ['literal', 'languageTag', 'shorthandLiteral', 'nestedNode', 'error'];
 
 		expect(resourceKinds.every(TermDescriber.isResourceKind)).toBe(true);
 		expect(otherKinds.some(TermDescriber.isResourceKind)).toBe(false);
@@ -95,8 +95,8 @@ describe('resource and atomic tokens', () => {
 		expect(describer.isResourceToken(token('42'))).toBe(false);
 	});
 
-	it('treats valid predicates, resources and placeholders as atomic', () => {
-		const items = lexer.items(lexer.tokenize('a owl:Class "x" […] foo'));
+	it('treats valid predicates, resources and nested-node markers as atomic', () => {
+		const items = lexer.items(lexer.tokenize('a owl:Class "x" [] foo'));
 
 		expect(items.map((_, index) => describer.isAtomicToken(items, index))).toEqual([true, true, false, true, false]);
 		expect(describer.isAtomicToken(lexer.items(lexer.tokenize('foo:x owl:Class')), 0)).toBe(false);

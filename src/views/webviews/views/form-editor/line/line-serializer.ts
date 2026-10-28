@@ -15,14 +15,17 @@ const BARE_DATATYPES: Record<string, string> = {
 };
 
 /**
- * The placeholder a blank-node value is written as on a line.
+ * The placeholder a blank node the statement keeps is written as in the statement text sent to
+ * the host, which puts the source text of the node back in its place. The line shown to the user
+ * never contains it.
  */
-export const PLACEHOLDER_TEXT = '[…]';
+export const NESTED_NODE_PLACEHOLDER = '[…]';
 
 /**
  * Writes the properties of a resource as statement lines: the predicate, then its values
  * single-spaced, prefixed names where a prefix is declared, literals with their tag or datatype,
- * bare numbers and booleans, lists as `( … )` and blank nodes as placeholders.
+ * bare numbers and booleans and lists as `( … )`. Blank-node values are left off the line, as they
+ * are shown as nested cards below it, and collected in the line model.
  */
 export class LineSerializer {
 	private readonly _lexer = new LineLexer();
@@ -45,15 +48,15 @@ export class LineSerializer {
 	/**
 	 * Write a property as a statement line.
 	 * @param property The property.
-	 * @returns The line with the views of its terms.
+	 * @returns The line with the views of its terms and its blank-node values.
 	 */
 	serializeProperty(property: PropertyView): LineModel {
-		const model: LineModel = { text: '', terms: {}, placeholders: [] };
+		const model: LineModel = { text: '', terms: {}, nestedNodes: [] };
 		const predicate = this._predicateText(property.predicate);
 
 		model.terms[predicate] = property.predicate;
 
-		const values = property.values.map(value => this.serializeValue(value, model));
+		const values = property.values.map(value => this.serializeValue(value, model)).filter(text => text !== '');
 
 		model.text = [predicate, ...values].join(' ');
 
@@ -63,12 +66,12 @@ export class LineSerializer {
 	/**
 	 * Write a value as it appears on a line.
 	 * @param view The value.
-	 * @param model Collects the term views and blank nodes the text refers to, when given.
-	 * @returns The text of the value.
+	 * @param model Collects the term views and the blank nodes the line leaves out, when given.
+	 * @returns The text of the value, empty for a blank node, which is not written on the line.
 	 */
-	serializeValue(view: TermView, model?: Pick<LineModel, 'terms' | 'placeholders'>): string {
+	serializeValue(view: TermView, model?: Pick<LineModel, 'terms' | 'nestedNodes'>): string {
 		if (view.collection) {
-			const items = view.collection.items.map(item => this.serializeValue(item, model));
+			const items = view.collection.items.map(item => this.serializeValue(item, model)).filter(text => text !== '');
 
 			return items.length > 0 ? `( ${items.join(' ')} )` : '( )';
 		}
@@ -86,19 +89,21 @@ export class LineSerializer {
 			case 'literal':
 				return this._literalText(view.term.value, view.term.language, view.term.datatype);
 			default:
-				model?.placeholders.push(view);
+				model?.nestedNodes.push(view);
 
-				return PLACEHOLDER_TEXT;
+				return '';
 		}
 	}
 
 	/**
-	 * Put the commas Turtle needs between the top-level values of a canonical line, leaving the
-	 * items of a list alone.
-	 * @param canonical The canonical text of the line.
+	 * Write the canonical text of a line as the statement text for the host: the values separated
+	 * by commas, lists kept whole, and one placeholder appended for every blank node the statement
+	 * keeps, which the host replaces with the source text of the node.
+	 * @param canonical The canonical text of the line, without markers for new nested nodes.
+	 * @param nestedNodeCount The number of blank nodes the statement keeps.
 	 * @returns The statement text.
 	 */
-	toStatementText(canonical: string): string {
+	toStatementText(canonical: string, nestedNodeCount = 0): string {
 		if (LineLexer.isComment(canonical)) {
 			return canonical;
 		}
@@ -111,8 +116,10 @@ export class LineSerializer {
 		}
 
 		const values = this._lexer.valueGroups(tokens).map(group => canonical.slice(group.start, group.end));
+		const placeholders = Array.from({ length: nestedNodeCount }, () => NESTED_NODE_PLACEHOLDER);
+		const objects = [...values, ...placeholders];
 
-		return values.length > 0 ? `${items[0].text} ${values.join(', ')}` : items[0].text;
+		return objects.length > 0 ? `${items[0].text} ${objects.join(', ')}` : items[0].text;
 	}
 
 	/**
@@ -125,7 +132,7 @@ export class LineSerializer {
 			return predicate.term.iri === RDF_TYPE ? 'a' : predicate.prefixedName ?? formatIri(this._namespaces, predicate.term.iri);
 		}
 
-		return predicate.prefixedName ?? PLACEHOLDER_TEXT;
+		return predicate.prefixedName ?? '';
 	}
 
 	/**

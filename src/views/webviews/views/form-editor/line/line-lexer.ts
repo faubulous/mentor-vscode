@@ -190,7 +190,7 @@ export class LineLexer {
 		}
 
 		if (character === '[') {
-			return _bracketedToken(text, index, ']', 'placeholder');
+			return _bracketedToken(text, index, ']', 'nestedNode');
 		}
 
 		return _nameToken(text, index);
@@ -321,7 +321,7 @@ function _suffixEnd(text: string, index: number): number {
  * @param kind The kind of token the brackets enclose.
  * @returns The token.
  */
-function _bracketedToken(text: string, index: number, close: string, kind: 'iri' | 'placeholder'): LineToken {
+function _bracketedToken(text: string, index: number, close: string, kind: 'iri' | 'nestedNode'): LineToken {
 	const closeIndex = text.indexOf(close, index);
 	const end = closeIndex < 0 ? text.length : closeIndex + 1;
 

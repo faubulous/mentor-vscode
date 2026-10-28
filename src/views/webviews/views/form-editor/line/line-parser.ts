@@ -7,8 +7,8 @@ import { RDF_TYPE, XSD_NAMESPACE } from './well-known-iris';
 const ESCAPES: Record<string, string> = { '"': '"', '\\': '\\', n: '\n', r: '\r', t: '\t', b: '\b', f: '\f', "'": "'" };
 
 /**
- * Reads a canonical line into its predicate and values. Blank-node placeholders are numbered in
- * order, lists keep their items.
+ * Reads a canonical line into its predicate and values. The `[` markers typed to add nested
+ * blank nodes are numbered in the order read, lists included, so each can be added in place.
  */
 export class LineParser {
 	private readonly _lexer = new LineLexer();
@@ -99,7 +99,7 @@ export class LineParser {
 	 */
 	private _parseValues(tokens: LineToken[]): ParsedValue[] | LineProblem {
 		const stack: { items: ParsedValue[]; start: number }[] = [{ items: [], start: 0 }];
-		let placeholderCount = 0;
+		let nestedNodeCount = 0;
 
 		for (const token of tokens) {
 			if (token.kind === 'punctuation' && token.text === '(') {
@@ -113,13 +113,13 @@ export class LineParser {
 
 				stack[stack.length - 1].items.push({ kind: 'list', items: list.items });
 			} else if (token.kind !== 'punctuation') {
-				const value = this._parseValue(token, placeholderCount);
+				const value = this._parseValue(token, nestedNodeCount);
 
 				if (!('kind' in value)) {
 					return value;
 				}
 
-				placeholderCount += value.kind === 'placeholder' ? 1 : 0;
+				nestedNodeCount += value.kind === 'nestedNode' ? 1 : 0;
 				stack[stack.length - 1].items.push(value);
 			}
 		}
@@ -136,15 +136,15 @@ export class LineParser {
 	/**
 	 * Read one value token.
 	 * @param token The token.
-	 * @param placeholderIndex The number of placeholders read before it.
+	 * @param nestedNodeIndex The number of nested-node markers read before it.
 	 * @returns The value, or the problem.
 	 */
-	private _parseValue(token: LineToken, placeholderIndex: number): ParsedValue | LineProblem {
+	private _parseValue(token: LineToken, nestedNodeIndex: number): ParsedValue | LineProblem {
 		const end = token.start + token.text.length;
 
 		switch (token.kind) {
-			case 'placeholder':
-				return { kind: 'placeholder', index: placeholderIndex };
+			case 'nestedNode':
+				return { kind: 'nestedNode', index: nestedNodeIndex };
 			case 'languageTag':
 				return { message: 'A language tag needs a literal before it', start: token.start, end };
 			case 'literal':

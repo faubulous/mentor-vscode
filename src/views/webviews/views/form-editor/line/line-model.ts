@@ -2,7 +2,7 @@ import { TermView } from '../form-editor-model';
 
 /**
  * A property serialized as a line, with the views of the terms it names so the line can be
- * rendered with labels, and the blank nodes its placeholders stand for.
+ * rendered with labels, and the blank-node values it leaves off the line.
  */
 export interface LineModel {
 	/**
@@ -16,7 +16,8 @@ export interface LineModel {
 	terms: Record<string, TermView>;
 
 	/**
-	 * The blank-node values in the order of their `[…]` placeholders.
+	 * The blank-node values, in the order written in the document. They are not written on the
+	 * line but shown as nested cards below it.
 	 */
-	placeholders: TermView[];
+	nestedNodes: TermView[];
 }

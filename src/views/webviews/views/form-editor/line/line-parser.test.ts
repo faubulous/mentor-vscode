@@ -59,16 +59,16 @@ describe('LineParser.parse', () => {
 		expect(statement('<http://x/p> <http://x/y>')).toEqual({ predicate: 'http://x/p', values: [{ kind: 'term', term: { kind: 'iri', iri: 'http://x/y' } }] });
 	});
 
-	it('reads lists and numbers the placeholders', () => {
+	it('reads lists and numbers the markers for new nested nodes', () => {
 		expect(statement('rdfs:range ( ex:a "b" ) ex:c').values).toEqual([
 			{ kind: 'list', items: [{ kind: 'term', term: { kind: 'iri', iri: `${EXAMPLE_NAMESPACE}a` } }, { kind: 'term', term: { kind: 'literal', value: 'b' } }] },
 			{ kind: 'term', term: { kind: 'iri', iri: `${EXAMPLE_NAMESPACE}c` } }
 		]);
-		expect(statement('ex:p […] ex:a [] ( [ ] )').values).toEqual([
-			{ kind: 'placeholder', index: 0 },
+		expect(statement('ex:p [] ex:a [ ] ( [ ] )').values).toEqual([
+			{ kind: 'nestedNode', index: 0 },
 			{ kind: 'term', term: { kind: 'iri', iri: `${EXAMPLE_NAMESPACE}a` } },
-			{ kind: 'placeholder', index: 1 },
-			{ kind: 'list', items: [{ kind: 'placeholder', index: 2 }] }
+			{ kind: 'nestedNode', index: 1 },
+			{ kind: 'list', items: [{ kind: 'nestedNode', index: 2 }] }
 		]);
 	});
 
@@ -113,20 +113,19 @@ describe('round trips', () => {
 		expect(statement(model.text)).toEqual({ predicate: `${EXAMPLE_NAMESPACE}p`, values: values.map(value => ({ kind: 'term', term: value.term })) });
 	});
 
-	it('serialize then parse keeps lists and placeholders', () => {
-		const placeholder = view({ kind: 'bnode', id: 'b1' });
+	it('serialize then parse keeps lists and leaves the blank nodes off the line', () => {
+		const nested = view({ kind: 'bnode', id: 'b1' });
 		const list: TermView = { ...view({ kind: 'bnode', id: 'b2' }), collection: { items: [view({ kind: 'iri', iri: `${EXAMPLE_NAMESPACE}a` }, 'ex:a'), view({ kind: 'literal', value: 'b' })] } };
-		const model = serializer.serializeProperty({ predicate: view({ kind: 'iri', iri: RDF.type }, 'rdf:type'), values: [list, placeholder] });
+		const model = serializer.serializeProperty({ predicate: view({ kind: 'iri', iri: RDF.type }, 'rdf:type'), values: [list, nested] });
 
-		expect(model.text).toBe('a ( ex:a "b" ) […]');
+		expect(model.text).toBe('a ( ex:a "b" )');
 		expect(statement(model.text)).toEqual({
 			predicate: RDF.type,
 			values: [
-				{ kind: 'list', items: [{ kind: 'term', term: { kind: 'iri', iri: `${EXAMPLE_NAMESPACE}a` } }, { kind: 'term', term: { kind: 'literal', value: 'b' } }] },
-				{ kind: 'placeholder', index: 0 }
+				{ kind: 'list', items: [{ kind: 'term', term: { kind: 'iri', iri: `${EXAMPLE_NAMESPACE}a` } }, { kind: 'term', term: { kind: 'literal', value: 'b' } }] }
 			]
 		});
-		expect(model.placeholders).toEqual([placeholder]);
+		expect(model.nestedNodes).toEqual([nested]);
 	});
 
 	it('names the XML Schema datatypes as the parser does', () => {

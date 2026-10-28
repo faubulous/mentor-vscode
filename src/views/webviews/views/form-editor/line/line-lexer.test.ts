@@ -36,8 +36,8 @@ describe('LineLexer.tokenize', () => {
 		expect(lexer.tokenize('"a\\"b" c')[0]).toMatchObject({ kind: 'literal', value: 'a\\"b', closed: true, text: '"a\\"b"' });
 	});
 
-	it('reads blank-node placeholders', () => {
-		expect(lexer.items(lexer.tokenize('ex:p [] [ ] […]')).slice(1).map(token => [token.kind, token.text])).toEqual([['placeholder', '[]'], ['placeholder', '[ ]'], ['placeholder', '[…]']]);
+	it('reads the markers typed for new nested nodes, closed or not', () => {
+		expect(lexer.items(lexer.tokenize('ex:p [] [ ] [')).slice(1).map(token => [token.kind, token.text])).toEqual([['nestedNode', '[]'], ['nestedNode', '[ ]'], ['nestedNode', '[']]);
 	});
 
 	it('reads list brackets and separators as punctuation', () => {
