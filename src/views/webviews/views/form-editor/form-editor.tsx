@@ -8,7 +8,6 @@ import { ContextBar } from './components/context-bar';
 import { DocumentHeader } from './components/document-header';
 import { FormErrorBoundary } from './components/form-error-boundary';
 import { FormToolbar } from './components/form-toolbar';
-import { getHeadword } from './components/headword';
 import { EmptyState, LoadingState, ProblemState, ReadOnlyBanner } from './components/resource-list-states';
 import { DocumentProblem, DocumentSnapshot, ResourceId } from './form-editor-model';
 import { FormEditorMessages, FormEditorWebviewMessage } from './form-editor-messages';
@@ -82,7 +81,7 @@ function FormEditor(): React.JSX.Element {
 
 	const post = useCallback((message: FormEditorWebviewMessage) => messagingRef.current?.postMessage(message), []);
 
-	// The open entries belong to a document: when the webview is reused for another, they are dropped.
+	// The open cards belong to a document: when the webview is reused for another, they are dropped.
 	const documentUri = snapshot?.uri;
 
 	useEffect(() => {
@@ -95,7 +94,7 @@ function FormEditor(): React.JSX.Element {
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [documentUri]);
 
-	// The open entries are remembered as they change.
+	// The open cards are remembered as they change.
 	useEffect(() => {
 		const openIds = cardStates.openIds();
 
@@ -120,7 +119,7 @@ function FormEditor(): React.JSX.Element {
 	const documentResourceId = snapshot?.documentResourceId;
 	const documentResource = useMemo(() => snapshot?.resources.find(resource => resource.id === documentResourceId), [snapshot?.resources, documentResourceId]);
 
-	// The resource describing the document heads the form; every other resource is an entry.
+	// The resource describing the document heads the form; every other resource is a card.
 	const listed = useMemo(() => visibleResources.filter(resource => resource.id !== documentResourceId), [visibleResources, documentResourceId]);
 	const blocks = useFormBlocks(listed, snapshot?.trailingComments ?? [], filtering);
 
@@ -136,7 +135,7 @@ function FormEditor(): React.JSX.Element {
 			updateViewState({ hideExternalDeclarations: undefined });
 		}
 
-		// The entry is marked rather than opened: what it holds is the reader's to open.
+		// The card is marked rather than opened: what it holds is the reader's to open.
 		setRevealedId(resourceId);
 
 		if (resourceId === documentResourceId) {
@@ -211,9 +210,9 @@ function FormEditor(): React.JSX.Element {
 								<div className="form-editor-scroll" ref={setScrollElement} tabIndex={-1}>
 									<ContextBar
 										visible={titleScrolledPast}
-										title={documentResource ? getHeadword(documentResource) : snapshot.fileName}
+										title={documentResource?.label ?? snapshot.fileName}
 										iconName={documentResource?.iconName}
-										guideWord={current ? getHeadword(current) : undefined}
+										guideWord={current?.label}
 										position={current ? listed.indexOf(current) + 1 : undefined}
 										count={listed.length}
 										filtering={filtering}

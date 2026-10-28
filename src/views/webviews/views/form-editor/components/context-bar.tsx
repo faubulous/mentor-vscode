@@ -20,7 +20,7 @@ export interface ContextBarProps {
 	iconName?: string;
 
 	/**
-	 * The headword of the entry under the top of the view.
+	 * The label of the card under the top of the view.
 	 */
 	guideWord?: string;
 
@@ -47,7 +47,7 @@ export interface ContextBarProps {
 
 /**
  * The running head of the form, shown once the title of the document has scrolled out of view:
- * the document at its start, and at its end the headword of the entry under the top of the view
+ * the document at its start, and at its end the label of the card under the top of the view
  * with where it stands in the list. It hangs from an anchor of no height, so it overlays the
  * entries instead of moving them as it appears.
  * @param props The title, the current entry and the counts.

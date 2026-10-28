@@ -1,6 +1,5 @@
 import { Ref } from 'react';
 import { ResourceSummary } from '../form-editor-model';
-import { getHeadword } from './headword';
 import { ResourceIcon } from './resource-icon';
 
 /**
@@ -30,7 +29,7 @@ export interface DocumentHeaderProps {
  * @returns The header.
  */
 export function DocumentHeader({ fileName, documentResource, titleRef }: DocumentHeaderProps): React.JSX.Element {
-	const title = documentResource ? getHeadword(documentResource) : fileName;
+	const title = documentResource?.label ?? fileName;
 	const iri = documentResource?.term.kind === 'iri' ? documentResource.term.iri : undefined;
 
 	return (

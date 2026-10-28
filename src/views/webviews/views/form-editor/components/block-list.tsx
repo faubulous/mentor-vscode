@@ -6,9 +6,8 @@ import { IResourceDataService } from '../services/resource-data-service.interfac
 import { FormBlock } from '../state/form-block';
 import { ResourceCardStates } from '../state/resource-card-states';
 import { CommentBlock } from './comment-block';
-import { getHeadword } from './headword';
 import { PositionRail, RailMark } from './position-rail';
-import { ResourceEntry } from './resource-entry';
+import { ResourceCard } from './resource-card';
 
 /**
  * How many rows beyond the viewport are loaded, so that scrolling does not reveal empty rows.
@@ -75,14 +74,14 @@ export interface BlockListProps {
 	filtering?: boolean;
 
 	/**
-	 * Tells which entry is under the top of the view, or none while the header is in view.
+	 * Tells which card is under the top of the view, or none while the header is in view.
 	 */
 	onCurrentChange?: (resourceId: string | undefined) => void;
 }
 
 /**
- * The virtualized list of the blocks of the form: resource entries and the comments between
- * them. Only the visible rows are rendered, and only the statements of the entries around the
+ * The virtualized list of the blocks of the form: resource cards and the comments between
+ * them. Only the visible rows are rendered, and only the statements of the cards around the
  * viewport are requested, so a document with thousands of resources costs no more than one with
  * a screenful.
  * @param props The blocks, the scroll container and the state of the entries.
@@ -122,7 +121,7 @@ export function BlockList({ blocks, dataService, scrollElement, cardStates, pinn
 							style={{ position: 'absolute', top: 0, left: 0, width: '100%', transform: `translateY(${item.offset}px)` }}
 						>
 							{block.kind === 'resource'
-								? <ResourceEntry summary={block.resource} expanded={cardStates.stateOf(block.id).open !== 'collapsed'} current={block.id === currentId} onToggle={onToggle} />
+								? <ResourceCard summary={block.resource} expanded={cardStates.stateOf(block.id).open !== 'collapsed'} current={block.id === currentId} onToggle={onToggle} />
 								: <CommentBlock text={block.text} />}
 						</div>
 					);
@@ -247,7 +246,7 @@ function useRailMarks(blocks: FormBlock[], offsetOf: (index: number) => number, 
 	return useMemo(() => blocks.map((block, index): RailMark => ({
 		kind: block.kind === 'comment' ? 'comment' : filtering ? 'match' : 'resource',
 		offset: scrollMargin + offsetOf(index),
-		title: block.kind === 'resource' ? getHeadword(block.resource) : 'Comment'
+		title: block.kind === 'resource' ? block.resource.label : 'Comment'
 	})),
 	// The offsets change with the measured sizes, which the total size follows.
 	// eslint-disable-next-line react-hooks/exhaustive-deps

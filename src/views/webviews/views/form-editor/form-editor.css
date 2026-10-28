@@ -332,56 +332,57 @@ body {
 	overflow-wrap: anywhere;
 }
 
-/* ---------- Entries ---------- */
+/* ---------- Resource cards ---------- */
 
-.entry {
+.resource-card {
 	position: relative;
-	display: grid;
-	grid-template-columns: var(--form-glyph-column) minmax(0, 1fr) 110px;
-	padding: 12px 0 13px;
+	padding: 10px 0 11px;
 	border-bottom: 1px solid var(--form-hairline);
 }
 
-.entry:hover {
+.resource-card:hover {
 	background: var(--form-hover);
 }
 
-/* An expanded entry is a form, and takes the background of the input fields. */
-.entry.is-expanded {
+/* An expanded card is a form, and takes the background of the input fields. */
+.resource-card.is-expanded {
 	background: var(--vscode-input-background, var(--form-hover));
 }
 
-/* The entry the context bar names, the one the definition tree revealed, or the one being edited. */
-.entry.is-current,
-.entry:focus-within {
+/* The card the context bar names, the one the definition tree revealed, or the one being edited. */
+.resource-card.is-current,
+.resource-card:focus-within {
 	box-shadow: inset 2px 0 0 var(--vscode-focusBorder);
 }
 
-.entry-glyph {
-	display: flex;
-	justify-self: center;
-	margin-top: 6px;
-}
-
-.entry-main {
-	min-width: 0;
-}
-
-.entry-headword-row {
-	display: flex;
-	align-items: baseline;
-	gap: 6px;
-	min-width: 0;
+/* The header is the clickable area: the glyph in the gutter, the title, and the chevron at the end. */
+.resource-card-header {
+	display: grid;
+	grid-template-columns: var(--form-glyph-column) minmax(0, 1fr) 32px;
+	align-items: center;
+	min-height: 26px;
 	cursor: pointer;
 	outline: none;
 }
 
-.entry-headword-row:focus-visible {
+.resource-card-header:focus-visible {
 	outline: 1px solid var(--vscode-focusBorder);
-	outline-offset: 1px;
+	outline-offset: -1px;
 }
 
-.entry-headword {
+.resource-card-glyph {
+	display: flex;
+	justify-self: center;
+}
+
+.resource-card-title {
+	display: flex;
+	align-items: baseline;
+	gap: 6px;
+	min-width: 0;
+}
+
+.resource-card-label {
 	min-width: 0;
 	color: var(--vscode-foreground);
 	font-size: 15px;
@@ -389,23 +390,37 @@ body {
 	line-height: 26px;
 }
 
-.entry-headword.is-unnamed {
+.resource-card-label.is-unnamed {
 	color: var(--vscode-descriptionForeground);
 }
 
-.entry-type {
+.resource-card-type {
 	color: var(--vscode-descriptionForeground);
 	font-size: 12px;
 	font-weight: 500;
 }
 
-.entry-definition {
+.resource-card-chevron {
+	display: grid;
+	place-items: center;
+	justify-self: center;
+	color: var(--vscode-descriptionForeground);
+}
+
+/* The body and the footer align with the title, past the gutter of the glyph. */
+.resource-card-body,
+.resource-card-footer {
+	padding-left: var(--form-glyph-column);
+	padding-right: 32px;
+}
+
+.resource-card-description {
 	margin-top: 1px;
 	color: var(--vscode-foreground);
 	line-height: 1.55;
 }
 
-.entry-iri {
+.resource-card-iri {
 	margin-top: 4px;
 	color: var(--vscode-descriptionForeground);
 	font-family: var(--form-mono);
@@ -413,43 +428,10 @@ body {
 	overflow-wrap: anywhere;
 }
 
-/* The column at the end of an entry, on the line of its headword: the usage count and the chevron. */
-.entry-meta {
-	display: flex;
-	align-items: center;
-	justify-content: flex-end;
-	gap: 8px;
-	height: 26px;
-	padding-right: 4px;
-}
-
-.entry-usage {
+.resource-card-footer {
+	margin-top: 4px;
 	color: var(--vscode-descriptionForeground);
 	font-size: 12px;
-	white-space: nowrap;
-}
-
-.entry-chevron {
-	display: grid;
-	place-items: center;
-	width: 22px;
-	height: 22px;
-	padding: 0;
-	border: 0;
-	border-radius: 3px;
-	background: transparent;
-	color: var(--vscode-descriptionForeground);
-	cursor: pointer;
-}
-
-.entry-chevron:hover {
-	background: var(--form-tint);
-	color: var(--vscode-foreground);
-}
-
-.entry-chevron:focus-visible {
-	outline: 1px solid var(--vscode-focusBorder);
-	outline-offset: -1px;
 }
 
 .filter-match {
