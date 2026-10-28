@@ -474,6 +474,230 @@ body {
 	color: var(--vscode-mentor-color-dataProperty, #ce9178);
 }
 
+/* ---------- Statements ---------- */
+
+/* The label of the property beside its values, each value on a line of its own. */
+.statement-list {
+	--form-line-border: var(--vscode-settings-headerBorder, var(--form-hairline));
+	--statement-line-height: 22px;
+	display: grid;
+	grid-template-columns: 150px minmax(0, 1fr);
+	column-gap: 16px;
+	align-items: start;
+	margin-top: 6px;
+}
+
+.statement-line {
+	grid-column: 1 / -1;
+	display: grid;
+	grid-template-columns: subgrid;
+	align-items: start;
+	padding: 5px 0;
+	border-top: 1px solid var(--form-line-border);
+	line-height: var(--statement-line-height);
+}
+
+.statement-list > .statement-line:first-child,
+.statement-list > .statement-comment:first-child + .statement-line {
+	border-top: 0;
+}
+
+.statement-predicate {
+	grid-column: 1;
+	min-width: 0;
+	padding-left: 1px;
+	color: var(--vscode-descriptionForeground);
+	overflow-wrap: anywhere;
+}
+
+.statement-values {
+	grid-column: 2;
+	display: flex;
+	flex-direction: column;
+	align-items: stretch;
+	min-width: 0;
+	color: var(--vscode-foreground);
+}
+
+.statement-value {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	min-width: 0;
+}
+
+.statement-value + .statement-value {
+	margin-top: 2px;
+	padding-top: 2px;
+	border-top: 1px dotted var(--form-line-border);
+}
+
+.statement-value.is-node {
+	align-items: stretch;
+}
+
+/* The comment lines above a property or a value: grey text behind a bar. */
+.statement-comment,
+.statement-value-comment {
+	position: relative;
+	display: block;
+	grid-column: 1 / -1;
+	padding: 2px 0 2px calc(var(--form-comment-bar-width) + var(--mentor-space-3));
+	color: var(--vscode-descriptionForeground);
+	white-space: pre-wrap;
+}
+
+.statement-comment::before,
+.statement-value-comment::before {
+	content: '';
+	position: absolute;
+	top: 2px;
+	bottom: 2px;
+	left: 0;
+	width: var(--form-comment-bar-width);
+	border-radius: var(--form-comment-bar-width);
+	background: var(--form-comment-bar-color);
+}
+
+.statement-list-items {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 2px;
+	width: 100%;
+	min-width: 0;
+}
+
+.statement-list-item {
+	display: flex;
+	max-width: 100%;
+	min-width: 0;
+}
+
+.statement-list-item.is-node {
+	display: block;
+	align-self: stretch;
+}
+
+/* A literal: its text as a paragraph, with its language or datatype after it as a small tag. */
+.literal-value {
+	display: block;
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+}
+
+.literal-tag {
+	display: inline-block;
+	margin-left: 6px;
+	padding: 0 5px;
+	border: 1px solid var(--vscode-input-border, var(--form-hairline));
+	border-radius: 3px;
+	color: var(--vscode-descriptionForeground);
+	font-size: 10.5px;
+	line-height: 15px;
+	vertical-align: 2px;
+	white-space: nowrap;
+}
+
+/* A resource: its glyph and label as a pill, which leads to its card. */
+.value-pill {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	max-width: 100%;
+	box-sizing: border-box;
+	padding: 0 8px 0 6px;
+	border: 1px solid transparent;
+	border-radius: 3px;
+	background: var(--form-tint);
+	line-height: var(--statement-line-height);
+	outline: none;
+	white-space: nowrap;
+}
+
+.value-pill[role="link"] {
+	cursor: pointer;
+}
+
+.value-pill[role="link"]:hover .value-pill-label {
+	text-decoration: underline;
+}
+
+.value-pill:focus-visible {
+	border-color: var(--vscode-focusBorder);
+}
+
+.value-pill-icon {
+	flex: none;
+	display: inline-flex;
+	align-items: center;
+}
+
+.value-pill-label {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+/* A blank node of a value: its rows, indented behind a hairline rather than boxed. */
+.resource-card.is-nested {
+	margin: 2px 0;
+	padding: 0 0 0 12px;
+	border-left: 1px solid var(--form-hairline);
+}
+
+.resource-card.is-nested > .statement-list {
+	margin-top: 0;
+}
+
+.resource-card.is-nested .statement-list > .statement-line:first-child {
+	padding-top: 0;
+}
+
+.resource-card.is-nested .statement-list > .statement-line:last-child {
+	padding-bottom: 0;
+}
+
+.nested-placeholder {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	padding: 0 4px;
+	border: 1px dashed var(--vscode-panel-border);
+	border-radius: var(--mentor-radius-sm);
+	color: var(--vscode-descriptionForeground);
+	background: transparent;
+	cursor: pointer;
+	font: inherit;
+	font-size: 0.9em;
+}
+
+.nested-placeholder:hover {
+	color: var(--vscode-foreground);
+	border-color: var(--vscode-focusBorder);
+}
+
+.resource-form-loading {
+	margin-top: 6px;
+	color: var(--vscode-descriptionForeground);
+}
+
+/* A narrow card puts the predicate above its values: side by side there is no width left for either. */
+.resource-card-body {
+	container: card-body / inline-size;
+}
+
+@container card-body (max-width: 400px) {
+	.statement-list {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.statement-predicate,
+	.statement-values {
+		grid-column: 1;
+	}
+}
+
 /* ---------- Comments ---------- */
 
 /* A comment between entries: grey text behind a bar in the gutter, where an entry has its glyph. */

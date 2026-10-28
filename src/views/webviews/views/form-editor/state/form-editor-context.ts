@@ -49,6 +49,11 @@ export interface FormEditorContextValue {
 	onRevealResource?: (resourceId: string) => void;
 
 	/**
+	 * Open an IRI the document does not describe outside the editor.
+	 */
+	onOpenExternal?: (iri: string) => void;
+
+	/**
 	 * The resource last revealed, as from the definition tree, whose entry is marked until the
 	 * form is used.
 	 */

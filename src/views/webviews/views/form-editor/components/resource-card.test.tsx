@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWebview } from '@src/utilities/mocks/webview-test-utils';
+import { createResourceDataServiceStub } from '@src/utilities/mocks/resource-data-service-fixtures';
 import { createResourceSummary } from '@src/utilities/mocks/resource-summary-fixtures';
 import { FormEditorContext, FormEditorContextValue } from '../state/form-editor-context';
 import { ResourceCard } from './resource-card';
@@ -16,7 +17,7 @@ function renderCard(context: Partial<FormEditorContextValue> = {}, expanded = fa
 	const onToggle = vi.fn();
 	const result = renderWebview(
 		<FormEditorContext.Provider value={{ readOnly: true, namespaces: [], ...context }}>
-			<ResourceCard summary={summary} expanded={expanded} onToggle={onToggle} />
+			<ResourceCard summary={summary} dataService={createResourceDataServiceStub()} expanded={expanded} onToggle={onToggle} />
 		</FormEditorContext.Provider>
 	);
 
