@@ -1,7 +1,7 @@
 /**
  * The kinds of token a statement line is made of.
  */
-export type LineTokenKind = 'ws' | 'punct' | 'name' | 'iri' | 'lang' | 'lit' | 'hole';
+export type LineTokenKind = 'whitespace' | 'punctuation' | 'name' | 'iri' | 'languageTag' | 'literal' | 'placeholder';
 
 /**
  * What every token carries: its raw text and where it starts on the line.
@@ -22,14 +22,14 @@ interface LineTokenBase {
  * A run of spaces or tabs.
  */
 export interface WhitespaceToken extends LineTokenBase {
-	kind: 'ws';
+	kind: 'whitespace';
 }
 
 /**
  * A separator or a list bracket: `,`, `;`, `(` or `)`.
  */
 export interface PunctuationToken extends LineTokenBase {
-	kind: 'punct';
+	kind: 'punctuation';
 }
 
 /**
@@ -51,7 +51,7 @@ export interface IriToken extends LineTokenBase {
  * A language tag such as `@en` that is not attached to a literal.
  */
 export interface LanguageToken extends LineTokenBase {
-	kind: 'lang';
+	kind: 'languageTag';
 }
 
 /**
@@ -59,7 +59,7 @@ export interface LanguageToken extends LineTokenBase {
  * written before it (`@en "text"`), which the canonical form moves behind.
  */
 export interface LiteralToken extends LineTokenBase {
-	kind: 'lit';
+	kind: 'literal';
 
 	/**
 	 * The text between the quotes, with its Turtle escapes kept.
@@ -69,7 +69,7 @@ export interface LiteralToken extends LineTokenBase {
 	/**
 	 * The language tag without its `@`.
 	 */
-	lang?: string;
+	language?: string;
 
 	/**
 	 * The datatype as written after `^^`: a prefixed name or an `<iri>`.
@@ -84,7 +84,7 @@ export interface LiteralToken extends LineTokenBase {
 	/**
 	 * Whether the language tag was written before the opening quote.
 	 */
-	langPre?: boolean;
+	languageFirst?: boolean;
 
 	/**
 	 * The offset of the opening quote.
@@ -108,10 +108,11 @@ export interface LiteralToken extends LineTokenBase {
 }
 
 /**
- * A placeholder for a blank node: `[…]`, `[]` or `[ ]`.
+ * A placeholder for a blank node, which is edited in its own nested card and not on the line:
+ * `[…]`, `[]` or `[ ]`.
  */
-export interface HoleToken extends LineTokenBase {
-	kind: 'hole';
+export interface PlaceholderToken extends LineTokenBase {
+	kind: 'placeholder';
 }
 
 /**
@@ -124,7 +125,7 @@ export type LineToken =
 	| IriToken
 	| LanguageToken
 	| LiteralToken
-	| HoleToken;
+	| PlaceholderToken;
 
 /**
  * One value of a statement line: a single term, or a list `( … )` whose items are kept together

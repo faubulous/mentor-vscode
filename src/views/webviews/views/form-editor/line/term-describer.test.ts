@@ -18,8 +18,8 @@ function token(text: string): LineToken {
 
 describe('TermDescriber.describePredicate', () => {
 	it('describes known predicates, including a', () => {
-		expect(describer.describePredicate(token('a'))).toMatchObject({ curie: 'rdf:type', label: 'type', range: 'res' });
-		expect(describer.describePredicate(token('rdfs:label'))).toMatchObject({ label: 'label', range: 'lit' });
+		expect(describer.describePredicate(token('a'))).toMatchObject({ curie: 'rdf:type', label: 'type', range: 'resource' });
+		expect(describer.describePredicate(token('rdfs:label'))).toMatchObject({ label: 'label', range: 'literal' });
 	});
 
 	it('accepts a prefixed name with a declared prefix as a predicate of any range', () => {
@@ -40,8 +40,8 @@ describe('TermDescriber.describePredicate', () => {
 
 describe('TermDescriber.rangeOf', () => {
 	it('falls back to any for unknown predicates', () => {
-		expect(describer.rangeOf(token('rdfs:label'))).toBe('lit');
-		expect(describer.rangeOf(token('a'))).toBe('res');
+		expect(describer.rangeOf(token('rdfs:label'))).toBe('literal');
+		expect(describer.rangeOf(token('a'))).toBe('resource');
 		expect(describer.rangeOf(token('foo:x'))).toBe('any');
 		expect(describer.rangeOf(undefined)).toBe('any');
 	});
@@ -49,23 +49,23 @@ describe('TermDescriber.rangeOf', () => {
 
 describe('TermDescriber.describeValue', () => {
 	it('classifies literals, tags, numbers and placeholders', () => {
-		expect(describer.describeValue(token('"x"'))).toEqual({ kind: 'lit' });
-		expect(describer.describeValue(token('@en'))).toEqual({ kind: 'lang' });
-		expect(describer.describeValue(token('42'))).toEqual({ kind: 'typed', datatype: 'xsd:integer' });
-		expect(describer.describeValue(token('[…]'))).toEqual({ kind: 'hole' });
+		expect(describer.describeValue(token('"x"'))).toEqual({ kind: 'literal' });
+		expect(describer.describeValue(token('@en'))).toEqual({ kind: 'languageTag' });
+		expect(describer.describeValue(token('42'))).toEqual({ kind: 'shorthandLiteral', datatype: 'xsd:integer' });
+		expect(describer.describeValue(token('[…]'))).toEqual({ kind: 'placeholder' });
 	});
 
 	it('classifies resources by where they come from', () => {
-		expect(describer.describeValue(token('owl:Class'))).toMatchObject({ kind: 'vocab', label: 'Class', curie: 'owl:Class' });
-		expect(describer.describeValue(token('ex:Tree'))).toMatchObject({ kind: 'local', label: 'Tree' });
-		expect(describer.describeValue(token('ex:Nope'))).toEqual({ kind: 'new', label: 'Nope', iri: `${EXAMPLE_NAMESPACE}Nope`, curie: 'ex:Nope' });
-		expect(describer.describeValue(token('<http://x/y>'))).toEqual({ kind: 'ext', label: 'y', iri: 'http://x/y', curie: '<http://x/y>' });
-		expect(describer.describeValue(token('<http://www.w3.org/2002/07/owl#Class>'))).toMatchObject({ kind: 'vocab' });
+		expect(describer.describeValue(token('owl:Class'))).toMatchObject({ kind: 'vocabularyTerm', label: 'Class', curie: 'owl:Class' });
+		expect(describer.describeValue(token('ex:Tree'))).toMatchObject({ kind: 'documentResource', label: 'Tree' });
+		expect(describer.describeValue(token('ex:Nope'))).toEqual({ kind: 'newResource', label: 'Nope', iri: `${EXAMPLE_NAMESPACE}Nope`, curie: 'ex:Nope' });
+		expect(describer.describeValue(token('<http://x/y>'))).toEqual({ kind: 'externalResource', label: 'y', iri: 'http://x/y', curie: '<http://x/y>' });
+		expect(describer.describeValue(token('<http://www.w3.org/2002/07/owl#Class>'))).toMatchObject({ kind: 'vocabularyTerm' });
 	});
 
 	it('reports undeclared prefixes and bare words', () => {
-		expect(describer.describeValue(token('foo:x'))).toEqual({ kind: 'err', error: 'Unknown prefix "foo:"' });
-		expect(describer.describeValue(token('word')).kind).toBe('err');
+		expect(describer.describeValue(token('foo:x'))).toEqual({ kind: 'error', error: 'Unknown prefix "foo:"' });
+		expect(describer.describeValue(token('word')).kind).toBe('error');
 	});
 });
 
@@ -81,8 +81,8 @@ describe('TermDescriber.tokenIri', () => {
 
 describe('resource and atomic tokens', () => {
 	it('rings every kind of resource', () => {
-		const resourceKinds: LineValueKind[] = ['vocab', 'local', 'new', 'ext'];
-		const otherKinds: LineValueKind[] = ['lit', 'lang', 'typed', 'hole', 'err'];
+		const resourceKinds: LineValueKind[] = ['vocabularyTerm', 'documentResource', 'newResource', 'externalResource'];
+		const otherKinds: LineValueKind[] = ['literal', 'languageTag', 'shorthandLiteral', 'placeholder', 'error'];
 
 		expect(resourceKinds.every(TermDescriber.isResourceKind)).toBe(true);
 		expect(otherKinds.some(TermDescriber.isResourceKind)).toBe(false);
@@ -115,27 +115,27 @@ describe('TermDescriber.isLabelPredicate', () => {
 
 describe('TermDescriber.ghostFor', () => {
 	it('hints at the kind of value a range takes', () => {
-		expect(TermDescriber.ghostFor('lit')).toBe('"text"@en');
-		expect(TermDescriber.ghostFor('res')).toBe('resource');
+		expect(TermDescriber.ghostFor('literal')).toBe('"text"@en');
+		expect(TermDescriber.ghostFor('resource')).toBe('resource');
 		expect(TermDescriber.ghostFor('any')).toBe('value');
 	});
 });
 
 describe('TermDescriber.pillDisplayOf', () => {
 	it('labels vocabulary and local resources by their entry', () => {
-		expect(describer.pillDisplayOf('owl:Class')).toMatchObject({ label: 'Class', kind: 'vocab' });
-		expect(describer.pillDisplayOf('ex:Tree')).toMatchObject({ label: 'Tree', kind: 'local' });
+		expect(describer.pillDisplayOf('owl:Class')).toMatchObject({ label: 'Class', kind: 'vocabularyTerm' });
+		expect(describer.pillDisplayOf('ex:Tree')).toMatchObject({ label: 'Tree', kind: 'documentResource' });
 	});
 
 	it('labels a term the row knows by its view, with the icon of the definition tree', () => {
 		const terms = { 'ex:Other': { term: { kind: 'iri' as const, iri: `${EXAMPLE_NAMESPACE}Other` }, label: 'Other thing', iconName: 'mentor-rdf-class', editable: true } };
 
-		expect(describer.pillDisplayOf('ex:Other', terms)).toMatchObject({ label: 'Other thing', kind: 'ext', iconName: 'mentor-rdf-class' });
+		expect(describer.pillDisplayOf('ex:Other', terms)).toMatchObject({ label: 'Other thing', kind: 'externalResource', iconName: 'mentor-rdf-class' });
 	});
 
 	it('marks a declared but unknown name as new and an undeclared one as an error', () => {
-		expect(describer.pillDisplayOf('ex:Unknown').kind).toBe('new');
-		expect(describer.pillDisplayOf('nope:X').kind).toBe('err');
+		expect(describer.pillDisplayOf('ex:Unknown').kind).toBe('newResource');
+		expect(describer.pillDisplayOf('nope:X').kind).toBe('error');
 	});
 });
 

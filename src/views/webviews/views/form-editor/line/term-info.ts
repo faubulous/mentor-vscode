@@ -1,29 +1,26 @@
-import { BareDatatype } from './line-lexer';
-
-/**
- * What kind of values a predicate takes: literals, resources, or either.
- */
-export type TermRange = 'lit' | 'res' | 'any';
+import { ValueKind } from '@src/utilities/value-kind';
+import { XsdDatatype } from './line-lexer';
 
 /**
  * What the first token of a line denotes: a predicate with its label and range, or the reason
  * it is not one.
  */
 export type PredicateInfo =
-	| { error?: undefined; curie: string; iri: string; label: string; range: TermRange }
+	| { error?: undefined; curie: string; iri: string; label: string; range: ValueKind }
 	| { error: string };
 
 /**
- * The kinds a value token can be: a quoted literal, a dangling language tag, a bare number or
- * boolean, an IRI reference outside the vocabulary, a vocabulary term, a resource of this
- * document, a prefixed name that is not described yet, a blank-node placeholder, or an error.
+ * The kinds a value token can be: a quoted literal, a dangling language tag, a number or boolean
+ * written without quotes, an IRI reference outside the vocabulary, a vocabulary term, a resource
+ * of this document, a prefixed name that is not described yet, a placeholder for a blank node,
+ * or an error.
  */
-export type LineValueKind = 'lit' | 'lang' | 'typed' | 'ext' | 'vocab' | 'local' | 'new' | 'hole' | 'err';
+export type LineValueKind = 'literal' | 'languageTag' | 'shorthandLiteral' | 'externalResource' | 'vocabularyTerm' | 'documentResource' | 'newResource' | 'placeholder' | 'error';
 
 /**
  * The kinds of value that denote a resource.
  */
-export type ResourceValueKind = Extract<LineValueKind, 'vocab' | 'local' | 'new' | 'ext'>;
+export type ResourceValueKind = Extract<LineValueKind, 'vocabularyTerm' | 'documentResource' | 'newResource' | 'externalResource'>;
 
 /**
  * What a value token denotes.
@@ -50,9 +47,9 @@ export interface ValueInfo {
 	curie?: string;
 
 	/**
-	 * The datatype of a bare number or boolean.
+	 * The datatype of a number or boolean written without quotes.
 	 */
-	datatype?: BareDatatype;
+	datatype?: XsdDatatype;
 
 	/**
 	 * Why the token is not a valid value.
@@ -74,7 +71,7 @@ export interface PillDisplay {
 	 * A vocabulary term, a resource of this document, a resource not described yet, one known
 	 * only by its IRI, or an error.
 	 */
-	kind: ResourceValueKind | 'err';
+	kind: ResourceValueKind | 'error';
 
 	/**
 	 * The name shown on hover.

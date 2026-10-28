@@ -1,4 +1,4 @@
-import { iriOfTermText, splitCurie } from '@src/utilities/curie';
+import { getIriFromText, splitPrefixedName } from '@src/utilities/prefixed-name';
 import { LineLexer } from './line-lexer';
 import { LineToken, LiteralToken } from './line-token';
 import { LineProblem, ParsedLine, ParsedValue } from './parsed-line';
@@ -53,7 +53,7 @@ export class LineParser {
 			return predicate;
 		}
 
-		const values = this._parseValues(tokens.filter(token => token.kind !== 'ws' && token !== items[0]));
+		const values = this._parseValues(tokens.filter(token => token.kind !== 'whitespace' && token !== items[0]));
 
 		return Array.isArray(values) ? { predicate, values } : values;
 	}
@@ -83,7 +83,7 @@ export class LineParser {
 	 * @returns The message.
 	 */
 	private _predicateMessage(token: LineToken): string {
-		const parts = splitCurie(token.text);
+		const parts = splitPrefixedName(token.text);
 
 		if (parts && this._namespaces[parts.prefix] === undefined) {
 			return `Unknown prefix "${parts.prefix}:"`;
@@ -99,12 +99,12 @@ export class LineParser {
 	 */
 	private _parseValues(tokens: LineToken[]): ParsedValue[] | LineProblem {
 		const stack: { items: ParsedValue[]; start: number }[] = [{ items: [], start: 0 }];
-		let holeCount = 0;
+		let placeholderCount = 0;
 
 		for (const token of tokens) {
-			if (token.kind === 'punct' && token.text === '(') {
+			if (token.kind === 'punctuation' && token.text === '(') {
 				stack.push({ items: [], start: token.start });
-			} else if (token.kind === 'punct' && token.text === ')') {
+			} else if (token.kind === 'punctuation' && token.text === ')') {
 				if (stack.length === 1) {
 					return { message: 'Unmatched ")"', start: token.start, end: token.start + 1 };
 				}
@@ -112,14 +112,14 @@ export class LineParser {
 				const list = stack.pop()!;
 
 				stack[stack.length - 1].items.push({ kind: 'list', items: list.items });
-			} else if (token.kind !== 'punct') {
-				const value = this._parseValue(token, holeCount);
+			} else if (token.kind !== 'punctuation') {
+				const value = this._parseValue(token, placeholderCount);
 
 				if (!('kind' in value)) {
 					return value;
 				}
 
-				holeCount += value.kind === 'hole' ? 1 : 0;
+				placeholderCount += value.kind === 'placeholder' ? 1 : 0;
 				stack[stack.length - 1].items.push(value);
 			}
 		}
@@ -136,18 +136,18 @@ export class LineParser {
 	/**
 	 * Read one value token.
 	 * @param token The token.
-	 * @param holeIndex The number of placeholders read before it.
+	 * @param placeholderIndex The number of placeholders read before it.
 	 * @returns The value, or the problem.
 	 */
-	private _parseValue(token: LineToken, holeIndex: number): ParsedValue | LineProblem {
+	private _parseValue(token: LineToken, placeholderIndex: number): ParsedValue | LineProblem {
 		const end = token.start + token.text.length;
 
 		switch (token.kind) {
-			case 'hole':
-				return { kind: 'hole', index: holeIndex };
-			case 'lang':
+			case 'placeholder':
+				return { kind: 'placeholder', index: placeholderIndex };
+			case 'languageTag':
 				return { message: 'A language tag needs a literal before it', start: token.start, end };
-			case 'lit':
+			case 'literal':
 				return this._parseLiteral(token);
 			case 'name':
 				return this._parseName(token);
@@ -175,15 +175,15 @@ export class LineParser {
 
 		const value = LineParser.unescapeLiteral(token.value);
 
-		if (token.lang) {
-			return { kind: 'term', term: { kind: 'literal', value, language: token.lang } };
+		if (token.language) {
+			return { kind: 'term', term: { kind: 'literal', value, language: token.language } };
 		}
 
 		if (token.datatype === undefined) {
 			return { kind: 'term', term: { kind: 'literal', value } };
 		}
 
-		const datatype = iriOfTermText(token.datatype, this._namespaces);
+		const datatype = getIriFromText(this._namespaces, token.datatype);
 
 		if (datatype === undefined) {
 			return { message: `"${token.datatype}" is not a datatype`, start: token.start, end };
@@ -198,10 +198,10 @@ export class LineParser {
 	 * @returns The value, or the problem.
 	 */
 	private _parseName(token: LineToken): ParsedValue | LineProblem {
-		const bare = LineLexer.bareDatatypeOf(token.text);
+		const datatype = LineLexer.getDatatypeOf(token.text);
 
-		if (bare) {
-			return { kind: 'term', term: { kind: 'literal', value: token.text, datatype: XSD_NAMESPACE + bare.slice(4) } };
+		if (datatype) {
+			return { kind: 'term', term: { kind: 'literal', value: token.text, datatype: XSD_NAMESPACE + datatype.slice('xsd:'.length) } };
 		}
 
 		const iri = this._parseIri(token);
@@ -221,13 +221,13 @@ export class LineParser {
 			return token.text.endsWith('>') && token.text.length > 1 ? token.text.slice(1, -1) : { message: 'Unclosed IRI', start: token.start, end };
 		}
 
-		const iri = iriOfTermText(token.text, this._namespaces);
+		const iri = getIriFromText(this._namespaces, token.text);
 
 		if (iri !== undefined) {
 			return iri;
 		}
 
-		const parts = splitCurie(token.text);
+		const parts = splitPrefixedName(token.text);
 		const message = parts ? `Unknown prefix "${parts.prefix}:"` : `"${token.text}" is not a known term`;
 
 		return { message, start: token.start, end };

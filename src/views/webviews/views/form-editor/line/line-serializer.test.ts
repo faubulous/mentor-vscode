@@ -43,7 +43,7 @@ describe('LineSerializer.serializeProperty', () => {
 		expect(model.text).toBe('a owl:Class');
 		expect(model.terms.a).toBe(type);
 		expect(model.terms['owl:Class']).toBe(owlClass);
-		expect(model.holes).toEqual([]);
+		expect(model.placeholders).toEqual([]);
 	});
 
 	it('writes literals with their language or datatype', () => {
@@ -85,7 +85,7 @@ describe('LineSerializer.serializeProperty', () => {
 		const model = serializer.serializeProperty(property(iri(`${EXAMPLE_NAMESPACE}p`, 'ex:p'), [first, iri(`${EXAMPLE_NAMESPACE}a`, 'ex:a'), second]));
 
 		expect(model.text).toBe('ex:p […] ex:a […]');
-		expect(model.holes).toEqual([first, second]);
+		expect(model.placeholders).toEqual([first, second]);
 	});
 
 	it('keeps Turtle escapes on the line', () => {

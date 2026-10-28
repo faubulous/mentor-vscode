@@ -4,9 +4,9 @@ const PUNCTUATION = new Set([',', ';', '(', ')']);
 const TAG_CHARACTER = /[A-Za-z0-9-]/;
 
 /**
- * The datatypes a bare number or boolean on a line stands for.
+ * The XSD datatypes Turtle gives a number or boolean written without quotes, as prefixed names.
  */
-export type BareDatatype = 'xsd:boolean' | 'xsd:integer' | 'xsd:decimal' | 'xsd:double';
+export type XsdDatatype = 'xsd:boolean' | 'xsd:integer' | 'xsd:decimal' | 'xsd:double';
 
 /**
  * Splits the text of a statement line into tokens. Every character of the line belongs to
@@ -51,12 +51,11 @@ export class LineLexer {
 	}
 
 	/**
-	 * Get the datatype a bare word stands for, when it is a number or a boolean written without
-	 * quotes.
-	 * @param word The bare word.
+	 * Get the datatype of a number or boolean written without quotes.
+	 * @param word The word.
 	 * @returns The datatype, or `undefined` if the word is not a Turtle shorthand literal.
 	 */
-	static bareDatatypeOf(word: string): BareDatatype | undefined {
+	static getDatatypeOf(word: string): XsdDatatype | undefined {
 		if (word === 'true' || word === 'false') {
 			return 'xsd:boolean';
 		}
@@ -101,7 +100,7 @@ export class LineLexer {
 	 * @returns The items.
 	 */
 	items(tokens: readonly LineToken[]): LineToken[] {
-		return tokens.filter(token => token.kind !== 'ws' && token.kind !== 'punct');
+		return tokens.filter(token => token.kind !== 'whitespace' && token.kind !== 'punctuation');
 	}
 
 	/**
@@ -128,14 +127,14 @@ export class LineLexer {
 		let seenPredicate = false;
 
 		for (const token of tokens) {
-			if (token.kind === 'ws') {
+			if (token.kind === 'whitespace') {
 				continue;
 			}
 
-			if (token.kind === 'punct' && token.text === '(') {
+			if (token.kind === 'punctuation' && token.text === '(') {
 				list = list ?? { items: [], list: true, start: token.start, end: token.start + 1 };
 				depth++;
-			} else if (token.kind === 'punct' && token.text === ')') {
+			} else if (token.kind === 'punctuation' && token.text === ')') {
 				depth = Math.max(0, depth - 1);
 
 				if (list && depth === 0) {
@@ -143,12 +142,12 @@ export class LineLexer {
 					groups.push(list);
 					list = undefined;
 				}
-			} else if (token.kind !== 'punct' && !seenPredicate) {
+			} else if (token.kind !== 'punctuation' && !seenPredicate) {
 				seenPredicate = true;
-			} else if (token.kind !== 'punct' && list) {
+			} else if (token.kind !== 'punctuation' && list) {
 				list.items.push(token);
 				list.end = token.start + token.text.length;
-			} else if (token.kind !== 'punct') {
+			} else if (token.kind !== 'punctuation') {
 				groups.push({ items: [token], list: false, start: token.start, end: token.start + token.text.length });
 			}
 		}
@@ -170,11 +169,11 @@ export class LineLexer {
 		const character = text[index];
 
 		if (LineLexer.isWhitespace(character)) {
-			return { kind: 'ws', text: text.slice(index, _skipWhitespace(text, index)), start: index };
+			return { kind: 'whitespace', text: text.slice(index, _skipWhitespace(text, index)), start: index };
 		}
 
 		if (PUNCTUATION.has(character)) {
-			return { kind: 'punct', text: character, start: index };
+			return { kind: 'punctuation', text: character, start: index };
 		}
 
 		if (character === '@') {
@@ -190,7 +189,7 @@ export class LineLexer {
 		}
 
 		if (character === '[') {
-			return _bracketedToken(text, index, ']', 'hole');
+			return _bracketedToken(text, index, ']', 'placeholder');
 		}
 
 		return _nameToken(text, index);
@@ -215,7 +214,7 @@ export class LineLexer {
 			return this._literalToken(text, index, quote, text.slice(index + 1, end), text.slice(end, quote));
 		}
 
-		return { kind: 'lang', text: text.slice(index, end), start: index };
+		return { kind: 'languageTag', text: text.slice(index, end), start: index };
 	}
 
 	/**
@@ -223,11 +222,11 @@ export class LineLexer {
 	 * @param text The text of the line.
 	 * @param start Where the token starts, which is before the quote when a tag precedes it.
 	 * @param quoteStart The offset of the opening quote.
-	 * @param preLang A language tag written before the quote, without its `@`.
+	 * @param languageBefore A language tag written before the quote, without its `@`.
 	 * @param gap The whitespace between that tag and the quote.
 	 * @returns The literal token.
 	 */
-	private _literalToken(text: string, start: number, quoteStart: number, preLang: string | undefined, gap: string): LiteralToken {
+	private _literalToken(text: string, start: number, quoteStart: number, languageBefore: string | undefined, gap: string): LiteralToken {
 		let index = quoteStart + 1;
 
 		while (index < text.length && text[index] !== '"') {
@@ -239,18 +238,18 @@ export class LineLexer {
 		const valueEnd = closed ? index + 1 : text.length;
 		const suffixEnd = closed ? _suffixEnd(text, valueEnd) : valueEnd;
 		const suffix = text.slice(valueEnd, suffixEnd);
-		const suffixLang = suffix.startsWith('@') ? suffix.slice(1) : undefined;
-		const lang = preLang !== undefined ? preLang : suffixLang;
+		const languageAfter = suffix.startsWith('@') ? suffix.slice(1) : undefined;
+		const language = languageBefore !== undefined ? languageBefore : languageAfter;
 
 		return {
-			kind: 'lit',
+			kind: 'literal',
 			text: text.slice(start, suffixEnd),
 			start,
 			value: text.slice(quoteStart + 1, closed ? quoteEnd : text.length),
-			lang: lang === '' ? undefined : lang,
+			language: language === '' ? undefined : language,
 			datatype: suffix.startsWith('^^') ? suffix.slice(2) : undefined,
 			closed,
-			langPre: preLang !== undefined ? true : undefined,
+			languageFirst: languageBefore !== undefined ? true : undefined,
 			quoteStart,
 			quoteEnd,
 			gap,
@@ -321,7 +320,7 @@ function _suffixEnd(text: string, index: number): number {
  * @param kind The kind of token the brackets enclose.
  * @returns The token.
  */
-function _bracketedToken(text: string, index: number, close: string, kind: 'iri' | 'hole'): LineToken {
+function _bracketedToken(text: string, index: number, close: string, kind: 'iri' | 'placeholder'): LineToken {
 	const closeIndex = text.indexOf(close, index);
 	const end = closeIndex < 0 ? text.length : closeIndex + 1;
 

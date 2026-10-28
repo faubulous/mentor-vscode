@@ -18,5 +18,5 @@ export interface LineModel {
 	/**
 	 * The blank-node values in the order of their `[…]` placeholders.
 	 */
-	holes: TermView[];
+	placeholders: TermView[];
 }

@@ -1,4 +1,4 @@
-import { TermRange } from './term-info';
+import { ValueKind } from '@src/utilities/value-kind';
 
 /**
  * A predicate the line editor knows: how it is written, what it means and what it takes.
@@ -22,5 +22,5 @@ export interface PredicateEntry {
 	/**
 	 * What kind of values the predicate takes.
 	 */
-	range: TermRange;
+	range: ValueKind;
 }

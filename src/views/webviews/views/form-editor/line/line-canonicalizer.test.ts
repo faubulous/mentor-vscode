@@ -76,12 +76,12 @@ describe('LineCanonicalizer.hasValues', () => {
 
 describe('placeholders', () => {
 	it('counts the blank-node placeholders of a line', () => {
-		expect(canonicalizer.holeCount('ex:p […] ex:a [] [ ]')).toBe(3);
-		expect(canonicalizer.holeCount('ex:p ex:a')).toBe(0);
+		expect(canonicalizer.placeholderCount('ex:p […] ex:a [] [ ]')).toBe(3);
+		expect(canonicalizer.placeholderCount('ex:p ex:a')).toBe(0);
 	});
 
 	it('removes the placeholders beyond the existing blank nodes', () => {
-		expect(canonicalizer.removeExtraHoles('ex:p […] ex:a []', 1)).toBe('ex:p […] ex:a');
-		expect(canonicalizer.removeExtraHoles('ex:p []', 0)).toBe('ex:p');
+		expect(canonicalizer.removeExtraPlaceholders('ex:p […] ex:a []', 1)).toBe('ex:p […] ex:a');
+		expect(canonicalizer.removeExtraPlaceholders('ex:p []', 0)).toBe('ex:p');
 	});
 });

@@ -1,10 +1,12 @@
-import { localNameOf, splitCurie } from '@src/utilities/curie';
+import { splitPrefixedName } from '@src/utilities/prefixed-name';
+import { getLocalPartAndQuery } from '@src/utilities/uri';
 import { humanize } from '@src/utilities/string';
 import { TermView } from '../form-editor-model';
 import { LineLexer } from './line-lexer';
 import { LineToken } from './line-token';
 import { LineVocabulary } from './line-vocabulary';
-import { LineValueKind, PillDisplay, PredicateInfo, TermRange, ValueInfo } from './term-info';
+import { ValueKind } from '@src/utilities/value-kind';
+import { LineValueKind, PillDisplay, PredicateInfo, ValueInfo } from './term-info';
 import { LABEL_PREDICATE_IRIS, RDF_TYPE } from './well-known-iris';
 
 /**
@@ -24,7 +26,7 @@ export class TermDescriber {
 	 * @returns `true` for a resource.
 	 */
 	static isResourceKind(kind: LineValueKind): boolean {
-		return kind === 'vocab' || kind === 'local' || kind === 'new' || kind === 'ext';
+		return kind === 'vocabularyTerm' || kind === 'documentResource' || kind === 'newResource' || kind === 'externalResource';
 	}
 
 	/**
@@ -32,12 +34,12 @@ export class TermDescriber {
 	 * @param range The range of the predicate.
 	 * @returns The hint.
 	 */
-	static ghostFor(range: TermRange): string {
-		if (range === 'lit') {
+	static ghostFor(range: ValueKind): string {
+		if (range === 'literal') {
 			return '"text"@en';
 		}
 
-		return range === 'res' ? 'resource' : 'value';
+		return range === 'resource' ? 'resource' : 'value';
 	}
 
 	/**
@@ -54,7 +56,7 @@ export class TermDescriber {
 			const iri = _innerIri(token.text);
 			const known = this._vocabulary.predicate(token.text);
 
-			return { curie: token.text, iri, label: known?.label ?? localNameOf(iri), range: known?.range ?? 'any' };
+			return { curie: token.text, iri, label: known?.label ?? getLocalPartAndQuery(iri), range: known?.range ?? 'any' };
 		}
 
 		if (token.kind !== 'name') {
@@ -69,7 +71,7 @@ export class TermDescriber {
 	 * @param token The predicate token.
 	 * @returns The range.
 	 */
-	rangeOf(token: LineToken | undefined): TermRange {
+	rangeOf(token: LineToken | undefined): ValueKind {
 		const info = this.describePredicate(token);
 
 		return info.error === undefined ? info.range : 'any';
@@ -82,18 +84,18 @@ export class TermDescriber {
 	 */
 	describeValue(token: LineToken): ValueInfo {
 		switch (token.kind) {
-			case 'lit':
-				return { kind: 'lit' };
-			case 'lang':
-				return { kind: 'lang' };
-			case 'hole':
-				return { kind: 'hole' };
+			case 'literal':
+				return { kind: 'literal' };
+			case 'languageTag':
+				return { kind: 'languageTag' };
+			case 'placeholder':
+				return { kind: 'placeholder' };
 			case 'iri':
 				return this._describeIriValue(token.text);
 			case 'name':
 				return this._describeNamedValue(token.text);
 			default:
-				return { kind: 'err', error: 'Not a value' };
+				return { kind: 'error', error: 'Not a value' };
 		}
 	}
 
@@ -137,7 +139,7 @@ export class TermDescriber {
 			return (token.kind === 'name' || token.kind === 'iri') && this.describePredicate(token).error === undefined;
 		}
 
-		return token.kind === 'hole' || this.isResourceToken(token);
+		return token.kind === 'placeholder' || this.isResourceToken(token);
 	}
 
 	/**
@@ -167,16 +169,16 @@ export class TermDescriber {
 		const view = terms?.[text];
 
 		if (view) {
-			return { label: view.label ?? text, kind: 'ext', title: text, iconName: view.iconName };
+			return { label: view.label ?? text, kind: 'externalResource', title: text, iconName: view.iconName };
 		}
 
 		const iri = this._vocabulary.iriOf(text);
 
 		if (iri) {
-			return { label: text, kind: 'new', title: `${iri} · not described yet` };
+			return { label: text, kind: 'newResource', title: `${iri} · not described yet` };
 		}
 
-		return { label: text, kind: 'err', title: 'Not a resource: use a declared prefix or an <iri>' };
+		return { label: text, kind: 'error', title: 'Not a resource: use a declared prefix or an <iri>' };
 	}
 
 	/**
@@ -195,7 +197,7 @@ export class TermDescriber {
 
 		const iri = this._vocabulary.iriOf(text);
 
-		return iri ? humanize(localNameOf(iri), true) : text;
+		return iri ? humanize(getLocalPartAndQuery(iri), true) : text;
 	}
 
 	/**
@@ -211,11 +213,11 @@ export class TermDescriber {
 			return { curie: known.curie, iri: known.iri, label: known.label, range: known.range };
 		}
 
-		const parts = splitCurie(text);
+		const parts = splitPrefixedName(text);
 		const namespace = parts ? this._vocabulary.namespaces[parts.prefix] : undefined;
 
-		if (parts && namespace !== undefined && parts.local) {
-			return { curie: text, iri: namespace + parts.local, label: parts.local, range: 'any' };
+		if (parts && namespace !== undefined && parts.localName) {
+			return { curie: text, iri: namespace + parts.localName, label: parts.localName, range: 'any' };
 		}
 
 		if (parts && namespace === undefined) {
@@ -238,7 +240,7 @@ export class TermDescriber {
 			return { kind: known.kind, label: known.label, iri: known.iri, curie: known.curie };
 		}
 
-		return { kind: 'ext', label: localNameOf(iri), iri, curie: text };
+		return { kind: 'externalResource', label: getLocalPartAndQuery(iri), iri, curie: text };
 	}
 
 	/**
@@ -248,10 +250,10 @@ export class TermDescriber {
 	 * @returns What it denotes.
 	 */
 	private _describeNamedValue(text: string): ValueInfo {
-		const datatype = LineLexer.bareDatatypeOf(text);
+		const datatype = LineLexer.getDatatypeOf(text);
 
 		if (datatype) {
-			return { kind: 'typed', datatype };
+			return { kind: 'shorthandLiteral', datatype };
 		}
 
 		const known = this._vocabulary.resource(text);
@@ -260,18 +262,18 @@ export class TermDescriber {
 			return { kind: known.kind, label: known.label, iri: known.iri, curie: known.curie };
 		}
 
-		const parts = splitCurie(text);
+		const parts = splitPrefixedName(text);
 		const namespace = parts ? this._vocabulary.namespaces[parts.prefix] : undefined;
 
-		if (parts && namespace !== undefined && parts.local) {
-			return { kind: 'new', label: parts.local, iri: namespace + parts.local, curie: text };
+		if (parts && namespace !== undefined && parts.localName) {
+			return { kind: 'newResource', label: parts.localName, iri: namespace + parts.localName, curie: text };
 		}
 
 		if (parts && namespace === undefined) {
-			return { kind: 'err', error: `Unknown prefix "${parts.prefix}:"` };
+			return { kind: 'error', error: `Unknown prefix "${parts.prefix}:"` };
 		}
 
-		return { kind: 'err', error: 'Not a known term. ⇥ completes it, a space turns it into text' };
+		return { kind: 'error', error: 'Not a known term. ⇥ completes it, a space turns it into text' };
 	}
 }
 

@@ -7,27 +7,27 @@ describe('LineVocabulary', () => {
 	const vocabulary = createTestLineVocabulary();
 
 	it('finds a predicate by prefixed name, IRI reference or IRI', () => {
-		expect(vocabulary.predicate('rdfs:label')).toMatchObject({ label: 'label', range: 'lit' });
+		expect(vocabulary.predicate('rdfs:label')).toMatchObject({ label: 'label', range: 'literal' });
 		expect(vocabulary.predicate(`<${RDFS.label}>`)).toMatchObject({ curie: 'rdfs:label' });
 		expect(vocabulary.predicate(RDFS.label)).toMatchObject({ curie: 'rdfs:label' });
 	});
 
 	it('maps the keyword a to rdf:type', () => {
-		expect(vocabulary.predicate('a')).toMatchObject({ curie: 'rdf:type', label: 'type', range: 'res' });
+		expect(vocabulary.predicate('a')).toMatchObject({ curie: 'rdf:type', label: 'type', range: 'resource' });
 	});
 
 	it('synthesises rdf:type when the entries lack it', () => {
 		const bare = new LineVocabulary({ namespaces: LINE_TEST_NAMESPACES, predicates: [], resources: [] });
 
-		expect(bare.predicate('a')).toMatchObject({ curie: 'rdf:type', label: 'type', range: 'res' });
+		expect(bare.predicate('a')).toMatchObject({ curie: 'rdf:type', label: 'type', range: 'resource' });
 		expect(bare.predicate('rdf:type')).toBeDefined();
 	});
 
 	it('finds a resource by prefixed name, IRI reference or IRI', () => {
-		expect(vocabulary.resource('owl:Class')).toMatchObject({ label: 'Class', kind: 'vocab' });
+		expect(vocabulary.resource('owl:Class')).toMatchObject({ label: 'Class', kind: 'vocabularyTerm' });
 		expect(vocabulary.resource(`<${OWL.Class}>`)).toMatchObject({ curie: 'owl:Class' });
 		expect(vocabulary.resource(OWL.Class)).toMatchObject({ curie: 'owl:Class' });
-		expect(vocabulary.resource('ex:Tree')).toMatchObject({ kind: 'local' });
+		expect(vocabulary.resource('ex:Tree')).toMatchObject({ kind: 'documentResource' });
 	});
 
 	it('knows nothing about unknown terms', () => {

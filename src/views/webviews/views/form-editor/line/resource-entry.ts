@@ -20,7 +20,7 @@ export interface ResourceEntry {
 	/**
 	 * Whether the resource comes from a vocabulary or is described in this document.
 	 */
-	kind: 'vocab' | 'local';
+	kind: 'vocabularyTerm' | 'documentResource';
 
 	/**
 	 * The glyph that marks what kind of resource this is.

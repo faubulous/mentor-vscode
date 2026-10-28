@@ -1,11 +1,12 @@
 import { TermRef } from '../form-editor-model';
 
 /**
- * A value read from a line: a term, the index of a blank-node placeholder, or a list of values.
+ * A value read from a line: a term, a placeholder `[…]` with the index of the blank node it
+ * stands for among the placeholders of the line, or a list of values.
  */
 export type ParsedValue =
 	| { kind: 'term'; term: TermRef }
-	| { kind: 'hole'; index: number }
+	| { kind: 'placeholder'; index: number }
 	| { kind: 'list'; items: ParsedValue[] };
 
 /**

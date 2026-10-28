@@ -33,20 +33,20 @@ export function createTestLineVocabulary(): LineVocabulary {
 	return new LineVocabulary({
 		namespaces: LINE_TEST_NAMESPACES,
 		predicates: [
-			{ curie: 'rdf:type', iri: RDF.type, label: 'type', range: 'res' },
-			{ curie: 'rdfs:label', iri: RDFS.label, label: 'label', range: 'lit' },
-			{ curie: 'rdfs:comment', iri: RDFS.comment, label: 'comment', range: 'lit' },
-			{ curie: 'skos:prefLabel', iri: SKOS.prefLabel, label: 'preferred label', range: 'lit' },
-			{ curie: 'rdfs:subClassOf', iri: RDFS.subClassOf, label: 'subClassOf', range: 'res' },
-			{ curie: 'rdfs:range', iri: RDFS.range, label: 'range', range: 'res' },
+			{ curie: 'rdf:type', iri: RDF.type, label: 'type', range: 'resource' },
+			{ curie: 'rdfs:label', iri: RDFS.label, label: 'label', range: 'literal' },
+			{ curie: 'rdfs:comment', iri: RDFS.comment, label: 'comment', range: 'literal' },
+			{ curie: 'skos:prefLabel', iri: SKOS.prefLabel, label: 'preferred label', range: 'literal' },
+			{ curie: 'rdfs:subClassOf', iri: RDFS.subClassOf, label: 'subClassOf', range: 'resource' },
+			{ curie: 'rdfs:range', iri: RDFS.range, label: 'range', range: 'resource' },
 			{ curie: 'dcterms:modified', iri: `${DCTERMS_NAMESPACE}modified`, label: 'modified', range: 'any' }
 		],
 		resources: [
-			{ curie: 'owl:Class', iri: OWL.Class, label: 'Class', kind: 'vocab' },
-			{ curie: 'owl:Thing', iri: OWL.Thing, label: 'Thing', kind: 'vocab' },
-			{ curie: 'xsd:integer', iri: XSD.integer, label: 'integer', kind: 'vocab' },
-			{ curie: 'ex:Tree', iri: `${EXAMPLE_NAMESPACE}Tree`, label: 'Tree', kind: 'local' },
-			{ curie: 'ex:Graph', iri: `${EXAMPLE_NAMESPACE}Graph`, label: 'Graph', kind: 'local' }
+			{ curie: 'owl:Class', iri: OWL.Class, label: 'Class', kind: 'vocabularyTerm' },
+			{ curie: 'owl:Thing', iri: OWL.Thing, label: 'Thing', kind: 'vocabularyTerm' },
+			{ curie: 'xsd:integer', iri: XSD.integer, label: 'integer', kind: 'vocabularyTerm' },
+			{ curie: 'ex:Tree', iri: `${EXAMPLE_NAMESPACE}Tree`, label: 'Tree', kind: 'documentResource' },
+			{ curie: 'ex:Graph', iri: `${EXAMPLE_NAMESPACE}Graph`, label: 'Graph', kind: 'documentResource' }
 		]
 	});
 }

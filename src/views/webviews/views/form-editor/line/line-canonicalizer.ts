@@ -1,9 +1,9 @@
-import { splitCurie } from '@src/utilities/curie';
+import { splitPrefixedName } from '@src/utilities/prefixed-name';
 import { LineLexer } from './line-lexer';
 import { LineToken, ValueGroup } from './line-token';
 import { LineVocabulary } from './line-vocabulary';
 import { TermDescriber } from './term-describer';
-import { TermRange } from './term-info';
+import { ValueKind } from '@src/utilities/value-kind';
 
 /**
  * Brings a line into the form it is stored in: items joined by single spaces, literals
@@ -29,16 +29,16 @@ export class LineCanonicalizer {
 	 * @param range The range of the predicate.
 	 * @returns The canonical text, or `undefined` for a dangling language tag, which is dropped.
 	 */
-	static canonicalValue(token: LineToken, range: TermRange): string | undefined {
-		if (token.kind === 'lit') {
-			return _canonicalLiteral(token.value, token.lang, token.datatype);
+	static canonicalValue(token: LineToken, range: ValueKind): string | undefined {
+		if (token.kind === 'literal') {
+			return _canonicalLiteral(token.value, token.language, token.datatype);
 		}
 
-		if (token.kind === 'lang') {
+		if (token.kind === 'languageTag') {
 			return undefined;
 		}
 
-		if (token.kind === 'name' && !LineLexer.bareDatatypeOf(token.text) && (range === 'lit' || (range === 'any' && !splitCurie(token.text)))) {
+		if (token.kind === 'name' && !LineLexer.getDatatypeOf(token.text) && (range === 'literal' || (range === 'any' && !splitPrefixedName(token.text)))) {
 			return `"${token.text}"`;
 		}
 
@@ -59,8 +59,8 @@ export class LineCanonicalizer {
 	 * @param text The text of the line.
 	 * @returns The number of placeholders.
 	 */
-	holeCount(text: string): number {
-		return this._lexer.tokenize(text).filter(token => token.kind === 'hole').length;
+	placeholderCount(text: string): number {
+		return this._lexer.tokenize(text).filter(token => token.kind === 'placeholder').length;
 	}
 
 	/**
@@ -93,11 +93,11 @@ export class LineCanonicalizer {
 	 * @param keep How many placeholders stand for existing blank nodes.
 	 * @returns The canonical text without the extra placeholders.
 	 */
-	removeExtraHoles(text: string, keep: number): string {
+	removeExtraPlaceholders(text: string, keep: number): string {
 		let seen = 0;
 
 		const kept = this._lexer.tokenize(text).filter(token => {
-			if (token.kind !== 'hole') {
+			if (token.kind !== 'placeholder') {
 				return true;
 			}
 
@@ -113,13 +113,13 @@ export class LineCanonicalizer {
 /**
  * Serialize a literal with its tag or datatype.
  * @param value The text between the quotes.
- * @param lang The language tag, if any.
+ * @param language The language tag, if any.
  * @param datatype The datatype as written, if any.
  * @returns The canonical text.
  */
-function _canonicalLiteral(value: string, lang: string | undefined, datatype: string | undefined): string {
-	if (lang) {
-		return `"${value}"@${lang}`;
+function _canonicalLiteral(value: string, language: string | undefined, datatype: string | undefined): string {
+	if (language) {
+		return `"${value}"@${language}`;
 	}
 
 	return datatype ? `"${value}"^^${datatype}` : `"${value}"`;
@@ -131,7 +131,7 @@ function _canonicalLiteral(value: string, lang: string | undefined, datatype: st
  * @param range The range of the predicate.
  * @returns The canonical text, empty for a group that drops out.
  */
-function _canonicalGroup(group: ValueGroup, range: TermRange): string {
+function _canonicalGroup(group: ValueGroup, range: ValueKind): string {
 	const values = group.items.map(item => LineCanonicalizer.canonicalValue(item, range)).filter((value): value is string => value !== undefined);
 
 	if (!group.list) {

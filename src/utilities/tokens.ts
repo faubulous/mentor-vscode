@@ -8,6 +8,14 @@ import { TextEditSpec, shiftOffset } from '@src/utilities/text-edits';
 import { IToken, RdfToken } from "@faubulous/mentor-rdf-parsers";
 import { Range } from "vscode-languageserver-types";
 import { countLeadingWhitespace, countTrailingWhitespace } from "./string";
+import { PrefixMap, getIriFromPrefixedName } from './prefixed-name';
+
+/**
+ * The prefixed-name helpers live in a module without imports, so that the webviews can share
+ * them; they stay available here for the callers that work on tokens.
+ */
+export type { PrefixMap } from './prefixed-name';
+export { getIriFromPrefixedName, getNamespaceIriFromPrefixedName } from './prefixed-name';
 
 /**
  * A zero-based position in a document (compatible with `vscode.Position` and LSP `Position`).
@@ -21,13 +29,6 @@ export interface TokenPosition {
  * Maps namespace IRIs to prefixes.
  */
 export interface NamespaceMap {
-	[key: string]: string;
-}
-
-/**
- * Maps namespace prefixes to IRIs.
- */
-export interface PrefixMap {
 	[key: string]: string;
 }
 
@@ -256,56 +257,6 @@ export function getIriFromIriReference(value: string): string {
 	} else {
 		return v;
 	}
-}
-
-/**
- * The reserved character escapes of a local name (`PN_LOCAL_ESC`), e.g. `\-` in `ex:a\-b`.
- */
-const LOCAL_NAME_ESCAPE = /\\([_~.\-!$&'()*+,;=/?#@%])/g;
-
-/**
- * Get the IRI from a prefixed name, as the RDF readers resolve it: the prefix ends at the
- * first colon, as the local name may contain colons, e.g. `ex:a:b`, and the reserved
- * character escapes of the local name are resolved, e.g. `ex:a\-b` is `…a-b`.
- * Percent-encodings are part of the IRI and are kept.
- * @param prefixes The namespace IRIs by prefix.
- * @param name A prefixed name.
- * @returns The IRI, or `undefined` if the name has no colon or its prefix is not declared.
- */
-export function getIriFromPrefixedName(prefixes: PrefixMap, name: string): string | undefined {
-	// Located with indexOf instead of split, which allocates an array per name: this runs for
-	// every prefixed name in a document.
-	const colon = name.indexOf(':');
-
-	if (colon < 0) {
-		return undefined;
-	}
-
-	const namespaceIri = prefixes[name.substring(0, colon)];
-
-	if (!namespaceIri) {
-		return undefined;
-	}
-
-	const localName = name.substring(colon + 1);
-
-	return namespaceIri + (localName.includes('\\') ? localName.replace(LOCAL_NAME_ESCAPE, '$1') : localName);
-}
-
-/**
- * Get the namespace IRI of a prefixed name; the prefix ends at the first colon.
- * @param prefixes The namespace IRIs by prefix.
- * @param name A prefixed name.
- * @returns The namespace IRI, or `undefined` if the name has no colon or its prefix is not declared.
- */
-export function getNamespaceIriFromPrefixedName(prefixes: PrefixMap, name: string): string | undefined {
-	const colon = name.indexOf(':');
-
-	if (colon < 0) {
-		return undefined;
-	}
-
-	return prefixes[name.substring(0, colon)];
 }
 
 /**

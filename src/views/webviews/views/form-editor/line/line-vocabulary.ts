@@ -1,4 +1,4 @@
-import { compressIri, iriOfTermText } from '@src/utilities/curie';
+import { formatIri, getIriFromText } from '@src/utilities/prefixed-name';
 import { PredicateEntry } from './predicate-entry';
 import { ResourceEntry } from './resource-entry';
 import { RDF_TYPE } from './well-known-iris';
@@ -49,7 +49,7 @@ export class LineVocabulary {
 		this._resources = _indexByIri(input.resources);
 
 		if (!this._predicates.has(RDF_TYPE)) {
-			this._predicates.set(RDF_TYPE, { curie: compressIri(RDF_TYPE, this.namespaces), iri: RDF_TYPE, label: 'type', range: 'res' });
+			this._predicates.set(RDF_TYPE, { curie: formatIri(this.namespaces, RDF_TYPE), iri: RDF_TYPE, label: 'type', range: 'resource' });
 		}
 	}
 
@@ -78,7 +78,7 @@ export class LineVocabulary {
 	 * name with a declared prefix.
 	 */
 	iriOf(text: string): string | undefined {
-		return iriOfTermText(text, this.namespaces);
+		return getIriFromText(this.namespaces, text);
 	}
 }
 

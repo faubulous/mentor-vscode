@@ -65,10 +65,10 @@ describe('LineParser.parse', () => {
 			{ kind: 'term', term: { kind: 'iri', iri: `${EXAMPLE_NAMESPACE}c` } }
 		]);
 		expect(statement('ex:p […] ex:a [] ( [ ] )').values).toEqual([
-			{ kind: 'hole', index: 0 },
+			{ kind: 'placeholder', index: 0 },
 			{ kind: 'term', term: { kind: 'iri', iri: `${EXAMPLE_NAMESPACE}a` } },
-			{ kind: 'hole', index: 1 },
-			{ kind: 'list', items: [{ kind: 'hole', index: 2 }] }
+			{ kind: 'placeholder', index: 1 },
+			{ kind: 'list', items: [{ kind: 'placeholder', index: 2 }] }
 		]);
 	});
 
@@ -113,20 +113,20 @@ describe('round trips', () => {
 		expect(statement(model.text)).toEqual({ predicate: `${EXAMPLE_NAMESPACE}p`, values: values.map(value => ({ kind: 'term', term: value.term })) });
 	});
 
-	it('serialize then parse keeps lists and holes', () => {
-		const hole = view({ kind: 'bnode', id: 'b1' });
+	it('serialize then parse keeps lists and placeholders', () => {
+		const placeholder = view({ kind: 'bnode', id: 'b1' });
 		const list: TermView = { ...view({ kind: 'bnode', id: 'b2' }), collection: { items: [view({ kind: 'iri', iri: `${EXAMPLE_NAMESPACE}a` }, 'ex:a'), view({ kind: 'literal', value: 'b' })] } };
-		const model = serializer.serializeProperty({ predicate: view({ kind: 'iri', iri: RDF.type }, 'rdf:type'), values: [list, hole] });
+		const model = serializer.serializeProperty({ predicate: view({ kind: 'iri', iri: RDF.type }, 'rdf:type'), values: [list, placeholder] });
 
 		expect(model.text).toBe('a ( ex:a "b" ) […]');
 		expect(statement(model.text)).toEqual({
 			predicate: RDF.type,
 			values: [
 				{ kind: 'list', items: [{ kind: 'term', term: { kind: 'iri', iri: `${EXAMPLE_NAMESPACE}a` } }, { kind: 'term', term: { kind: 'literal', value: 'b' } }] },
-				{ kind: 'hole', index: 0 }
+				{ kind: 'placeholder', index: 0 }
 			]
 		});
-		expect(model.holes).toEqual([hole]);
+		expect(model.placeholders).toEqual([placeholder]);
 	});
 
 	it('names the XML Schema datatypes as the parser does', () => {
