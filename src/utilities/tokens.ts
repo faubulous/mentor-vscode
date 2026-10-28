@@ -11,13 +11,6 @@ import { countLeadingWhitespace, countTrailingWhitespace } from "./string";
 import { PrefixMap, getIriFromPrefixedName } from './prefixed-name';
 
 /**
- * The prefixed-name helpers live in a module without imports, so that the webviews can share
- * them; they stay available here for the callers that work on tokens.
- */
-export type { PrefixMap } from './prefixed-name';
-export { getIriFromPrefixedName, getNamespaceIriFromPrefixedName } from './prefixed-name';
-
-/**
  * A zero-based position in a document (compatible with `vscode.Position` and LSP `Position`).
  */
 export interface TokenPosition {
