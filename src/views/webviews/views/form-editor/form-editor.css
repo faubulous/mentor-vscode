@@ -1,0 +1,559 @@
+/*
+ * The form editor: the toolbar, the document header, the context bar, the entries, the comments
+ * and the position rail. Every colour comes from a theme variable; entries are set apart by
+ * hairlines and type, not by boxes. Imported as a string and injected at runtime, so this file
+ * must not rely on any bundler CSS features.
+ */
+
+/* The host pads the body of a webview. The form draws edge to edge, so the padding is reset. */
+body {
+	padding: 0;
+}
+
+.form-editor {
+	/* The column of the content, the toolbar and the context bar: its width and its insets. */
+	--form-column: 900px;
+	--form-inset: 48px;
+	--form-inset-end: 40px;
+	/* The hairline between entries and under the bars. */
+	--form-hairline: var(--vscode-widget-border, var(--vscode-panel-border, #2b2b2b));
+	/* The column of the glyph of an entry, as wide as the glyph and the even space on either side of it. */
+	--form-glyph-column: 40px;
+	/* The tint of chips and the rail, and the hover of entries. */
+	--form-tint: var(--vscode-toolbar-hoverBackground, color-mix(in oklab, var(--vscode-foreground) 10%, transparent));
+	--form-hover: var(--vscode-list-hoverBackground, color-mix(in oklab, var(--vscode-foreground) 5%, transparent));
+	--form-mono: var(--vscode-editor-font-family, monospace);
+	/* The bar along the left edge of a comment: its width and its colour. */
+	--form-comment-bar-width: 3px;
+	--form-comment-bar-color: color-mix(in oklab, var(--vscode-descriptionForeground) 55%, transparent);
+
+	display: flex;
+	flex-direction: column;
+	position: relative;
+	height: 100vh;
+	overflow: hidden;
+	color: var(--vscode-foreground);
+	background: var(--vscode-editor-background);
+	font-family: var(--vscode-font-family);
+	font-size: 13px;
+	line-height: 1.5;
+}
+
+/* In high-contrast themes the tints may resolve to transparent: the hairlines take the contrast border. */
+.vscode-high-contrast .form-editor,
+.vscode-high-contrast-light .form-editor {
+	--form-hairline: var(--vscode-contrastBorder);
+}
+
+/* ---------- Toolbar ---------- */
+
+.form-toolbar {
+	flex: 0 0 auto;
+	position: relative;
+	z-index: 2;
+	border-bottom: 1px solid var(--form-hairline);
+	background: var(--vscode-editor-background);
+}
+
+.form-toolbar-content {
+	box-sizing: content-box;
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+	align-items: center;
+	gap: 12px;
+	max-width: var(--form-column);
+	height: 40px;
+	padding: 0 var(--form-inset-end) 0 var(--form-inset);
+}
+
+.form-toolbar-middle {
+	display: flex;
+	align-items: center;
+	min-width: 0;
+}
+
+.form-toolbar-end {
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	gap: 6px;
+	min-width: 0;
+	margin-right: -6px;
+}
+
+/* The filter: a text field with its search icon, token, count and clear button inside. */
+.filter-field {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	width: 360px;
+	max-width: 100%;
+}
+
+.filter-field vscode-textfield {
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+.filter-shortcut {
+	flex: none;
+	padding: 0 5px;
+	border: 1px solid var(--form-hairline);
+	border-radius: 3px;
+	color: var(--vscode-descriptionForeground);
+	font-family: var(--form-mono);
+	font-size: 11px;
+	line-height: 16px;
+}
+
+.filter-count {
+	flex: none;
+	color: var(--vscode-descriptionForeground);
+	font-size: 11px;
+}
+
+.filter-clear,
+.filter-token-clear {
+	flex: none;
+	display: grid;
+	place-items: center;
+	width: 18px;
+	height: 18px;
+	padding: 0;
+	border: 0;
+	border-radius: 3px;
+	background: transparent;
+	color: var(--vscode-descriptionForeground);
+	cursor: pointer;
+}
+
+.filter-clear:hover,
+.filter-token-clear:hover {
+	background: var(--form-tint);
+	color: var(--vscode-foreground);
+}
+
+/* The definition tree node the list is narrowed to, as a token before the text. */
+.filter-token {
+	flex: none;
+	display: inline-flex;
+	align-items: center;
+	gap: 2px;
+	max-width: 40%;
+	padding: 0 2px 0 6px;
+	border-radius: 3px;
+	background: var(--form-tint);
+	color: var(--vscode-foreground);
+	font-size: 12px;
+	line-height: 18px;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+/* ---------- Body: the scroll area and the rail ---------- */
+
+.form-editor-body {
+	flex: 1 1 auto;
+	display: flex;
+	min-height: 0;
+}
+
+.form-editor-scroll {
+	flex: 1 1 auto;
+	position: relative;
+	min-width: 0;
+	overflow-y: auto;
+	overflow-x: hidden;
+	outline: none;
+	/* The position rail beside it is the scrollbar of the form. */
+	scrollbar-width: none;
+}
+
+.form-editor-scroll::-webkit-scrollbar {
+	display: none;
+}
+
+/*
+ * The content is one column, inset from the left edge of the editor and capped in width, while
+ * the scroll area keeps the full width. The toolbar and the context bar use the same column, so
+ * their edges align with the entries.
+ */
+.form-editor-content,
+.form-editor-banner {
+	box-sizing: content-box;
+	max-width: var(--form-column);
+	margin: 0;
+	padding-left: var(--form-inset);
+	padding-right: var(--form-inset-end);
+}
+
+.form-editor-content {
+	padding-bottom: var(--mentor-space-6);
+}
+
+.form-editor-rail {
+	flex: 0 0 20px;
+	position: relative;
+	border-left: 1px solid var(--form-hairline);
+	background: var(--vscode-editorWidget-background, var(--form-tint));
+}
+
+.position-rail {
+	--rail-resource: var(--vscode-foreground);
+	--rail-comment: var(--vscode-symbolIcon-fieldForeground, #75beff);
+	--rail-match: var(--vscode-minimap-findMatchHighlight, var(--vscode-symbolIcon-classForeground, #ee9d28));
+	position: absolute;
+	inset: 0;
+	cursor: pointer;
+}
+
+.position-rail-marks {
+	position: absolute;
+	inset: 0;
+}
+
+.position-rail-viewport {
+	position: absolute;
+	left: 0;
+	right: 0;
+	box-sizing: border-box;
+	border-top: 1px solid var(--vscode-focusBorder);
+	border-bottom: 1px solid var(--vscode-focusBorder);
+	background: var(--vscode-scrollbarSlider-background);
+	cursor: grab;
+}
+
+.position-rail-viewport:active {
+	cursor: grabbing;
+	background: var(--vscode-scrollbarSlider-activeBackground, var(--vscode-scrollbarSlider-background));
+}
+
+/* ---------- Context bar ---------- */
+
+/*
+ * The running head shows once the title of the document has scrolled away. It hangs from an
+ * anchor of no height, so it overlays the entries instead of moving them, and fades in and out.
+ */
+.context-bar-anchor {
+	position: sticky;
+	top: 0;
+	z-index: 8;
+	height: 0;
+}
+
+.context-bar {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	height: 30px;
+	border-bottom: 1px solid var(--form-hairline);
+	background: var(--vscode-editor-background);
+	box-shadow: 0 2px 6px -2px var(--vscode-widget-shadow, transparent);
+	opacity: 0;
+	visibility: hidden;
+	transition: opacity 120ms ease, visibility 0s linear 120ms;
+}
+
+.context-bar.is-visible {
+	opacity: 1;
+	visibility: visible;
+	transition: opacity 120ms ease, visibility 0s;
+}
+
+.context-bar-content {
+	box-sizing: content-box;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	max-width: var(--form-column);
+	height: 100%;
+	padding: 0 var(--form-inset-end) 0 var(--form-inset);
+}
+
+.context-bar-title {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	min-width: 0;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	color: var(--vscode-foreground);
+	font: inherit;
+	font-weight: 600;
+	white-space: nowrap;
+	cursor: pointer;
+}
+
+.context-bar-title > span {
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.context-bar-position {
+	flex: none;
+	color: var(--vscode-descriptionForeground);
+	font-size: 12px;
+	white-space: nowrap;
+}
+
+.context-bar-guide {
+	color: var(--vscode-foreground);
+}
+
+/* ---------- Document header ---------- */
+
+.document-header {
+	padding: 20px 0 12px;
+	border-bottom: 1px solid var(--form-hairline);
+}
+
+.document-header-title {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.document-header-title h1 {
+	margin: 0;
+	font-size: 20px;
+	font-weight: 600;
+	line-height: 1.3;
+}
+
+.document-header-subline {
+	margin-top: 2px;
+	color: var(--vscode-descriptionForeground);
+	font-family: var(--form-mono);
+	font-size: 12px;
+	overflow-wrap: anywhere;
+}
+
+/* ---------- Entries ---------- */
+
+.entry {
+	position: relative;
+	display: grid;
+	grid-template-columns: var(--form-glyph-column) minmax(0, 1fr) 110px;
+	padding: 12px 0 13px;
+	border-bottom: 1px solid var(--form-hairline);
+}
+
+.entry:hover {
+	background: var(--form-hover);
+}
+
+/* An expanded entry is a form, and takes the background of the input fields. */
+.entry.is-expanded {
+	background: var(--vscode-input-background, var(--form-hover));
+}
+
+/* The entry the context bar names, the one the definition tree revealed, or the one being edited. */
+.entry.is-current,
+.entry:focus-within {
+	box-shadow: inset 2px 0 0 var(--vscode-focusBorder);
+}
+
+.entry-glyph {
+	display: flex;
+	justify-self: center;
+	margin-top: 6px;
+}
+
+.entry-main {
+	min-width: 0;
+}
+
+.entry-headword-row {
+	display: flex;
+	align-items: baseline;
+	gap: 6px;
+	min-width: 0;
+	cursor: pointer;
+	outline: none;
+}
+
+.entry-headword-row:focus-visible {
+	outline: 1px solid var(--vscode-focusBorder);
+	outline-offset: 1px;
+}
+
+.entry-headword {
+	min-width: 0;
+	color: var(--vscode-foreground);
+	font-size: 15px;
+	font-weight: 600;
+	line-height: 26px;
+}
+
+.entry-headword.is-unnamed {
+	color: var(--vscode-descriptionForeground);
+}
+
+.entry-type {
+	color: var(--vscode-descriptionForeground);
+	font-size: 12px;
+	font-weight: 500;
+}
+
+.entry-definition {
+	margin-top: 1px;
+	color: var(--vscode-foreground);
+	line-height: 1.55;
+}
+
+.entry-iri {
+	margin-top: 4px;
+	color: var(--vscode-descriptionForeground);
+	font-family: var(--form-mono);
+	font-size: 12px;
+	overflow-wrap: anywhere;
+}
+
+/* The column at the end of an entry, on the line of its headword: the usage count and the chevron. */
+.entry-meta {
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	gap: 8px;
+	height: 26px;
+	padding-right: 4px;
+}
+
+.entry-usage {
+	color: var(--vscode-descriptionForeground);
+	font-size: 12px;
+	white-space: nowrap;
+}
+
+.entry-chevron {
+	display: grid;
+	place-items: center;
+	width: 22px;
+	height: 22px;
+	padding: 0;
+	border: 0;
+	border-radius: 3px;
+	background: transparent;
+	color: var(--vscode-descriptionForeground);
+	cursor: pointer;
+}
+
+.entry-chevron:hover {
+	background: var(--form-tint);
+	color: var(--vscode-foreground);
+}
+
+.entry-chevron:focus-visible {
+	outline: 1px solid var(--vscode-focusBorder);
+	outline-offset: -1px;
+}
+
+.filter-match {
+	border-radius: 2px;
+	background: var(--vscode-editor-findMatchHighlightBackground);
+	color: inherit;
+}
+
+/*
+ * The icons of resources take the colours the definition tree gives their kinds: the colours the
+ * extension contributes, which a webview reads as theme variables.
+ */
+.resource-icon[data-icon="mentor-rdf-class"],
+.resource-icon[data-icon="mentor-rdf-ontology"],
+.resource-icon[data-icon="mentor-rdf-concept-scheme"],
+.resource-icon[data-icon="mentor-rdf-shape"] {
+	color: var(--vscode-mentor-color-class, #569cd6);
+}
+
+.resource-icon[data-icon="mentor-rdf-concept"],
+.resource-icon[data-icon="mentor-rdf-collection"],
+.resource-icon[data-icon="mentor-rdf-collection-ordered"] {
+	color: var(--vscode-mentor-color-concept, #569cd6);
+}
+
+.resource-icon[data-icon="mentor-rdf-individual"] {
+	color: var(--vscode-mentor-color-individual, #569cd6);
+}
+
+.resource-icon[data-icon="mentor-rdf-object-property"],
+.resource-icon[data-icon="mentor-rdf-shape-property"] {
+	color: var(--vscode-mentor-color-objectProperty, #569cd6);
+}
+
+.resource-icon[data-icon="symbol-text"],
+.resource-icon[data-icon="symbol-number"],
+.resource-icon[data-icon="symbol-boolean"],
+.resource-icon[data-icon="calendar"],
+.resource-icon[data-icon="file-binary"] {
+	color: var(--vscode-mentor-color-dataProperty, #ce9178);
+}
+
+/* ---------- Comments ---------- */
+
+/* A comment between entries: grey text behind a bar in the gutter, where an entry has its glyph. */
+.form-block.is-comment .comment-block {
+	display: grid;
+	grid-template-columns: var(--form-glyph-column) minmax(0, 1fr);
+	padding: 16px 0 12px;
+	border-bottom: 1px solid var(--form-hairline);
+}
+
+.comment-block::before {
+	content: '';
+	align-self: stretch;
+	justify-self: center;
+	width: var(--form-comment-bar-width);
+	border-radius: var(--form-comment-bar-width);
+	background: var(--form-comment-bar-color);
+}
+
+.comment-block-text {
+	color: var(--vscode-descriptionForeground);
+	line-height: 1.55;
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+}
+
+/* ---------- States ---------- */
+
+.form-editor-state {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: var(--mentor-space-3);
+	padding: var(--mentor-space-7);
+	text-align: center;
+	color: var(--vscode-descriptionForeground);
+}
+
+.form-editor-state-message {
+	max-width: 60ch;
+	line-height: 1.5;
+}
+
+.form-editor-state-actions {
+	display: flex;
+	gap: var(--mentor-space-2);
+}
+
+.form-editor-banner {
+	display: flex;
+	align-items: flex-start;
+	gap: var(--mentor-space-3);
+	padding: var(--mentor-space-3) var(--mentor-space-4);
+	background: var(--mentor-status-warning-background);
+	color: var(--mentor-status-warning-foreground);
+	border-bottom: var(--mentor-border-panel);
+	flex: 0 0 auto;
+}
+
+.form-editor-banner-text {
+	flex: 1 1 auto;
+	min-width: 0;
+	line-height: 1.4;
+}
