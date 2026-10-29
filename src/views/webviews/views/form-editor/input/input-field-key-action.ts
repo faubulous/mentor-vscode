@@ -3,13 +3,15 @@
  */
 export type InputFieldKeyAction =
 	/**
-	 * Move to the field before, with the caret at its end.
+	 * Move to the field before, with the caret at its end; with `stops`, to the stop before, as
+	 * Shift+Tab does, passing the pills.
 	 */
-	| { kind: 'previousField' }
+	| { kind: 'previousField'; stops?: boolean }
 	/**
-	 * Move to the field after, with the caret at its start.
+	 * Move to the field after, with the caret at its start; with `stops`, to the stop after, as
+	 * Tab does, passing the pills.
 	 */
-	| { kind: 'nextField' }
+	| { kind: 'nextField'; stops?: boolean }
 	/**
 	 * Confirm what was typed as a value and continue in the field for the next one.
 	 */
@@ -48,9 +50,17 @@ export type InputFieldKeyAction =
 	 */
 	| { kind: 'startLiteral' }
 	/**
-	 * Edit the resource of a pill as text, starting with the typed character when there is one.
+	 * Continue in the input of the row with the character typed on a pill.
 	 */
-	| { kind: 'editPill'; seed?: string }
+	| { kind: 'typeIntoInput'; seed: string }
+	/**
+	 * Write the row now and stay in it, as Enter in a literal does.
+	 */
+	| { kind: 'saveRow' }
+	/**
+	 * Open the picker of the language tag or datatype of a literal, as Enter on its button does.
+	 */
+	| { kind: 'pickTag' }
 	/**
 	 * Leave the row for the one below, as Enter at the end of the row does.
 	 */

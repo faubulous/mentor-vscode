@@ -1,9 +1,10 @@
 import { FormEvent } from 'react';
 import { VscodeTextarea, VscodeTextfield } from '@vscode-elements/elements';
 import { InputFieldBinding } from '../hooks/use-statement-editor';
+import { TagOption, TagPicker } from './tag-picker';
 
 /**
- * How many lines a literal field grows to before it scrolls.
+ * How many lines a literal text area grows to before it scrolls.
  */
 const MAX_ROWS = 12;
 
@@ -22,19 +23,44 @@ export interface LiteralInputProps {
 	value: string;
 
 	/**
-	 * The language tag or datatype, such as `@en` or `^^xsd:date`, or empty.
+	 * The label of its language tag or datatype, shown after the text.
+	 */
+	tagLabel: string;
+
+	/**
+	 * The tag as written, which the picker starts on.
 	 */
 	suffix: string;
 
 	/**
-	 * Wires the text area to the row.
+	 * What keeps the text from being a value of its datatype, shown in place of the tag.
+	 */
+	problem?: string;
+
+	/**
+	 * Whether the value is a number, written in the editor font.
+	 */
+	numeric: boolean;
+
+	/**
+	 * Whether the value is a whole number, which the arrows step.
+	 */
+	integer: boolean;
+
+	/**
+	 * Wires the text field to the row.
 	 */
 	textField: InputFieldBinding;
 
 	/**
-	 * Wires the field of the tag to the row, while the literal has one.
+	 * Wires the button of the tag to the row.
 	 */
-	tagField?: InputFieldBinding;
+	tagField: InputFieldBinding;
+
+	/**
+	 * The tags the picker offers, while it is open.
+	 */
+	pickerOptions?: readonly TagOption[];
 
 	/**
 	 * Called with the text as it is typed.
@@ -42,65 +68,70 @@ export interface LiteralInputProps {
 	onValueChange: (value: string) => void;
 
 	/**
-	 * Called with the suffix as its tag is typed.
+	 * Called when the button of the tag is pressed.
 	 */
-	onSuffixChange: (suffix: string) => void;
+	onOpenPicker: () => void;
+
+	/**
+	 * Called with the tag picked.
+	 */
+	onPick: (suffix: string) => void;
+
+	/**
+	 * Called when the picker is left without a pick.
+	 */
+	onCancelPicker: () => void;
 }
 
 /**
- * A literal being edited: a text area that grows with its lines, and after it, while the literal
- * has one, the small field of its language tag or datatype, which `@` or `^^` at the end of the
- * text opens.
+ * A literal being edited: a text field with the muted label of its language tag or datatype after
+ * the text, which opens the picker of the tag; while the text does not fit the datatype, the
+ * label gives way to the reason. A text of several lines is a text area instead.
  * @param props The literal and its wiring.
- * @returns The fields.
+ * @returns The field.
  */
-export function LiteralInput({ index, value, suffix, textField, tagField, onValueChange, onSuffixChange }: LiteralInputProps): React.JSX.Element {
-	const datatype = suffix.startsWith('^^');
+export function LiteralInput(props: LiteralInputProps): React.JSX.Element {
+	const { index, value, tagLabel, suffix, problem, numeric, integer, textField, tagField, pickerOptions, onValueChange, onOpenPicker, onPick, onCancelPicker } = props;
+	const label = `Value ${index + 1}`;
+	const tag = pickerOptions
+		? <TagPicker options={pickerOptions} current={suffix} onPick={onPick} onCancel={onCancelPicker} />
+		: (
+			<button {...tagField} type="button" className={`literal-tag-button${problem ? ' is-problem' : ''}`} title={problem ?? 'Change the language or datatype'} aria-label={problem ? `${problem}. Change the language or datatype` : `${tagLabel}. Change the language or datatype`} onClick={onOpenPicker}>
+				{problem ?? tagLabel}
+			</button>
+		);
+
+	if (value.includes('\n')) {
+		return (
+			<span className="literal-input is-multiline">
+				<vscode-textarea
+					{...textField}
+					className="input-field is-literal"
+					rows={Math.min(value.split('\n').length, MAX_ROWS)}
+					resize="vertical"
+					value={value}
+					aria-label={label}
+					spellCheck={false}
+					onInput={(event: FormEvent<VscodeTextarea>) => onValueChange(event.currentTarget.value)}
+				/>
+				<span className="literal-input-tag">{tag}</span>
+			</span>
+		);
+	}
 
 	return (
-		<span className="literal-input">
-			<vscode-textarea
-				{...textField}
-				className="input-field is-literal"
-				rows={Math.min(value.split('\n').length, MAX_ROWS)}
-				resize="vertical"
-				value={value}
-				aria-label={`Value ${index + 1}`}
-				spellCheck={false}
-				onInput={(event: FormEvent<VscodeTextarea>) => onValueChange(event.currentTarget.value)}
-			/>
-			{tagField && (
-				<vscode-textfield
-					{...tagField}
-					className="input-field is-tag"
-					value={_tagTextOf(suffix)}
-					placeholder={datatype ? 'datatype' : 'lang'}
-					aria-label={`${datatype ? 'Datatype' : 'Language'} of value ${index + 1}`}
-					spellCheck={false}
-					autocomplete="off"
-					onInput={(event: FormEvent<VscodeTextfield>) => onSuffixChange(_suffixOfTag(suffix, event.currentTarget.value))}
-				/>
-			)}
-		</span>
+		<vscode-textfield
+			{...textField}
+			className={`input-field is-literal${numeric ? ' is-numeric' : ''}`}
+			type={integer ? 'number' : 'text'}
+			value={value}
+			invalid={problem !== undefined}
+			aria-label={label}
+			spellCheck={false}
+			autocomplete="off"
+			onInput={(event: FormEvent<VscodeTextfield>) => onValueChange(event.currentTarget.value)}
+		>
+			<span slot="content-after" className="literal-input-tag">{tag}</span>
+		</vscode-textfield>
 	);
-}
-
-/**
- * The tag of a literal as its field shows it: the language or the datatype, without the `@` or
- * `^^` that writes it.
- * @param suffix The suffix, such as `@en` or `^^xsd:date`.
- * @returns The tag.
- */
-function _tagTextOf(suffix: string): string {
-	return suffix.replace(/^(@|\^\^)/, '');
-}
-
-/**
- * The suffix a tag is written as: after `@` for a language, after `^^` for a datatype.
- * @param suffix The suffix the literal has, which tells which of the two it is.
- * @param text The tag as typed.
- * @returns The suffix.
- */
-function _suffixOfTag(suffix: string, text: string): string {
-	return `${suffix.startsWith('^^') ? '^^' : '@'}${text.replace(/^(@|\^\^)/, '')}`;
 }

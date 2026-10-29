@@ -122,6 +122,30 @@ export interface StatementEditorHandle {
 	focusNewValue(): void;
 
 	/**
+	 * Remove a value, as the remove button of a pill does, and put the caret on the value before.
+	 * @param index The index of the value.
+	 */
+	removeValue(index: number): void;
+
+	/**
+	 * Open the picker of the language tag or datatype of a literal.
+	 * @param index The index of the literal.
+	 */
+	openTagPicker(index: number): void;
+
+	/**
+	 * Close the tag picker without picking.
+	 */
+	closeTagPicker(): void;
+
+	/**
+	 * Give a literal the tag picked for it.
+	 * @param index The index of the literal.
+	 * @param suffix The tag as written: `@language` or `^^datatype`, empty for none.
+	 */
+	pickTag(index: number, suffix: string): void;
+
+	/**
 	 * Note that the row or a field of it took the focus.
 	 * @param event The focus event.
 	 */
@@ -182,9 +206,8 @@ export function useStatementEditor(options: StatementEditorOptions): StatementEd
 		}
 	}, [state, fields]);
 
-	const commitNow = useCallback((): void => {
-		const { state: current, options: { service: currentService, onCommit } } = latest.current;
-		const statement = _committedStatementOf(current, currentService);
+	const commit = useCallback((statement: EditableStatement): void => {
+		const { options: { service: currentService, onCommit } } = latest.current;
 		const text = currentService.canonicalTextOf(statement);
 
 		if (!deleted.current && text !== lastCommitted.current) {
@@ -193,11 +216,26 @@ export function useStatementEditor(options: StatementEditorOptions): StatementEd
 		}
 	}, []);
 
+	// Enter writes the row as it is, unless a literal holds text its datatype does not take.
+	const commitNow = useCallback((): void => {
+		const { state: current, options: { service: currentService } } = latest.current;
+		const statement = _committedStatementOf(current, currentService);
+
+		if (!statement.values.some(value => currentService.literalProblemOf(value) !== undefined)) {
+			commit(statement);
+		}
+	}, [commit]);
+
+	// Leaving writes the row too, but a literal left with text its datatype does not take goes
+	// back to what is stored.
 	const leave = useCallback((): void => {
+		const { state: current, options: { service: currentService, initial: currentInitial } } = latest.current;
+		const statement = _withInvalidReverted(_committedStatementOf(current, currentService), currentInitial, currentService);
+
 		active.current = false;
-		commitNow();
-		setState(current => current.left(_typedValueOf(current, latest.current.options.service)));
-	}, [commitNow]);
+		commit(statement);
+		setState(StatementEditorState.of(statement));
+	}, [commit]);
 
 	const onFieldKeyDown = useCallback((field: InputFieldId, event: KeyboardEvent<HTMLElement>): void => {
 		const { state: current, options: currentOptions } = latest.current;
@@ -218,6 +256,10 @@ export function useStatementEditor(options: StatementEditorOptions): StatementEd
 			_performRowAction(action, field, { commitNow, options: currentOptions, lastCommitted, deleted, setState });
 		}
 	}, [commitNow]);
+
+	const openTagPicker = useCallback((index: number): void => setState(current => current.tagPickerOpened(index)), []);
+	const closeTagPicker = useCallback((): void => setState(current => current.tagPickerClosed()), []);
+	const pickTag = useCallback((index: number, suffix: string): void => setState(current => current.tagPicked(index, suffix)), []);
 
 	const bind = useCallback((field: InputFieldId): InputFieldBinding => ({
 		ref: fields.register(field),
@@ -255,6 +297,10 @@ export function useStatementEditor(options: StatementEditorOptions): StatementEd
 		setPending: text => setState(current => current.withPending(text)),
 		setValue: (index, value) => setState(current => current.withStatement(current.statement.withValue(index, value))),
 		focusNewValue: () => setState(current => current.focusing(InputFieldId.NEW_VALUE, 'end')),
+		removeValue: index => setState(current => current.valueRemoved(index, false)),
+		openTagPicker,
+		closeTagPicker,
+		pickTag,
 		onContainerFocus,
 		onContainerBlur
 	};
@@ -350,6 +396,9 @@ function _performRowAction(action: InputFieldKeyAction, field: InputFieldId, con
 	const { options } = control;
 
 	switch (action.kind) {
+		case 'saveRow':
+			control.commitNow();
+			break;
 		case 'nextRow':
 			control.commitNow();
 			options.onLeaveRow('next', 'predicate');
@@ -383,9 +432,9 @@ function _fieldActionState(action: InputFieldKeyAction, field: InputFieldId, sta
 	switch (action.kind) {
 		case 'previousField':
 		case 'nextField':
-			return state.movedToNeighbour(field, action.kind === 'nextField' ? 'next' : 'previous');
+			return state.movedToNeighbour(field, action.kind === 'nextField' ? 'next' : 'previous', action.stops === true);
 		case 'commitField':
-			return field.kind === 'newValue' ? state.typedValueCommitted(_typedValueOf(state, service)) : state.pillConfirmed();
+			return state.typedValueCommitted(_typedValueOf(state, service));
 		case 'removeField':
 			return field.index === undefined ? state : state.valueRemoved(field.index, action.forward === true);
 		case 'addValue':
@@ -402,8 +451,10 @@ function _fieldActionState(action: InputFieldKeyAction, field: InputFieldId, sta
 			return state.focusing(InputFieldId.PREDICATE, 'start');
 		case 'rowEnd':
 			return state.movedToRowEnd();
-		case 'editPill':
-			return field.index === undefined ? state : state.pillEdited(field.index, action.seed);
+		case 'typeIntoInput':
+			return state.typedIntoInput(action.seed);
+		case 'pickTag':
+			return field.index === undefined ? state : state.tagPickerOpened(field.index);
 		default:
 			return undefined;
 	}
@@ -426,6 +477,30 @@ function _suffixStartedState(field: InputFieldId, marker: '@' | '^^', state: Sta
 	}
 
 	return field.index === undefined ? state : state.suffixStarted(field.index, marker);
+}
+
+/**
+ * The statement with every literal whose text its datatype does not take put back to what is
+ * stored at its place, or dropped when nothing is stored there.
+ * @param statement The statement as edited.
+ * @param initial The statement as stored.
+ * @param service Validates literals.
+ * @returns The statement, the same one when every literal fits.
+ */
+function _withInvalidReverted(statement: EditableStatement, initial: EditableStatement, service: IStatementTextService): EditableStatement {
+	let reverted = statement;
+
+	for (let index = statement.values.length - 1; index >= 0; index--) {
+		if (service.literalProblemOf(statement.values[index]) === undefined) {
+			continue;
+		}
+
+		const stored = initial.values[index];
+
+		reverted = stored && service.literalProblemOf(stored) === undefined ? reverted.withValue(index, stored) : reverted.withoutValue(index);
+	}
+
+	return reverted;
 }
 
 /**
@@ -496,7 +571,7 @@ function _inputKindOf(field: InputFieldId, state: StatementEditorState): InputFi
 			const value = state.statement.values[field.index ?? -1];
 
 			if (value?.kind === 'resource') {
-				return state.editingPill === field.index ? 'resourceText' : 'resourcePill';
+				return 'resourcePill';
 			}
 
 			return value?.kind === 'literal' ? 'literalText' : 'source';

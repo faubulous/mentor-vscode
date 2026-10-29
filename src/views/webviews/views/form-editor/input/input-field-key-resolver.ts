@@ -5,12 +5,12 @@ import { InputFieldKeyboardEvent } from './input-field-keyboard-event';
 /**
  * The kinds of input that hold one of the values of the statement, each on a row of its own.
  */
-const VALUE_INPUTS: ReadonlySet<InputFieldInputKind> = new Set<InputFieldInputKind>(['resourcePill', 'literalText', 'literalTag', 'resourceText', 'source']);
+const VALUE_INPUTS: ReadonlySet<InputFieldInputKind> = new Set<InputFieldInputKind>(['resourcePill', 'literalText', 'literalTag', 'source']);
 
 /**
  * Resolves a key pressed in a field of a statement row into the action it asks for: the keys of
  * the row first, then the keys that cross from field to field, then the characters that mean
- * more than themselves.
+ * more than themselves. Keys the library handles itself fall through.
  */
 export class InputFieldKeyResolver {
 	/**
@@ -61,10 +61,8 @@ export class InputFieldKeyResolver {
 		switch (event.key) {
 			case 'Enter':
 				return this._resolveEnter(event, context);
-			case 'F2':
-				return context.field === 'resourcePill' ? { kind: 'editPill' } : undefined;
 			case 'Tab':
-				return { kind: event.shiftKey ? 'previousField' : 'nextField' };
+				return { kind: event.shiftKey ? 'previousField' : 'nextField', stops: true };
 			case 'Escape':
 				return { kind: 'restore' };
 			case 'ArrowUp':
@@ -77,9 +75,9 @@ export class InputFieldKeyResolver {
 	}
 
 	/**
-	 * Resolve Enter, which adds a value below the values of the statement. In the empty field
-	 * for a new value it ends the row and moves to the one below, as an empty item ends a list;
-	 * in a literal Shift+Enter breaks the line instead.
+	 * Resolve Enter: in a literal it writes the row (Shift+Enter breaks the line); in the input
+	 * of a resource row it confirms what was typed, or, empty, ends the row and moves to the one
+	 * below; on a pill it opens the input; in the predicate it moves on.
 	 * @param event The key event.
 	 * @param context The field.
 	 * @returns The action, or `undefined` for a line break.
@@ -87,11 +85,13 @@ export class InputFieldKeyResolver {
 	private _resolveEnter(event: InputFieldKeyboardEvent, context: InputFieldKeyContext): InputFieldKeyAction | undefined {
 		switch (context.field) {
 			case 'predicate':
-				return context.rowEmpty ? { kind: 'nextRow' } : { kind: 'nextField' };
+				return context.rowEmpty ? { kind: 'nextRow' } : { kind: 'nextField', stops: true };
 			case 'newValue':
 				return context.empty ? { kind: 'nextRow' } : { kind: 'commitField' };
 			case 'literalText':
-				return event.shiftKey ? undefined : { kind: 'addValue' };
+				return event.shiftKey ? undefined : { kind: 'saveRow' };
+			case 'literalTag':
+				return { kind: 'pickTag' };
 			default:
 				return { kind: 'addValue' };
 		}
@@ -148,7 +148,6 @@ export class InputFieldKeyResolver {
 			case 'literalTag':
 				return { kind: 'removeSuffix' };
 			case 'literalText':
-			case 'resourceText':
 			case 'source':
 				return { kind: 'removeField' };
 			default:
@@ -169,15 +168,13 @@ export class InputFieldKeyResolver {
 
 		switch (context.field) {
 			case 'resourcePill':
-				return { kind: 'editPill', seed: event.key };
+				return { kind: 'typeIntoInput', seed: event.key };
 			case 'predicate':
 				return event.key === ' ' && context.atEnd && !context.empty ? { kind: 'nextField' } : undefined;
 			case 'literalText':
 				return this._resolveSuffixStart(event.key, context);
 			case 'newValue':
 				return this._resolveNewValueKey(event.key, context);
-			case 'resourceText':
-				return this._resolveSeparator(event.key, context);
 			default:
 				return undefined;
 		}

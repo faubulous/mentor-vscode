@@ -1,9 +1,9 @@
 /**
- * The kinds of input a statement row is edited in: its predicate, a resource being typed, the
- * text of a literal, the language tag or datatype of a literal, a confirmed resource shown as a
- * pill, a value edited as source, and the field for a new value.
+ * The kinds of input a statement row is edited in: its predicate, the text of a literal, the
+ * button of its language tag or datatype, a resource shown as a pill, a value edited as source,
+ * and the input a new value is typed into.
  */
-export type InputFieldInputKind = 'predicate' | 'resourceText' | 'literalText' | 'literalTag' | 'resourcePill' | 'source' | 'newValue';
+export type InputFieldInputKind = 'predicate' | 'literalText' | 'literalTag' | 'resourcePill' | 'source' | 'newValue';
 
 /**
  * What the key resolver needs to know about the field that received a key.

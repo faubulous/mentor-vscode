@@ -1,5 +1,7 @@
 import { splitPrefixedName } from '@src/utilities/prefixed-name';
+import { getLocalPartAndQuery } from '@src/utilities/uri';
 import { ValueKind } from '@src/utilities/value-kind';
+import { LiteralDatatypes } from '../input/literal-datatypes';
 import { PropertyView, TermView } from '../form-editor-model';
 import { LineCanonicalizer } from '../line/line-canonicalizer';
 import { LineLexer } from '../line/line-lexer';
@@ -10,7 +12,7 @@ import { LineVocabulary } from '../line/line-vocabulary';
 import { isLineProblem } from '../line/parsed-line';
 import { TermDescriber } from '../line/term-describer';
 import { PillDisplay } from '../line/term-info';
-import { RDF_TYPE } from '../line/well-known-iris';
+import { RDF_TYPE, XSD_STRING } from '../line/well-known-iris';
 import { EditableStatement } from '../state/editable-statement';
 import { EditableValue } from '../state/editable-value';
 import { IStatementTextService } from './statement-text-service.interface';
@@ -126,6 +128,50 @@ export class StatementTextService implements IStatementTextService {
 		}
 
 		return { kind: 'literal', value: text, suffix: '' };
+	}
+
+	tagLabelOf(value: EditableValue): string {
+		if (value.kind === 'shorthandLiteral') {
+			const bare = LineLexer.bareDatatypeOf(value.text);
+
+			return bare ? LiteralDatatypes.of(this.vocabulary.iriOf(bare) ?? '')?.label ?? bare : 'Number';
+		}
+
+		if (value.kind !== 'literal' || !value.suffix) {
+			return 'Text';
+		}
+
+		if (value.suffix.startsWith('@')) {
+			return value.suffix.slice(1);
+		}
+
+		const iri = this.datatypeIriOf(value.suffix);
+
+		return iri ? LiteralDatatypes.of(iri)?.label ?? getLocalPartAndQuery(iri) : value.suffix.slice(2);
+	}
+
+	literalProblemOf(value: EditableValue): string | undefined {
+		if (value.kind === 'shorthandLiteral') {
+			return LineLexer.bareDatatypeOf(value.text.trim()) ? undefined : 'A number, or true or false';
+		}
+
+		if (value.kind !== 'literal' || !value.suffix.startsWith('^^')) {
+			return undefined;
+		}
+
+		const iri = this.datatypeIriOf(value.suffix);
+
+		return iri ? LiteralDatatypes.problemOf(iri, value.value) : undefined;
+	}
+
+	datatypeIriOf(suffix: string): string | undefined {
+		if (!suffix.startsWith('^^')) {
+			return undefined;
+		}
+
+		const text = suffix.slice(2);
+
+		return text === '' ? XSD_STRING : this.vocabulary.iriOf(text);
 	}
 
 	rangeOf(predicate: string): ValueKind {

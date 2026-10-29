@@ -48,6 +48,7 @@ export function EditableStatementList({ detail, dataService, editing }: Editable
 	const shown = new PendingEdits(editing.pendingEditsFor(detail.id)).applyTo(detail);
 	const subject = detail.term;
 	const visited = [detail.id];
+	const languages = _languagesOf(shown);
 
 	// The host delivered the card again: the drafts it has shown as statements go.
 	useEffect(() => setDrafts(current => current.pruneSubmitted()), [detail]);
@@ -137,6 +138,7 @@ export function EditableStatementList({ detail, dataService, editing }: Editable
 									initial={service.editableStatementOf(property)}
 									terms={service.termViewsOf(property)}
 									nestedNodes={property.values.filter(value => value.nested !== undefined)}
+									languages={languages}
 									service={service}
 									dataService={dataService}
 									visited={visited}
@@ -162,6 +164,7 @@ export function EditableStatementList({ detail, dataService, editing }: Editable
 						key={`draft-${draft.id}`}
 						cellKey={cellKey}
 						initial={EditableStatement.EMPTY}
+						languages={languages}
 						service={service}
 						dataService={dataService}
 						visited={visited}
@@ -179,6 +182,25 @@ export function EditableStatementList({ detail, dataService, editing }: Editable
 			})}
 		</div>
 	);
+}
+
+/**
+ * The languages the literals of a resource are tagged with, each once, in the order met.
+ * @param detail The resource.
+ * @returns The languages.
+ */
+function _languagesOf(detail: ResourceDetail): string[] {
+	const languages: string[] = [];
+
+	for (const property of detail.properties) {
+		for (const value of property.values) {
+			if (value.term.kind === 'literal' && value.term.language && !languages.includes(value.term.language)) {
+				languages.push(value.term.language);
+			}
+		}
+	}
+
+	return languages;
 }
 
 /**

@@ -26,44 +26,80 @@ export class EditableStatement {
 	}
 
 	/**
-	 * The fields in the order the arrows walk them: the predicate, each value with the tag of a
-	 * literal after it, and the field for a new value. A nested node is a card, not a field.
+	 * Whether the row has a field for a new value: the input after the pills of a row that holds
+	 * resources, or the one field of a row that holds nothing yet. A row of literals has none:
+	 * its values are the fields it shows.
+	 */
+	get hasNewValueField(): boolean {
+		return this.values.some(value => value.kind !== 'literal' && value.kind !== 'shorthandLiteral') || !this.values.some(value => value.kind === 'literal' || value.kind === 'shorthandLiteral');
+	}
+
+	/**
+	 * The fields in the order the arrows walk them: the predicate, each pill, each literal with
+	 * the button of its tag after it, and the field for a new value when the row has one. A nested
+	 * node is a card, not a field.
 	 * @returns The identifiers, in order.
 	 */
 	fieldOrder(): InputFieldId[] {
 		const values = this.values.flatMap((value, index) => {
-			if (value.kind === 'nestedNode') {
-				return [];
+			switch (value.kind) {
+				case 'nestedNode':
+					return [];
+				case 'literal':
+					return [InputFieldId.value(index), InputFieldId.tag(index)];
+				default:
+					return [InputFieldId.value(index)];
 			}
-
-			return value.kind === 'literal' && value.suffix ? [InputFieldId.value(index), InputFieldId.tag(index)] : [InputFieldId.value(index)];
 		});
 
-		return [InputFieldId.PREDICATE, ...values, InputFieldId.NEW_VALUE];
+		return [InputFieldId.PREDICATE, ...values, ...(this.hasNewValueField ? [InputFieldId.NEW_VALUE] : [])];
+	}
+
+	/**
+	 * The fields in the order Tab walks them: as the arrows do, but the pills of a row are one
+	 * stop, the input after them.
+	 * @returns The identifiers, in order.
+	 */
+	tabOrder(): InputFieldId[] {
+		return this.fieldOrder().filter(field => field.kind !== 'value' || !this._isPill(field.index));
 	}
 
 	/**
 	 * The field next to another in the order of the row.
 	 * @param from The current field.
 	 * @param direction Which way.
+	 * @param stops Whether to walk the stops of Tab rather than every field.
 	 * @returns The neighbour, or `undefined` past the first or last field.
 	 */
-	neighbourField(from: InputFieldId, direction: 'previous' | 'next'): InputFieldId | undefined {
-		const order = this.fieldOrder();
+	neighbourField(from: InputFieldId, direction: 'previous' | 'next', stops = false): InputFieldId | undefined {
+		const order = stops ? this.tabOrder() : this.fieldOrder();
 		const index = order.findIndex(field => field.equals(from));
 
 		return index < 0 ? undefined : order[direction === 'next' ? index + 1 : index - 1];
 	}
 
 	/**
-	 * The field of the last value, or the field for a new value when there is none.
+	 * The field the caret goes to at the end of the row: the field for a new value when the row
+	 * has one, else the last literal.
 	 * @returns The identifier.
 	 */
 	lastField(): InputFieldId {
-		const order = this.fieldOrder();
-		const last = order[order.length - 2];
+		if (this.hasNewValueField) {
+			return InputFieldId.NEW_VALUE;
+		}
 
-		return last && last.kind !== 'predicate' ? last : InputFieldId.NEW_VALUE;
+		const literals = this.fieldOrder().filter(field => field.kind === 'value');
+
+		return literals[literals.length - 1] ?? InputFieldId.PREDICATE;
+	}
+
+	/**
+	 * Indicate whether a value is shown as a pill.
+	 * @param index The index of the value.
+	 * @returns `true` for a resource.
+	 */
+	private _isPill(index: number | undefined): boolean {
+		return index !== undefined && this.values[index]?.kind === 'resource';
 	}
 
 	/**

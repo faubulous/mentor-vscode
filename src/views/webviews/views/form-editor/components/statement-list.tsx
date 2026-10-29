@@ -75,6 +75,7 @@ export function StatementRow({ property, ...rest }: StatementRowProps): React.JS
 
 	return (
 		<div className="statement-line" role="group" aria-label={label}>
+			<span className="statement-gutter"></span>
 			<span className="statement-predicate" title={title}>{label}</span>
 			<span className="statement-values">
 				{property.values.map((value, index) => (
@@ -84,6 +85,7 @@ export function StatementRow({ property, ...rest }: StatementRowProps): React.JS
 					</span>
 				))}
 			</span>
+			<span className="statement-actions"></span>
 		</div>
 	);
 }

@@ -21,23 +21,39 @@ describe('StatementEditorState', () => {
 		expect(fulfilled.focusFulfilled()).toBe(fulfilled);
 	});
 
-	it('knows the focused field and confirms an edited pill once another field takes the focus', () => {
-		const editing = createState().pillEdited(1, 'x');
+	it('knows the focused field and continues in the input with a character typed on a pill', () => {
+		const focused = createState().fieldFocused(InputFieldId.value(1));
+		const typed = focused.typedIntoInput('x');
 
-		expect(editing.editingPill).toBe(1);
-		expect(editing.statement.values[1]).toEqual({ kind: 'resource', text: 'x' });
-		expect(editing.fieldFocused(InputFieldId.value(1)).editingPill).toBe(1);
-		expect(editing.fieldFocused(InputFieldId.NEW_VALUE).editingPill).toBeUndefined();
-		expect(editing.fieldFocused(InputFieldId.NEW_VALUE).focusedField).toBe(InputFieldId.NEW_VALUE);
-		expect(editing.pillConfirmed().focusRequest?.field).toBe(InputFieldId.NEW_VALUE);
+		expect(focused.focusedField).toEqual(InputFieldId.value(1));
+		expect(focused.fieldFocused(InputFieldId.value(1))).toBe(focused);
+		expect(typed.pending).toBe('x');
+		expect(typed.focusRequest).toEqual({ field: InputFieldId.NEW_VALUE, caret: 'end' });
+	});
+
+	it('opens the tag picker of a literal, takes its pick and closes it', () => {
+		const open = createState().tagPickerOpened(0);
+		const picked = open.tagPicked(0, '@de');
+
+		expect(open.pickingTag).toBe(0);
+		expect(open.tagPickerClosed().pickingTag).toBeUndefined();
+		expect(open.tagPickerClosed().focusRequest).toEqual({ field: InputFieldId.tag(0), caret: 'end' });
+		expect(picked.statement.values[0]).toEqual({ kind: 'literal', value: 'Tree', suffix: '@de' });
+		expect(picked.pickingTag).toBeUndefined();
+		expect(picked.focusRequest).toEqual({ field: InputFieldId.value(0), caret: 'end' });
+		const closed = createState();
+
+		expect(closed.tagPickerClosed()).toBe(closed);
 	});
 
 	it('takes a typed value as a value and continues in the emptied field', () => {
 		const state = createState().withPending('ex:B').typedValueCommitted({ kind: 'resource', text: 'ex:B' });
+		const text = StatementEditorState.of(EditableStatement.EMPTY).withPending('a tree').typedValueCommitted({ kind: 'literal', value: 'a tree', suffix: '' });
 
 		expect(state.statement.values).toHaveLength(3);
 		expect(state.pending).toBe('');
 		expect(state.focusRequest).toEqual({ field: InputFieldId.NEW_VALUE, caret: 'end' });
+		expect(text.focusRequest).toEqual({ field: InputFieldId.value(0), caret: 'end' });
 		expect(createState().typedValueCommitted(undefined).statement.values).toHaveLength(2);
 	});
 
@@ -67,7 +83,7 @@ describe('StatementEditorState', () => {
 	it('moves between neighbouring fields and to the end of the row', () => {
 		expect(createState().movedToNeighbour(InputFieldId.PREDICATE, 'next').focusRequest).toEqual({ field: InputFieldId.value(0), caret: 'start' });
 		expect(createState().movedToNeighbour(InputFieldId.PREDICATE, 'previous').focusRequest).toBeUndefined();
-		expect(createState().movedToRowEnd().focusRequest).toEqual({ field: InputFieldId.value(1), caret: 'end' });
+		expect(createState().movedToRowEnd().focusRequest).toEqual({ field: InputFieldId.NEW_VALUE, caret: 'end' });
 	});
 
 	it('folds the typed value in when the row is left and forgets the focus', () => {

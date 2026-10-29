@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
 import { act, fireEvent, screen, within } from '@testing-library/react';
-import { RDF, RDFS } from '@faubulous/mentor-rdf';
+import { RDF, RDFS, XSD } from '@faubulous/mentor-rdf';
 import { renderWebview } from '@src/utilities/mocks/webview-test-utils';
 import { createEditingControllerStub } from '@src/utilities/mocks/editing-controller-fixtures';
 import { createResourceDataServiceStub } from '@src/utilities/mocks/resource-data-service-fixtures';
@@ -44,6 +44,13 @@ async function settle(): Promise<void> {
 }
 
 /**
+ * The rows of the list, in order.
+ */
+function rows(): HTMLElement[] {
+	return screen.getAllByRole('group').filter(element => element.classList.contains('statement-line'));
+}
+
+/**
  * Type a text into a field, as the user does.
  */
 function type(field: HTMLElement, text: string): void {
@@ -55,9 +62,9 @@ describe('EditableStatementList', () => {
 	it('shows each statement as fields, with a row for a new statement after them', () => {
 		renderList();
 
-		expect(screen.getAllByRole('group').map(row => row.getAttribute('aria-label'))).toEqual(['rdf:type', 'rdfs:label', 'rdfs:subClassOf', 'New statement']);
+		expect(rows().map(row => row.getAttribute('aria-label'))).toEqual(['rdf:type', 'rdfs:label', 'rdfs:subClassOf', 'New statement']);
 		expect((screen.getByLabelText('Value 1') as HTMLInputElement).value).toBe('Tree');
-		expect((screen.getByLabelText('Language of value 1') as HTMLInputElement).value).toBe('en');
+		expect(screen.getByText('en').classList.contains('literal-tag-button')).toBe(true);
 		expect(screen.getByLabelText('Class').classList.contains('value-pill')).toBe(true);
 	});
 
@@ -82,7 +89,8 @@ describe('EditableStatementList', () => {
 		type(within(draft).getByLabelText('Predicate'), 'rdfs:comment');
 		type(newValue, 'A tree');
 		fireEvent.keyDown(newValue, { key: 'Enter' });
-		fireEvent.keyDown(newValue, { key: 'Enter' });
+		// The typed text became a literal field; Enter in it writes the row.
+		fireEvent.keyDown(within(draft).getByLabelText('Value 1'), { key: 'Enter' });
 		await settle();
 
 		expect(editing.submitted).toMatchObject([{ operations: [{ op: 'replaceStatement', subject: TEST_SUBJECT, text: 'rdfs:comment "A tree"' }] }]);
@@ -138,22 +146,64 @@ describe('EditableStatementList', () => {
 
 		renderList(createTestResourceDetail([createProperty('ex:p', [list]), createProperty('ex:q', [createIriView('ex:B', 'B')])]));
 
-		const rows = screen.getAllByRole('group');
+		const [first, second] = rows();
 
-		expect(within(rows[0]).queryByLabelText('Predicate')).toBeNull();
-		expect(within(rows[1]).getByLabelText('Predicate')).toBeTruthy();
+		expect(within(first).queryByLabelText('Predicate')).toBeNull();
+		expect(within(second).getByLabelText('Predicate')).toBeTruthy();
+	});
+
+	it('continues in the input of the row with a character typed on a pill', async () => {
+		renderList();
+
+		const pill = screen.getByLabelText('Class');
+
+		fireEvent.focusIn(pill);
+		fireEvent.keyDown(pill, { key: 'x' });
+		await act(async () => undefined);
+
+		const input = within(rows()[0]).getByLabelText('New value') as HTMLInputElement;
+
+		expect(input.value).toBe('x');
+		expect(document.activeElement).toBe(input);
+	});
+
+	it('shows why a number does not fit its datatype and puts the stored value back when the row is left', async () => {
+		const { editing } = renderList(createTestResourceDetail([createProperty('ex:count', [{ term: { kind: 'literal', value: '42', datatype: XSD.integer }, editable: true }])]));
+		const field = screen.getByLabelText('Value 1') as HTMLInputElement;
+
+		fireEvent.focusIn(field);
+		type(field, '4.5');
+
+		expect(screen.getByText(/Whole numbers/).classList.contains('is-problem')).toBe(true);
+
+		fireEvent.keyDown(field, { key: 'Enter' });
+		expect(editing.submitted).toEqual([]);
+
+		fireEvent.focusOut(field);
+		await settle();
+
+		expect(editing.submitted).toEqual([]);
+		expect(field.value).toBe('42');
+	});
+
+	it('opens the tag picker from the button of the tag', () => {
+		renderList();
+
+		fireEvent.click(screen.getByText('en'));
+
+		expect(document.querySelector('.tag-picker')).not.toBeNull();
 	});
 
 	it('moves to the predicate of the row below with the arrow', async () => {
 		renderList();
 
-		const rows = screen.getAllByRole('group');
-		const predicate = within(rows[0]).getByLabelText('Predicate');
+		const [first, second] = rows();
+		const predicate = within(first).getByLabelText('Predicate');
 
 		act(() => predicate.focus());
 		fireEvent.keyDown(predicate, { key: 'ArrowDown' });
 		await act(async () => undefined);
 
-		expect(document.activeElement).toBe(within(rows[1]).getByLabelText('Predicate'));
+		expect(document.activeElement).toBe(within(second).getByLabelText('Predicate'));
 	});
 });

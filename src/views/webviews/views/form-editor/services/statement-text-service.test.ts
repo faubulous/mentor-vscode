@@ -104,6 +104,26 @@ describe('StatementTextService.valueOfTypedText', () => {
 	});
 });
 
+describe('StatementTextService literals', () => {
+	it('labels the tag of a literal by its language, its datatype or Text', () => {
+		expect(service.tagLabelOf({ kind: 'literal', value: 'Tree', suffix: '@en' })).toBe('en');
+		expect(service.tagLabelOf({ kind: 'literal', value: '1', suffix: '^^xsd:integer' })).toBe('Integer');
+		expect(service.tagLabelOf({ kind: 'literal', value: 'x', suffix: '^^ex:Code' })).toBe('Code');
+		expect(service.tagLabelOf({ kind: 'literal', value: 'x', suffix: '' })).toBe('Text');
+		expect(service.tagLabelOf({ kind: 'shorthandLiteral', text: '3.5' })).toBe('Decimal');
+	});
+
+	it('tells what keeps a text from fitting its datatype', () => {
+		expect(service.literalProblemOf({ kind: 'literal', value: '1.5', suffix: '^^xsd:integer' })).toMatch(/Whole numbers/);
+		expect(service.literalProblemOf({ kind: 'literal', value: '15', suffix: '^^xsd:integer' })).toBeUndefined();
+		expect(service.literalProblemOf({ kind: 'literal', value: 'anything', suffix: '@en' })).toBeUndefined();
+		expect(service.literalProblemOf({ kind: 'shorthandLiteral', text: '4x' })).toMatch(/number/);
+		expect(service.datatypeIriOf('^^xsd:integer')).toBe(XSD.integer);
+		expect(service.datatypeIriOf('^^')).toBe(XSD.string);
+		expect(service.datatypeIriOf('@en')).toBeUndefined();
+	});
+});
+
 describe('StatementTextService terms', () => {
 	it('knows the range and IRI of a predicate as written', () => {
 		expect(service.rangeOf('rdfs:label')).toBe('literal');

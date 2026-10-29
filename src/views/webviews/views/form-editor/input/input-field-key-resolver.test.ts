@@ -14,15 +14,15 @@ function resolve(key: string, context: Partial<InputFieldKeyContext> = {}, modif
 }
 
 describe('InputFieldKeyResolver', () => {
-	it('moves from the predicate to the values with Space and walks the fields with Tab', () => {
+	it('moves from the predicate to the values with Space and walks the stops with Tab', () => {
 		expect(resolve(' ', { field: 'predicate' })).toEqual({ kind: 'nextField' });
-		expect(resolve('Tab', { field: 'predicate' })).toEqual({ kind: 'nextField' });
-		expect(resolve('Tab', { field: 'literalText' })).toEqual({ kind: 'nextField' });
-		expect(resolve('Tab', { field: 'newValue' }, { shiftKey: true })).toEqual({ kind: 'previousField' });
+		expect(resolve('Tab', { field: 'predicate' })).toEqual({ kind: 'nextField', stops: true });
+		expect(resolve('Tab', { field: 'literalText' })).toEqual({ kind: 'nextField', stops: true });
+		expect(resolve('Tab', { field: 'newValue' }, { shiftKey: true })).toEqual({ kind: 'previousField', stops: true });
 	});
 
 	it('confirms a typed resource with Space or a comma at its end', () => {
-		expect(resolve(' ', { field: 'resourceText' })).toEqual({ kind: 'commitField' });
+		expect(resolve(' ', { field: 'newValue' })).toEqual({ kind: 'commitField' });
 		expect(resolve(',', { field: 'newValue' })).toEqual({ kind: 'commitField' });
 		expect(resolve(' ', { field: 'newValue', atEnd: false })).toBeUndefined();
 		expect(resolve(' ', { field: 'literalText' })).toBeUndefined();
@@ -50,24 +50,23 @@ describe('InputFieldKeyResolver', () => {
 		expect(resolve('K', { field: 'newValue' }, { ctrlKey: true, shiftKey: true })).toBeUndefined();
 	});
 
-	it('adds a value with Enter in a value and breaks a literal with Shift+Enter', () => {
-		expect(resolve('Enter', { field: 'resourceText' })).toEqual({ kind: 'addValue' });
-		expect(resolve('Enter', { field: 'literalText' })).toEqual({ kind: 'addValue' });
-		expect(resolve('Enter', { field: 'resourcePill' })).toEqual({ kind: 'addValue' });
+	it('writes the row with Enter in a literal, breaks a line with Shift+Enter, and opens the tag picker from its button', () => {
+		expect(resolve('Enter', { field: 'literalText' })).toEqual({ kind: 'saveRow' });
 		expect(resolve('Enter', { field: 'literalText' }, { shiftKey: true })).toBeUndefined();
+		expect(resolve('Enter', { field: 'literalTag' })).toEqual({ kind: 'pickTag' });
+		expect(resolve('Enter', { field: 'resourcePill' })).toEqual({ kind: 'addValue' });
 	});
 
-	it('confirms a typed value with Enter and leaves for the row below from the empty field for a new value', () => {
+	it('confirms a typed value with Enter and leaves for the row below from the empty input', () => {
 		expect(resolve('Enter', { field: 'newValue' })).toEqual({ kind: 'commitField' });
 		expect(resolve('Enter', { field: 'newValue', empty: true })).toEqual({ kind: 'nextRow' });
-		expect(resolve('Enter', { field: 'predicate' })).toEqual({ kind: 'nextField' });
+		expect(resolve('Enter', { field: 'predicate' })).toEqual({ kind: 'nextField', stops: true });
 		expect(resolve('Enter', { field: 'predicate', rowEmpty: true })).toEqual({ kind: 'nextRow' });
 	});
 
-	it('edits a pill as text with F2 or a typed character', () => {
-		expect(resolve('F2', { field: 'resourcePill' })).toEqual({ kind: 'editPill' });
-		expect(resolve('F2', { field: 'literalText' })).toBeUndefined();
-		expect(resolve('x', { field: 'resourcePill' })).toEqual({ kind: 'editPill', seed: 'x' });
+	it('continues in the input with a character typed on a pill', () => {
+		expect(resolve('x', { field: 'resourcePill' })).toEqual({ kind: 'typeIntoInput', seed: 'x' });
+		expect(resolve('F2', { field: 'resourcePill' })).toBeUndefined();
 	});
 
 	it('starts the tag of a literal with @ or a second ^ at the end of its text, once', () => {
@@ -79,11 +78,10 @@ describe('InputFieldKeyResolver', () => {
 		expect(resolve('@', { field: 'literalText', hasSuffix: true })).toBeUndefined();
 	});
 
-	it('removes an emptied tag and crosses from it', () => {
+	it('removes a tag with Backspace on its button and crosses from it', () => {
 		expect(resolve('Backspace', { field: 'literalTag', empty: true, atStart: true })).toEqual({ kind: 'removeSuffix' });
 		expect(resolve('Backspace', { field: 'literalTag', empty: false, atStart: false })).toBeUndefined();
 		expect(resolve('ArrowLeft', { field: 'literalTag', atStart: true })).toEqual({ kind: 'previousField' });
-		expect(resolve('Enter', { field: 'literalTag' })).toEqual({ kind: 'addValue' });
 	});
 
 	it('turns typed characters in the new value into their meaning', () => {

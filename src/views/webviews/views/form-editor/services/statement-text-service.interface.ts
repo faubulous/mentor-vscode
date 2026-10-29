@@ -74,6 +74,28 @@ export interface IStatementTextService {
 	valueOfTypedText(text: string, range: ValueKind): EditableValue | undefined;
 
 	/**
+	 * The label the tag of a literal is shown by: its language, the label of its datatype, or
+	 * "Text" for a plain string.
+	 * @param value The literal.
+	 * @returns The label.
+	 */
+	tagLabelOf(value: EditableValue): string;
+
+	/**
+	 * Tell what keeps the text of a literal from being a value of its datatype.
+	 * @param value The literal.
+	 * @returns The hint, or `undefined` when the text fits.
+	 */
+	literalProblemOf(value: EditableValue): string | undefined;
+
+	/**
+	 * The IRI of the datatype a tag names.
+	 * @param suffix The tag as written: `^^datatype`.
+	 * @returns The IRI, or `undefined` for a language tag or an unknown prefix.
+	 */
+	datatypeIriOf(suffix: string): string | undefined;
+
+	/**
 	 * What a predicate takes, as far as the card knows.
 	 * @param predicate The predicate as written.
 	 * @returns The range, `any` for an unknown predicate.
