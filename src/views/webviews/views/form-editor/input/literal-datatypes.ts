@@ -33,7 +33,7 @@ const FLOATING_POINT = /^([+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?|[+-]?INF|NaN)$
 /**
  * The IRI of the Markdown media type, which text literals in Markdown are typed with.
  */
-export const MARKDOWN_DATATYPE = 'https://www.iana.org/assignments/media-types/text/markdown';
+const MARKDOWN_DATATYPE = 'https://www.iana.org/assignments/media-types/text/markdown';
 
 /**
  * The datatypes the literal fields know, in the order they are offered.
