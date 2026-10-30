@@ -1,0 +1,52 @@
+import { OWL, RDF, RDFS, SKOS, XSD, _OWL, _RDF, _RDFS, _SKOS, _XSD } from '@faubulous/mentor-rdf';
+import { StatementVocabulary } from '@src/views/webviews/views/form-editor/services/statement/statement-vocabulary';
+
+/**
+ * The namespace of the Dublin Core terms, which mentor-rdf has no constant for.
+ */
+export const DCTERMS_NAMESPACE = 'http://purl.org/dc/terms/';
+
+/**
+ * The namespace of the example resources of the statement tests.
+ */
+export const EXAMPLE_NAMESPACE = 'http://example.org/';
+
+/**
+ * The namespaces the statement tests declare.
+ */
+export const STATEMENT_TEST_NAMESPACES: Readonly<Record<string, string>> = {
+	rdf: _RDF,
+	rdfs: _RDFS,
+	owl: _OWL,
+	skos: _SKOS,
+	xsd: _XSD,
+	dcterms: DCTERMS_NAMESPACE,
+	ex: EXAMPLE_NAMESPACE
+};
+
+/**
+ * Build the vocabulary the statement tests share: a few predicates of every range and a few
+ * vocabulary and local resources.
+ * @returns The vocabulary.
+ */
+export function createTestStatementVocabulary(): StatementVocabulary {
+	return new StatementVocabulary({
+		namespaces: STATEMENT_TEST_NAMESPACES,
+		predicates: [
+			{ curie: 'rdf:type', iri: RDF.type, label: 'type', range: 'resource' },
+			{ curie: 'rdfs:label', iri: RDFS.label, label: 'label', range: 'literal' },
+			{ curie: 'rdfs:comment', iri: RDFS.comment, label: 'comment', range: 'literal' },
+			{ curie: 'skos:prefLabel', iri: SKOS.prefLabel, label: 'preferred label', range: 'literal' },
+			{ curie: 'rdfs:subClassOf', iri: RDFS.subClassOf, label: 'subClassOf', range: 'resource' },
+			{ curie: 'rdfs:range', iri: RDFS.range, label: 'range', range: 'resource' },
+			{ curie: 'dcterms:modified', iri: `${DCTERMS_NAMESPACE}modified`, label: 'modified', range: 'any' }
+		],
+		resources: [
+			{ curie: 'owl:Class', iri: OWL.Class, label: 'Class', kind: 'vocabularyTerm' },
+			{ curie: 'owl:Thing', iri: OWL.Thing, label: 'Thing', kind: 'vocabularyTerm' },
+			{ curie: 'xsd:integer', iri: XSD.integer, label: 'integer', kind: 'vocabularyTerm' },
+			{ curie: 'ex:Tree', iri: `${EXAMPLE_NAMESPACE}Tree`, label: 'Tree', kind: 'documentResource' },
+			{ curie: 'ex:Graph', iri: `${EXAMPLE_NAMESPACE}Graph`, label: 'Graph', kind: 'documentResource' }
+		]
+	});
+}

@@ -476,13 +476,21 @@ body {
 
 /* ---------- Statements ---------- */
 
-/* The label of the property beside its values, each value on a line of its own. */
+/*
+ * The grid of a card: a gutter for the grip, the predicate, the values and a column for the
+ * actions of the row, as the spec lays them out. The gutter and the actions are reserved until
+ * their controls arrive.
+ */
 .statement-list {
-	--form-line-border: var(--vscode-settings-headerBorder, var(--form-hairline));
+	--form-line-border: color-mix(in oklab, var(--vscode-foreground) 8%, transparent);
 	--statement-line-height: 22px;
+	--form-gutter: 44px;
+	--form-predicate-column: 200px;
+	--form-actions-column: 62px;
+	--form-column-gap: 20px;
 	display: grid;
-	grid-template-columns: 150px minmax(0, 1fr);
-	column-gap: 16px;
+	grid-template-columns: var(--form-gutter) var(--form-predicate-column) minmax(0, 1fr) var(--form-actions-column);
+	column-gap: var(--form-column-gap);
 	align-items: start;
 	margin-top: 6px;
 }
@@ -502,8 +510,12 @@ body {
 	border-top: 0;
 }
 
-.statement-predicate {
+.statement-gutter {
 	grid-column: 1;
+}
+
+.statement-predicate {
+	grid-column: 2;
 	min-width: 0;
 	padding-left: 1px;
 	color: var(--vscode-descriptionForeground);
@@ -511,12 +523,16 @@ body {
 }
 
 .statement-values {
-	grid-column: 2;
+	grid-column: 3;
 	display: flex;
 	flex-direction: column;
 	align-items: stretch;
 	min-width: 0;
 	color: var(--vscode-foreground);
+}
+
+.statement-actions {
+	grid-column: 4;
 }
 
 .statement-value {
@@ -541,7 +557,7 @@ body {
 .statement-value-comment {
 	position: relative;
 	display: block;
-	grid-column: 1 / -1;
+	grid-column: 2 / -1;
 	padding: 2px 0 2px calc(var(--form-comment-bar-width) + var(--mentor-space-3));
 	color: var(--vscode-descriptionForeground);
 	white-space: pre-wrap;
@@ -601,6 +617,7 @@ body {
 
 /* A resource: its glyph and label as a pill, which leads to its card. */
 .value-pill {
+	position: relative;
 	display: inline-flex;
 	align-items: center;
 	gap: 6px;
@@ -608,7 +625,7 @@ body {
 	box-sizing: border-box;
 	padding: 0 8px 0 6px;
 	border: 1px solid transparent;
-	border-radius: 3px;
+	border-radius: 4px;
 	background: var(--form-tint);
 	line-height: var(--statement-line-height);
 	outline: none;
@@ -647,6 +664,10 @@ body {
 }
 
 .resource-card.is-nested > .statement-list {
+	--form-gutter: 0px;
+	--form-predicate-column: 120px;
+	--form-actions-column: 56px;
+	--form-column-gap: 12px;
 	margin-top: 0;
 }
 
@@ -682,18 +703,275 @@ body {
 	color: var(--vscode-descriptionForeground);
 }
 
+/* ---------- Editable statements ---------- */
+
+/*
+ * Plain at rest, field on intent: the predicate and the literals are VS Code text fields whose
+ * box is transparent until the pointer or the focus is on them, so nothing moves when editing
+ * starts. The resource values of a row stand in one box of their own, drawn the same way. The
+ * fields set the rhythm of the rows: every box of one line of text is as tall as a text field.
+ */
+.statement-list.is-editable {
+	--form-field-height: 26px;
+	--form-field-border: var(--vscode-settings-textInputBorder, var(--vscode-settings-textInputBackground, #313131));
+	--form-field-background: var(--vscode-settings-textInputBackground, #313131);
+	--form-field-foreground: var(--vscode-settings-textInputForeground, var(--vscode-foreground));
+}
+
+.statement-list.is-editable > .statement-line {
+	padding: 6px 0;
+}
+
+.statement-line.is-editable .statement-predicate {
+	padding-left: 0;
+}
+
+.statement-line.is-editable .statement-values {
+	gap: 4px;
+}
+
+.statement-line.is-editable .statement-value {
+	align-items: stretch;
+}
+
+.statement-line.is-editable .statement-value + .statement-value {
+	margin-top: 0;
+	padding-top: 0;
+	border-top: 0;
+}
+
+.input-field {
+	display: block;
+	width: 100%;
+	max-width: none;
+	--vscode-settings-textInputBackground: transparent;
+	--vscode-settings-textInputBorder: transparent;
+}
+
+.input-field:hover,
+.input-field:focus-within {
+	--vscode-settings-textInputBackground: var(--form-field-background);
+	--vscode-settings-textInputBorder: var(--form-field-border);
+}
+
+.input-field.is-predicate {
+	--vscode-settings-textInputForeground: var(--vscode-descriptionForeground);
+}
+
+.input-field.is-predicate:focus-within {
+	--vscode-settings-textInputForeground: var(--form-field-foreground);
+}
+
+/* Numbers are written in the editor font, as code is. */
+.input-field.is-numeric {
+	--vscode-font-family: var(--vscode-editor-font-family, monospace);
+}
+
+/* A text area holds a literal of several lines; it fills the grid of its host from the height of a field. */
+.input-field.is-literal {
+	min-height: var(--form-field-height);
+}
+
+vscode-textarea.input-field.is-literal {
+	display: grid;
+}
+
+.literal-input.is-multiline {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	column-gap: 6px;
+	align-items: start;
+}
+
+/* The language tag or datatype after the text of a literal: a muted label, a button for its picker. */
+.literal-input-tag {
+	display: inline-flex;
+	align-items: center;
+	flex: none;
+	max-width: 230px;
+}
+
+.literal-tag-button {
+	height: 22px;
+	margin: 0 2px 0 4px;
+	padding: 0 6px;
+	border: 1px solid transparent;
+	border-radius: 4px;
+	background: transparent;
+	color: var(--vscode-descriptionForeground);
+	font: inherit;
+	font-size: 12px;
+	line-height: 18px;
+	white-space: nowrap;
+	cursor: pointer;
+}
+
+.literal-tag-button:hover,
+.literal-tag-button:focus-visible {
+	border-color: var(--form-field-border);
+	color: var(--vscode-foreground);
+	outline: none;
+}
+
+.literal-tag-button.is-problem {
+	color: var(--vscode-errorForeground);
+}
+
+.tag-picker {
+	width: 200px;
+	--vscode-font-size: 12px;
+}
+
+/*
+ * The resource values of a row in one box, the pills before the input of the next value. The box
+ * is one Tab stop and draws its border as the fields do.
+ */
+.resource-values {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 4px;
+	box-sizing: border-box;
+	min-height: var(--form-field-height);
+	padding: 0 2px;
+	border: 1px solid transparent;
+	border-radius: 4px;
+	outline: none;
+	cursor: text;
+}
+
+.resource-values:hover,
+.resource-values:focus-within {
+	border-color: var(--form-field-border);
+	background: var(--form-field-background);
+}
+
+.resource-values:focus-within {
+	border-color: var(--vscode-focusBorder);
+}
+
+.resource-values > .value-pill {
+	line-height: 18px;
+}
+
+.resource-values > .value-pill:focus {
+	border-color: var(--vscode-focusBorder);
+}
+
+/* The input after the pills: borderless inside the box, growing with the room that is left. */
+.resource-values > .input-field.is-new {
+	flex: 1 1 160px;
+	display: inline-block;
+	width: auto;
+	min-width: 160px;
+	margin: -1px 0;
+	--vscode-settings-textInputBackground: transparent;
+	--vscode-settings-textInputBorder: transparent;
+	--vscode-focusBorder: transparent;
+}
+
+.resource-values > .input-field.is-source {
+	flex: 1 1 100%;
+}
+
+/* The remove button takes the place of the icon of a pill while the pointer or the focus is on it. */
+.value-pill-remove {
+	position: absolute;
+	top: 50%;
+	left: 4px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 18px;
+	height: 18px;
+	margin: 0;
+	padding: 0;
+	border: 0;
+	border-radius: 3px;
+	background: var(--form-tint);
+	color: var(--vscode-foreground);
+	opacity: 0;
+	transform: translateY(-50%);
+	cursor: pointer;
+}
+
+.value-pill:hover > .value-pill-remove,
+.value-pill:focus > .value-pill-remove {
+	opacity: 1;
+}
+
+.value-pill:hover > .value-pill-icon,
+.value-pill:focus > .value-pill-icon {
+	visibility: hidden;
+}
+
+/* A link of a row, such as the one that brings the input of a row of blank nodes back. */
+.statement-link {
+	align-self: flex-start;
+	margin: 2px 0 0 6px;
+	padding: 0;
+	border: 0;
+	background: none;
+	color: var(--vscode-textLink-foreground);
+	font: inherit;
+	cursor: pointer;
+}
+
+.statement-link:hover {
+	text-decoration: underline;
+}
+
+/* Why a row was not written, under the row, with the means to dismiss it. */
+.row-error {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	grid-column: 2 / -1;
+	margin-top: 4px;
+	color: var(--vscode-errorForeground);
+	font-size: 0.92em;
+}
+
+.row-error-message {
+	flex: 1 1 auto;
+	min-width: 0;
+	overflow-wrap: anywhere;
+}
+
+.row-error-dismiss {
+	display: inline-flex;
+	flex: none;
+	padding: 0;
+	border: 0;
+	background: none;
+	color: inherit;
+	cursor: pointer;
+}
+
+.row-error-dismiss:hover {
+	color: var(--vscode-foreground);
+}
+
 /* A narrow card puts the predicate above its values: side by side there is no width left for either. */
 .resource-card-body {
 	container: card-body / inline-size;
 }
 
-@container card-body (max-width: 400px) {
+@container card-body (max-width: 500px) {
 	.statement-list {
 		grid-template-columns: minmax(0, 1fr);
 	}
 
+	.statement-gutter,
+	.statement-actions {
+		display: none;
+	}
+
 	.statement-predicate,
-	.statement-values {
+	.statement-values,
+	.statement-comment,
+	.statement-value-comment,
+	.row-error {
 		grid-column: 1;
 	}
 }

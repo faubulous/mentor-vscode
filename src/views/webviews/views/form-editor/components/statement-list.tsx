@@ -55,7 +55,7 @@ export function StatementList({ detail, dataService, depth, visited }: Statement
 /**
  * Properties of the {@link StatementRow} component.
  */
-interface StatementRowProps extends Omit<StatementListProps, 'detail'> {
+export interface StatementRowProps extends Omit<StatementListProps, 'detail'> {
 	/**
 	 * The property of the row.
 	 */
@@ -68,13 +68,14 @@ interface StatementRowProps extends Omit<StatementListProps, 'detail'> {
  * @param props The property and where the row stands.
  * @returns The row.
  */
-function StatementRow({ property, ...rest }: StatementRowProps): React.JSX.Element {
+export function StatementRow({ property, ...rest }: StatementRowProps): React.JSX.Element {
 	const predicate = property.predicate;
 	const title = predicate.term.kind === 'iri' ? predicate.term.iri : undefined;
 	const label = predicate.label || predicate.prefixedName || title;
 
 	return (
 		<div className="statement-line" role="group" aria-label={label}>
+			<span className="statement-gutter"></span>
 			<span className="statement-predicate" title={title}>{label}</span>
 			<span className="statement-values">
 				{property.values.map((value, index) => (
@@ -84,6 +85,7 @@ function StatementRow({ property, ...rest }: StatementRowProps): React.JSX.Eleme
 					</span>
 				))}
 			</span>
+			<span className="statement-actions"></span>
 		</div>
 	);
 }
@@ -129,9 +131,12 @@ function TermValue({ view, dataService, depth, visited }: TermValueProps): React
 		case 'iri': {
 			const iri = view.term.iri;
 
-			return <ValuePill view={view} onNavigate={() => navigate(iri)} />;
+			return <ValuePill label={view.label || view.prefixedName || iri} title={iri} iconName={view.iconName} onNavigate={() => navigate(iri)} />;
 		}
-		default:
-			return <ValuePill view={view} />;
+		default: {
+			const title = view.term.kind === 'bnode' ? `_:${view.term.id}` : undefined;
+
+			return <ValuePill label={view.label || view.prefixedName || title || ''} title={title} iconName={view.iconName} />;
+		}
 	}
 }

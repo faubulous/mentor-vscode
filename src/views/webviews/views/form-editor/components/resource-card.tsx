@@ -5,6 +5,7 @@ import { IResourceDataService } from '../services/resource-data-service.interfac
 import { useFormEditorContext } from '../state/form-editor-context';
 import { HighlightedText } from './highlighted-text';
 import { ResourceIcon } from './resource-icon';
+import { EditableStatementList } from './editable-statement-list';
 import { StatementList } from './statement-list';
 
 /**
@@ -40,14 +41,16 @@ export interface ResourceCardProps {
 /**
  * One resource of the document as a card of the list, in three parts: the header, which is the
  * clickable area, with the type glyph, the label, the type and the chevron; the body with the
- * description and, once expanded, the IRI of the resource and its statements; and the footer
- * with the usage count. Cards are set apart by hairlines, not boxes.
+ * description and, once expanded, the IRI of the resource and its statements, as editable rows
+ * where the document can be written; and the footer with the usage count. Cards are set apart
+ * by hairlines, not boxes.
  * @param props The resource and its state.
  * @returns The card.
  */
 export function ResourceCard({ summary, dataService, expanded, current, onToggle }: ResourceCardProps): React.JSX.Element {
-	const { filterText, dominantTypeIri, revealedResourceId } = useFormEditorContext();
+	const { filterText, dominantTypeIri, revealedResourceId, editing, readOnly } = useFormEditorContext();
 	const { detail } = useResourceDetail(dataService, summary.id);
+	const editable = !readOnly && editing !== undefined;
 	const showType = summary.typeIri !== undefined && summary.typeIri !== dominantTypeIri;
 	const marked = current === true || revealedResourceId === summary.id;
 	const toggle = (): void => onToggle(summary.id);
@@ -76,7 +79,9 @@ export function ResourceCard({ summary, dataService, expanded, current, onToggle
 					{summary.description && <div className="resource-card-description"><HighlightedText text={summary.description} query={filterText} /></div>}
 					{expanded && <div className="resource-card-iri">{_identifierOf(summary)}</div>}
 					{expanded && (detail
-						? <StatementList detail={detail} dataService={dataService} depth={0} visited={[summary.id]} />
+						? (editable && editing
+							? <EditableStatementList detail={detail} dataService={dataService} editing={editing} />
+							: <StatementList detail={detail} dataService={dataService} depth={0} visited={[summary.id]} />)
 						: <div className="resource-form-loading">Loading…</div>)}
 				</div>
 			)}

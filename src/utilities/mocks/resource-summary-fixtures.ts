@@ -1,5 +1,5 @@
 import { ResourceSummary } from '@src/views/webviews/views/form-editor/form-editor-model';
-import { EXAMPLE_NAMESPACE } from './line-fixtures';
+import { EXAMPLE_NAMESPACE } from './statement-vocabulary-fixtures';
 
 /**
  * Make the summary of a resource of the example namespace.

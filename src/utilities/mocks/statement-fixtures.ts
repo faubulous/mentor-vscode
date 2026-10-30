@@ -1,6 +1,6 @@
 import { OWL, RDF, RDFS } from '@faubulous/mentor-rdf';
 import { PropertyView, ResourceDetail, TermRef, TermView } from '@src/views/webviews/views/form-editor/form-editor-model';
-import { EXAMPLE_NAMESPACE, LINE_TEST_NAMESPACES } from './line-fixtures';
+import { EXAMPLE_NAMESPACE, STATEMENT_TEST_NAMESPACES } from './statement-vocabulary-fixtures';
 
 /**
  * The subject of the statement fixtures.
@@ -21,7 +21,7 @@ export const TEST_SUBJECT_ID = 'i:tree';
 export function createIriView(prefixedName: string, label?: string): TermView {
 	const [prefix, localName] = prefixedName.split(':');
 
-	return { term: { kind: 'iri', iri: LINE_TEST_NAMESPACES[prefix] + localName }, prefixedName, label, editable: true };
+	return { term: { kind: 'iri', iri: STATEMENT_TEST_NAMESPACES[prefix] + localName }, prefixedName, label, editable: true };
 }
 
 /**
