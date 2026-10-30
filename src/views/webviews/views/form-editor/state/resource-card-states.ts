@@ -1,9 +1,8 @@
 /**
- * How far the card of a resource is open: showing only its summary, all its statements without
- * editing, as in a read-only document, or the editor. Opening a card edits it; the form shows it
- * read only where the document cannot be edited.
+ * Whether the card of a resource shows only its summary or all its statements. The statements
+ * are edited where the document can be written, and read otherwise.
  */
-export type ResourceCardOpenState = 'collapsed' | 'readOnly' | 'edit';
+type ResourceCardOpenState = 'collapsed' | 'open';
 
 /**
  * The state of one resource card. An open card stays open until its chevron collapses it.
@@ -21,9 +20,9 @@ export interface ResourceCardState {
 const COLLAPSED_CARD: ResourceCardState = { open: 'collapsed' };
 
 /**
- * The state of a card open for editing.
+ * The state of a card showing all its statements.
  */
-const OPEN_CARD: ResourceCardState = { open: 'edit' };
+const OPEN_CARD: ResourceCardState = { open: 'open' };
 
 /**
  * The states of the resource cards, by resource identifier. A card without an entry is collapsed.
@@ -74,14 +73,6 @@ export class ResourceCardStates {
 		return Object.keys(this._states).filter(id => this._states[id].open !== 'collapsed');
 	}
 
-	/**
-	 * Open a collapsed card for editing, as a click on it or a resource just created does.
-	 * @param id The resource identifier of the card.
-	 * @returns The next states, the states themselves when the card is open already.
-	 */
-	open(id: string): ResourceCardStates {
-		return this.stateOf(id).open === 'collapsed' ? this._with(id, OPEN_CARD) : this;
-	}
 
 	/**
 	 * Collapse an open card, or open a collapsed one, as the corner chevron does.
@@ -92,14 +83,6 @@ export class ResourceCardStates {
 		return this._with(id, this.stateOf(id).open === 'collapsed' ? OPEN_CARD : COLLAPSED_CARD);
 	}
 
-	/**
-	 * Collapse a card.
-	 * @param id The resource identifier of the card.
-	 * @returns The next states.
-	 */
-	collapse(id: string): ResourceCardStates {
-		return this._with(id, COLLAPSED_CARD);
-	}
 
 	/**
 	 * Replace the state of one card, dropping the entry of a collapsed card so the map holds only

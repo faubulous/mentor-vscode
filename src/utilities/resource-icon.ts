@@ -20,7 +20,7 @@ const DEFAULT_PROPERTY_ICON = 'rdf-object-property';
  * @param datatypeIri The IRI of the datatype, or `undefined` for a plain literal.
  * @returns The name of the icon to show, or `undefined` for a datatype with no glyph of its own.
  */
-export function getDatatypeIconName(datatypeIri?: string): string | undefined {
+function _getDatatypeIconName(datatypeIri?: string): string | undefined {
 	switch (datatypeIri) {
 		case XSD.date:
 		case XSD.dateTime:
@@ -71,7 +71,7 @@ export function getPropertyIconName(rangeIri?: string, valueKind?: ValueKind): s
 		return valueKind === 'literal' ? 'symbol-text' : DEFAULT_PROPERTY_ICON;
 	}
 
-	return getDatatypeIconName(rangeIri) ?? (valueKind === 'literal' ? 'symbol-text' : DEFAULT_PROPERTY_ICON);
+	return _getDatatypeIconName(rangeIri) ?? (valueKind === 'literal' ? 'symbol-text' : DEFAULT_PROPERTY_ICON);
 }
 
 /**

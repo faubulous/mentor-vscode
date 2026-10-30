@@ -64,14 +64,12 @@ describe('ResourceIndexBuilder', () => {
 		const shared = index.summaries.find(summary => summary.term.kind === 'bnode')!;
 
 		expect(index.referenceCounts.get(shared.id)).toBe(2);
-		expect(shared.nested).toBe(false);
 	});
 
-	it('counts properties and values separately', () => {
+	it('counts the properties, not the values', () => {
 		const index = indexOf('ex:Thing ex:note "a" , "b" , "c" ;\n    ex:other "x" .\n');
 
 		expect(index.summaries[0].propertyCount).toBe(2);
-		expect(index.summaries[0].valueCount).toBe(4);
 	});
 
 	it('prefers a resolved label over the local part', () => {
@@ -112,12 +110,10 @@ describe('ResourceIndexBuilder', () => {
 		const index = indexOf('ex:A a owl:Class , rdfs:Class .\nex:B a owl:NamedIndividual , skos:Concept .\nex:C ex:p "x" .\n');
 		const [a, b, c] = index.summaries;
 
-		expect(a.typeLabels).toEqual(['owl:Class', 'rdfs:Class']);
 		expect(a.typeIri).toBe(OWL.Class);
 		expect(a.typeLabel).toBe('owl:Class');
 		expect(b.typeIri).toBe(SKOS.Concept);
 		expect(b.typeLabel).toBe('skos:Concept');
-		expect(c.typeLabels).toBeUndefined();
 		expect(c.typeIri).toBeUndefined();
 	});
 
@@ -127,24 +123,10 @@ describe('ResourceIndexBuilder', () => {
 		expect(index.summaries.map(summary => summary.iconName)).toEqual(['mentor-rdf-ontology', 'mentor-rdf-concept-scheme', 'mentor-rdf-individual']);
 	});
 
-	it('collects the datatypes used in the document', () => {
-		const index = indexOf('ex:Thing ex:count "1"^^xsd:integer ; ex:when "2026-01-01"^^xsd:date .\n');
-
-		expect(index.datatypes).toEqual([`${_XSD}date`, `${_XSD}integer`]);
-	});
-
-	it('lists the declared namespaces sorted by prefix, counting their uses', () => {
+	it('lists the declared namespaces sorted by prefix', () => {
 		const index = indexOf('ex:A a ex:Class .\nex:B a ex:Class .\n');
 
 		expect(index.namespaces.map(namespace => namespace.prefix)).toEqual(['ex', 'owl', 'rdfs', 'sh', 'skos', 'xsd']);
-		expect(index.namespaces.find(namespace => namespace.prefix === 'ex')?.usageCount).toBe(4);
-		expect(index.namespaces.find(namespace => namespace.prefix === 'sh')?.usageCount).toBe(0);
-	});
-
-	it('records source positions for statements written in the document', () => {
-		const index = indexOf('ex:Thing a ex:Class .\n');
-
-		expect(index.summaries[0].position).toEqual({ line: PREAMBLE.split('\n').length - 1, character: 0 });
 	});
 
 	it('keeps the list nodes of a collection out of the resource list', () => {

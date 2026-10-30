@@ -27,7 +27,7 @@ export interface StatementComments {
  * @param quad The statement.
  * @returns The comment tokens written above the statement.
  */
-export function leadingCommentsOf(quad: QuadContext): IToken[] {
+function _leadingCommentsOf(quad: QuadContext): IToken[] {
 	// Measured against the object, which is the one part of a statement that is always its own:
 	// a subject is written once for a block and a predicate once for a list of values, so either
 	// of them can precede a comment written inside the statement they belong to.
@@ -42,7 +42,7 @@ export function leadingCommentsOf(quad: QuadContext): IToken[] {
  * @returns The comment texts above the property and above the value.
  */
 export function splitLeadingComments(quad: QuadContext): StatementComments {
-	const leading = leadingCommentsOf(quad);
+	const leading = _leadingCommentsOf(quad);
 	const aboveProperty = _commentsAbovePredicate(quad, leading);
 
 	return {
@@ -63,14 +63,14 @@ export function leadingCommentRunsOf(entry: ResourceIndexEntry): string[][] | un
 		return undefined;
 	}
 
-	const runs = splitCommentRuns(_commentsAbovePredicate(first, leadingCommentsOf(first))).map(run => run.map(getCommentText));
+	const runs = splitCommentRuns(_commentsAbovePredicate(first, _leadingCommentsOf(first))).map(run => run.map(getCommentText));
 
 	return runs.length > 0 ? runs : undefined;
 }
 
 /**
  * Get the comments that close a document. The reader attaches them to the last statement it
- * reads, where {@link leadingCommentsOf} leaves them out; they are the ones written after the
+ * reads, where {@link _leadingCommentsOf} leaves them out; they are the ones written after the
  * object of the last statement of the document.
  * @param quadContexts The statements of the document.
  * @returns The lines of each run of comments, in the order they were written.

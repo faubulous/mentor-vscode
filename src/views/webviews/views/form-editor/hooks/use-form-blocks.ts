@@ -52,27 +52,14 @@ export function useFormBlocks(resources: readonly ResourceSummary[], trailingCom
  * @returns The block.
  */
 function _resourceCommentBlock(resource: ResourceSummary, lines: string[], run: number): FormBlock {
-	return {
-		kind: 'comment',
-		id: `comment:${resource.id}:${run}`,
-		text: lines.join('\n'),
-		anchor: { kind: 'resource', resourceId: resource.id, subject: resource.term, run }
-	};
+	return { kind: 'comment', id: `comment:${resource.id}:${run}`, text: lines.join('\n') };
 }
 
 /**
- * The blocks of the runs of comments closing the document, each named by its first line.
+ * The blocks of the runs of comments closing the document.
  * @param runs The lines of each run.
  * @returns The blocks.
  */
 function _documentCommentBlocks(runs: readonly string[][]): FormBlock[] {
-	let index = 0;
-
-	return runs.map((lines, run) => {
-		const block: FormBlock = { kind: 'comment', id: `${DOCUMENT_COMMENT_BLOCK_ID}:${run}`, text: lines.join('\n'), anchor: { kind: 'document', index } };
-
-		index += lines.length;
-
-		return block;
-	});
+	return runs.map((lines, run) => ({ kind: 'comment', id: `${DOCUMENT_COMMENT_BLOCK_ID}:${run}`, text: lines.join('\n') }));
 }

@@ -1,16 +1,11 @@
-import { RdfToken } from '@faubulous/mentor-rdf-parsers';
-import { TermRef } from '../term-ref';
-import { EditPlan, ExpectedStatementChange, TermPattern, createPlan } from '../edit-plan';
+import { ExpectedStatementChange, TermPattern } from '../edit-plan';
 import { EditRejectionError } from '../edit-rejection';
 import { ObjectSpan, PredicateGroup, SubjectBlock } from '../statement-model';
-import { PropertyOperations } from './property-operations';
-import { ResolvedValue, StatementLocator, ValueLocation } from '../statement-locator';
-import { toTermRef } from '../resource-id';
-import { TextEditSpec, absorbBlankLine, deleteRange, expandToWholeLines, mergeRanges } from '@src/utilities/text-edits';
-import { statementsWithin } from '@src/utilities/quad-contexts';
 import { SynthesisContext } from '../synthesis-context';
-import { toPatternFromRef, toTermPattern } from '../term-patterns';
-import { isCommentToken, isTokenOfType, previousNonCommentTokenIndex, tokenEnd } from '@src/utilities/tokens';
+import { toTermPattern } from '../term-patterns';
+import { statementsWithin } from '@src/utilities/quad-contexts';
+import { TextEditSpec, absorbBlankLine, deleteRange, expandToWholeLines, mergeRanges } from '@src/utilities/text-edits';
+import { isCommentToken, tokenEnd } from '@src/utilities/tokens';
 
 /**
  * The range removing the groups from one index to another: up to the start of the following
@@ -27,8 +22,8 @@ function _runDeletionRange(block: SubjectBlock, from: number, to: number): { sta
 }
 
 /**
- * The value and group edits the other operations build on: appending a value, deleting a value,
- * groups of the blocks of a subject, or blocks.
+ * The removals the other operations build on: the statements a value takes with it, and the groups
+ * of the blocks of a subject.
  */
 export class ValueOperations {
 	/**
@@ -36,29 +31,6 @@ export class ValueOperations {
 	 * @param _context The shared state of the action.
 	 */
 	constructor(private readonly _context: SynthesisContext) { }
-
-	/**
-	 * Remove a value. The punctuation around it is removed with it, and a predicate that loses its
-	 * only value goes as well. The last statement of a subject is not removed silently: the webview
-	 * has to ask for the subject to be deleted.
-	 * @param location The value to remove.
-	 * @returns The plan removing the value.
-	 * @throws {EditRejectionError} If the value is not found, or is the last statement about the subject.
-	 */
-	deleteValue(location: ValueLocation): EditPlan {
-		const context = this._context;
-
-		const resolved = new StatementLocator(context.model).valueAt(location);
-		const { block, group, span } = resolved;
-		const edits = group.objects.length > 1
-			? this._lineDeletions(this._valueDeletionRange(resolved))
-			: this.groupDeletions(new Map([[block, [group]]]));
-
-		return createPlan({
-			edits,
-			expectedChanges: this.removalChanges(toPatternFromRef(toTermRef(block.subject)), group.predicateIri, span)
-		});
-	}
 
 	/**
 	 * The statements a written value takes with it when it goes: its own, and those of the blank
@@ -80,86 +52,10 @@ export class ValueOperations {
 	}
 
 	/**
-	 * Insert already written text as a further value of a predicate: after the last value when the
-	 * subject carries the predicate, as a new predicate otherwise. The plan carries the edit and the
-	 * focus; the caller adds what the text means in statements.
-	 * @param subject The subject the value belongs to.
-	 * @param predicate The predicate the value belongs to.
-	 * @param written The value as it is to appear in the text.
-	 * @returns The plan inserting the value.
-	 * @throws {EditRejectionError} If the subject has no block in the document.
-	 */
-	appendWrittenValue(subject: TermRef, predicate: string, written: string): EditPlan {
-		const context = this._context;
-
-		const target = this._findLastGroup(subject, predicate);
-
-		if (!target) {
-			return new PropertyOperations(context).newProperty(subject, predicate, written);
-		}
-
-		const { block, group } = target;
-		const last = group.objects[group.objects.length - 1];
-		const separator = context.styleDetector.objectsOnePerLine(group)
-			? `,${context.style.eol}${context.styleDetector.objectIndentFor(block, group)}`
-			: ', ';
-		const edit = { start: last.end, end: last.end, newText: separator + written };
-
-		return createPlan({
-			edits: [edit],
-			focus: { edit, offsetWithin: separator.length, target: 'value' }
-		});
-	}
-
-	/**
-	 * Find the last group of a predicate across the blocks of a subject.
-	 * @param subject The subject whose groups to search.
-	 * @param predicate The predicate of the group.
-	 * @returns The group with its block, or `undefined` when the subject does not carry the predicate.
-	 */
-	private _findLastGroup(subject: TermRef, predicate: string): { block: SubjectBlock; group: PredicateGroup } | undefined {
-		const context = this._context;
-
-		let found: { block: SubjectBlock; group: PredicateGroup } | undefined;
-
-		for (const block of context.model.blocksBySubject.get(subject.kind === 'bnode' ? `b:${subject.id}` : subject.kind === 'iri' ? `i:${subject.iri}` : '') ?? []) {
-			for (const group of block.groups) {
-				if (group.predicateIri === predicate) {
-					found = { block, group };
-				}
-			}
-		}
-
-		return found;
-	}
-
-	/**
-	 * The range removing one value of several: the value with the comma that joins it to its
-	 * neighbour, so the remaining values stay a well formed list.
-	 * @param resolved The value to remove.
-	 * @returns The range.
-	 */
-	private _valueDeletionRange(resolved: ResolvedValue): { start: number; end: number } {
-		const context = this._context;
-
-		const { group, span, indexInGroup } = resolved;
-		const { tokens } = context.model;
-
-		if (indexInGroup < group.objects.length - 1) {
-			return { start: span.start, end: group.objects[indexInGroup + 1].start };
-		}
-
-		const comma = previousNonCommentTokenIndex(tokens, span.startTokenIndex);
-		const previous = group.objects[indexInGroup - 1];
-
-		return { start: isTokenOfType(tokens[comma], RdfToken.COMMA.name) ? Math.min(previous.end, tokens[comma].startOffset) : previous.end, end: span.end };
-	}
-
-	/**
 	 * Remove groups of the blocks of a subject, as one edit removes them. Neighbouring groups of a
 	 * block go as one range, so the ranges never overlap and the separators between them go too. A
 	 * blank node written in brackets that loses all its groups stays as `[ ]`. Any other block that
-	 * loses all its groups goes as a whole, as {@link blockDeletions} removes it, while another
+	 * loses all its groups goes as a whole, as {@link _blockDeletions} removes it, while another
 	 * block of its subject keeps a statement; the blocks are judged together, so an edit cannot
 	 * remove a subject by emptying its blocks one by one.
 	 * @param removed The groups that go, by the block holding them.
@@ -182,7 +78,7 @@ export class ValueOperations {
 
 		this._requireSubjectsKept(emptied);
 
-		return [...edits, ...this.blockDeletions(emptied)];
+		return [...edits, ...this._blockDeletions(emptied)];
 	}
 
 	/**
@@ -192,7 +88,7 @@ export class ValueOperations {
 	 * @param blocks The blocks.
 	 * @returns The deletions, one per run of neighbouring blocks.
 	 */
-	blockDeletions(blocks: readonly SubjectBlock[]): TextEditSpec[] {
+	private _blockDeletions(blocks: readonly SubjectBlock[]): TextEditSpec[] {
 		const { text } = this._context.model;
 		const lines = blocks.map(block => {
 			const range = this._blockRange(block);

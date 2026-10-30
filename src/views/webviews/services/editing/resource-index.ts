@@ -1,7 +1,7 @@
 import { QuadContext } from '@faubulous/mentor-rdf-parsers';
 import { RDF } from '@faubulous/mentor-rdf';
 import { Term } from '@rdfjs/types';
-import { DocumentPosition, NamespaceInfo, ResourceId, ResourceSummary, TermRef } from '@src/views/webviews/views/form-editor/form-editor-model';
+import { NamespaceInfo, ResourceId, ResourceSummary, TermRef } from '@src/views/webviews/views/form-editor/form-editor-model';
 
 /**
  * A resource collected from the document, together with the statements that describe it.
@@ -26,16 +26,6 @@ export interface ResourceIndexEntry {
 	 * Whether the resource is an anonymous blank node written inline as an object.
 	 */
 	nested: boolean;
-
-	/**
-	 * The graph the resource is described in, for TriG documents.
-	 */
-	graph?: string;
-
-	/**
-	 * Where the resource starts in the document, when a source position is known.
-	 */
-	position?: DocumentPosition;
 }
 
 /**
@@ -72,11 +62,6 @@ export interface ResourceIndex {
 	 * The namespace declarations of the document, ordered by prefix.
 	 */
 	namespaces: NamespaceInfo[];
-
-	/**
-	 * The datatypes used in the document, sorted.
-	 */
-	datatypes: string[];
 
 	/**
 	 * The items of each collection, by the identifier of the node that heads it.

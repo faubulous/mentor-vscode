@@ -5,7 +5,6 @@ vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 import { RDF, XSD } from '@faubulous/mentor-rdf';
 import { RdfSyntax } from '@faubulous/mentor-rdf-parsers';
 import { EX, SynthesisFixtureOptions, anchorOf, createSynthesisInput, synthesizeEdit, synthesizePlan } from '@src/utilities/mocks/edit-synthesis-fixtures';
-import { resolveFocusOffset } from '../edit-plan';
 import { StatementValue } from '../statement-value';
 import { TermRef } from '../term-ref';
 
@@ -155,6 +154,12 @@ describe('ValueListOperations.setValues in Turtle', () => {
 		expect(setValues(`ex:s ex:p ex:a .\n\nex:s ex:q ex:b .\n`, [])).toBe(`ex:s ex:q ex:b .\n`);
 	});
 
+	it('removes a block that loses all its statements with the comment above it in TriG too', () => {
+		const body = `ex:g {\n    # about p\n    ex:s ex:p ex:a .\n\n    ex:s ex:q ex:b .\n}\n`;
+
+		expect(setValues(body, [], TRIG)).toBe(`ex:g {\n    ex:s ex:q ex:b .\n}\n`);
+	});
+
 	it('removes a block that loses all its statements with the comment above it and one blank line', () => {
 		expect(setValues(`ex:s ex:q ex:a .\n\n# about p\nex:s ex:p ex:b . # b\n\nex:t ex:q ex:c .\n`, [])).toBe(`ex:s ex:q ex:a .\n\nex:t ex:q ex:c .\n`);
 		expect(setValues(`ex:s ex:q ex:a .\n\nex:s ex:p ex:b .\n`, [])).toBe(`ex:s ex:q ex:a .\n`);
@@ -177,17 +182,6 @@ describe('ValueListOperations.setValues in Turtle', () => {
 		expect(setValues(body, [{ kind: 'term', term: { kind: 'iri', iri: 'not an iri' } }])).toBe('rejected:invalidTerm');
 		expect(setValues(body, [literal('x', { language: 'not a tag' })])).toBe('rejected:invalidTerm');
 		expect(setValues(body, [{ kind: 'list', items: [{ kind: 'existing', anchor: anchorOf(body, 'ex:a') }] }])).toBe('rejected:notFound');
-	});
-
-	it('focuses the first new value', () => {
-		const body = `ex:s ex:p ex:a .\n`;
-		const input = createSynthesisInput(body);
-		const plan = synthesizePlan(body, [{ op: 'setValues', subject, predicate: P, values: [kept(body, 'ex:a'), iri('b')] }]);
-		const offset = resolveFocusOffset(plan)!;
-
-		expect(plan.focus?.target).toBe('value');
-		expect(input.text.slice(0, plan.edits[0].start) + plan.edits[0].newText).toContain('ex:b');
-		expect(offset).toBe(anchorOf(body, 'ex:a') + 'ex:a, '.length);
 	});
 });
 

@@ -21,7 +21,7 @@ class TestWriter implements EditWriter {
 
 	/**
 	 * Create a writer.
-	 * @param predicate The predicate its operations delete.
+	 * @param predicate The predicate its operations empty.
 	 * @param onTake Called while it builds its edit.
 	 */
 	constructor(private readonly predicate: string, private readonly onTake?: () => void) { }
@@ -34,7 +34,7 @@ class TestWriter implements EditWriter {
 		this.writes--;
 		this.onTake?.();
 
-		return [{ op: 'deleteProperty', subject, predicate: this.predicate }];
+		return [{ op: 'setValues', subject, predicate: this.predicate, values: [] }];
 	}
 
 	settle(outcome: EditOutcome): void {

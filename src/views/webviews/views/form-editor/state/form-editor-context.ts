@@ -1,5 +1,5 @@
 import { createContext, useContext } from 'react';
-import { AnnotationScheme, NamespaceInfo, ResourceSummary } from '../form-editor-model';
+import { NamespaceInfo, ResourceSummary } from '../form-editor-model';
 import { IEditingController } from './editing-controller.interface';
 
 /**
@@ -27,21 +27,6 @@ export interface FormEditorContextValue {
 	 * The resources of the document, which the lines complete and label local terms from.
 	 */
 	resources?: ResourceSummary[];
-
-	/**
-	 * The language the labels and descriptions are read in.
-	 */
-	activeLanguage?: string;
-
-	/**
-	 * The predicates the document names and describes its resources with.
-	 */
-	annotationScheme?: AnnotationScheme;
-
-	/**
-	 * Reveal a position of the document in a text editor.
-	 */
-	onRevealInTextEditor?: (line: number, character: number) => void;
 
 	/**
 	 * Scroll to a resource, used by nested blank node placeholders.

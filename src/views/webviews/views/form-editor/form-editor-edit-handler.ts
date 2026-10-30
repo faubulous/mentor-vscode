@@ -1,18 +1,14 @@
 import * as vscode from 'vscode';
-import { IToken } from '@faubulous/mentor-rdf-parsers';
 import { TurtleDocument } from '@src/languages/turtle/turtle-document';
 import { IDocumentTokenSource } from '@src/services/document/document-token-source.interface';
 import { EditOperation, EditRejectionReason } from '@src/services/editing/edit-operation';
-import { resolveFocusOffset } from '@src/services/editing/edit-plan';
 import { isEditRejection } from '@src/services/editing/edit-rejection';
 import { EditSynthesizer } from '@src/services/editing/edit-synthesizer';
 import { EditVerifier } from '@src/services/editing/edit-verifier';
 import { StyleFallback } from '@src/services/editing/local-style';
 import { SynthesisInput } from '@src/services/editing/synthesis-context';
-import { remapBlankNodeIds } from '@src/utilities/tokens';
 import { getConfig } from '@src/utilities/vscode/config';
 import { toWorkspaceEdit } from '@src/utilities/vscode/edit';
-import { FocusPoint } from '../../services/editing/focus-hint-resolver';
 import { ReadOnlyReason } from './form-editor-model';
 
 /**
@@ -65,7 +61,7 @@ export interface EditHandlerContext {
  * The outcome of an edit request.
  */
 export type EditOutcome =
-	| { ok: true; version: number; focus?: FocusPoint; renamedIds: [string, string][] }
+	| { ok: true; version: number }
 	| { ok: false; reason: EditRejectionReason; message: string };
 
 /**
@@ -95,10 +91,9 @@ export class FormEditorEditHandler {
 
 		this._ensureFreshTokens(handlerContext, text);
 
-		const tokensBefore: IToken[] = context.tokens;
 		const input: SynthesisInput = {
 			text,
-			tokens: tokensBefore,
+			tokens: context.tokens,
 			quadContexts: context.getQuadContexts(),
 			namespaces: context.namespaces,
 			syntax: context.syntax,
@@ -132,14 +127,7 @@ export class FormEditorEditHandler {
 
 		this._refreshTokens(handlerContext, verification.text);
 
-		const focusOffset = resolveFocusOffset(plan);
-
-		return {
-			ok: true,
-			version: document.version,
-			focus: focusOffset !== undefined && plan.focus ? { offset: focusOffset, target: plan.focus.target } : undefined,
-			renamedIds: remapBlankNodeIds(tokensBefore, context.tokens, plan.edits)
-		};
+		return { ok: true, version: document.version };
 	}
 
 	/**

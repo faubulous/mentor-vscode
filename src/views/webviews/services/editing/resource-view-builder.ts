@@ -4,10 +4,9 @@ import { OWL, RDF, RDFS, SH, Uri } from '@faubulous/mentor-rdf';
 import { IDocumentContext } from '@src/services/document/document-context.interface';
 import { getIriResourceId, getResourceId, toTermRef } from '@src/services/editing/resource-id';
 import { DEFAULT_ICON, getSubjectIconName } from '@src/utilities/subject-icon';
-import { getTokenPosition, hasSourcePosition } from '@src/utilities/tokens';
+import { hasSourcePosition } from '@src/utilities/tokens';
 import { ValueKind, ValueKindHint } from '@src/utilities/value-kind';
 import {
-	DocumentPosition,
 	NestedResourceRef,
 	PropertyView,
 	ResourceDetail,
@@ -16,7 +15,7 @@ import {
 	TermRef,
 	TermView
 } from '@src/views/webviews/views/form-editor/form-editor-model';
-import { Annotation, AnnotationResolver } from './annotation-resolver';
+import { AnnotationResolver } from './annotation-resolver';
 import { CollectionItem, ResourceIndex, ResourceIndexEntry, ResourceIndexOptions, isCollectionChainPredicate, typeIrisOf } from './resource-index';
 import { leadingCommentRunsOf, splitLeadingComments } from './statement-comments';
 
@@ -58,8 +57,7 @@ export class ResourceViewBuilder {
 
 	/**
 	 * Build the list row of a resource. The row is described only with what the document states,
-	 * as looking every resource up in the store costs a rebuild of a large document dearly; an open
-	 * resource resolves its description with the store, as its statements are built.
+	 * as looking every resource up in the store costs a rebuild of a large document dearly.
 	 * @param entry The resource.
 	 * @returns The resource summary.
 	 */
@@ -73,20 +71,14 @@ export class ResourceViewBuilder {
 			id: entry.id,
 			term: entry.term,
 			label: label.text,
-			labelLanguage: label.language,
 			description: this._annotations.findDescription(entry)?.text,
 			prefixedName: this._toPrefixedName(entry.term),
 			iconName: this._resolveIconName(entry, typeIris),
-			typeLabels,
 			typeIri: typeIris[primaryType],
 			typeLabel: typeLabels?.[primaryType],
 			propertyCount: _countProperties(entry),
-			valueCount: entry.quads.length,
-			nested: entry.nested,
-			graph: entry.graph,
 			hasLabel: this._annotations.findLabel(entry) !== undefined,
-			comments: entry.nested ? undefined : leadingCommentRunsOf(entry),
-			position: entry.position
+			comments: entry.nested ? undefined : leadingCommentRunsOf(entry)
 		};
 	}
 
@@ -99,21 +91,14 @@ export class ResourceViewBuilder {
 	 */
 	buildDetail(entry: ResourceIndexEntry): ResourceDetail {
 		const { groups, resourceComments } = this._collectProperties(entry);
-		const label = this._annotations.findLabel(entry);
-		const description = this._resolveDescription(entry);
 
 		return {
 			id: entry.id,
 			term: entry.term,
-			description: description?.text,
-			typeLabels: this._resolveTypeLabels(typeIrisOf(entry)),
-			labelPredicate: label?.predicate,
-			descriptionPredicate: description?.predicate,
 			properties: groups.map(group => ({ ...group, valueKind: _valueKindOf(group.values) })),
 			// A resource of its own shows them above its card, where they were written; a node
 			// written inside another has no card of its own to stand outside of.
-			comments: entry.nested && resourceComments.length > 0 ? resourceComments : undefined,
-			position: entry.position
+			comments: entry.nested && resourceComments.length > 0 ? resourceComments : undefined
 		};
 	}
 
@@ -177,7 +162,7 @@ export class ResourceViewBuilder {
 		const term: TermRef = { kind: 'iri', iri };
 		const label = this._resolveLabel(term);
 
-		return { term, label: label.text, labelLanguage: label.language, prefixedName: this._toPrefixedName(term), editable: true };
+		return { term, label: label.text, prefixedName: this._toPrefixedName(term), editable: true };
 	}
 
 	/**
@@ -189,16 +174,14 @@ export class ResourceViewBuilder {
 	private _toTermView(term: Quad_Subject | Quad_Object, token: QuadContext['objectToken']): TermView {
 		const termRef = toTermRef(term);
 		const label = this._resolveLabel(termRef);
-		const position = _toPosition(token);
+		const written = hasSourcePosition(token);
 
 		return {
 			term: termRef,
 			label: label.text,
-			labelLanguage: label.language,
 			prefixedName: this._toPrefixedName(termRef),
-			position,
-			anchor: position ? token.startOffset : undefined,
-			editable: position !== undefined
+			anchor: written ? token.startOffset : undefined,
+			editable: written
 		};
 	}
 
@@ -271,8 +254,7 @@ export class ResourceViewBuilder {
 			id,
 			propertyCount: _countProperties(nested),
 			label: this._resolveLabel(nested.term).text || undefined,
-			typeLabel: typeIris.length > 0 ? this._resolveLabel({ kind: 'iri', iri: typeIris[0] }).text : undefined,
-			iconName: this._resolveIconName(nested, typeIris)
+			typeLabel: typeIris.length > 0 ? this._resolveLabel({ kind: 'iri', iri: typeIris[0] }).text : undefined
 		};
 	}
 
@@ -324,29 +306,6 @@ export class ResourceViewBuilder {
 		return { text: this._toPrefixedName(term) ?? Uri.getLocalPart(term.iri) ?? term.iri };
 	}
 
-	/**
-	 * Resolve the description of a resource: what it states for a description predicate, which the
-	 * form can edit, or else what the store knows about it.
-	 * @param entry The resource.
-	 * @returns The description, or `undefined` when there is none.
-	 */
-	private _resolveDescription(entry: ResourceIndexEntry): Pick<Annotation, 'text'> & Partial<Annotation> | undefined {
-		const stated = this._annotations.findDescription(entry);
-
-		if (stated) {
-			return stated;
-		}
-
-		const term = entry.term;
-
-		if (term.kind === 'literal') {
-			return undefined;
-		}
-
-		const text = this._context.getResourceDescription(term.kind === 'bnode' ? term.id : term.iri)?.value;
-
-		return text ? { text } : undefined;
-	}
 
 	/**
 	 * Resolve the labels of the types a resource asserts, as the labels of any other terms are.
@@ -440,17 +399,3 @@ function _valueKindOf(values: readonly TermView[]): ValueKindHint | undefined {
 	return { kind: kinds.size === 1 ? [...kinds][0] : 'any', source: 'usage' };
 }
 
-/**
- * Convert the source token of a quad component to a document position.
- * @param token The token.
- * @returns The position, or `undefined` if the token has no source location.
- */
-function _toPosition(token: QuadContext['objectToken']): DocumentPosition | undefined {
-	if (!hasSourcePosition(token)) {
-		return undefined;
-	}
-
-	const { start } = getTokenPosition(token);
-
-	return { line: start.line, character: start.character };
-}

@@ -7,17 +7,8 @@ import { ValueOperations } from './value-operations';
 import { StatementLocator } from '../statement-locator';
 import { SynthesisContext } from '../synthesis-context';
 import { toPatternFromRef, toTermPattern } from '../term-patterns';
+import { TextEditSpec } from '@src/utilities/text-edits';
 import { tokenEnd } from '@src/utilities/tokens';
-
-/**
- * The `deleteProperty` operation of the edit contract.
- */
-type DeletePropertyOperation = Extract<EditOperation, { op: 'deleteProperty' }>;
-
-/**
- * The `moveProperty` operation of the edit contract.
- */
-type MovePropertyOperation = Extract<EditOperation, { op: 'moveProperty' }>;
 
 /**
  * The `setPredicate` operation of the edit contract.
@@ -25,24 +16,7 @@ type MovePropertyOperation = Extract<EditOperation, { op: 'moveProperty' }>;
 type SetPredicateOperation = Extract<EditOperation, { op: 'setPredicate' }>;
 
 /**
- * The offset of a group within the rewritten run of groups.
- * @param texts The texts of the groups in their new order.
- * @param separators The separators between the groups.
- * @param index The index of the group.
- * @returns The offset of the group in the joined text.
- */
-function _offsetOfGroup(texts: readonly string[], separators: readonly string[], index: number): number {
-	let offset = 0;
-
-	for (let position = 0; position < index; position++) {
-		offset += texts[position].length + separators[position].length;
-	}
-
-	return offset;
-}
-
-/**
- * Adds, moves and deletes the predicates of a subject.
+ * Adds, renames and deletes the predicates of a subject.
  */
 export class PropertyOperations {
 	/**
@@ -59,22 +33,17 @@ export class PropertyOperations {
 	 * @param subject The subject to add the predicate to.
 	 * @param predicateIri The IRI of the predicate.
 	 * @param written The values as they are to appear in the text.
-	 * @returns The plan inserting the statement.
+	 * @returns The edit inserting the statement.
 	 * @throws {EditRejectionError} If the subject has no block in the document.
 	 */
-	newProperty(subject: TermRef, predicateIri: string, written: string): EditPlan {
+	newProperty(subject: TermRef, predicateIri: string, written: string): TextEditSpec {
 		const context = this._context;
 
 		const blocks = new StatementLocator(context.model).blocksOf(subject);
 		const block = blocks.find(candidate => candidate.nested) ?? blocks[blocks.length - 1];
 		const predicate = context.writer.writePredicate(predicateIri);
 		const separator = this._separator(block);
-		const edit = { start: block.end, end: block.end, newText: `${separator}${predicate} ${written}` };
-
-		return createPlan({
-			edits: [edit],
-			focus: { edit, offsetWithin: separator.length + predicate.length + 1, target: 'value' }
-		});
+		return { start: block.end, end: block.end, newText: `${separator}${predicate} ${written}` };
 	}
 
 	/**
@@ -108,8 +77,7 @@ export class PropertyOperations {
 			expectedChanges: netExpectedChanges(objects.flatMap(object => [
 				{ subject, predicate: operation.predicate, object: toTermPattern(object.quad.object), delta: -1 },
 				{ subject, predicate: operation.newPredicate, object: toTermPattern(object.quad.object), delta: 1 }
-			])),
-			focus: { edit: edits[0], offsetWithin: 0, target: 'predicate' }
+			]))
 		});
 	}
 
@@ -129,79 +97,19 @@ export class PropertyOperations {
 	}
 
 	/**
-	 * Move a predicate with its values to stand before another predicate of the subject, or after the
-	 * last one. The groups of the block are rewritten in their new order while every separator between
-	 * them stays where it was, so a block written one predicate per line keeps its lines and its
-	 * indentation. No statement changes, so nothing is expected of the result beyond parsing.
-	 * @param operation The predicate to move and where to.
-	 * @returns The plan rewriting the groups, or an empty plan when nothing moves.
-	 * @throws {EditRejectionError} If the subject does not write the predicates in one block.
-	 */
-	moveProperty(operation: MovePropertyOperation): EditPlan {
-		const context = this._context;
-
-		const block = this._blockHolding(operation.subject, operation.predicate, operation.before);
-		const groups = block.groups;
-		const from = groups.findIndex(group => group.predicateIri === operation.predicate);
-		const target = operation.before === undefined ? groups.length : groups.findIndex(group => group.predicateIri === operation.before);
-		const to = target > from ? target - 1 : target;
-
-		if (from === to) {
-			return createPlan({});
-		}
-
-		const { text } = context.model;
-		const texts = groups.map(group => text.slice(group.start, group.end));
-		const separators = groups.slice(1).map((group, index) => text.slice(groups[index].end, group.start));
-		const [moved] = texts.splice(from, 1);
-
-		texts.splice(to, 0, moved);
-
-		const newText = texts.map((group, index) => (index > 0 ? separators[index - 1] : '') + group).join('');
-		const edit = { start: groups[0].start, end: groups[groups.length - 1].end, newText };
-
-		return createPlan({
-			edits: [edit],
-			focus: { edit, offsetWithin: _offsetOfGroup(texts, separators, to), target: 'predicate' }
-		});
-	}
-
-	/**
-	 * The one block of the subject that writes both predicates, or the predicate alone when it is
-	 * moved to the end. A move stays within a block: it rearranges how one place is written.
-	 * @param subject The subject whose block to find.
-	 * @param predicate The predicate to move.
-	 * @param before The predicate to move it before, if any.
-	 * @returns The block.
-	 * @throws {EditRejectionError} If no block of the subject carries the predicates.
-	 */
-	private _blockHolding(subject: TermRef, predicate: string, before: string | undefined): SubjectBlock {
-		const context = this._context;
-
-		const carries = (block: SubjectBlock, iri: string) => block.groups.some(group => group.predicateIri === iri);
-		const block = new StatementLocator(context.model).blocksOf(subject)
-			.find(candidate => carries(candidate, predicate) && (before === undefined || carries(candidate, before)));
-
-		if (!block) {
-			throw new EditRejectionError('notFound', 'The resource does not write these predicates in one place.');
-		}
-
-		return block;
-	}
-
-	/**
 	 * Remove a predicate with all its values from every block of the subject, as
 	 * {@link ValueOperations.groupDeletions} removes groups: a block that loses all its groups goes
 	 * with its comments, unless no block of the subject would keep a statement.
-	 * @param operation The predicate to remove.
+	 * @param subjectRef The subject.
+	 * @param predicate The IRI of the predicate to remove.
 	 * @returns The plan removing the groups.
 	 * @throws {EditRejectionError} If the subject does not carry the predicate, or the predicate holds the last statements about the subject.
 	 */
-	deleteProperty(operation: DeletePropertyOperation): EditPlan {
+	deleteProperty(subjectRef: TermRef, predicate: string): EditPlan {
 		const context = this._context;
 
-		const groups = this.findPredicateGroups(operation.subject, operation.predicate);
-		const subject = toPatternFromRef(operation.subject);
+		const groups = this.findPredicateGroups(subjectRef, predicate);
+		const subject = toPatternFromRef(subjectRef);
 		const plan = createPlan({});
 		const values = new ValueOperations(context);
 		const byBlock = new Map<SubjectBlock, PredicateGroup[]>();
@@ -210,7 +118,7 @@ export class PropertyOperations {
 			byBlock.set(block, [...(byBlock.get(block) ?? []), group]);
 
 			for (const object of group.objects) {
-				plan.expectedChanges.push(...values.removalChanges(subject, operation.predicate, object));
+				plan.expectedChanges.push(...values.removalChanges(subject, predicate, object));
 			}
 		}
 

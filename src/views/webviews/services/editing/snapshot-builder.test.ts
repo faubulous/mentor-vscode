@@ -36,11 +36,10 @@ describe('SnapshotBuilder', () => {
 		expect(snapshotOf('ex:A a owl:Class .').version).toBe(7);
 	});
 
-	it('reports the file name and syntax of the document', () => {
+	it('reports the file name of the document', () => {
 		const snapshot = snapshotOf('ex:A a owl:Class .');
 
 		expect(snapshot.fileName).toBe('vocab.ttl');
-		expect(snapshot.syntax).toBe('turtle');
 	});
 
 	it('keeps the resources in document order, naming the resource describing the document wherever it is written', () => {
@@ -56,25 +55,19 @@ describe('SnapshotBuilder', () => {
 		expect(snapshot.documentResourceId).toBe(`i:${EX}onto`);
 	});
 
-	it('carries the active language so the webview can mark fallback values', () => {
-		expect(snapshotOf('ex:A a owl:Class .', 'de').activeLanguage).toBe('de');
-	});
-
 	it('lists the declared namespaces sorted by prefix', () => {
 		expect(snapshotOf('ex:A a owl:Class .').namespaces.map(namespace => namespace.prefix)).toEqual(['dct', 'ex', 'owl', 'rdfs', 'skos']);
 	});
 
-	it('names the types of a resource, counts its usages and detects the scheme of the document', () => {
+	it('describes a resource and counts its usages', () => {
 		const snapshot = snapshotOf(`
 			ex:A a owl:Class ; rdfs:label "A" ; rdfs:comment "About A" .
 			ex:B a owl:Class , rdfs:Class ; rdfs:label "B" .
 		`);
 
-		expect(snapshot.resources.map(resource => resource.typeLabels)).toEqual([['owl:Class'], ['owl:Class', 'rdfs:Class']]);
+		expect(snapshot.resources.map(resource => resource.typeLabel)).toEqual(['owl:Class', 'owl:Class']);
 		expect(snapshot.resources.map(resource => resource.usageCount)).toEqual([3, 3]);
 		expect(snapshot.resources[0].description).toBe('About A');
-		expect(snapshot.annotationScheme.label).toMatchObject({ term: { kind: 'iri', iri: RDFS.label }, prefixedName: 'rdfs:label' });
-		expect(snapshot.annotationScheme.description?.term).toEqual({ kind: 'iri', iri: RDFS.comment });
 	});
 
 	it('counts the usages of a blank node of the list within the document', () => {
@@ -171,7 +164,6 @@ describe('SnapshotBuilder', () => {
 		const snapshot = snapshotOf('');
 
 		expect(snapshot.resources).toEqual([]);
-		expect(snapshot.datatypes).toEqual([]);
 		expect(snapshot.problems).toEqual([]);
 	});
 });

@@ -134,13 +134,3 @@ export function getIriFromText(prefixes: Readonly<PrefixMap>, text: string): str
 	return getIriFromPrefixedName(prefixes, text);
 }
 
-/**
- * Write an IRI as it is written in Turtle: as a prefixed name when a declared namespace covers
- * it, otherwise as an IRI reference `<iri>`.
- * @param prefixes The namespace IRIs by prefix.
- * @param iri The IRI.
- * @returns The prefixed name or the IRI reference.
- */
-export function formatIri(prefixes: Readonly<PrefixMap>, iri: string): string {
-	return getPrefixedName(prefixes, iri) ?? `<${iri}>`;
-}

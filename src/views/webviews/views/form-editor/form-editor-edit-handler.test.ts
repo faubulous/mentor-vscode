@@ -55,10 +55,9 @@ describe('FormEditorEditHandler', () => {
 
 		const outcome = await new FormEditorEditHandler().handle(setValueRequest(1, 'new'), { document, context });
 
-		expect(outcome).toMatchObject({ ok: true, version: 2, renamedIds: [] });
+		expect(outcome).toEqual({ ok: true, version: 2 });
 		expect(document.getText()).toBe(`${PREAMBLE}ex:s ex:p "new" .\n`);
 		expect(context.getParseResult(document.getText())).toBeDefined();
-		expect(outcome.ok && outcome.focus).toEqual({ offset: PREAMBLE.length + 'ex:s ex:p '.length, target: 'value' });
 	});
 
 	it('rejects a request built against an older version of the document', async () => {
@@ -120,7 +119,7 @@ describe('FormEditorEditHandler', () => {
 		const request: EditRequest = {
 			editId: 'e2',
 			baseVersion: 1,
-			operations: [{ op: 'deleteProperty', subject: { kind: 'iri', iri: `${EX}s` }, predicate: `${EX}p` }]
+			operations: [{ op: 'setValues', subject: { kind: 'iri', iri: `${EX}s` }, predicate: `${EX}p`, values: [] }]
 		};
 
 		const outcome = await new FormEditorEditHandler().handle(request, { document, context });
@@ -128,21 +127,5 @@ describe('FormEditorEditHandler', () => {
 		expect(outcome).toMatchObject({ ok: false, reason: 'wouldRemoveSubject' });
 		expect(spy).not.toHaveBeenCalled();
 		expect(document.version).toBe(1);
-	});
-
-	it('reports the blank nodes an edit renumbered', async () => {
-		const { document, context } = setup('ex:s ex:p [ ex:r "x" ] ;\n    ex:q "old" .\n');
-
-		applyEditsTo(document);
-
-		const request: EditRequest = {
-			editId: 'e3',
-			baseVersion: 1,
-			operations: [{ op: 'setValues', subject: { kind: 'iri', iri: `${EX}s` }, predicate: `${EX}q`, values: [{ kind: 'term', term: { kind: 'literal', value: 'new' } }] }]
-		};
-		const outcome = await new FormEditorEditHandler().handle(request, { document, context });
-
-		// The bracket keeps its place in the token order, so its identifier survives.
-		expect(outcome).toMatchObject({ ok: true, renamedIds: [] });
 	});
 });

@@ -28,7 +28,7 @@ export interface TextEditSpec {
  * @param edits The edits to sort.
  * @returns A new array sorted by start and then by end offset.
  */
-export function sortTextEdits(edits: readonly TextEditSpec[]): TextEditSpec[] {
+function _sortTextEdits(edits: readonly TextEditSpec[]): TextEditSpec[] {
 	return [...edits].sort((a, b) => a.start - b.start || a.end - b.end);
 }
 
@@ -39,7 +39,7 @@ export function sortTextEdits(edits: readonly TextEditSpec[]): TextEditSpec[] {
  * @returns The first overlapping pair, or `undefined` if the edits are disjoint.
  */
 export function findOverlappingEdits(edits: readonly TextEditSpec[]): [TextEditSpec, TextEditSpec] | undefined {
-	const sorted = sortTextEdits(edits);
+	const sorted = _sortTextEdits(edits);
 
 	for (let i = 1; i < sorted.length; i++) {
 		const previous = sorted[i - 1];
@@ -61,7 +61,7 @@ export function findOverlappingEdits(edits: readonly TextEditSpec[]): [TextEditS
  * @throws When two edits overlap.
  */
 export function applyTextEdits(text: string, edits: readonly TextEditSpec[]): string {
-	const sorted = sortTextEdits(edits);
+	const sorted = _sortTextEdits(edits);
 
 	if (findOverlappingEdits(sorted)) {
 		throw new Error('Text edits overlap.');
@@ -76,28 +76,6 @@ export function applyTextEdits(text: string, edits: readonly TextEditSpec[]): st
 	}
 
 	return result + text.slice(cursor);
-}
-
-/**
- * Translate an offset of the original text into the edited text.
- * @param offset The offset in the original text.
- * @param edits The edits that were applied.
- * @returns The offset in the edited text, or `undefined` if the edits removed that position.
- */
-export function shiftOffset(offset: number, edits: readonly TextEditSpec[]): number | undefined {
-	let shifted = offset;
-
-	for (const edit of sortTextEdits(edits)) {
-		if (edit.end <= offset) {
-			shifted += edit.newText.length - (edit.end - edit.start);
-		} else if (edit.start <= offset) {
-			return undefined;
-		} else {
-			break;
-		}
-	}
-
-	return shifted;
 }
 
 /**

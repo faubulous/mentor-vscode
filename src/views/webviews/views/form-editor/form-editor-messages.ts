@@ -6,30 +6,25 @@
 
 import type { EditOperation, EditRejectionReason } from '@src/services/editing/edit-operation';
 import type { ExecuteCommandMessage } from '../../webview-messaging';
-import type { DocumentPosition, DocumentSnapshot, FocusHint, ResourceDetail, ResourceId } from './form-editor-model';
-
-/**
- * Why a snapshot was sent, which tells the webview how much of its state to preserve.
- */
-export type SnapshotCause = 'initial' | 'external' | 'formEdit' | 'settings' | 'language';
+import type { DocumentPosition, DocumentSnapshot, ResourceDetail, ResourceId } from './form-editor-model';
 
 /**
  * Messages sent from the extension host to the webview.
  */
 export type FormEditorHostMessage =
 	/**
-	 * The document, rebuilt after it changed; `editId` names the edit of the form that caused it.
+	 * The document, rebuilt after it changed.
 	 */
-	| { id: 'DocumentSnapshot'; cause: SnapshotCause; editId?: string; snapshot: DocumentSnapshot }
+	| { id: 'DocumentSnapshot'; snapshot: DocumentSnapshot }
 	/**
 	 * The properties of the resources the webview asked for; `missing` names those the document
 	 * no longer describes.
 	 */
 	| { id: 'ResourcesLoaded'; version: number; resources: ResourceDetail[]; missing: ResourceId[] }
 	/**
-	 * An edit of the form was applied; `renamedIds` maps the blank node identifiers it renumbered.
+	 * An edit of the form was applied, producing the given document version.
 	 */
-	| { id: 'EditApplied'; editId: string; version: number; focus?: FocusHint; renamedIds?: [ResourceId, ResourceId][] }
+	| { id: 'EditApplied'; editId: string; version: number }
 	/**
 	 * An edit of the form was not applied.
 	 */

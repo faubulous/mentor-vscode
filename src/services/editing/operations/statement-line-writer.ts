@@ -1,13 +1,11 @@
 import { TextEditSpec, deleteRange, expandToWholeLines } from '@src/utilities/text-edits';
 import { lineEndOffset } from '@src/utilities/string';
 import { tokenEnd } from '@src/utilities/tokens';
-import { FocusRequest } from '../edit-plan';
 import { EditRejectionError } from '../edit-rejection';
 import { ObjectSpan, SubjectBlock } from '../statement-model';
 import { StatementValueWriter } from '../statement-value-writer';
 import { SynthesisContext } from '../synthesis-context';
 import { NewValue, ValueList, ValueListEntry, ValueListGroup } from '../value-list';
-import { ValueListEdits } from '../value-list-edits';
 
 /**
  * Writes an edit of the values of a predicate into a document that writes one statement per line,
@@ -16,7 +14,6 @@ import { ValueListEdits } from '../value-list-edits';
  * it and the graph of that line.
  */
 export class StatementLineWriter {
-	private _focus?: FocusRequest;
 
 	/**
 	 * Create a writer for one action.
@@ -37,10 +34,8 @@ export class StatementLineWriter {
 	 * @returns The edits.
 	 * @throws {EditRejectionError} If a value cannot be written in the syntax.
 	 */
-	write(): ValueListEdits {
-		const edits = this._list.groups.flatMap(entry => this._editLine(entry));
-
-		return { edits, focus: this._focus };
+	write(): TextEditSpec[] {
+		return this._list.groups.flatMap(entry => this._editLine(entry));
 	}
 
 	/**
@@ -50,11 +45,10 @@ export class StatementLineWriter {
 	 * @returns The edits.
 	 * @throws {EditRejectionError} If a value cannot be written in the syntax.
 	 */
-	writeNewPredicate(block: SubjectBlock): ValueListEdits {
+	writeNewPredicate(block: SubjectBlock): TextEditSpec[] {
 		const object = block.groups[block.groups.length - 1].objects[0];
-		const edit = this._insertAfter(block, this._lines(block, object, this._list.added));
 
-		return { edits: [edit], focus: this._focus };
+		return [this._insertAfter(block, this._lines(block, object, this._list.added))];
 	}
 
 	/**
@@ -110,7 +104,7 @@ export class StatementLineWriter {
 	 * @returns The edit.
 	 */
 	private _insertBefore(block: SubjectBlock, lines: readonly string[]): TextEditSpec {
-		return this._focused({ start: block.start, end: block.start, newText: lines.join(this._context.style.eol) + this._context.style.eol }, 0);
+		return { start: block.start, end: block.start, newText: lines.join(this._context.style.eol) + this._context.style.eol };
 	}
 
 	/**
@@ -123,7 +117,7 @@ export class StatementLineWriter {
 		const { eol } = this._context.style;
 		const offset = lineEndOffset(this._context.model.text, _lineEnd(block));
 
-		return this._focused({ start: offset, end: offset, newText: eol + lines.join(eol) }, eol.length);
+		return { start: offset, end: offset, newText: eol + lines.join(eol) };
 	}
 
 	/**
@@ -133,7 +127,7 @@ export class StatementLineWriter {
 	 * @returns The edit.
 	 */
 	private _replaceLine(block: SubjectBlock, lines: readonly string[]): TextEditSpec {
-		return this._focused({ start: block.start, end: _lineEnd(block), newText: lines.join(this._context.style.eol) }, 0);
+		return { start: block.start, end: _lineEnd(block), newText: lines.join(this._context.style.eol) };
 	}
 
 	/**
@@ -146,18 +140,6 @@ export class StatementLineWriter {
 		const lines = expandToWholeLines(text, block.start, _lineEnd(block));
 
 		return deleteRange(text, tokens, lines.start, lines.end);
-	}
-
-	/**
-	 * Remember the first edit that writes a new value, which takes the focus.
-	 * @param edit The edit.
-	 * @param offsetWithin The offset of the value within the text of the edit.
-	 * @returns The edit.
-	 */
-	private _focused(edit: TextEditSpec, offsetWithin: number): TextEditSpec {
-		this._focus ??= { edit, offsetWithin, target: 'value' };
-
-		return edit;
 	}
 }
 

@@ -59,10 +59,10 @@ describe('StatementDraft', () => {
 	});
 
 	it('carries a draft over to the statement as written after an edit, by term and by the place of blank nodes', () => {
-		const node: TermView = { term: { kind: 'bnode', id: 'n1' }, editable: true, anchor: 1, nested: { id: 'b:n1', propertyCount: 1, iconName: 'x' } };
+		const node: TermView = { term: { kind: 'bnode', id: 'n1' }, editable: true, anchor: 1, nested: { id: 'b:n1', propertyCount: 1 } };
 		const before = new StatementDraft(RDFS.label, [{ kind: 'written', view: node }, { kind: 'term', term: { kind: 'literal', value: 'Oak', language: 'en' } }, { kind: 'term', term: { kind: 'literal', value: '1', datatype: XSD.integer } }]);
 		const after = withAnchors(createTestResourceDetail([createProperty('rdfs:label', [
-			{ term: { kind: 'bnode', id: 'n7' }, editable: true, nested: { id: 'b:n7', propertyCount: 1, iconName: 'x' } },
+			{ term: { kind: 'bnode', id: 'n7' }, editable: true, nested: { id: 'b:n7', propertyCount: 1 } },
 			createLiteralView('Oak', 'en')
 		])])).properties[0];
 		const rebased = before.rebasedOnto(StatementDraft.fromProperty(after));

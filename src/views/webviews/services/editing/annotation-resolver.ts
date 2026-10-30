@@ -21,21 +21,6 @@ export interface Annotation {
 }
 
 /**
- * The predicates a document names and describes its resources with, by IRI.
- */
-export interface AnnotationPredicates {
-	/**
-	 * The predicate most resources are labelled with.
-	 */
-	labelPredicate?: string;
-
-	/**
-	 * The predicate most resources are described with.
-	 */
-	descriptionPredicate?: string;
-}
-
-/**
  * A literal without the predicate it was found under.
  */
 type AnnotationLiteral = Omit<Annotation, 'predicate'>;
@@ -63,7 +48,7 @@ export class AnnotationResolver {
 	 * @returns The label, or `undefined` when the resource states none.
 	 */
 	findLabel(entry: ResourceIndexEntry): Annotation | undefined {
-		return this.findAnnotation(entry, this._labelPredicates);
+		return this._findAnnotation(entry, this._labelPredicates);
 	}
 
 	/**
@@ -72,7 +57,7 @@ export class AnnotationResolver {
 	 * @returns The description, or `undefined` when the resource states none.
 	 */
 	findDescription(entry: ResourceIndexEntry): Annotation | undefined {
-		return this.findAnnotation(entry, this._descriptionPredicates);
+		return this._findAnnotation(entry, this._descriptionPredicates);
 	}
 
 	/**
@@ -83,7 +68,7 @@ export class AnnotationResolver {
 	 * @param predicates The predicates to look for, most preferred first.
 	 * @returns The annotation, or `undefined` when the resource states none.
 	 */
-	findAnnotation(entry: ResourceIndexEntry, predicates: readonly string[]): Annotation | undefined {
+	private _findAnnotation(entry: ResourceIndexEntry, predicates: readonly string[]): Annotation | undefined {
 		for (const predicate of predicates) {
 			const literals = AnnotationResolver._literalsOf(entry, predicate);
 
@@ -95,21 +80,6 @@ export class AnnotationResolver {
 		return undefined;
 	}
 
-	/**
-	 * Detect the predicates a document names and describes its resources with: of the configured
-	 * ones, the predicate most resources state a literal for. Ties go to the more preferred
-	 * predicate, and a document that uses none of them gets the most preferred one.
-	 * @param entries The resources of the document.
-	 * @returns The predicates of the document.
-	 */
-	detectScheme(entries: Iterable<ResourceIndexEntry>): AnnotationPredicates {
-		const resources = Array.from(entries);
-
-		return {
-			labelPredicate: AnnotationResolver._mostUsed(resources, this._labelPredicates),
-			descriptionPredicate: AnnotationResolver._mostUsed(resources, this._descriptionPredicates)
-		};
-	}
 
 	/**
 	 * Pick the literal in the active language, a regional variant of it, or the first one.
@@ -130,27 +100,6 @@ export class AnnotationResolver {
 		return exact ?? variant ?? literals[0];
 	}
 
-	/**
-	 * The predicate the most resources state a literal for, or the first when none of them is used.
-	 * @param entries The resources of the document.
-	 * @param predicates The predicates to choose from, most preferred first.
-	 * @returns The predicate, or `undefined` when none is configured.
-	 */
-	private static _mostUsed(entries: readonly ResourceIndexEntry[], predicates: readonly string[]): string | undefined {
-		let best: string | undefined = predicates[0];
-		let bestCount = 0;
-
-		for (const predicate of predicates) {
-			const count = entries.filter(entry => AnnotationResolver._literalsOf(entry, predicate).length > 0).length;
-
-			if (count > bestCount) {
-				best = predicate;
-				bestCount = count;
-			}
-		}
-
-		return best;
-	}
 
 	/**
 	 * The literal values a resource states for a predicate, in document order.

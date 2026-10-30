@@ -95,7 +95,6 @@ describe('FormEditorSession', () => {
 
 		const [message] = postedOf(posted, 'DocumentSnapshot');
 
-		expect(message.cause).toBe('initial');
 		expect(message.snapshot.resources.map(resource => resource.prefixedName)).toEqual(['ex:A', 'ex:B']);
 		expect(message.snapshot.readOnly).toBeUndefined();
 	});
@@ -132,7 +131,7 @@ describe('FormEditorSession', () => {
 		expect(message.snapshot.resources).toEqual([]);
 	});
 
-	it('applies an edit, publishes the new snapshot before the confirmation and resolves the focus', async () => {
+	it('applies an edit and publishes the new snapshot before the confirmation', async () => {
 		const { session, document, posted, receive } = await createSession('ex:s ex:p "old" .\n');
 
 		vi.spyOn(vscode.workspace, 'applyEdit').mockImplementation(async edit => applyWorkspaceEditTo(edit, document));
@@ -147,10 +146,8 @@ describe('FormEditorSession', () => {
 		const snapshots = postedOf(posted, 'DocumentSnapshot');
 		const [applied] = postedOf(posted, 'EditApplied');
 
-		expect(snapshots[1]).toMatchObject({ cause: 'formEdit', editId: 'e1' });
 		expect(snapshots[1].snapshot.version).toBe(2);
 		expect(posted.indexOf(snapshots[1])).toBeLessThan(posted.indexOf(applied));
-		expect(applied.focus).toEqual({ resourceId: `i:${EX}s`, propertyIndex: 0, valueIndex: 0, target: 'value' });
 	});
 
 	it('keeps the snapshot of the last parse until the text it was parsed from is the current one', async () => {
