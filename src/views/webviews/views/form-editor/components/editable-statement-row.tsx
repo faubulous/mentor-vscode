@@ -2,74 +2,17 @@ import { FormEvent, KeyboardEvent, useState } from 'react';
 import { VscodeTextfield } from '@vscode-elements/elements';
 import { PropertyView, TermRef, TermView } from '../form-editor-model';
 import { StatementServices } from '../hooks/use-statement-services';
-import { StatementRowHandle, useStatementRow } from '../hooks/use-statement-row';
-import { IResourceDataService } from '../services/resource-data-service.interface';
-import { LiteralDatatypes } from '../services/statement/literal-datatypes';
-import { XSD_INTEGER, XSD_STRING } from '../services/statement/well-known-iris';
+import { useStatementRow } from '../hooks/use-statement-row';
 import { CellKey } from '../state/cell-key';
 import { IEditingController } from '../state/editing-controller.interface';
 import { RowValue } from '../state/row-value';
 import { StatementDraft } from '../state/statement-draft';
-import { LiteralField } from './literal-field';
+import { EditableLiteral } from './editable-literal';
 import { ResourceValues } from './resource-values';
 import { RowError } from './row-error';
+import { StatementRowContext } from './statement-row-context';
+import { getTermLabel } from './term-labels';
 import { TermValue } from './term-value';
-
-/**
- * Where a statement row stands: the card it belongs to and how deep it is nested.
- */
-interface StatementRowContext {
-	/**
-	 * Supplies the statements of the blank nodes the values refer to.
-	 */
-	dataService: IResourceDataService;
-
-	/**
-	 * The nesting depth of the row: zero for a card of the list.
-	 */
-	depth: number;
-
-	/**
-	 * The resources that hold the row, which guard against cycles.
-	 */
-	visited: readonly string[];
-}
-
-/**
- * Properties of the {@link ReadOnlyStatementRow} component.
- */
-export interface ReadOnlyStatementRowProps extends StatementRowContext {
-	/**
-	 * The property the row shows.
-	 */
-	property: PropertyView;
-}
-
-/**
- * A statement as it is read: the predicate by its label, then each value on a line of its own,
- * with the comment lines written above it.
- * @param props The property and where the row stands.
- * @returns The row.
- */
-export function ReadOnlyStatementRow({ property, ...context }: ReadOnlyStatementRowProps): React.JSX.Element {
-	const label = _labelOf(property.predicate);
-
-	return (
-		<div className="statement-line" role="group" aria-label={label}>
-			<span className="statement-gutter"></span>
-			<span className="statement-predicate" title={_iriOf(property.predicate.term)}>{label}</span>
-			<span className="statement-values">
-				{property.values.map((value, index) => (
-					<span key={index} className={`statement-value${value.nested ? ' is-node' : ''}`}>
-						{value.comments && <span className="statement-value-comment">{value.comments.join('\n')}</span>}
-						<TermValue view={value} {...context} />
-					</span>
-				))}
-			</span>
-			<span className="statement-actions"></span>
-		</div>
-	);
-}
 
 /**
  * Properties of the {@link EditableStatementRow} component.
@@ -128,10 +71,14 @@ export function EditableStatementRow(props: EditableStatementRowProps): React.JS
 	const { state } = row;
 	const [predicateFocused, setPredicateFocused] = useState(false);
 	const predicateView = state.draft.predicate ? services.resolver.viewOf({ kind: 'iri', iri: state.draft.predicate }) : undefined;
-	const predicateLabel = predicateView ? _labelOf(predicateView) : state.predicateText;
+	const predicateLabel = predicateView ? getTermLabel(predicateView) : state.predicateText;
 	const error = (property ? editing.state.errorForRow(cellKey.resourceId, cellKey.propertyIndex ?? -1) : editing.state.errorForCell(cellKey))?.message ?? state.problem;
 	const range = property?.valueKind?.kind ?? 'any';
-	const indexed = state.draft.values.map((value, index) => ({ value, kind: _kindOf(_viewOf(value, services)), index }));
+	const indexed = state.draft.values.map((value, index) => {
+		const view = _viewOf(value, services);
+
+		return { value, view, kind: _kindOf(view), index };
+	});
 	const literals = indexed.filter(entry => entry.kind === 'literal');
 	const resources = indexed.filter(entry => entry.kind === 'resource');
 	const wholes = indexed.filter(entry => entry.kind === 'whole');
@@ -176,15 +123,15 @@ export function EditableStatementRow(props: EditableStatementRowProps): React.JS
 				/>
 			</span>
 			<span className="statement-values">
-				{literals.map(({ value, index }) => (
+				{literals.map(({ value, view, index }) => (
 					<span key={index} className="statement-value">
 						{_commentsOf(value)}
-						<EditableLiteral value={value} index={index} row={row} services={services} />
+						<EditableLiteral view={view} index={index} row={row} services={services} />
 					</span>
 				))}
 				<span className={`statement-value is-adder${resources.length === 0 && state.draft.values.length > 0 && state.pendingText === '' ? ' is-on-intent' : ''}`}>
 					<ResourceValues
-						resources={resources.map(({ value, index }) => ({ view: _viewOf(value, services), index }))}
+						resources={resources.map(({ view, index }) => ({ view, index }))}
 						documentResources={services.resources}
 						range={range}
 						pendingText={state.pendingText}
@@ -196,11 +143,11 @@ export function EditableStatementRow(props: EditableStatementRowProps): React.JS
 						onRemove={row.onRemoveValue}
 					/>
 				</span>
-				{wholes.map(({ value, index }) => (
+				{wholes.map(({ value, view, index }) => (
 					<span key={index} className={`statement-value${_isNode(value) ? ' is-node' : ''}`}>
 						{_commentsOf(value)}
 						<span className="statement-value-whole" data-value-index={index}>
-							<TermValue view={_viewOf(value, services)} {...context} />
+							<TermValue view={view} {...context} />
 							<button type="button" className="statement-value-remove" aria-label={`Remove value ${index + 1}`} title="Remove" onClick={() => row.onRemoveValue(index)}>
 								<vscode-icon name="close" size={12}></vscode-icon>
 							</button>
@@ -211,59 +158,6 @@ export function EditableStatementRow(props: EditableStatementRowProps): React.JS
 			<span className="statement-actions"></span>
 			{error && <RowError message={error} onDismiss={() => editing.dismissError(cellKey)} />}
 		</div>
-	);
-}
-
-/**
- * Properties of the {@link EditableLiteral} component.
- */
-interface EditableLiteralProps {
-	/**
-	 * The value.
-	 */
-	value: RowValue;
-
-	/**
-	 * The index of the value among the values of its statement.
-	 */
-	index: number;
-
-	/**
-	 * The row.
-	 */
-	row: StatementRowHandle;
-
-	/**
-	 * Gives the datatypes their labels and the card its languages.
-	 */
-	services: StatementServices;
-}
-
-/**
- * A literal value of an edited statement as its field.
- * @param props The value and its row.
- * @returns The field.
- */
-function EditableLiteral({ value, index, row, services }: EditableLiteralProps): React.JSX.Element | null {
-	const term = _viewOf(value, services).term;
-
-	if (term.kind !== 'literal') {
-		return null;
-	}
-
-	return (
-		<LiteralField
-			index={index}
-			text={term.value}
-			tag={term.language ?? _datatypeLabel(term.datatype, services)}
-			problem={row.literalProblems.get(index)}
-			numeric={term.datatype !== undefined && LiteralDatatypes.isNumeric(term.datatype)}
-			integer={term.datatype === XSD_INTEGER}
-			languages={services.languages}
-			services={services}
-			onInput={text => row.onLiteralInput(index, text)}
-			onTagPick={tag => row.onLiteralTag(index, tag)}
-		/>
 	);
 }
 
@@ -301,24 +195,6 @@ function _commentsOf(value: RowValue): React.JSX.Element | null {
 }
 
 /**
- * The label a term is shown by: its label, else its prefixed name, else its IRI.
- * @param view The view of the term.
- * @returns The label.
- */
-function _labelOf(view: TermView): string {
-	return view.label || view.prefixedName || _iriOf(view.term) || '';
-}
-
-/**
- * The IRI of a term, if it is one.
- * @param term The term.
- * @returns The IRI.
- */
-function _iriOf(term: TermRef): string | undefined {
-	return term.kind === 'iri' ? term.iri : undefined;
-}
-
-/**
  * How the predicate of a property is written in its field: its prefixed name, else its IRI.
  * @param property The property.
  * @param services Gives the predicate its prefixed name.
@@ -328,21 +204,6 @@ function _predicateText(property: PropertyView, services: StatementServices): st
 	const term = property.predicate.term;
 
 	return property.predicate.prefixedName ?? services.resolver.viewOf(term).prefixedName ?? (term.kind === 'iri' ? `<${term.iri}>` : '');
-}
-
-/**
- * The label of a datatype: the name the fields know it by, else its prefixed name; Text for plain
- * text.
- * @param datatype The IRI of the datatype.
- * @param services Gives the datatype its prefixed name.
- * @returns The label.
- */
-function _datatypeLabel(datatype: string | undefined, services: StatementServices): string {
-	if (!datatype || datatype === XSD_STRING) {
-		return 'Text';
-	}
-
-	return LiteralDatatypes.of(datatype)?.label ?? services.resolver.viewOf({ kind: 'iri', iri: datatype }).prefixedName ?? datatype;
 }
 
 /**
