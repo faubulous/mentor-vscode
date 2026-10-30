@@ -9,18 +9,13 @@ import type { ExecuteCommandMessage } from '../../webview-messaging';
 import type { DocumentPosition, DocumentSnapshot, ResourceDetail, ResourceId } from './form-editor-model';
 
 /**
- * Why a snapshot was sent, which tells the webview how much of its state to preserve.
- */
-export type SnapshotCause = 'initial' | 'external' | 'formEdit' | 'settings' | 'language';
-
-/**
  * Messages sent from the extension host to the webview.
  */
 export type FormEditorHostMessage =
 	/**
-	 * The document, rebuilt after it changed; `editId` names the edit of the form that caused it.
+	 * The document, rebuilt after it changed.
 	 */
-	| { id: 'DocumentSnapshot'; cause: SnapshotCause; editId?: string; snapshot: DocumentSnapshot }
+	| { id: 'DocumentSnapshot'; snapshot: DocumentSnapshot }
 	/**
 	 * The properties of the resources the webview asked for; `missing` names those the document
 	 * no longer describes.

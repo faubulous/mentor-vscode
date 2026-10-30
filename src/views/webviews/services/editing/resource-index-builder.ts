@@ -1,10 +1,10 @@
 import { QuadContext, RdfToken } from '@faubulous/mentor-rdf-parsers';
 import { Term } from '@rdfjs/types';
-import { RDF, Uri } from '@faubulous/mentor-rdf';
+import { RDF } from '@faubulous/mentor-rdf';
 import { IDocumentContext } from '@src/services/document/document-context.interface';
 import { getResourceId, toTermRef } from '@src/services/editing/resource-id';
-import { getTokenPosition, hasSourcePosition, isTokenOfType } from '@src/utilities/tokens';
-import { DocumentPosition, NamespaceInfo, ResourceId } from '@src/views/webviews/views/form-editor/form-editor-model';
+import { isTokenOfType } from '@src/utilities/tokens';
+import { NamespaceInfo, ResourceId } from '@src/views/webviews/views/form-editor/form-editor-model';
 import { CollectionItem, ResourceIndex, ResourceIndexEntry } from './resource-index';
 import { ResourceViewBuilder } from './resource-view-builder';
 import { trailingCommentRunsOf } from './statement-comments';
@@ -23,10 +23,6 @@ export class ResourceIndexBuilder {
 	private readonly _referenceCounts = new Map<ResourceId, number>();
 
 	private readonly _labelledSubjects = new Set<ResourceId>();
-
-	private readonly _datatypes = new Set<string>();
-
-	private readonly _namespaceUsage = new Map<string, number>();
 
 	/**
 	 * Create a builder for the statements of a document.
@@ -54,7 +50,6 @@ export class ResourceIndexBuilder {
 			summaries: [],
 			entries: this._entries,
 			namespaces: this._buildNamespaces(),
-			datatypes: Array.from(this._datatypes).sort(),
 			referenceCounts: this._referenceCounts,
 			trailingComments: trailingCommentRunsOf(this._quadContexts),
 			...this._buildCollections()
@@ -90,17 +85,6 @@ export class ResourceIndexBuilder {
 			this._referenceCounts.set(objectId, (this._referenceCounts.get(objectId) ?? 0) + 1);
 		}
 
-		if (quad.object.termType === 'Literal') {
-			const datatype = (quad.object as { datatype?: { value: string } }).datatype?.value;
-
-			if (datatype) {
-				this._datatypes.add(datatype);
-			}
-		}
-
-		this._countNamespaceUsage(quad.subject);
-		this._countNamespaceUsage(quad.predicate);
-		this._countNamespaceUsage(quad.object);
 	}
 
 	/**
@@ -120,9 +104,7 @@ export class ResourceIndexBuilder {
 			id,
 			term: toTermRef(quad.subject),
 			quads: [],
-			nested: false,
-			graph: quad.graph?.value || undefined,
-			position: _toPosition(quad.subjectToken)
+			nested: false
 		};
 
 		this._entries.set(id, entry);
@@ -131,19 +113,6 @@ export class ResourceIndexBuilder {
 		return entry;
 	}
 
-	/**
-	 * Count a use of the namespace of a term.
-	 * @param term The term.
-	 */
-	private _countNamespaceUsage(term: Term): void {
-		if (term.termType !== 'NamedNode') {
-			return;
-		}
-
-		const namespaceIri = Uri.getNamespaceIri(term.value);
-
-		this._namespaceUsage.set(namespaceIri, (this._namespaceUsage.get(namespaceIri) ?? 0) + 1);
-	}
 
 	/**
 	 * Build the namespace list of the document, ordered by prefix.
@@ -151,27 +120,10 @@ export class ResourceIndexBuilder {
 	 */
 	private _buildNamespaces(): NamespaceInfo[] {
 		return Object.entries(this._context.namespaces)
-			.map(([prefix, iri]) => ({
-				prefix,
-				iri,
-				usageCount: this._namespaceUsage.get(iri) ?? 0,
-				position: this._toNamespacePosition(prefix, iri)
-			}))
+			.map(([prefix, iri]) => ({ prefix, iri }))
 			.sort((a, b) => a.prefix.localeCompare(b.prefix));
 	}
 
-	/**
-	 * Resolve the position of a namespace declaration. The Turtle document keys its declarations
-	 * by namespace IRI, while the XML parser keys them by prefix, so both keys are tried.
-	 * @param prefix The declared prefix.
-	 * @param iri The namespace IRI.
-	 * @returns The position, or `undefined` when the declaration is not located.
-	 */
-	private _toNamespacePosition(prefix: string, iri: string): DocumentPosition | undefined {
-		const range = this._context.namespaceDefinitions.first(iri) ?? this._context.namespaceDefinitions.first(prefix);
-
-		return range ? { line: range.start.line, character: range.start.character } : undefined;
-	}
 
 	/**
 	 * Collapse the `rdf:first` and `rdf:rest` chains of the document into ordered item lists. A
@@ -239,17 +191,3 @@ export class ResourceIndexBuilder {
 }
 
 
-/**
- * Convert the source token of a quad component to a document position.
- * @param token The token.
- * @returns The position, or `undefined` if the token has no source location.
- */
-function _toPosition(token: QuadContext['subjectToken']): DocumentPosition | undefined {
-	if (!hasSourcePosition(token)) {
-		return undefined;
-	}
-
-	const { start } = getTokenPosition(token);
-
-	return { line: start.line, character: start.character };
-}

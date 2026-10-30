@@ -11,7 +11,7 @@ describe('useFormEditorContext', () => {
 	});
 
 	it('reads the value of the nearest provider', () => {
-		const value: FormEditorContextValue = { readOnly: false, namespaces: [{ prefix: 'ex', iri: 'http://example.org/', usageCount: 1 }], activeLanguage: 'en' };
+		const value: FormEditorContextValue = { readOnly: false, namespaces: [{ prefix: 'ex', iri: 'http://example.org/' }] };
 		const { result } = renderHook(() => useFormEditorContext(), {
 			wrapper: ({ children }) => <FormEditorContext.Provider value={value}>{children}</FormEditorContext.Provider>
 		});

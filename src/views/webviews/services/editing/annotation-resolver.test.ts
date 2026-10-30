@@ -45,31 +45,3 @@ describe('AnnotationResolver.findDescription', () => {
 		expect(new AnnotationResolver([], [SKOS.definition, RDFS.comment]).findDescription(entry)?.text).toBe('a definition');
 	});
 });
-
-describe('AnnotationResolver.detectScheme', () => {
-	it('picks the predicates most resources use', () => {
-		const entries = [
-			entryOf('A', [[SKOS.prefLabel, 'a'], [SKOS.definition, 'a']]),
-			entryOf('B', [[SKOS.prefLabel, 'b'], [RDFS.comment, 'b']]),
-			entryOf('C', [[RDFS.label, 'c'], [SKOS.definition, 'c']])
-		];
-
-		expect(new AnnotationResolver([RDFS.label, SKOS.prefLabel], [RDFS.comment, SKOS.definition]).detectScheme(entries))
-			.toEqual({ labelPredicate: SKOS.prefLabel, descriptionPredicate: SKOS.definition });
-	});
-
-	it('breaks a tie in favour of the more preferred predicate', () => {
-		const entries = [entryOf('A', [[SKOS.prefLabel, 'a']]), entryOf('B', [[RDFS.label, 'b']])];
-
-		expect(new AnnotationResolver([RDFS.label, SKOS.prefLabel], []).detectScheme(entries).labelPredicate).toBe(RDFS.label);
-	});
-
-	it('falls back to the most preferred predicate when the document uses none', () => {
-		expect(new AnnotationResolver([RDFS.label, SKOS.prefLabel], [RDFS.comment]).detectScheme([entryOf('A', [])]))
-			.toEqual({ labelPredicate: RDFS.label, descriptionPredicate: RDFS.comment });
-	});
-
-	it('has no predicate to offer when none is configured', () => {
-		expect(new AnnotationResolver([], []).detectScheme([])).toEqual({ labelPredicate: undefined, descriptionPredicate: undefined });
-	});
-});

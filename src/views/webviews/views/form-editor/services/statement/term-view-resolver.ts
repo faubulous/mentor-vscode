@@ -45,7 +45,6 @@ export class TermViewResolver {
 		return {
 			term,
 			label: known?.label,
-			labelLanguage: known?.labelLanguage,
 			prefixedName: known?.prefixedName ?? getPrefixedName(this._namespaces, term.iri),
 			iconName: known?.iconName,
 			editable: false

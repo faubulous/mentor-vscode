@@ -16,7 +16,7 @@ import { StatementList } from './statement-list';
  * The view of a blank node value with its nested node.
  */
 function createNestedView(id: string, extra: Partial<NonNullable<TermView['nested']>> = {}): TermView {
-	return { term: { kind: 'bnode', id }, editable: true, nested: { id: `b:${id}`, propertyCount: 1, iconName: 'mentor-rdf-individual', ...extra } };
+	return { term: { kind: 'bnode', id }, editable: true, nested: { id: `b:${id}`, propertyCount: 1, ...extra } };
 }
 
 /**
@@ -25,7 +25,7 @@ function createNestedView(id: string, extra: Partial<NonNullable<TermView['neste
 function renderList(detail: ResourceDetail, context: Partial<FormEditorContextValue> = {}, details: ResourceDetail[] = []) {
 	const dataService = createResourceDataServiceStub([detail, ...details]);
 	const result = renderWebview(
-		<FormEditorContext.Provider value={{ readOnly: true, namespaces: [{ prefix: 'xsd', iri: 'http://www.w3.org/2001/XMLSchema#', usageCount: 1 }], ...context }}>
+		<FormEditorContext.Provider value={{ readOnly: true, namespaces: [{ prefix: 'xsd', iri: 'http://www.w3.org/2001/XMLSchema#' }], ...context }}>
 			<StatementList detail={detail} dataService={dataService} depth={0} visited={[detail.id]} />
 		</FormEditorContext.Provider>
 	);

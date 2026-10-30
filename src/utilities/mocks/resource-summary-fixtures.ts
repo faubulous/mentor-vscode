@@ -17,8 +17,6 @@ export function createResourceSummary(localName: string, extra: Partial<Resource
 		prefixedName: `ex:${localName}`,
 		iconName: 'mentor-rdf-class',
 		propertyCount: 2,
-		valueCount: 3,
-		nested: false,
 		hasLabel: true,
 		...extra
 	};

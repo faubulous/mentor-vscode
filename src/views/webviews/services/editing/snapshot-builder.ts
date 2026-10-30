@@ -2,12 +2,10 @@ import { DCAT, OWL, RDF, SKOS } from '@faubulous/mentor-rdf';
 import { QuadContext } from '@faubulous/mentor-rdf-parsers';
 import { ITokenizedDocumentContext } from '@src/services/document/document-context.interface';
 import { getFileName } from '@src/utilities/uri';
-import { AnnotationScheme, DocumentProblem, DocumentSnapshot, ReadOnlyReason, ResourceId, ResourceSummary } from '@src/views/webviews/views/form-editor/form-editor-model';
-import { AnnotationResolver } from './annotation-resolver';
+import { DocumentProblem, DocumentSnapshot, ReadOnlyReason, ResourceId, ResourceSummary } from '@src/views/webviews/views/form-editor/form-editor-model';
 import { ExternalDeclarationDetector } from './external-declaration-detector';
 import { ResourceIndex, ResourceIndexEntry, typeIrisOf } from './resource-index';
 import { ResourceIndexBuilder } from './resource-index-builder';
-import { ResourceViewBuilder } from './resource-view-builder';
 
 /**
  * The types of the resources that describe a document as a whole.
@@ -103,14 +101,9 @@ export class SnapshotBuilder {
 				version: this._input.version,
 				uri: this._input.uri,
 				fileName: getFileName(this._input.uri),
-				syntax: String(context.syntax ?? ''),
-				baseIri: context.baseIri,
 				namespaces: index.namespaces,
-				annotationScheme: this._buildAnnotationScheme(index),
-				activeLanguage: context.activeLanguageTag,
 				resources,
 				documentResourceId,
-				datatypes: index.datatypes,
 				trailingComments: index.trailingComments.length > 0 ? index.trailingComments : undefined,
 				readOnly: this._input.readOnly,
 				problems: this._input.problems ?? [],
@@ -119,23 +112,6 @@ export class SnapshotBuilder {
 		};
 	}
 
-	/**
-	 * Detect the predicates the document names and describes its resources with, resolved as the
-	 * predicates of the rows are.
-	 * @param index The index of the document.
-	 * @returns The scheme.
-	 */
-	private _buildAnnotationScheme(index: ResourceIndex): AnnotationScheme {
-		const { context } = this._input;
-		const detected = new AnnotationResolver(context.predicates.label, context.predicates.description, context.activeLanguageTag)
-			.detectScheme(index.entries.values());
-		const views = new ResourceViewBuilder(index, context);
-
-		return {
-			label: detected.labelPredicate ? views.buildPredicateView(detected.labelPredicate) : undefined,
-			description: detected.descriptionPredicate ? views.buildPredicateView(detected.descriptionPredicate) : undefined
-		};
-	}
 
 	/**
 	 * How often a resource is used: across the indexed documents for an IRI, which other documents

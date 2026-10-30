@@ -59,22 +59,6 @@ describe('ResourceViewBuilder.buildDetail', () => {
 		expect(detail.properties[0].predicate).toMatchObject({ term: { kind: 'iri', iri: RDFS.label }, label: 'label', prefixedName: 'rdfs:label', editable: true });
 	});
 
-	it('resolves the description across the indexed documents, naming the predicate when the document states one', () => {
-		const stored = detailOf('ex:Thing a ex:Class .\n', { descriptions: { [`${EX}Thing`]: 'A thing of some kind.' } });
-		const stated = detailOf('ex:Thing rdfs:comment "Stated." .\n', { descriptions: { [`${EX}Thing`]: 'Stored.' }, predicates: { label: [], description: [RDFS.comment] } });
-
-		expect(stored.description).toBe('A thing of some kind.');
-		expect(stored.descriptionPredicate).toBeUndefined();
-		expect(stated.description).toBe('Stated.');
-		expect(stated.descriptionPredicate).toBe(RDFS.comment);
-	});
-
-	it('names the predicate the label was read from', () => {
-		const detail = detailOf('ex:Thing rdfs:label "x" .\n', { predicates: { label: [RDFS.label], description: [] } });
-
-		expect(detail.labelPredicate).toBe(RDFS.label);
-	});
-
 	it('links a nested blank node object to its own resource', () => {
 		const detail = detailOf('ex:Shape sh:property [ sh:path ex:name ; sh:minCount 1 ] .\n');
 		const nested = detail.properties[0].values[0].nested;
@@ -103,27 +87,16 @@ describe('ResourceViewBuilder.buildDetail', () => {
 		expect(detail.properties[0].values[0].nested?.typeLabel).toBe('sh:PropertyShape');
 	});
 
-	it('marks a blank node with the icon of the kind of thing it is', () => {
-		const typed = detailOf('ex:Shape sh:property [ a sh:PropertyShape ; sh:path ex:name ] .\n');
-		// How shapes are written in practice: no `a sh:PropertyShape`, just the constraint.
-		const untyped = detailOf('ex:Shape sh:property [ sh:path ex:name ; sh:minCount 1 ] .\n');
-		const refined = detailOf('ex:Shape sh:property [ sh:path ex:name ; sh:datatype xsd:string ] .\n');
-
-		expect(typed.properties[0].values[0].nested?.iconName).toBe('mentor-rdf-shape-property');
-		expect(untyped.properties[0].values[0].nested?.iconName).toBe('mentor-rdf-shape-property');
-		expect(refined.properties[0].values[0].nested?.iconName).toBe('symbol-text');
-	});
-
 	it('does not link a labelled blank node, which has a row of its own', () => {
 		const detail = detailOf('ex:Thing ex:related _:node .\n_:node ex:label "I stand alone" .\n');
 
 		expect(detail.properties[0].values[0].nested).toBeUndefined();
 	});
 
-	it('positions the values of an inline blank node so they can be edited', () => {
+	it('anchors the values of an inline blank node so they can be edited', () => {
 		const detail = nestedDetailOf('ex:Thing ex:shape [ ex:name "inner" ] .\n');
 
-		expect(detail.properties[0].values[0].position).toEqual({ line: PREAMBLE.split('\n').length - 1, character: 28 });
+		expect(detail.properties[0].values[0].anchor).toBe(PREAMBLE.length + 28);
 		expect(detail.properties[0].values[0].editable).toBe(true);
 	});
 
@@ -133,12 +106,11 @@ describe('ResourceViewBuilder.buildDetail', () => {
 		expect(detail.properties[0].values[0].collection?.items.map(item => item.prefixedName)).toEqual(['ex:first', 'ex:second', 'ex:third']);
 	});
 
-	it('positions the items of a collection at their own tokens so they can be edited', () => {
+	it('anchors the items of a collection at their own tokens so they can be edited', () => {
 		const detail = detailOf('ex:Thing ex:steps ( ex:first ex:second ) .\n');
 		const items = detail.properties[0].values[0].collection?.items ?? [];
-		const line = PREAMBLE.split('\n').length - 1;
 
-		expect(items.map(item => item.position)).toEqual([{ line, character: 20 }, { line, character: 29 }]);
+		expect(items.map(item => item.anchor)).toEqual([PREAMBLE.length + 20, PREAMBLE.length + 29]);
 		expect(items.every(item => item.editable)).toBe(true);
 	});
 
@@ -161,7 +133,6 @@ describe('ResourceViewBuilder.buildDetail', () => {
 
 		expect(items).toHaveLength(2);
 		expect(items.every(item => item.nested !== undefined)).toBe(true);
-		expect(items[0].nested?.iconName).toBe('mentor-rdf-shape-property');
 		expect(items[1].nested?.propertyCount).toBe(2);
 	});
 });

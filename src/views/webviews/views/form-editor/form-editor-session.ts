@@ -20,9 +20,15 @@ import { ResourceIndex, ResourceIndexOptions } from '../../services/editing/reso
 import { ResourceViewBuilder } from '../../services/editing/resource-view-builder';
 import { SnapshotBuilder } from '../../services/editing/snapshot-builder';
 import { EditOutcome, FormEditorEditHandler } from './form-editor-edit-handler';
-import { FormEditorHostMessage, FormEditorWebviewMessage, SnapshotCause } from './form-editor-messages';
+import { FormEditorHostMessage, FormEditorWebviewMessage } from './form-editor-messages';
 import { DocumentProblem, DocumentSnapshot, ReadOnlyReason, ResourceDetail, ResourceId } from './form-editor-model';
 
+
+/**
+ * Why a snapshot is built, which decides whether the snapshot of the same document version can be
+ * kept.
+ */
+type SnapshotCause = 'initial' | 'external' | 'formEdit' | 'settings' | 'language';
 /**
  * The delay before a snapshot is rebuilt after the document changed. The token source already
  * absorbs keystroke bursts, so this only coalesces the events that follow one delivery.
@@ -209,7 +215,7 @@ export class FormEditorSession implements vscode.Disposable {
 		}
 
 		this._refreshDebouncer.cancel();
-		this._publishSnapshot('formEdit', editId);
+		this._publishSnapshot('formEdit');
 
 		this._postMessage({ id: 'EditApplied', editId, version: outcome.version });
 
@@ -348,10 +354,9 @@ export class FormEditorSession implements vscode.Disposable {
 
 	/**
 	 * Build and post a snapshot of the document.
-	 * @param cause Why the snapshot is sent.
-	 * @param editId The edit of the form that caused it, if any.
+	 * @param cause Why the snapshot is built.
 	 */
-	private _publishSnapshot(cause: SnapshotCause, editId?: string): void {
+	private _publishSnapshot(cause: SnapshotCause): void {
 		if (this._disposed) {
 			return;
 		}
@@ -361,7 +366,7 @@ export class FormEditorSession implements vscode.Disposable {
 		if (!context) {
 			const readOnly: ReadOnlyReason = { reason: 'unsupportedSyntax', message: 'This document cannot be shown in the form editor.' };
 
-			this._postMessage({ id: 'DocumentSnapshot', cause, editId, snapshot: this._buildEmptySnapshot(readOnly) });
+			this._postMessage({ id: 'DocumentSnapshot', snapshot: this._buildEmptySnapshot(readOnly) });
 
 			return;
 		}
@@ -372,7 +377,7 @@ export class FormEditorSession implements vscode.Disposable {
 		// of the last parse stays until the parse of this version is delivered. A template is shown
 		// without its statements, and so without offsets.
 		if (readOnly?.reason !== 'template' && !tokensMatchText(context.tokens, this._document.getText())) {
-			this._sendSnapshot(cause, editId);
+			this._sendSnapshot();
 
 			return;
 		}
@@ -384,7 +389,7 @@ export class FormEditorSession implements vscode.Disposable {
 			this._rebuildSnapshot(context, readOnly, problems, key);
 		}
 
-		this._sendSnapshot(cause, editId);
+		this._sendSnapshot();
 	}
 
 	/**
@@ -413,10 +418,8 @@ export class FormEditorSession implements vscode.Disposable {
 
 	/**
 	 * Post the kept snapshot, once the webview is ready and unless it was posted already.
-	 * @param cause Why the snapshot is sent.
-	 * @param editId The edit of the form that caused it, if any.
 	 */
-	private _sendSnapshot(cause: SnapshotCause, editId?: string): void {
+	private _sendSnapshot(): void {
 		const snapshot = this._snapshot;
 
 		if (!snapshot || !this._webviewReady || snapshot === this._sentSnapshot) {
@@ -424,7 +427,7 @@ export class FormEditorSession implements vscode.Disposable {
 		}
 
 		this._sentSnapshot = snapshot;
-		this._postMessage({ id: 'DocumentSnapshot', cause, editId, snapshot });
+		this._postMessage({ id: 'DocumentSnapshot', snapshot });
 	}
 
 	/**
@@ -627,11 +630,8 @@ export class FormEditorSession implements vscode.Disposable {
 			version: this._document.version,
 			uri: this._documentUri,
 			fileName: this._document.uri.path.split('/').pop() ?? '',
-			syntax: this._document.languageId,
 			namespaces: [],
-			annotationScheme: {},
 			resources: [],
-			datatypes: [],
 			readOnly,
 			problems: this._collectProblems()
 		};

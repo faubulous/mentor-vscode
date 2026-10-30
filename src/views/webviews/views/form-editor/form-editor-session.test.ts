@@ -95,7 +95,6 @@ describe('FormEditorSession', () => {
 
 		const [message] = postedOf(posted, 'DocumentSnapshot');
 
-		expect(message.cause).toBe('initial');
 		expect(message.snapshot.resources.map(resource => resource.prefixedName)).toEqual(['ex:A', 'ex:B']);
 		expect(message.snapshot.readOnly).toBeUndefined();
 	});
@@ -147,7 +146,6 @@ describe('FormEditorSession', () => {
 		const snapshots = postedOf(posted, 'DocumentSnapshot');
 		const [applied] = postedOf(posted, 'EditApplied');
 
-		expect(snapshots[1]).toMatchObject({ cause: 'formEdit', editId: 'e1' });
 		expect(snapshots[1].snapshot.version).toBe(2);
 		expect(posted.indexOf(snapshots[1])).toBeLessThan(posted.indexOf(applied));
 	});

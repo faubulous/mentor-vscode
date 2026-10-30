@@ -189,15 +189,12 @@ function FormEditor(): React.JSX.Element {
 		editing: editable ? controller : undefined,
 		namespaces: snapshot?.namespaces ?? [],
 		resources: snapshot?.resources,
-		activeLanguage: snapshot?.activeLanguage,
-		annotationScheme: snapshot?.annotationScheme,
-		onRevealInTextEditor: handleRevealInTextEditor,
 		onRevealResource: handleRevealResource,
 		onOpenExternal: handleOpenExternal,
 		revealedResourceId: revealedId,
 		dominantTypeIri: snapshot?.dominantTypeIri,
 		filterText
-	}), [snapshot, editable, controller, handleRevealInTextEditor, handleRevealResource, handleOpenExternal, revealedId, filterText]);
+	}), [snapshot, editable, controller, handleRevealResource, handleOpenExternal, revealedId, filterText]);
 
 	if (!snapshot) {
 		return (
