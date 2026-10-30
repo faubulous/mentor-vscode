@@ -7,7 +7,7 @@ import { StatementToken } from './statement-token';
 import { StatementVocabulary } from './statement-vocabulary';
 import { ValueKind } from '@src/utilities/value-kind';
 import { StatementValueKind, PillDisplay, PredicateInfo, ValueInfo } from './term-info';
-import { LABEL_PREDICATE_IRIS, RDF_TYPE } from './well-known-iris';
+import { RDF_TYPE } from './well-known-iris';
 
 /**
  * Tells what the tokens of a statement text denote against a vocabulary: whether the first is a predicate
@@ -140,17 +140,6 @@ export class TermDescriber {
 		}
 
 		return token.kind === 'nestedNode' || this.isResourceToken(token);
-	}
-
-	/**
-	 * Indicate whether the predicate of a statement text is a label predicate, whose values are shown bold.
-	 * @param token The predicate token.
-	 * @returns `true` for a label predicate.
-	 */
-	isLabelPredicate(token: StatementToken | undefined): boolean {
-		const iri = token ? this.tokenIri(token) : undefined;
-
-		return iri !== undefined && LABEL_PREDICATE_IRIS.has(iri);
 	}
 
 	/**

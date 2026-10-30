@@ -18,12 +18,3 @@ export const XSD_NAMESPACE = 'http://www.w3.org/2001/XMLSchema#';
  * The datatype a plain literal carries, which is never written.
  */
 export const XSD_STRING = `${XSD_NAMESPACE}string`;
-
-/**
- * The predicates whose values name a resource, shown in bold.
- */
-export const LABEL_PREDICATE_IRIS: ReadonlySet<string> = new Set([
-	'http://www.w3.org/2000/01/rdf-schema#label',
-	'http://www.w3.org/2004/02/skos/core#prefLabel',
-	'http://purl.org/dc/terms/title'
-]);

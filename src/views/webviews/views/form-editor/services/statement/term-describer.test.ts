@@ -103,16 +103,6 @@ describe('resource and atomic tokens', () => {
 	});
 });
 
-describe('TermDescriber.isLabelPredicate', () => {
-	it('recognises the label predicates by IRI', () => {
-		expect(describer.isLabelPredicate(token('rdfs:label'))).toBe(true);
-		expect(describer.isLabelPredicate(token('skos:prefLabel'))).toBe(true);
-		expect(describer.isLabelPredicate(token('dcterms:title'))).toBe(true);
-		expect(describer.isLabelPredicate(token('rdfs:comment'))).toBe(false);
-		expect(describer.isLabelPredicate(undefined)).toBe(false);
-	});
-});
-
 describe('TermDescriber.ghostFor', () => {
 	it('hints at the kind of value a range takes', () => {
 		expect(TermDescriber.ghostFor('literal')).toBe('"text"@en');
