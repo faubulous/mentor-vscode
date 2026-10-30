@@ -1,33 +1,18 @@
 import { TermView } from '../form-editor-model';
 import { useIriNavigation } from '../hooks/use-iri-navigation';
-import { IResourceDataService } from '../services/resource-data-service.interface';
 import { LiteralValue } from './literal-value';
 import { NestedResourceCard } from './nested-resource-card';
+import { StatementRowContext } from './statement-row-context';
 import { ValuePill } from './value-pill';
 
 /**
  * Properties of the {@link TermValue} component.
  */
-export interface TermValueProps {
+export interface TermValueProps extends StatementRowContext {
 	/**
 	 * The value.
 	 */
 	view: TermView;
-
-	/**
-	 * Supplies the statements of the blank nodes the value refers to.
-	 */
-	dataService: IResourceDataService;
-
-	/**
-	 * The nesting depth of the row the value stands in: zero for a card of the list.
-	 */
-	depth: number;
-
-	/**
-	 * The resources that hold the row, which guard against cycles.
-	 */
-	visited: readonly string[];
 }
 
 /**

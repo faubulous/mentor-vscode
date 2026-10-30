@@ -1,6 +1,7 @@
 import { KeyboardEvent, MouseEvent } from 'react';
 import { TermView } from '../form-editor-model';
 import { ResourceIcon } from './resource-icon';
+import { getTermLabel, getTermTitle } from './term-labels';
 
 /**
  * The icon of a resource whose kind nothing tells, as in the definition tree.
@@ -35,8 +36,8 @@ export interface ValuePillProps {
  * @returns The pill.
  */
 export function ValuePill({ view, onNavigate, onRemove }: ValuePillProps): React.JSX.Element {
-	const title = view.term.kind === 'iri' ? view.term.iri : view.term.kind === 'bnode' ? `_:${view.term.id}` : undefined;
-	const label = view.label || view.prefixedName || title;
+	const title = getTermTitle(view.term);
+	const label = getTermLabel(view);
 
 	const handleClick = (event: MouseEvent<HTMLSpanElement>): void => {
 		event.stopPropagation();
