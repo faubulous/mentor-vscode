@@ -5,7 +5,6 @@ import { ServiceToken } from '@src/services/tokens';
 import { IDocumentContextService } from '@src/services/document';
 import { WorkspaceUri } from '@src/providers/workspace-uri';
 import { TurtleDocument } from '@src/languages';
-import { hasBlockingErrors } from '@src/utilities/vscode/diagnostic';
 
 export const inlineBlankNodes = {
 	id: 'mentor.command.inlineBlankNodes',
@@ -39,7 +38,7 @@ export const inlineBlankNodes = {
 			return;
 		}
 
-		if (hasBlockingErrors(document.uri)) {
+		if (context.getSyntaxErrors(document.getText()).length > 0) {
 			await vscode.window.showErrorMessage('This document has syntax errors and cannot be refactored.');
 			return;
 		}

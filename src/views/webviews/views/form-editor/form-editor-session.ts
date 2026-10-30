@@ -12,8 +12,8 @@ import { EditOperation, EditRejectionReason } from '@src/services/editing/edit-o
 import { ResourceReferenceProvider } from '@src/providers/resource-reference-provider';
 import { Debouncer } from '@src/utilities/debounce';
 import { getSubjectIconName } from '@src/utilities/subject-icon';
-import { hasBlockingErrors } from '@src/utilities/vscode/diagnostic';
 import { tokensMatchText } from '@src/utilities/tokens';
+import { DocumentSyntaxError } from '@src/services/document/document-syntax-error';
 import { WebviewComponentFactory } from '../../webview-component-factory';
 import { ExecuteCommandMessage } from '../../webview-messaging';
 import { ResourceIndex, ResourceIndexOptions } from '../../services/editing/resource-index';
@@ -21,6 +21,7 @@ import { ResourceViewBuilder } from '../../services/editing/resource-view-builde
 import { SnapshotBuilder } from '../../services/editing/snapshot-builder';
 import { EditOutcome, FormEditorEditHandler } from './form-editor-edit-handler';
 import { FormEditorHostMessage, FormEditorWebviewMessage } from './form-editor-messages';
+import { getFormReadOnlyReason } from './form-editor-read-only';
 import { DocumentProblem, DocumentSnapshot, ReadOnlyReason, ResourceDetail, ResourceId } from './form-editor-model';
 
 
@@ -152,7 +153,6 @@ export class FormEditorSession implements vscode.Disposable {
 		this._subscriptions.push(
 			this._panel.webview.onDidReceiveMessage((message: FormEditorWebviewMessage) => this._onDidReceiveMessage(message)),
 			this._panel.onDidChangeViewState(() => this._onDidChangeViewState()),
-			vscode.languages.onDidChangeDiagnostics(event => this._onDidChangeDiagnostics(event)),
 			vscode.workspace.onDidChangeConfiguration(event => this._onDidChangeConfiguration(event)),
 			this._contextService.onDidChangeDocumentContext(context => {
 				if (context?.uri.toString() === this._documentUri) {
@@ -206,8 +206,7 @@ export class FormEditorSession implements vscode.Disposable {
 		const outcome = await this._editHandler.handle({ editId, baseVersion, operations }, {
 			document: this._document,
 			context,
-			tokenSource: this._tokenSource,
-			readOnly: this._getReadOnlyReason(context)
+			tokenSource: this._tokenSource
 		});
 
 		if (!outcome.ok) {
@@ -322,17 +321,6 @@ export class FormEditorSession implements vscode.Disposable {
 	}
 
 	/**
-	 * Refresh when the problems of this document changed, because they decide whether the
-	 * document can be edited.
-	 * @param event The diagnostics that changed.
-	 */
-	private _onDidChangeDiagnostics(event: vscode.DiagnosticChangeEvent): void {
-		if (event.uris.some(uri => uri.toString() === this._documentUri)) {
-			this._scheduleRefresh('external');
-		}
-	}
-
-	/**
 	 * Refresh when a setting that affects rendering changed.
 	 * @param event The configuration that changed.
 	 */
@@ -371,18 +359,20 @@ export class FormEditorSession implements vscode.Disposable {
 			return;
 		}
 
-		const readOnly = this._getReadOnlyReason(context);
+		const text = this._document.getText();
 
 		// The parse of an earlier text: its offsets are not those of this version, so the snapshot
 		// of the last parse stays until the parse of this version is delivered. A template is shown
 		// without its statements, and so without offsets.
-		if (readOnly?.reason !== 'template' && !tokensMatchText(context.tokens, this._document.getText())) {
+		if (!isTemplate(text) && !tokensMatchText(context.tokens, text)) {
 			this._sendSnapshot();
 
 			return;
 		}
 
-		const problems = this._collectProblems();
+		const syntaxErrors = context.getSyntaxErrors(text);
+		const readOnly = getFormReadOnlyReason(text, syntaxErrors);
+		const problems = this._toProblems(syntaxErrors);
 		const key = `${this._document.version}|${readOnly?.reason ?? ''}|${JSON.stringify(problems)}`;
 
 		if (!this._reuseSnapshot(cause, key)) {
@@ -576,48 +566,16 @@ export class FormEditorSession implements vscode.Disposable {
 	}
 
 	/**
-	 * Determine whether the document can be edited through the form.
-	 * @param context The context of the document.
-	 * @returns Why it cannot, or `undefined` when it can.
+	 * Name the places where the text does not parse, so the form can point at them.
+	 * @param syntaxErrors The syntax errors of the text.
+	 * @returns The problems, the first few of them.
 	 */
-	private _getReadOnlyReason(context: TurtleDocument): ReadOnlyReason | undefined {
-		if (isTemplate(this._document.getText())) {
-			return {
-				reason: 'template',
-				message: 'Triplate templates cannot be shown in the form editor because their structure is generated.'
-			};
-		}
+	private _toProblems(syntaxErrors: readonly DocumentSyntaxError[]): DocumentProblem[] {
+		return syntaxErrors.slice(0, MAX_PROBLEMS).map(error => {
+			const position = this._document.positionAt(error.offset);
 
-		if (hasBlockingErrors(this._document.uri)) {
-			return {
-				reason: 'syntaxErrors',
-				message: 'This document has syntax errors. Fix them in the text editor to continue editing here.'
-			};
-		}
-
-		if (!context.getQuadContexts().length && this._document.getText().trim().length > 0) {
-			return {
-				reason: 'syntaxErrors',
-				message: 'This document could not be parsed. Open it in the text editor to see the problem.'
-			};
-		}
-
-		return undefined;
-	}
-
-	/**
-	 * Collect the error problems of the document, so the form can point at them.
-	 * @returns The problems.
-	 */
-	private _collectProblems(): DocumentProblem[] {
-		return vscode.languages.getDiagnostics(this._document.uri)
-			.filter(diagnostic => diagnostic.severity === vscode.DiagnosticSeverity.Error)
-			.slice(0, MAX_PROBLEMS)
-			.map(diagnostic => ({
-				message: diagnostic.message,
-				line: diagnostic.range.start.line,
-				character: diagnostic.range.start.character
-			}));
+			return { message: error.message, line: position.line, character: position.character };
+		});
 	}
 
 	/**
@@ -633,7 +591,7 @@ export class FormEditorSession implements vscode.Disposable {
 			namespaces: [],
 			resources: [],
 			readOnly,
-			problems: this._collectProblems()
+			problems: []
 		};
 	}
 

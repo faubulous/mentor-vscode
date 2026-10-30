@@ -7,6 +7,7 @@ import { ParserFactory } from '@src/languages/parser-factory';
 import { ISettingsService } from '@src/services/core';
 import { DocumentContext } from '@src/services/document/document-context';
 import { DocumentParseResult, ITokenizedDocumentContext } from '@src/services/document/document-context.interface';
+import { DocumentSyntaxError } from '@src/services/document/document-syntax-error';
 import { RangeIndex } from '@src/utilities/range-index';
 import { WorkspaceUri } from '@src/providers/workspace-uri';
 import {
@@ -110,13 +111,7 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 	}
 
 	parse(text: string): IToken[] {
-		// Use a file-scoped blank node ID generator so that blank node identities
-		// are stable across reloads of the same document. The lexer instance is
-		// shared, so the generator must be set on every call.
-		const lexer = ParserFactory.getLexer(this.syntax);
-		lexer.blankNodeIdGenerator = createFileBlankNodeIdGenerator(this.uri.toString());
-
-		const lexingResult = tokenizeWithTriplate(lexer, text);
+		const lexingResult = this._lex(text);
 
 		// Analyze the tokens here, once, so that the diagnostics service and
 		// loadTriples can reuse the result instead of re-tokenizing and
@@ -158,6 +153,46 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 		}
 
 		return this._parseSyntaxTree(text, lexingResult);
+	}
+
+	/**
+	 * Read where a text does not follow the grammar of the document's syntax: from the last parse
+	 * when it was of this text, else from a parse made for the purpose, which leaves the context as
+	 * it is. A text the parser cannot read at all, as a pathologically nested one, has one error at
+	 * its start.
+	 * @param text The text.
+	 * @returns The errors, none for a text that parses.
+	 */
+	getSyntaxErrors(text: string): DocumentSyntaxError[] {
+		const parse = this.getParseResult(text) ?? this._analyze(text, this._lex(text));
+
+		if (!parse) {
+			return [{ message: 'The document could not be parsed.', offset: 0 }];
+		}
+
+		const recognition = [...parse.parserErrors, ...parse.semanticErrors].map(error => {
+			const offset = error.token?.startOffset;
+
+			// The end of the input is a token without a place in the text.
+			return { message: error.message, offset: offset !== undefined && offset >= 0 ? offset : text.length };
+		});
+
+		return [...parse.lexErrors.map(error => ({ message: error.message, offset: error.offset })), ...recognition];
+	}
+
+	/**
+	 * Tokenize a text with the file-scoped blank node identifiers of the document, so that blank
+	 * node identities are stable across reloads of the same document. The lexer instance is shared,
+	 * so the generator is set on every call.
+	 * @param text The text.
+	 * @returns The tokens of the text.
+	 */
+	private _lex(text: string): TriplateLexingResult {
+		const lexer = ParserFactory.getLexer(this.syntax);
+
+		lexer.blankNodeIdGenerator = createFileBlankNodeIdGenerator(this.uri.toString());
+
+		return tokenizeWithTriplate(lexer, text);
 	}
 
 	/**

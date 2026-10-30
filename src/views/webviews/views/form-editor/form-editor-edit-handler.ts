@@ -9,7 +9,7 @@ import { StyleFallback } from '@src/services/editing/local-style';
 import { SynthesisInput } from '@src/services/editing/synthesis-context';
 import { getConfig } from '@src/utilities/vscode/config';
 import { toWorkspaceEdit } from '@src/utilities/vscode/edit';
-import { ReadOnlyReason } from './form-editor-model';
+import { getFormReadOnlyReason } from './form-editor-read-only';
 
 /**
  * An edit request as received from the webview.
@@ -50,11 +50,6 @@ export interface EditHandlerContext {
 	 * absent.
 	 */
 	tokenSource?: IDocumentTokenSource;
-
-	/**
-	 * Why the document cannot be edited, if it cannot.
-	 */
-	readOnly?: ReadOnlyReason;
 }
 
 /**
@@ -77,19 +72,23 @@ export class FormEditorEditHandler {
 	 * @returns The outcome of the request.
 	 */
 	async handle(request: EditRequest, handlerContext: EditHandlerContext): Promise<EditOutcome> {
-		const { document, context, readOnly } = handlerContext;
+		const { document, context } = handlerContext;
 
 		if (request.baseVersion !== document.version) {
 			return _reject('staleVersion', 'The document changed before the edit was applied.');
 		}
 
-		if (readOnly) {
-			return _reject(readOnly.reason === 'syntaxErrors' ? 'parseErrors' : 'readOnly', readOnly.message);
-		}
-
 		const text = document.getText();
 
 		this._ensureFreshTokens(handlerContext, text);
+
+		// Decided on the parse of the text the edit is applied to, not on the diagnostics, which
+		// may still describe an earlier text.
+		const readOnly = getFormReadOnlyReason(text, context.getSyntaxErrors(text));
+
+		if (readOnly) {
+			return _reject(readOnly.reason === 'syntaxErrors' ? 'parseErrors' : 'readOnly', readOnly.message);
+		}
 
 		const input: SynthesisInput = {
 			text,

@@ -1047,4 +1047,40 @@ describe('TurtleDocument.getQuadContexts', () => {
 
         expect(doc.getQuadContexts().map(context => context.predicate.value)).toEqual(['http://example.org/f']);
     });
+
+    describe('getSyntaxErrors', () => {
+        it('reports no errors for a text that parses, and where a text does not', () => {
+            const doc = makeDoc();
+            const valid = '@prefix ex: <http://example.org/> .\nex:s ex:p "x" .\n';
+            const broken = '@prefix ex: <http://example.org/> .\nex:s ex:p "x"\n';
+
+            expect(doc.getSyntaxErrors(valid)).toEqual([]);
+
+            const errors = doc.getSyntaxErrors(broken);
+
+            expect(errors.length).toBeGreaterThan(0);
+            expect(errors.every(error => error.offset >= 0 && error.offset <= broken.length && error.message.length > 0)).toBe(true);
+        });
+
+        it('reads the errors of the last parse of the same text, and leaves the context as it is for another text', () => {
+            const doc = makeDoc();
+            const text = '@prefix ex: <http://example.org/> .\nex:s ex:p "x" .\n';
+
+            doc.parse(text);
+
+            const tokens = doc.tokens;
+
+            expect(doc.getSyntaxErrors(text)).toEqual([]);
+            expect(doc.getSyntaxErrors('ex:s ex:p .')).not.toEqual([]);
+            expect(doc.tokens).toBe(tokens);
+            expect(doc.getParseResult(text)).toBeDefined();
+        });
+
+        it('reports a character the lexer cannot match', () => {
+            const doc = makeDoc();
+
+            expect(doc.getSyntaxErrors('@prefix ex: <http://example.org/> .\nex:s ex:p ex:o . §\n')).not.toEqual([]);
+        });
+    });
 });
+

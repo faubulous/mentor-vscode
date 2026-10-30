@@ -2,10 +2,10 @@ import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { RdfSyntax, TurtleReader } from '@faubulous/mentor-rdf-parsers';
 import { ParserFactory } from '@src/languages/parser-factory';
+import { TurtleDocument } from '@src/languages/turtle/turtle-document';
 import { QuadContextSerializer, TurtleSerializer, QuadSortingStrategy } from '@faubulous/mentor-rdf-serializers';
 import { ServiceToken } from '@src/services/tokens';
 import { IDocumentContextService } from '@src/services/document';
-import { hasBlockingErrors } from '@src/utilities/vscode/diagnostic';
 
 /**
  * Sorts the active RDF document according to a given sorting strategy using the StatementSerializer.
@@ -25,16 +25,16 @@ export async function sortDocument(documentUri: vscode.Uri | undefined, strategy
 	const document = vscode.workspace.textDocuments.find(doc => doc.uri.toString() === targetUri.toString())
 		?? await vscode.workspace.openTextDocument(targetUri);
 
-	if (hasBlockingErrors(document.uri)) {
-		await vscode.window.showErrorMessage('This document has syntax errors and cannot be sorted.');
-		return;
-	}
-
 	const contextService = container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
 	const context = contextService.contexts[document.uri.toString()];
 
 	if (!context) {
 		vscode.window.showErrorMessage('The document context could not be retrieved.');
+		return;
+	}
+
+	if (context instanceof TurtleDocument && context.getSyntaxErrors(document.getText()).length > 0) {
+		await vscode.window.showErrorMessage('This document has syntax errors and cannot be sorted.');
 		return;
 	}
 
