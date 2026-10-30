@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { useState } from 'react';
 import { fireEvent, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -22,8 +22,6 @@ function Form({ onKey }: { onKey: (tookIt: boolean) => void }) {
 
 describe('useUndoRouting', () => {
 	it('leaves an undo to the document when nothing was typed, and gives it to the field after typing', async () => {
-		vi.useFakeTimers({ shouldAdvanceTime: true });
-
 		const taken: boolean[] = [];
 
 		renderWebview(<Form onKey={tookIt => taken.push(tookIt)} />);
@@ -43,12 +41,9 @@ describe('useUndoRouting', () => {
 
 		// The field undid its step: back at the start, the next undo goes to the document.
 		field.value = 'Tree';
-		await vi.runAllTimersAsync();
 		fireEvent.keyDown(field, { key: 'z', ctrlKey: true });
 
 		expect(taken).toEqual([false, false, true, false]);
-
-		vi.useRealTimers();
 	});
 
 	it('ignores keys that are not an undo or a redo', () => {

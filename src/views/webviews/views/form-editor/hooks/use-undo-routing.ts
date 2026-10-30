@@ -3,7 +3,10 @@ import { UndoRoutingService } from '../services/undo-routing-service';
 
 /**
  * Route Ctrl+Z and its redo between the field being typed in and the document, following the
- * focus and the typing of the fields under a root.
+ * focus and the typing of the fields under a root. VS Code undoes the document of a custom
+ * editor for Ctrl+Z wherever the focus is, and its webview keeps the browser from undoing the
+ * field; a key the field takes is therefore kept from reaching VS Code, which leaves the field
+ * to undo its own typing.
  * @param root The root of the form.
  * @returns The key handler of the root: typing in the focused field is undone in the field, and
  * the key is then kept from VS Code; anything else is left to VS Code, which undoes the document.
@@ -49,7 +52,6 @@ export function useUndoRouting(root: HTMLElement | null): (event: React.Keyboard
 
 		// Kept from VS Code, whose undo would change the document; the field undoes the step.
 		event.stopPropagation();
-		window.setTimeout(() => router.settle(field, _valueOf(field) ?? ''), 0);
 
 		return true;
 	}, [router]);
