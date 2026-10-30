@@ -42,6 +42,13 @@ The developer friendly IDE for RDF knowledge graphs.
 
 ## News
 
+### Version 0.7.1: Referenced Classes and Properties in the Definitions Tree
+- Fixed classes and properties from other vocabularies missing from the top level of the definitions tree when the document annotates or declares them, e.g. a `prov:Location` that carries an `rdfs:comment`, or a `prov:Activity` declared as `owl:Class`; their sub classes and sub properties are listed below them again instead of at the top level ([mentor-rdf#38](https://github.com/faubulous/mentor-rdf/issues/38))
+- The definitions tree shows the top of a chain of referenced classes or properties that the document states, e.g. `prov:Entity` above `prov:Plan`, and lists a class or property with several super classes below each of them ([mentor-rdf#38](https://github.com/faubulous/mentor-rdf/issues/38))
+- The top level of the class and property trees is computed faster for large vocabularies
+- Hovers, labels and the missing language tag decoration use the asserted triples only where they ask for them, instead of also picking up inferred ones ([mentor-rdf#36](https://github.com/faubulous/mentor-rdf/pull/36))
+- Updated mentor-rdf to 2.6.1 and mentor-rdf-serializers to 1.10.0
+
 ### Version 0.7.0: Rename Across Files and Lower Memory Use
 - **Breaking change:** renaming an IRI (F2) now also renames it in all other indexed files that reference it; the changes in other files are shown in the Refactor Preview before they are applied. Set `mentor.editor.renameAcrossFiles` to `false` to rename within the document only, as before
 - Go to Definition now opens the framework vocabularies shipped with Mentor (RDF, RDFS, OWL, SHACL, SKOS, XSD, …) and the preset SHACL shapes in read-only documents, e.g. for `rdfs:label` or `owl:Class`

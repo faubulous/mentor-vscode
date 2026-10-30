@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Validator } from 'shacl-engine';
 import { Store } from '@faubulous/mentor-rdf';
-import { rdfDataFactory } from '@src/utilities/rdf';
+import { RdfDataFactory } from '@src/utilities/rdf';
 import { TAXONOMY_SHAPES_URI } from '../preset-definitions';
 import { loadPresetShapeGraphs } from './index';
 
@@ -28,7 +28,7 @@ async function validate(shapesUri: string, dataTurtle: string) {
 
 	store.loadTurtle(dataTurtle, DATA_GRAPH_URI, false);
 
-	const validator = new Validator(store.getDataset([shapesUri], false), { factory: rdfDataFactory });
+	const validator = new Validator(store.getDataset([shapesUri], false), { factory: RdfDataFactory });
 
 	return validator.validate({ dataset: store.getDataset([DATA_GRAPH_URI], false) });
 }
