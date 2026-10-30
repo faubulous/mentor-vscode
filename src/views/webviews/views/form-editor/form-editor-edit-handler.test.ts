@@ -120,7 +120,7 @@ describe('FormEditorEditHandler', () => {
 		const request: EditRequest = {
 			editId: 'e2',
 			baseVersion: 1,
-			operations: [{ op: 'deleteProperty', subject: { kind: 'iri', iri: `${EX}s` }, predicate: `${EX}p` }]
+			operations: [{ op: 'setValues', subject: { kind: 'iri', iri: `${EX}s` }, predicate: `${EX}p`, values: [] }]
 		};
 
 		const outcome = await new FormEditorEditHandler().handle(request, { document, context });

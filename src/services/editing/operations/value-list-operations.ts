@@ -40,7 +40,7 @@ export class ValueListOperations {
 		const context = this._context;
 
 		if (operation.values.length === 0) {
-			return new PropertyOperations(context).deleteProperty({ op: 'deleteProperty', subject: operation.subject, predicate: operation.predicate });
+			return new PropertyOperations(context).deleteProperty(operation.subject, operation.predicate);
 		}
 
 		const list = new ValueListResolver(context.model).resolve(operation.subject, operation.predicate, operation.values);

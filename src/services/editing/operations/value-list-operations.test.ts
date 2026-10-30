@@ -155,6 +155,12 @@ describe('ValueListOperations.setValues in Turtle', () => {
 		expect(setValues(`ex:s ex:p ex:a .\n\nex:s ex:q ex:b .\n`, [])).toBe(`ex:s ex:q ex:b .\n`);
 	});
 
+	it('removes a block that loses all its statements with the comment above it in TriG too', () => {
+		const body = `ex:g {\n    # about p\n    ex:s ex:p ex:a .\n\n    ex:s ex:q ex:b .\n}\n`;
+
+		expect(setValues(body, [], TRIG)).toBe(`ex:g {\n    ex:s ex:q ex:b .\n}\n`);
+	});
+
 	it('removes a block that loses all its statements with the comment above it and one blank line', () => {
 		expect(setValues(`ex:s ex:q ex:a .\n\n# about p\nex:s ex:p ex:b . # b\n\nex:t ex:q ex:c .\n`, [])).toBe(`ex:s ex:q ex:a .\n\nex:t ex:q ex:c .\n`);
 		expect(setValues(`ex:s ex:q ex:a .\n\nex:s ex:p ex:b .\n`, [])).toBe(`ex:s ex:q ex:a .\n`);

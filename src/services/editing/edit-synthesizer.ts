@@ -4,11 +4,8 @@ import { EditOperation } from './edit-operation';
 import { EditPlan, mergePlans } from './edit-plan';
 import { EditRejection, EditRejectionError } from './edit-rejection';
 import { LocalStyleDetector } from './local-style-detector';
-import { CommentOperations } from './operations/comment-operations';
-import { NamespaceOperations } from './operations/namespace-operations';
 import { PropertyOperations } from './operations/property-operations';
 import { ValueListOperations } from './operations/value-list-operations';
-import { SubjectOperations } from './operations/subject-operations';
 import { StatementModelBuilder } from './statement-model-builder';
 import { SynthesisContext, SynthesisInput } from './synthesis-context';
 import { TermWriter } from './term-writer';
@@ -32,7 +29,7 @@ export class EditSynthesizer {
 	 */
 	synthesize(operations: EditOperation[]): EditPlan | EditRejection {
 		try {
-			const context = this.createContext(operations);
+			const context = this.createContext();
 			const plan = mergePlans(operations.map(operation => this._synthesizeOperation(context, operation)));
 
 			if (findOverlappingEdits(plan.edits)) {
@@ -50,23 +47,15 @@ export class EditSynthesizer {
 	}
 
 	/**
-	 * Build the shared state of one user action. Namespaces declared by the action itself are
-	 * known to the writer, so a value can be written with a prefix declared in the same step.
-	 * @param operations The operations of the action.
+	 * Build the shared state of one user action.
 	 * @returns The shared state.
 	 */
-	createContext(operations: EditOperation[]): SynthesisContext {
+	createContext(): SynthesisContext {
 		const input = this._input;
 		const model = new StatementModelBuilder(input.text, input.tokens, input.quadContexts).build();
 		const styleDetector = new LocalStyleDetector(model, input.style);
 		const style = styleDetector.style;
 		const namespaces = { ...input.namespaces };
-
-		for (const operation of operations) {
-			if (operation.op === 'addNamespace') {
-				namespaces[operation.prefix] = operation.iri;
-			}
-		}
 
 		const writer = new TermWriter({
 			namespaces,
@@ -91,28 +80,6 @@ export class EditSynthesizer {
 				return new ValueListOperations(context).setValues(operation);
 			case 'setPredicate':
 				return new PropertyOperations(context).setPredicate(operation);
-			case 'deleteProperty':
-				return new PropertyOperations(context).deleteProperty(operation);
-			case 'moveProperty':
-				return new PropertyOperations(context).moveProperty(operation);
-			case 'addSubject':
-				return new SubjectOperations(context).addSubject(operation);
-			case 'deleteSubject':
-				return new SubjectOperations(context).deleteSubject(operation);
-			case 'renameSubject':
-				return new SubjectOperations(context).renameSubject(operation);
-			case 'addNestedNode':
-				return new SubjectOperations(context).addNestedNode(operation);
-			case 'addNamespace':
-				return new NamespaceOperations(context).addNamespace(operation);
-			case 'setPropertyComments':
-				return new CommentOperations(context).setPropertyComments(operation);
-			case 'setComment':
-				return new CommentOperations(context).setComment(operation);
-			case 'addComment':
-				return new CommentOperations(context).addComment(operation);
-			case 'deleteComment':
-				return new CommentOperations(context).deleteComment(operation);
 			default:
 				throw new EditRejectionError('unsupportedConstruct', `The operation '${(operation as { op: string }).op}' is not supported.`);
 		}

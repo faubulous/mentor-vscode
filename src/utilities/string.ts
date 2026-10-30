@@ -141,19 +141,6 @@ export function isBlank(text: string, start: number, end: number): boolean {
 }
 
 /**
- * Indicate whether a range holds nothing but white space, line breaks included. Unlike
- * {@link isBlank} this says whether two things are separated by empty lines rather than whether
- * they sit on the same one.
- * @param text The document text.
- * @param start The offset to start at.
- * @param end The offset to stop before.
- * @returns `true` if the range holds no content.
- */
-export function isWhitespace(text: string, start: number, end: number): boolean {
-	return /^\s*$/.test(text.slice(start, end));
-}
-
-/**
  * Get the indentation of the line holding an offset when the offset starts its line's content.
  * @param text The document text.
  * @param offset The offset of a token.
