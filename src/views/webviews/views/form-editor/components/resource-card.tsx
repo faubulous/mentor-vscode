@@ -47,7 +47,7 @@ export interface ResourceCardProps {
  */
 export function ResourceCard({ summary, dataService, expanded, current, onToggle }: ResourceCardProps): React.JSX.Element {
 	const { filterText, dominantTypeIri, revealedResourceId } = useFormEditorContext();
-	const { detail } = useResourceDetail(dataService, summary.id);
+	const { detail, stale } = useResourceDetail(dataService, summary.id);
 	const showType = summary.typeIri !== undefined && summary.typeIri !== dominantTypeIri;
 	const marked = current === true || revealedResourceId === summary.id;
 	const toggle = (): void => onToggle(summary.id);
@@ -76,7 +76,7 @@ export function ResourceCard({ summary, dataService, expanded, current, onToggle
 					{summary.description && <div className="resource-card-description"><HighlightedText text={summary.description} query={filterText} /></div>}
 					{expanded && <div className="resource-card-iri">{_identifierOf(summary)}</div>}
 					{expanded && (detail
-						? <StatementList detail={detail} dataService={dataService} depth={0} visited={[summary.id]} />
+						? <StatementList detail={detail} stale={stale} dataService={dataService} depth={0} visited={[summary.id]} />
 						: <div className="resource-form-loading">Loading…</div>)}
 				</div>
 			)}

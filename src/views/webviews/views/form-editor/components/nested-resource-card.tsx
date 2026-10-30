@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { NestedResourceRef } from '../form-editor-model';
 import { useResourceDetail } from '../hooks/use-resource-detail';
 import { IResourceDataService } from '../services/resource-data-service.interface';
@@ -43,7 +44,14 @@ export interface NestedResourceCardProps {
  * @returns The card, or nothing for a node that holds this card already.
  */
 export function NestedResourceCard({ nested, dataService, depth, visited }: NestedResourceCardProps): React.JSX.Element | null {
-	const { detail } = useResourceDetail(dataService, nested.id);
+	const { detail, stale } = useResourceDetail(dataService, nested.id);
+
+	// The node is asked for when nothing is known of it, and again after the document changed.
+	useEffect(() => {
+		if (!detail || stale) {
+			dataService.request([nested.id]);
+		}
+	}, [detail, stale, dataService, nested.id]);
 
 	if (visited.includes(nested.id)) {
 		return null;
@@ -54,8 +62,6 @@ export function NestedResourceCard({ nested, dataService, depth, visited }: Nest
 	}
 
 	if (!detail) {
-		dataService.request([nested.id]);
-
 		return <div className="resource-card is-nested" data-resource-id={nested.id}><div className="resource-form-loading">Loading…</div></div>;
 	}
 

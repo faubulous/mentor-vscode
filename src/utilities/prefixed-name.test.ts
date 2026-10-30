@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { RDFS } from '@faubulous/mentor-rdf';
-import { LINE_TEST_NAMESPACES } from './mocks/line-fixtures';
+import { TEST_NAMESPACES } from './mocks/statement-fixtures';
 import {
 	formatIri,
 	getIriFromPrefixedName,
@@ -84,12 +84,12 @@ describe('getNamespaceIriFromPrefixedName', () => {
 
 describe('getPrefixedName', () => {
 	it('writes a prefixed name when a namespace covers the IRI', () => {
-		expect(getPrefixedName(LINE_TEST_NAMESPACES, RDFS.label)).toBe('rdfs:label');
+		expect(getPrefixedName(TEST_NAMESPACES, RDFS.label)).toBe('rdfs:label');
 	});
 
 	it('knows no name for an IRI outside the namespaces or with a local name that needs escapes', () => {
-		expect(getPrefixedName(LINE_TEST_NAMESPACES, 'http://other/x')).toBeUndefined();
-		expect(getPrefixedName(LINE_TEST_NAMESPACES, 'http://example.org/a/b')).toBeUndefined();
+		expect(getPrefixedName(TEST_NAMESPACES, 'http://other/x')).toBeUndefined();
+		expect(getPrefixedName(TEST_NAMESPACES, 'http://example.org/a/b')).toBeUndefined();
 	});
 
 	it('prefers the longest namespace', () => {
@@ -99,19 +99,19 @@ describe('getPrefixedName', () => {
 
 describe('getIriFromText', () => {
 	it('resolves IRI references and declared prefixed names', () => {
-		expect(getIriFromText(LINE_TEST_NAMESPACES, '<http://x/y>')).toBe('http://x/y');
-		expect(getIriFromText(LINE_TEST_NAMESPACES, 'rdfs:label')).toBe(RDFS.label);
-		expect(getIriFromText(LINE_TEST_NAMESPACES, 'foo:x')).toBeUndefined();
-		expect(getIriFromText(LINE_TEST_NAMESPACES, 'word')).toBeUndefined();
+		expect(getIriFromText(TEST_NAMESPACES, '<http://x/y>')).toBe('http://x/y');
+		expect(getIriFromText(TEST_NAMESPACES, 'rdfs:label')).toBe(RDFS.label);
+		expect(getIriFromText(TEST_NAMESPACES, 'foo:x')).toBeUndefined();
+		expect(getIriFromText(TEST_NAMESPACES, 'word')).toBeUndefined();
 	});
 });
 
 describe('formatIri', () => {
 	it('writes a prefixed name when a namespace covers the IRI', () => {
-		expect(formatIri(LINE_TEST_NAMESPACES, RDFS.label)).toBe('rdfs:label');
+		expect(formatIri(TEST_NAMESPACES, RDFS.label)).toBe('rdfs:label');
 	});
 
 	it('writes an IRI reference otherwise', () => {
-		expect(formatIri(LINE_TEST_NAMESPACES, 'http://other/x')).toBe('<http://other/x>');
+		expect(formatIri(TEST_NAMESPACES, 'http://other/x')).toBe('<http://other/x>');
 	});
 });

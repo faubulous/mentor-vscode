@@ -1,6 +1,6 @@
 import { getLocalPartAndQuery } from '@src/utilities/uri';
 import { NamespaceInfo, TermRef } from '../form-editor-model';
-import { XSD_STRING } from '../line/well-known-iris';
+import { XSD_STRING } from '../services/statement/well-known-iris';
 import { useFormEditorContext } from '../state/form-editor-context';
 
 /**

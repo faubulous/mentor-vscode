@@ -21,6 +21,7 @@ export function createResourceDataServiceStub(details: readonly ResourceDetail[]
 	const requested: ResourceId[] = [];
 
 	return {
+		version: 1,
 		requested,
 		get: id => byId.get(id),
 		request: ids => requested.push(...ids),

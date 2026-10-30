@@ -30,14 +30,11 @@ export interface SubmittedEdit {
  */
 export interface IEditingHostService {
 	/**
-	 * The document version the host last reported.
-	 */
-	readonly version: number;
-
-	/**
 	 * Apply the operations of one user action as one undo step.
 	 * @param operations The operations to apply.
+	 * @param baseVersion The document version the operations were built from, whose offsets their
+	 * anchors are; the host refuses them against any other version.
 	 * @returns The submitted edit.
 	 */
-	applyEdit(operations: EditOperation[]): SubmittedEdit;
+	applyEdit(operations: EditOperation[], baseVersion: number): SubmittedEdit;
 }

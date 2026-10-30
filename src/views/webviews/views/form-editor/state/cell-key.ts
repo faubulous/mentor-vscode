@@ -1,50 +1,41 @@
 import { FocusHint, ResourceId } from '../form-editor-model';
 
 /**
- * The column a cell belongs to. A `line` is a statement written as one line, a `draft` the line
- * a new statement is typed into, and a `comment` a run of comment lines.
+ * The kinds of row of a card that take the focus: the statement of a property, the row a new
+ * statement is typed into, and a run of comment lines.
  */
-export type CellColumn = 'subject' | 'predicate' | 'value' | 'addProperty' | 'line' | 'draft' | 'comment';
+export type CellColumn = 'statement' | 'draft' | 'comment';
 
 /**
- * The columns that make up a property row.
- */
-const ROW_COLUMNS: ReadonlySet<CellColumn> = new Set<CellColumn>(['predicate', 'value', 'line']);
-
-/**
- * The parts that address a cell.
+ * The parts that address a row of a card.
  */
 export interface CellAddress {
 	/**
-	 * The resource the cell belongs to.
+	 * The resource the row belongs to.
 	 */
 	resourceId: ResourceId;
 
 	/**
-	 * The column of the cell.
+	 * The kind of row.
 	 */
 	column: CellColumn;
 
 	/**
-	 * The property row, for a cell within the rows.
+	 * The property of a statement row, the draft of a draft row, or the property a comment run
+	 * introduces.
 	 */
 	propertyIndex?: number;
 
 	/**
-	 * The value within the row, for a value cell.
+	 * The value within a statement row that takes the focus.
 	 */
 	valueIndex?: number;
-
-	/**
-	 * The item within a collection value.
-	 */
-	itemIndex?: number;
 }
 
 /**
- * Identifies one focusable cell of the form. Cells carry its text form,
- * `<resourceId>|<column>|<propertyIndex>|<valueIndex>|<itemIndex>`, in their `data-cell`
- * attribute, so the focus can be restored by a DOM query after the rows re-render from new data.
+ * Identifies one row of the form that takes the focus. Rows carry its text form in their
+ * `data-cell` attribute, so the focus can be restored by a DOM query after the rows re-render
+ * from new data.
  */
 export class CellKey implements CellAddress {
 	readonly resourceId: ResourceId;
@@ -55,94 +46,64 @@ export class CellKey implements CellAddress {
 
 	readonly valueIndex?: number;
 
-	readonly itemIndex?: number;
-
 	/**
-	 * Create the key of a cell.
-	 * @param address The parts that address the cell.
+	 * Create the key of a row.
+	 * @param address The parts that address the row.
 	 */
 	constructor(address: CellAddress) {
 		this.resourceId = address.resourceId;
 		this.column = address.column;
 		this.propertyIndex = address.propertyIndex;
 		this.valueIndex = address.valueIndex;
-		this.itemIndex = address.itemIndex;
 	}
 
 	/**
-	 * Read a key from its text form. Resource identifiers may contain `|`, so the text is split
-	 * from the end.
-	 * @param text The text form of a key.
-	 * @returns The key, or `undefined` if the text is malformed.
-	 */
-	static parse(text: string): CellKey | undefined {
-		const parts = text.split('|');
-
-		if (parts.length < 5) {
-			return undefined;
-		}
-
-		const itemIndex = _indexOf(parts.pop()!);
-		const valueIndex = _indexOf(parts.pop()!);
-		const propertyIndex = _indexOf(parts.pop()!);
-		const column = parts.pop() as CellColumn;
-
-		return new CellKey({ resourceId: parts.join('|'), column, propertyIndex, valueIndex, itemIndex });
-	}
-
-	/**
-	 * Translate the focus hint of an applied edit into the key of the cell to focus. Statements
-	 * are edited as lines, so a hint on a predicate or a value lands on the line of its property,
-	 * and a hint to add a property, as for a new nested node, on its first line.
+	 * Translate the focus hint of an applied edit into the key of the row to focus. Every target
+	 * of a statement lands on the row of its property; a new resource or nested node, which has
+	 * no row of its own yet, on the first row of the resource.
 	 * @param hint The hint sent by the host.
 	 * @returns The key.
 	 */
 	static fromFocusHint(hint: FocusHint): CellKey {
-		switch (hint.target) {
-			case 'subject':
-				return new CellKey({ resourceId: hint.resourceId, column: 'subject' });
-			case 'addProperty':
-				return new CellKey({ resourceId: hint.resourceId, column: 'line', propertyIndex: 0 });
-			case 'comment':
-				return new CellKey({ resourceId: hint.resourceId, column: 'comment', propertyIndex: hint.propertyIndex, valueIndex: hint.valueIndex });
-			default:
-				return new CellKey({ resourceId: hint.resourceId, column: 'line', propertyIndex: hint.propertyIndex ?? 0 });
+		if (hint.target === 'comment') {
+			return new CellKey({ resourceId: hint.resourceId, column: 'comment', propertyIndex: hint.propertyIndex });
 		}
+
+		return new CellKey({ resourceId: hint.resourceId, column: 'statement', propertyIndex: hint.propertyIndex ?? 0, valueIndex: hint.target === 'value' ? hint.valueIndex : undefined });
 	}
 
 	/**
-	 * Indicate whether another key addresses the same cell.
+	 * Indicate whether another key addresses the same row and value.
 	 * @param other The other key.
-	 * @returns `true` for the same cell.
+	 * @returns `true` for the same row and value.
 	 */
 	equals(other: CellKey | undefined): boolean {
 		return other !== undefined && this.toString() === other.toString();
 	}
 
 	/**
-	 * Indicate whether the cell is part of a property row.
+	 * Indicate whether the key addresses the statement row of a property.
 	 * @param resourceId The resource of the row.
-	 * @param propertyIndex The row.
-	 * @returns `true` when the cell is one of the row's.
+	 * @param propertyIndex The property of the row.
+	 * @returns `true` for that row.
 	 */
 	isInRow(resourceId: ResourceId, propertyIndex: number): boolean {
-		return this.resourceId === resourceId && this.propertyIndex === propertyIndex && ROW_COLUMNS.has(this.column);
+		return this.resourceId === resourceId && this.propertyIndex === propertyIndex && this.column === 'statement';
 	}
 
 	/**
-	 * The text form of the key, as the cells carry it.
+	 * The key of the row alone, without the value within it, as the row element carries it.
+	 * @returns The key of the row.
+	 */
+	row(): CellKey {
+		return this.valueIndex === undefined ? this : new CellKey({ resourceId: this.resourceId, column: this.column, propertyIndex: this.propertyIndex });
+	}
+
+	/**
+	 * The text form of the key, as the rows carry it in their `data-cell` attribute.
 	 * @returns The text.
 	 */
 	toString(): string {
-		return `${this.resourceId}|${this.column}|${this.propertyIndex ?? ''}|${this.valueIndex ?? ''}|${this.itemIndex ?? ''}`;
+		return [this.resourceId, this.column, this.propertyIndex ?? '', this.valueIndex ?? ''].join('|');
 	}
-}
-
-/**
- * Read an index segment of a key.
- * @param segment The segment.
- * @returns The index, or `undefined` for an empty segment.
- */
-function _indexOf(segment: string): number | undefined {
-	return segment === '' ? undefined : Number(segment);
 }

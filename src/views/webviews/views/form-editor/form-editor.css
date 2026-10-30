@@ -682,6 +682,113 @@ body {
 	color: var(--vscode-descriptionForeground);
 }
 
+/* ---------- Edited statements ---------- */
+
+/* Where the document can be written, the predicate and the literals are fields that fill their column. */
+.statement-list.is-editable > .statement-line {
+	padding: 3px 0;
+	border-top: 0;
+}
+
+.statement-line.is-editable .statement-values {
+	gap: 4px;
+}
+
+.statement-line.is-editable .statement-value {
+	align-items: stretch;
+}
+
+.statement-line.is-editable .statement-value + .statement-value {
+	margin-top: 0;
+	padding-top: 0;
+	border-top: 0;
+}
+
+.input-field {
+	display: block;
+	width: 100%;
+}
+
+.input-field.is-predicate {
+	--vscode-settings-textInputForeground: var(--vscode-descriptionForeground);
+}
+
+.literal-field.is-numeric {
+	--vscode-font-family: var(--vscode-editor-font-family, monospace);
+}
+
+.literal-field-tag {
+	padding: 0 6px;
+	color: var(--vscode-descriptionForeground);
+	font-size: 12px;
+	white-space: nowrap;
+}
+
+.literal-field-tag.is-problem {
+	color: var(--vscode-errorForeground);
+}
+
+.literal-field.is-multiline {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	align-items: start;
+}
+
+/* A resource or a blank node of an edited statement, with the button that removes it. */
+.value-pill-remove,
+.statement-value-remove {
+	display: inline-flex;
+	align-items: center;
+	padding: 0;
+	border: 0;
+	background: none;
+	color: var(--vscode-descriptionForeground);
+	cursor: pointer;
+}
+
+.value-pill-remove:hover,
+.statement-value-remove:hover {
+	color: var(--vscode-foreground);
+}
+
+.statement-value-whole {
+	display: flex;
+	align-items: flex-start;
+	gap: 4px;
+}
+
+.statement-value-whole > :first-child {
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+/* Why a row was not written, under the row, with the means to dismiss it. */
+.row-error {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	grid-column: 1 / -1;
+	margin-top: 4px;
+	color: var(--vscode-errorForeground);
+	font-size: 0.92em;
+}
+
+.row-error-message {
+	flex: 1 1 auto;
+	min-width: 0;
+	overflow-wrap: anywhere;
+}
+
+.row-error-dismiss {
+	display: inline-flex;
+	flex: none;
+	padding: 0;
+	border: 0;
+	background: none;
+	color: inherit;
+	cursor: pointer;
+}
+
 /* A narrow card puts the predicate above its values: side by side there is no width left for either. */
 .resource-card-body {
 	container: card-body / inline-size;

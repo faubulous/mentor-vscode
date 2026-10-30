@@ -11,9 +11,15 @@ import { FormToolbar } from './components/form-toolbar';
 import { EmptyState, LoadingState, ProblemState, ReadOnlyBanner } from './components/resource-list-states';
 import { DocumentProblem, DocumentSnapshot, ResourceId } from './form-editor-model';
 import { FormEditorMessages, FormEditorWebviewMessage } from './form-editor-messages';
+import { useEditingController } from './hooks/use-editing-controller';
+import { useFocusRestore } from './hooks/use-focus-restore';
+import { useFocusedBlock } from './hooks/use-focused-block';
 import { useFormBlocks } from './hooks/use-form-blocks';
 import { useScrolledPast } from './hooks/use-scrolled-past';
+import { useUndoRouting } from './hooks/use-undo-routing';
+import { EditingHostService } from './services/editing-host-service';
 import { ResourceDataService } from './services/resource-data-service';
+import { EditingController } from './state/editing-controller';
 import { FormEditorContext, FormEditorContextValue } from './state/form-editor-context';
 import { PersistedViewState, ViewStateChanges } from './state/persisted-view-state';
 import { ResourceCardStates } from './state/resource-card-states';
@@ -22,7 +28,9 @@ import stylesheet from './form-editor.css';
 
 /**
  * The form based editor for RDF documents: the toolbar with the filter, the header of the
- * document, the virtualized list of its resources and comments, and the position rail.
+ * document, the virtualized list of its resources and comments, and the position rail. Where
+ * the document can be written, the statements of the cards are edited in place and handed to
+ * the host as edits.
  */
 function FormEditor(): React.JSX.Element {
 	useSharedStylesheets();
@@ -51,6 +59,11 @@ function FormEditor(): React.JSX.Element {
 	}, [setStoredViewState]);
 
 	const dataService = useMemo(() => new ResourceDataService(ids => messagingRef.current?.postMessage({ id: 'RequestResources', ids })), []);
+	const hostService = useMemo(() => new EditingHostService(message => messagingRef.current?.postMessage(message)), []);
+	const controller = useMemo(() => new EditingController(hostService), [hostService]);
+	const editingState = useEditingController(controller);
+	const focusedBlockId = useFocusedBlock(scrollElement);
+	const routeUndo = useUndoRouting(scrollElement);
 
 	const onMessage = useCallback((message: FormEditorMessages) => {
 		switch (message.id) {
@@ -60,6 +73,11 @@ function FormEditor(): React.JSX.Element {
 				break;
 			case 'ResourcesLoaded':
 				dataService.accept(message.version, message.resources, message.missing);
+				controller.settleDelivered(message.version, message.resources.map(resource => resource.id));
+				break;
+			case 'EditApplied':
+			case 'EditRejected':
+				hostService.accept(message);
 				break;
 			case 'ScrollToResource':
 				revealResourceRef.current?.(message.resourceId);
@@ -70,7 +88,7 @@ function FormEditor(): React.JSX.Element {
 			default:
 				break;
 		}
-	}, [dataService]);
+	}, [dataService, hostService, controller]);
 
 	const messaging = useWebviewMessaging<FormEditorMessages>(onMessage);
 
@@ -152,16 +170,29 @@ function FormEditor(): React.JSX.Element {
 	const handleOpenExternal = useCallback((iri: string) => post({ id: 'ExecuteCommand', command: 'vscode.open', args: [iri] }), [post]);
 	const handleRevealProblem = useCallback((problem: DocumentProblem) => handleRevealInTextEditor(problem.line, problem.character), [handleRevealInTextEditor]);
 
-	// The filter is the find of the form.
+	// Undo in a field undoes its typing, elsewhere the document; the filter is the find of the form.
 	const handleKeyDown = useCallback((event: KeyboardEvent<HTMLDivElement>) => {
+		if (routeUndo(event)) {
+			return;
+		}
+
 		if (event.key.toLowerCase() === 'f' && (event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey) {
 			event.preventDefault();
 			filterRef.current?.focus();
 		}
-	}, []);
+	}, [routeUndo]);
+
+	// Nothing is edited in a document that cannot be written back.
+	const editable = snapshot !== undefined && snapshot.readOnly === undefined;
+
+	useFocusRestore(scrollElement, editingState.focusRequest, () => controller.focusFulfilled());
+
+	// The card holding the focus, or about to take it, stays mounted while it is scrolled out of view.
+	const pinnedIds = useMemo(() => new Set([focusedBlockId, editingState.focusRequest?.resourceId].filter((id): id is string => id !== undefined)), [focusedBlockId, editingState.focusRequest]);
 
 	const context: FormEditorContextValue = useMemo(() => ({
-		readOnly: true,
+		readOnly: !editable,
+		editing: editable ? controller : undefined,
 		namespaces: snapshot?.namespaces ?? [],
 		resources: snapshot?.resources,
 		activeLanguage: snapshot?.activeLanguage,
@@ -172,7 +203,9 @@ function FormEditor(): React.JSX.Element {
 		revealedResourceId: revealedId,
 		dominantTypeIri: snapshot?.dominantTypeIri,
 		filterText
-	}), [snapshot, handleRevealInTextEditor, handleRevealResource, handleOpenExternal, revealedId, filterText]);
+	// The controller is one object throughout; its state changing is what makes the rows read it anew.
+	// eslint-disable-next-line react-hooks/exhaustive-deps
+	}), [snapshot, editable, controller, editingState, handleRevealInTextEditor, handleRevealResource, handleOpenExternal, revealedId, filterText]);
 
 	if (!snapshot) {
 		return (
@@ -230,6 +263,7 @@ function FormEditor(): React.JSX.Element {
 													dataService={dataService}
 													scrollElement={scrollElement}
 													cardStates={cardStates}
+													pinnedIds={pinnedIds}
 													onToggle={handleToggle}
 													revealRequest={revealRequest}
 													railElement={railElement}

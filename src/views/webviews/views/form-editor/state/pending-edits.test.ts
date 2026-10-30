@@ -5,7 +5,7 @@ import { PendingEdit, PendingEdits } from './pending-edits';
 
 const EX = 'http://example.org/';
 const subject = { kind: 'iri' as const, iri: `${EX}s` };
-const cellKey = new CellKey({ resourceId: `i:${EX}s`, column: 'line', propertyIndex: 0 });
+const cellKey = new CellKey({ resourceId: `i:${EX}s`, column: 'statement', propertyIndex: 0 });
 
 /**
  * Wrap operations into a pending edit.

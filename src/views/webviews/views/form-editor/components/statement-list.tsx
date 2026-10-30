@@ -1,10 +1,13 @@
-import { Fragment } from 'react';
-import { PropertyView, ResourceDetail, TermView } from '../form-editor-model';
-import { useIriNavigation } from '../hooks/use-iri-navigation';
+import { Fragment, useEffect, useState } from 'react';
+import { PropertyView, ResourceDetail } from '../form-editor-model';
+import { StatementServices, useStatementServices } from '../hooks/use-statement-services';
 import { IResourceDataService } from '../services/resource-data-service.interface';
-import { LiteralValue } from './literal-value';
-import { NestedResourceCard } from './nested-resource-card';
-import { ValuePill } from './value-pill';
+import { CellKey } from '../state/cell-key';
+import { IEditingController } from '../state/editing-controller.interface';
+import { useFormEditorContext } from '../state/form-editor-context';
+import { NewStatementRows } from '../state/new-statement-rows';
+import { StatementDraft } from '../state/statement-draft';
+import { EditableStatementRow, ReadOnlyStatementRow } from './statement-row';
 
 /**
  * Properties of the {@link StatementList} component.
@@ -14,6 +17,11 @@ export interface StatementListProps {
 	 * The resource with its statements.
 	 */
 	detail: ResourceDetail;
+
+	/**
+	 * Whether the detail belongs to an earlier document version while the current one loads.
+	 */
+	stale?: boolean;
 
 	/**
 	 * Supplies the statements of the blank nodes the values refer to.
@@ -26,26 +34,39 @@ export interface StatementListProps {
 	depth: number;
 
 	/**
-	 * The resources that hold this list, which guard against cycles.
+	 * The resources that hold the list, which guard against cycles.
 	 */
 	visited: readonly string[];
 }
 
 /**
- * The statements of a card as rows, in document order: each property one row, preceded by the
- * comment lines written above it, with the label of the predicate beside its values, each value
- * on a line of its own. Resources are pills that lead to their card, literals are their text
- * with their tag, and a blank node is its own card below the line that refers to it.
+ * The statements of a card as rows, in document order, each preceded by the comment lines
+ * written above it. Where the document can be written, the rows of a card of the list are edited
+ * in place and a row for a new statement follows them; the rows of a nested blank node, and those
+ * whose values cannot all be kept by their place, are read.
  * @param props The resource and where the list stands.
  * @returns The rows.
  */
-export function StatementList({ detail, dataService, depth, visited }: StatementListProps): React.JSX.Element {
+export function StatementList(props: StatementListProps): React.JSX.Element {
+	const { editing, readOnly } = useFormEditorContext();
+
+	return !readOnly && editing && props.depth === 0
+		? <EditableStatementList {...props} editing={editing} />
+		: <ReadOnlyStatementList {...props} />;
+}
+
+/**
+ * The rows of a resource as they are read.
+ * @param props The resource and where the list stands.
+ * @returns The rows.
+ */
+function ReadOnlyStatementList({ detail, dataService, depth, visited }: StatementListProps): React.JSX.Element {
 	return (
 		<div className="statement-list">
 			{detail.properties.map((property, index) => (
 				<Fragment key={index}>
-					{property.comments && <div className="statement-comment">{property.comments.join('\n')}</div>}
-					<StatementRow property={property} dataService={dataService} depth={depth} visited={visited} />
+					<PropertyComments property={property} />
+					<ReadOnlyStatementRow property={property} dataService={dataService} depth={depth} visited={visited} />
 				</Fragment>
 			))}
 		</div>
@@ -53,85 +74,92 @@ export function StatementList({ detail, dataService, depth, visited }: Statement
 }
 
 /**
- * Properties of the {@link StatementRow} component.
+ * Properties of the {@link EditableStatementList} component.
  */
-interface StatementRowProps extends Omit<StatementListProps, 'detail'> {
+interface EditableStatementListProps extends StatementListProps {
 	/**
-	 * The property of the row.
+	 * Hands the edits to the host.
 	 */
-	property: PropertyView;
+	editing: IEditingController;
 }
 
 /**
- * One statement: the predicate by its label, then each value on a line of its own with the
- * comment lines written above it.
- * @param props The property and where the row stands.
- * @returns The row.
+ * The rows of a resource as fields, followed by the rows for new statements: the one being typed
+ * into, and those handed to the host, which are read until the host shows their statements.
+ * @param props The resource, the means to edit and where the list stands.
+ * @returns The rows.
  */
-function StatementRow({ property, ...rest }: StatementRowProps): React.JSX.Element {
-	const predicate = property.predicate;
-	const title = predicate.term.kind === 'iri' ? predicate.term.iri : undefined;
-	const label = predicate.label || predicate.prefixedName || title;
+function EditableStatementList({ detail, stale = false, dataService, depth, visited, editing }: EditableStatementListProps): React.JSX.Element {
+	const services = useStatementServices(detail);
+	const [newRows, setNewRows] = useState(NewStatementRows.NONE);
+	const context = { dataService, depth, visited };
+
+	// The host delivered the card again: the rows it shows the statements of now go.
+	useEffect(() => setNewRows(current => current.pruneSubmitted()), [detail]);
+
+	// A row for a new statement is always at hand after the statements.
+	useEffect(() => {
+		if (!newRows.open) {
+			setNewRows(current => current.opened());
+		}
+	}, [newRows]);
 
 	return (
-		<div className="statement-line" role="group" aria-label={label}>
-			<span className="statement-predicate" title={title}>{label}</span>
-			<span className="statement-values">
-				{property.values.map((value, index) => (
-					<span key={index} className={`statement-value${value.nested ? ' is-node' : ''}`}>
-						{value.comments && <span className="statement-value-comment">{value.comments.join('\n')}</span>}
-						<TermValue view={value} {...rest} />
-					</span>
+		<div className="statement-list is-editable">
+			{detail.properties.map((property, index) => (
+				<Fragment key={index}>
+					<PropertyComments property={property} />
+					{StatementDraft.canEdit(property)
+						? <EditableStatementRow cellKey={new CellKey({ resourceId: detail.id, column: 'statement', propertyIndex: index })} subject={detail.term} property={property} stale={stale} services={services} editing={editing} {...context} />
+						: <ReadOnlyStatementRow property={property} {...context} />}
+				</Fragment>
+			))}
+			{newRows.all.map(row => row.submitted
+				? <ReadOnlyStatementRow key={`new-${row.id}`} property={_propertyOf(row.submitted, services)} {...context} />
+				: (
+					<EditableStatementRow
+						key={`new-${row.id}`}
+						cellKey={new CellKey({ resourceId: detail.id, column: 'draft', propertyIndex: row.id })}
+						subject={detail.term}
+						stale={stale}
+						services={services}
+						editing={editing}
+						onSubmitted={statement => setNewRows(current => current.submitted(row.id, statement))}
+						{...context}
+					/>
 				))}
-			</span>
 		</div>
 	);
 }
 
 /**
- * Properties of the {@link TermValue} component.
+ * Properties of the {@link PropertyComments} component.
  */
-interface TermValueProps extends Omit<StatementListProps, 'detail'> {
+interface PropertyCommentsProps {
 	/**
-	 * The value.
+	 * The property.
 	 */
-	view: TermView;
+	property: PropertyView;
 }
 
 /**
- * One value: a pill for a resource, the text of a literal, the items of a list, or the card of
- * a blank node.
- * @param props The value and where it stands.
- * @returns The value.
+ * The comment lines written above a property, if it has any.
+ * @param props The property.
+ * @returns The comment lines.
  */
-function TermValue({ view, dataService, depth, visited }: TermValueProps): React.JSX.Element {
-	const navigate = useIriNavigation();
+function PropertyComments({ property }: PropertyCommentsProps): React.JSX.Element | null {
+	return property.comments ? <div className="statement-comment">{property.comments.join('\n')}</div> : null;
+}
 
-	if (view.collection) {
-		return (
-			<span className="statement-list-items" role="list">
-				{view.collection.items.map((item, index) => (
-					<span key={index} className={`statement-list-item${item.nested ? ' is-node' : ''}`} role="listitem">
-						<TermValue view={item} dataService={dataService} depth={depth} visited={visited} />
-					</span>
-				))}
-			</span>
-		);
-	}
-
-	if (view.nested) {
-		return <NestedResourceCard nested={view.nested} dataService={dataService} depth={depth + 1} visited={visited} />;
-	}
-
-	switch (view.term.kind) {
-		case 'literal':
-			return <LiteralValue term={view.term} />;
-		case 'iri': {
-			const iri = view.term.iri;
-
-			return <ValuePill view={view} onNavigate={() => navigate(iri)} />;
-		}
-		default:
-			return <ValuePill view={view} />;
-	}
+/**
+ * The property a statement handed to the host stands for until the host shows it.
+ * @param statement The statement.
+ * @param services Gives the terms their views.
+ * @returns The property.
+ */
+function _propertyOf(statement: StatementDraft, services: StatementServices): PropertyView {
+	return {
+		predicate: services.resolver.viewOf({ kind: 'iri', iri: statement.predicate ?? '' }),
+		values: statement.values.map(value => value.kind === 'written' ? value.view : services.resolver.viewOf(value.term))
+	};
 }

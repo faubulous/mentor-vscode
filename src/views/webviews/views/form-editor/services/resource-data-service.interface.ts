@@ -7,6 +7,11 @@ import { ResourceDetail, ResourceId } from '../form-editor-model';
  */
 export interface IResourceDataService {
 	/**
+	 * The document version the loaded details belong to, which edits built from them are based on.
+	 */
+	readonly version: number;
+
+	/**
 	 * Get the already loaded detail of a resource.
 	 * @param id The resource identifier.
 	 * @returns The detail, or `undefined` when it has not been loaded yet.
