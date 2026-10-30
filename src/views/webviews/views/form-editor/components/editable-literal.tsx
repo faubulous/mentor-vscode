@@ -1,7 +1,7 @@
+import { XSD } from '@faubulous/mentor-rdf/ontologies';
 import { TermView } from '../form-editor-model';
 import { StatementServices } from '../hooks/use-statement-services';
 import { LiteralDatatypes } from '../services/statement/literal-datatypes';
-import { XSD_INTEGER, XSD_STRING } from '../services/statement/well-known-iris';
 import { getDatatypeHint, getDatatypeLabel } from './datatype-labels';
 import { EditedRow } from './edited-row';
 import { LiteralField } from './literal-field';
@@ -46,7 +46,7 @@ export function EditableLiteral({ view, index, edited }: EditableLiteralProps): 
 			tag={term.language ?? _datatypeLabel(term.datatype, services)}
 			problem={editor.unfittingLiterals.has(index) && term.datatype ? getDatatypeHint(term.datatype) : undefined}
 			numeric={term.datatype !== undefined && LiteralDatatypes.isNumeric(term.datatype)}
-			integer={term.datatype === XSD_INTEGER}
+			integer={term.datatype === XSD.integer}
 			languages={services.languages}
 			services={services}
 			onInput={text => editor.inputLiteral(index, text)}
@@ -63,5 +63,5 @@ export function EditableLiteral({ view, index, edited }: EditableLiteralProps): 
  * @returns The label.
  */
 function _datatypeLabel(datatype: string | undefined, services: StatementServices): string {
-	return getDatatypeLabel(datatype ?? XSD_STRING) ?? services.resolver.viewOf({ kind: 'iri', iri: datatype ?? XSD_STRING }).prefixedName ?? datatype ?? '';
+	return getDatatypeLabel(datatype ?? XSD.string) ?? services.resolver.viewOf({ kind: 'iri', iri: datatype ?? XSD.string }).prefixedName ?? datatype ?? '';
 }

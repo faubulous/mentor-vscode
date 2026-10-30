@@ -1,8 +1,8 @@
+import { XSD } from '@faubulous/mentor-rdf/ontologies';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { VscodeTextfield } from '@vscode-elements/elements';
 import { StatementServices } from '../hooks/use-statement-services';
 import { LiteralDatatypes } from '../services/statement/literal-datatypes';
-import { XSD_STRING } from '../services/statement/well-known-iris';
 import { LiteralTag } from '../state/literal-tag';
 import { Combobox, ComboboxOption } from './combobox';
 import { getDatatypeLabel } from './datatype-labels';
@@ -94,7 +94,7 @@ function _optionsOf(text: string, languages: readonly string[], services: Statem
 	const datatypes = LiteralDatatypes.fitting(text).map(iri => {
 		const prefixedName = services.resolver.viewOf({ kind: 'iri', iri }).prefixedName;
 
-		return { label: getDatatypeLabel(iri) ?? prefixedName ?? iri, detail: prefixedName ?? iri, keywords: prefixedName, value: iri === XSD_STRING ? {} : { datatype: iri } };
+		return { label: getDatatypeLabel(iri) ?? prefixedName ?? iri, detail: prefixedName ?? iri, keywords: prefixedName, value: iri === XSD.string ? {} : { datatype: iri } };
 	});
 
 	return [...datatypes, ...languages.map(language => ({ label: language, detail: 'Language', value: { language } }))];

@@ -1,5 +1,5 @@
+import { XSD } from '@faubulous/mentor-rdf/ontologies';
 import { MARKDOWN_DATATYPE } from '../services/statement/literal-datatypes';
-import { XSD_NAMESPACE } from '../services/statement/well-known-iris';
 
 /**
  * How a datatype is named in the literal fields, and what to type when a text does not fit it.
@@ -20,13 +20,13 @@ interface DatatypeText {
  * The names of the datatypes the literal fields know, by IRI.
  */
 const DATATYPE_TEXTS: ReadonlyMap<string, DatatypeText> = new Map([
-	[`${XSD_NAMESPACE}string`, { label: 'Text' }],
-	[`${XSD_NAMESPACE}integer`, { label: 'Integer', hint: 'Whole numbers only, e.g. 1 or -2' }],
-	[`${XSD_NAMESPACE}decimal`, { label: 'Decimal', hint: 'A decimal number, e.g. 3600.0' }],
-	[`${XSD_NAMESPACE}double`, { label: 'Double', hint: 'A double, e.g. 3.6E3' }],
-	[`${XSD_NAMESPACE}float`, { label: 'Float', hint: 'A float, e.g. 3.6E3' }],
-	[`${XSD_NAMESPACE}boolean`, { label: 'Boolean', hint: 'true or false' }],
-	[`${XSD_NAMESPACE}anyURI`, { label: 'URI', hint: 'A URI, e.g. https://…' }],
+	[XSD.string, { label: 'Text' }],
+	[XSD.integer, { label: 'Integer', hint: 'Whole numbers only, e.g. 1 or -2' }],
+	[XSD.decimal, { label: 'Decimal', hint: 'A decimal number, e.g. 3600.0' }],
+	[XSD.double, { label: 'Double', hint: 'A double, e.g. 3.6E3' }],
+	[XSD.float, { label: 'Float', hint: 'A float, e.g. 3.6E3' }],
+	[XSD.boolean, { label: 'Boolean', hint: 'true or false' }],
+	[XSD.anyURI, { label: 'URI', hint: 'A URI, e.g. https://…' }],
 	[MARKDOWN_DATATYPE, { label: 'Markdown' }]
 ]);
 

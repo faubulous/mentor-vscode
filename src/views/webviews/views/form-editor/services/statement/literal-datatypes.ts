@@ -1,5 +1,5 @@
+import { XSD } from '@faubulous/mentor-rdf/ontologies';
 import { TermRef } from '../../form-editor-model';
-import { XSD_NAMESPACE } from './well-known-iris';
 
 /**
  * A datatype the literal fields know: its IRI and the text it takes.
@@ -30,20 +30,20 @@ export const MARKDOWN_DATATYPE = 'https://www.iana.org/assignments/media-types/t
  * The datatypes the literal fields know, in the order the picker offers them.
  */
 const KNOWN: readonly LiteralDatatype[] = [
-	{ iri: `${XSD_NAMESPACE}string` },
-	{ iri: `${XSD_NAMESPACE}integer`, pattern: /^[+-]?\d+$/ },
-	{ iri: `${XSD_NAMESPACE}decimal`, pattern: /^[+-]?(\d+(\.\d*)?|\.\d+)$/ },
-	{ iri: `${XSD_NAMESPACE}double`, pattern: FLOATING_POINT },
-	{ iri: `${XSD_NAMESPACE}float`, pattern: FLOATING_POINT },
-	{ iri: `${XSD_NAMESPACE}boolean`, pattern: /^(true|false|1|0)$/ },
-	{ iri: `${XSD_NAMESPACE}anyURI`, pattern: /^[a-zA-Z][\w+.-]*:\S*$/ },
+	{ iri: XSD.string },
+	{ iri: XSD.integer, pattern: /^[+-]?\d+$/ },
+	{ iri: XSD.decimal, pattern: /^[+-]?(\d+(\.\d*)?|\.\d+)$/ },
+	{ iri: XSD.double, pattern: FLOATING_POINT },
+	{ iri: XSD.float, pattern: FLOATING_POINT },
+	{ iri: XSD.boolean, pattern: /^(true|false|1|0)$/ },
+	{ iri: XSD.anyURI, pattern: /^[a-zA-Z][\w+.-]*:\S*$/ },
 	{ iri: MARKDOWN_DATATYPE }
 ];
 
 /**
  * The datatypes whose values are numbers, written in the editor font and stepped with the arrows.
  */
-const NUMERIC: ReadonlySet<string> = new Set(['integer', 'decimal', 'double', 'float'].map(name => `${XSD_NAMESPACE}${name}`));
+const NUMERIC: ReadonlySet<string> = new Set([XSD.integer, XSD.decimal, XSD.double, XSD.float]);
 
 /**
  * What the literal fields know about datatypes: which of them are numbers, which text each takes,
