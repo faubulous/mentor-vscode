@@ -792,6 +792,20 @@ body {
 	display: none;
 }
 
+/* The resources of a row that only reads, as pills that wrap like the pills of an edited row. */
+.value-pills {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 4px;
+	min-height: var(--form-field-height);
+	padding: 0 3px;
+}
+
+.value-pills .value-pill {
+	line-height: 20px;
+}
+
 /* The resources of a row in one box, the pills before the input of the next value. */
 .resource-values {
 	display: flex;

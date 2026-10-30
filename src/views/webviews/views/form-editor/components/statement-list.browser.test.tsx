@@ -2,11 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { userEvent } from 'vitest/browser';
 import { act, render, within } from '@testing-library/react';
 import { RDFS, XSD } from '@faubulous/mentor-rdf';
-import { createEditingControllerStub } from '@src/utilities/mocks/editing-controller-fixtures';
+import { createEditingHostStub } from '@src/utilities/mocks/editing-host-fixtures';
 import { createResourceDataServiceStub } from '@src/utilities/mocks/resource-data-service-fixtures';
 import { createResourceSummary } from '@src/utilities/mocks/resource-summary-fixtures';
 import { EXAMPLE_NAMESPACE, TEST_NAMESPACES, TEST_SUBJECT, createProperty, createSampleResourceDetail, createTestResourceDetail, withAnchors } from '@src/utilities/mocks/statement-fixtures';
 import { ResourceDetail } from '../form-editor-model';
+import { EditingController } from '../state/editing-controller';
 import { FormEditorContext } from '../state/form-editor-context';
 import { StatementList } from './statement-list';
 
@@ -15,22 +16,34 @@ const SAMPLE = withAnchors(createSampleResourceDetail());
 const RESOURCES = [createResourceSummary('Plant', { label: 'Plant' }), createResourceSummary('Shrub', { label: 'Shrub' })];
 
 /**
- * Render the edited statements of a detail in the form editor, with a recording controller.
+ * Render the edited statements of a detail in the form editor, written through a controller over
+ * a recording host.
  */
 async function renderList(detail: ResourceDetail = SAMPLE) {
-	const editing = createEditingControllerStub();
-	const result = render(
+	const host = createEditingHostStub();
+	const editing = new EditingController(host);
+	const dataService = createResourceDataServiceStub([detail]);
+	const ui = (current: ResourceDetail) => (
 		<div className="form-editor">
 			<FormEditorContext.Provider value={{ readOnly: false, editing, namespaces: NAMESPACES, resources: RESOURCES }}>
-				<StatementList detail={detail} dataService={createResourceDataServiceStub([detail])} depth={0} visited={[detail.id]} />
+				<StatementList detail={current} dataService={dataService} depth={0} visited={[current.id]} />
 			</FormEditorContext.Provider>
 			<button type="button" className="outside">Outside</button>
 		</div>
 	);
+	const result = render(ui(detail));
 
 	await Promise.all(Array.from(result.container.querySelectorAll('vscode-textfield')).map(field => (field as unknown as { updateComplete: Promise<unknown> }).updateComplete));
 
-	return { ...result, editing };
+	/**
+	 * Deliver the detail for the next version, as the host does after an applied edit.
+	 */
+	const deliver = async (next: ResourceDetail) => {
+		dataService.version++;
+		await act(async () => result.rerender(ui(next)));
+	};
+
+	return { ...result, host, deliver };
 }
 
 /**
@@ -56,13 +69,13 @@ function pillsOf(row: HTMLElement): string[] {
 
 describe('StatementList, edited in a browser', () => {
 	it('writes an edited literal when the focus is tabbed out of its row', async () => {
-		const { editing } = await renderList();
+		const { host } = await renderList();
 
 		await userEvent.click(within(rows()[1]).getByLabelText('Value 1'));
 		await userEvent.keyboard('{End}s');
 		await leaveList();
 
-		expect(editing.submitted.map(edit => edit.operations[0])).toEqual([{ op: 'setValues', subject: TEST_SUBJECT, predicate: RDFS.label, values: [{ kind: 'term', term: { kind: 'literal', value: 'Trees', language: 'en' } }] }]);
+		expect(host.submitted.map(edit => edit.operations[0])).toEqual([{ op: 'setValues', subject: TEST_SUBJECT, predicate: RDFS.label, values: [{ kind: 'term', term: { kind: 'literal', value: 'Trees', language: 'en' } }] }]);
 	});
 
 	it('adds a typed resource as a pill and offers the resources of the document', async () => {
@@ -104,7 +117,7 @@ describe('StatementList, edited in a browser', () => {
 	});
 
 	it('changes the language of a literal with the tag picker', async () => {
-		const { editing } = await renderList();
+		const { host } = await renderList();
 
 		await userEvent.click(within(rows()[1]).getByRole('button', { name: /^en\./ }));
 		await userEvent.keyboard('de{Enter}');
@@ -113,7 +126,7 @@ describe('StatementList, edited in a browser', () => {
 
 		await leaveList();
 
-		expect(editing.submitted[0].operations[0]).toEqual({ op: 'setValues', subject: TEST_SUBJECT, predicate: RDFS.label, values: [{ kind: 'term', term: { kind: 'literal', value: 'Tree', language: 'de' } }] });
+		expect(host.submitted[0].operations[0]).toEqual({ op: 'setValues', subject: TEST_SUBJECT, predicate: RDFS.label, values: [{ kind: 'term', term: { kind: 'literal', value: 'Tree', language: 'de' } }] });
 	});
 
 	it('offers the datatypes a number fits', async () => {
@@ -141,13 +154,13 @@ describe('StatementList, edited in a browser', () => {
 
 	it('shows why a number does not fit its datatype in place of its tag, and writes nothing', async () => {
 		const detail = withAnchors(createTestResourceDetail([createProperty('ex:count', [{ term: { kind: 'literal', value: '42', datatype: XSD.integer }, editable: true }])]));
-		const { editing } = await renderList(detail);
+		const { host } = await renderList(detail);
 
 		await userEvent.click(within(rows()[0]).getByLabelText('Value 1'));
 		await userEvent.keyboard('{End}.5{Enter}');
 
 		expect(within(rows()[0]).getByRole('button', { name: /Whole numbers/ })).toBeTruthy();
-		expect(editing.submitted).toEqual([]);
+		expect(host.submitted).toEqual([]);
 	});
 
 	it('draws the box of a field only on intent', async () => {
@@ -163,8 +176,22 @@ describe('StatementList, edited in a browser', () => {
 		expect(border()).not.toBe('transparent');
 	});
 
+	it('leaves the focus where the user put it when the edit of the row left is applied', async () => {
+		const { host, deliver } = await renderList();
+
+		await userEvent.click(within(rows()[1]).getByLabelText('Value 1'));
+		await userEvent.keyboard('{End}s');
+		await userEvent.click(within(rows()[2]).getByLabelText('New value'));
+		await act(async () => host.settle());
+		await deliver({ ...SAMPLE, properties: SAMPLE.properties.map((property, index) => index === 1 ? { ...property, values: [{ ...property.values[0], term: { kind: 'literal', value: 'Trees', language: 'en' }, anchor: 900 }] } : property) });
+
+		expect(host.submitted).toHaveLength(1);
+		expect(rows()[2].contains(document.activeElement)).toBe(true);
+		expect((within(rows()[1]).getByLabelText('Value 1') as HTMLInputElement).value).toBe('Trees');
+	});
+
 	it('adds a new statement typed into its row', async () => {
-		const { editing } = await renderList();
+		const { host } = await renderList();
 		const row = rows()[3];
 
 		await userEvent.click(within(row).getByLabelText('Predicate'));
@@ -173,6 +200,6 @@ describe('StatementList, edited in a browser', () => {
 		await userEvent.keyboard('ex:Plant{Enter}');
 		await leaveList();
 
-		expect(editing.submitted.map(edit => edit.operations[0])).toEqual([{ op: 'setValues', subject: TEST_SUBJECT, predicate: RDFS.seeAlso, values: [{ kind: 'term', term: { kind: 'iri', iri: `${EXAMPLE_NAMESPACE}Plant` } }] }]);
+		expect(host.submitted.map(edit => edit.operations[0])).toEqual([{ op: 'setValues', subject: TEST_SUBJECT, predicate: RDFS.seeAlso, values: [{ kind: 'term', term: { kind: 'iri', iri: `${EXAMPLE_NAMESPACE}Plant` } }] }]);
 	});
 });

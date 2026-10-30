@@ -9,8 +9,8 @@ describe('TypedTermReader', () => {
 	it('reads prefixed names and IRI references as IRIs, and tells an undeclared prefix', () => {
 		expect(reader.readIri('ex:Tree')).toEqual({ term: { kind: 'iri', iri: `${EXAMPLE_NAMESPACE}Tree` } });
 		expect(reader.readIri(' <http://other.org/x> ')).toEqual({ term: { kind: 'iri', iri: 'http://other.org/x' } });
-		expect(reader.readIri('foo:x').problem).toMatch(/'foo' is not declared/);
-		expect(reader.readIri('a tree').problem).toMatch(/prefixed name or an <IRI>/);
+		expect(reader.readIri('foo:x').problem).toEqual({ kind: 'undeclaredPrefix', prefix: 'foo' });
+		expect(reader.readIri('a tree').problem).toEqual({ kind: 'notAName' });
 	});
 
 	it('reads a as rdf:type only in predicate position', () => {
@@ -21,7 +21,7 @@ describe('TypedTermReader', () => {
 	it('reads a value by what the predicate takes', () => {
 		expect(reader.readValue('ex:Tree', 'any')).toEqual({ term: { kind: 'iri', iri: `${EXAMPLE_NAMESPACE}Tree` } });
 		expect(reader.readValue('ex:Tree', 'literal')).toEqual({ term: { kind: 'literal', value: 'ex:Tree' } });
-		expect(reader.readValue('a tree', 'resource')?.problem).toMatch(/prefixed name/);
+		expect(reader.readValue('a tree', 'resource')?.problem).toEqual({ kind: 'notAName' });
 		expect(reader.readValue('a tree', 'any')).toEqual({ term: { kind: 'literal', value: 'a tree' } });
 		expect(reader.readValue('   ', 'any')).toBeUndefined();
 	});

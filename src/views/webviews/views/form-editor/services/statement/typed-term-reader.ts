@@ -1,14 +1,20 @@
 import { getIriFromText, splitPrefixedName } from '@src/utilities/prefixed-name';
 import { ValueKind } from '@src/utilities/value-kind';
 import { TermRef } from '../../form-editor-model';
+import { TermProblem } from './term-problem';
 import { RDF_TYPE, XSD_NAMESPACE } from './well-known-iris';
 
 /**
  * What a typed text reads as: a term, or why it is none.
  */
-export type TermReading =
-	| { term: TermRef; problem?: undefined }
-	| { term?: undefined; problem: string };
+export type TermReading<T extends TermRef = TermRef> =
+	| { term: T; problem?: undefined }
+	| { term?: undefined; problem: TermProblem };
+
+/**
+ * What a typed text reads as where only a resource is taken: an IRI, or why the text is none.
+ */
+export type IriReading = TermReading<Extract<TermRef, { kind: 'iri' }>>;
 
 /**
  * The datatypes a number or boolean typed without quotes stands for, with the shape of each, in
@@ -47,11 +53,11 @@ export class TypedTermReader {
 	 * @param text The typed text.
 	 * @returns The IRI, or why the text names none.
 	 */
-	readIri(text: string): TermReading {
+	readIri(text: string): IriReading {
 		const trimmed = text.trim();
 
 		if (!TypedTermReader.isName(trimmed)) {
-			return { problem: 'A resource is written as a prefixed name or an <IRI>.' };
+			return { problem: { kind: 'notAName' } };
 		}
 
 		const iri = getIriFromText(this._namespaces, trimmed);
@@ -60,7 +66,7 @@ export class TypedTermReader {
 			return { term: { kind: 'iri', iri } };
 		}
 
-		return { problem: `The prefix '${splitPrefixedName(trimmed)?.prefix ?? ''}' is not declared.` };
+		return { problem: { kind: 'undeclaredPrefix', prefix: splitPrefixedName(trimmed)?.prefix ?? '' } };
 	}
 
 	/**
@@ -68,7 +74,7 @@ export class TypedTermReader {
 	 * @param text The typed text.
 	 * @returns The IRI of the predicate, or why the text names none.
 	 */
-	readPredicate(text: string): TermReading {
+	readPredicate(text: string): IriReading {
 		return text.trim() === 'a' ? { term: { kind: 'iri', iri: RDF_TYPE } } : this.readIri(text);
 	}
 
@@ -94,7 +100,7 @@ export class TypedTermReader {
 		}
 
 		if (range === 'resource') {
-			return { problem: 'A resource is written as a prefixed name or an <IRI>.' };
+			return { problem: { kind: 'notAName' } };
 		}
 
 		const bare = BARE_LITERALS.find(candidate => candidate.pattern.test(trimmed));

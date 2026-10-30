@@ -1,8 +1,9 @@
 import { TermView } from '../form-editor-model';
 import { StatementServices } from '../hooks/use-statement-services';
-import { StatementRowHandle } from '../hooks/use-statement-row';
 import { LiteralDatatypes } from '../services/statement/literal-datatypes';
 import { XSD_INTEGER, XSD_STRING } from '../services/statement/well-known-iris';
+import { getDatatypeHint, getDatatypeLabel } from './datatype-labels';
+import { EditedRow } from './edited-row';
 import { LiteralField } from './literal-field';
 
 /**
@@ -20,14 +21,9 @@ export interface EditableLiteralProps {
 	index: number;
 
 	/**
-	 * The row.
+	 * The row the value belongs to.
 	 */
-	row: StatementRowHandle;
-
-	/**
-	 * Gives the datatypes their labels and the card its languages.
-	 */
-	services: StatementServices;
+	edited: EditedRow;
 }
 
 /**
@@ -35,7 +31,8 @@ export interface EditableLiteralProps {
  * @param props The value and its row.
  * @returns The field, or nothing for a value that is no literal.
  */
-export function EditableLiteral({ view, index, row, services }: EditableLiteralProps): React.JSX.Element | null {
+export function EditableLiteral({ view, index, edited }: EditableLiteralProps): React.JSX.Element | null {
+	const { editor, services } = edited;
 	const term = view.term;
 
 	if (term.kind !== 'literal') {
@@ -47,13 +44,13 @@ export function EditableLiteral({ view, index, row, services }: EditableLiteralP
 			index={index}
 			text={term.value}
 			tag={term.language ?? _datatypeLabel(term.datatype, services)}
-			problem={row.literalProblems.get(index)}
+			problem={editor.unfittingLiterals.has(index) && term.datatype ? getDatatypeHint(term.datatype) : undefined}
 			numeric={term.datatype !== undefined && LiteralDatatypes.isNumeric(term.datatype)}
 			integer={term.datatype === XSD_INTEGER}
 			languages={services.languages}
 			services={services}
-			onInput={text => row.onLiteralInput(index, text)}
-			onTagPick={tag => row.onLiteralTag(index, tag)}
+			onInput={text => editor.inputLiteral(index, text)}
+			onTagPick={tag => editor.inputLiteralTag(index, tag)}
 		/>
 	);
 }
@@ -66,9 +63,5 @@ export function EditableLiteral({ view, index, row, services }: EditableLiteralP
  * @returns The label.
  */
 function _datatypeLabel(datatype: string | undefined, services: StatementServices): string {
-	if (!datatype || datatype === XSD_STRING) {
-		return 'Text';
-	}
-
-	return LiteralDatatypes.of(datatype)?.label ?? services.resolver.viewOf({ kind: 'iri', iri: datatype }).prefixedName ?? datatype;
+	return getDatatypeLabel(datatype ?? XSD_STRING) ?? services.resolver.viewOf({ kind: 'iri', iri: datatype ?? XSD_STRING }).prefixedName ?? datatype ?? '';
 }

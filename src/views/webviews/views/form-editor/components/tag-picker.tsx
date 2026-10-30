@@ -5,6 +5,7 @@ import { LiteralDatatypes } from '../services/statement/literal-datatypes';
 import { XSD_STRING } from '../services/statement/well-known-iris';
 import { LiteralTag } from '../state/literal-tag';
 import { Combobox, ComboboxOption } from './combobox';
+import { getDatatypeLabel } from './datatype-labels';
 
 /**
  * The shape of a language tag such as `en` or `de-CH`.
@@ -70,7 +71,7 @@ export function TagPicker({ text, languages, services, onPick, onCancel }: TagPi
 
 		const reading = services.reader.readIri(trimmed);
 
-		if (reading.term?.kind === 'iri') {
+		if (reading.term) {
 			onPick({ datatype: reading.term.iri });
 		}
 	};
@@ -90,10 +91,10 @@ export function TagPicker({ text, languages, services, onPick, onCancel }: TagPi
  * @returns The options.
  */
 function _optionsOf(text: string, languages: readonly string[], services: StatementServices): ComboboxOption<LiteralTag>[] {
-	const datatypes = LiteralDatatypes.fitting(text).map(datatype => {
-		const prefixedName = services.resolver.viewOf({ kind: 'iri', iri: datatype.iri }).prefixedName;
+	const datatypes = LiteralDatatypes.fitting(text).map(iri => {
+		const prefixedName = services.resolver.viewOf({ kind: 'iri', iri }).prefixedName;
 
-		return { label: datatype.label, detail: prefixedName ?? datatype.iri, keywords: prefixedName, value: datatype.iri === XSD_STRING ? {} : { datatype: datatype.iri } };
+		return { label: getDatatypeLabel(iri) ?? prefixedName ?? iri, detail: prefixedName ?? iri, keywords: prefixedName, value: iri === XSD_STRING ? {} : { datatype: iri } };
 	});
 
 	return [...datatypes, ...languages.map(language => ({ label: language, detail: 'Language', value: { language } }))];
