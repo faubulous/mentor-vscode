@@ -16,7 +16,6 @@ import { hasBlockingErrors } from '@src/utilities/vscode/diagnostic';
 import { tokensMatchText } from '@src/utilities/tokens';
 import { WebviewComponentFactory } from '../../webview-component-factory';
 import { ExecuteCommandMessage } from '../../webview-messaging';
-import { FocusHintResolver } from '../../services/editing/focus-hint-resolver';
 import { ResourceIndex, ResourceIndexOptions } from '../../services/editing/resource-index';
 import { ResourceViewBuilder } from '../../services/editing/resource-view-builder';
 import { SnapshotBuilder } from '../../services/editing/snapshot-builder';
@@ -212,11 +211,7 @@ export class FormEditorSession implements vscode.Disposable {
 		this._refreshDebouncer.cancel();
 		this._publishSnapshot('formEdit', editId);
 
-		const focus = outcome.focus && this._index
-			? new FocusHintResolver(this._index, context, this._getIndexOptions()).resolve(outcome.focus)
-			: undefined;
-
-		this._postMessage({ id: 'EditApplied', editId, version: outcome.version, focus, renamedIds: outcome.renamedIds });
+		this._postMessage({ id: 'EditApplied', editId, version: outcome.version });
 
 		return outcome;
 	}

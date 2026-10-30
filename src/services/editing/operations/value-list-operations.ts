@@ -5,7 +5,7 @@ import { StatementValueWriter } from '../statement-value-writer';
 import { SynthesisContext } from '../synthesis-context';
 import { toPatternFromRef } from '../term-patterns';
 import { NewValue, ValueList } from '../value-list';
-import { ValueListEdits } from '../value-list-edits';
+import { TextEditSpec } from '@src/utilities/text-edits';
 import { ValueListResolver } from '../value-list-resolver';
 import { ObjectListWriter } from './object-list-writer';
 import { PropertyOperations } from './property-operations';
@@ -53,7 +53,8 @@ export class ValueListOperations {
 			...removed.flatMap(span => new ValueOperations(context).removalChanges(subject, operation.predicate, span)),
 			...added.flatMap(value => writer.expectedChangesOf(subject, operation.predicate, value))
 		];
-		return createPlan({ edits: written.edits, focus: written.focus, expectedChanges: netExpectedChanges(expectedChanges) });
+
+		return createPlan({ edits: written, expectedChanges: netExpectedChanges(expectedChanges) });
 	}
 
 	/**
@@ -63,7 +64,7 @@ export class ValueListOperations {
 	 * @param writer Writes the new values.
 	 * @returns The edits.
 	 */
-	private _writeValues(operation: SetValuesOperation, list: ValueList, writer: StatementValueWriter): ValueListEdits {
+	private _writeValues(operation: SetValuesOperation, list: ValueList, writer: StatementValueWriter): TextEditSpec[] {
 		return this._context.writer.abbreviates
 			? new ObjectListWriter(this._context, list, writer).write()
 			: new StatementLineWriter(this._context, operation.predicate, list, writer).write();
@@ -76,7 +77,7 @@ export class ValueListOperations {
 	 * @param writer Writes the new values.
 	 * @returns The edits.
 	 */
-	private _writeNewPredicate(operation: SetValuesOperation, list: ValueList, writer: StatementValueWriter): ValueListEdits {
+	private _writeNewPredicate(operation: SetValuesOperation, list: ValueList, writer: StatementValueWriter): TextEditSpec[] {
 		const context = this._context;
 
 		if (!context.writer.abbreviates) {
@@ -85,8 +86,6 @@ export class ValueListOperations {
 			return new StatementLineWriter(context, operation.predicate, list, writer).writeNewPredicate(blocks[blocks.length - 1]);
 		}
 
-		const plan = new PropertyOperations(context).newProperty(operation.subject, operation.predicate, list.added.map((value: NewValue) => writer.write(value)).join(', '));
-
-		return { edits: plan.edits, focus: plan.focus };
+		return [new PropertyOperations(context).newProperty(operation.subject, operation.predicate, list.added.map((value: NewValue) => writer.write(value)).join(', '))];
 	}
 }

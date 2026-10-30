@@ -18,7 +18,7 @@ export const EX = 'http://example.org/';
 /**
  * The prefix declarations a Turtle or TriG test document starts with.
  */
-export const PREAMBLE = `@prefix ex: <${EX}> .\n@prefix rdfs: <${_RDFS}> .\n@prefix xsd: <${_XSD}> .\n\n`;
+const PREAMBLE = `@prefix ex: <${EX}> .\n@prefix rdfs: <${_RDFS}> .\n@prefix xsd: <${_XSD}> .\n\n`;
 
 /**
  * How a test document is written.

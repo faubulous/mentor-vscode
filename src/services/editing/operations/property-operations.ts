@@ -7,6 +7,7 @@ import { ValueOperations } from './value-operations';
 import { StatementLocator } from '../statement-locator';
 import { SynthesisContext } from '../synthesis-context';
 import { toPatternFromRef, toTermPattern } from '../term-patterns';
+import { TextEditSpec } from '@src/utilities/text-edits';
 import { tokenEnd } from '@src/utilities/tokens';
 
 /**
@@ -32,22 +33,17 @@ export class PropertyOperations {
 	 * @param subject The subject to add the predicate to.
 	 * @param predicateIri The IRI of the predicate.
 	 * @param written The values as they are to appear in the text.
-	 * @returns The plan inserting the statement.
+	 * @returns The edit inserting the statement.
 	 * @throws {EditRejectionError} If the subject has no block in the document.
 	 */
-	newProperty(subject: TermRef, predicateIri: string, written: string): EditPlan {
+	newProperty(subject: TermRef, predicateIri: string, written: string): TextEditSpec {
 		const context = this._context;
 
 		const blocks = new StatementLocator(context.model).blocksOf(subject);
 		const block = blocks.find(candidate => candidate.nested) ?? blocks[blocks.length - 1];
 		const predicate = context.writer.writePredicate(predicateIri);
 		const separator = this._separator(block);
-		const edit = { start: block.end, end: block.end, newText: `${separator}${predicate} ${written}` };
-
-		return createPlan({
-			edits: [edit],
-			focus: { edit, offsetWithin: separator.length + predicate.length + 1, target: 'value' }
-		});
+		return { start: block.end, end: block.end, newText: `${separator}${predicate} ${written}` };
 	}
 
 	/**
@@ -81,8 +77,7 @@ export class PropertyOperations {
 			expectedChanges: netExpectedChanges(objects.flatMap(object => [
 				{ subject, predicate: operation.predicate, object: toTermPattern(object.quad.object), delta: -1 },
 				{ subject, predicate: operation.newPredicate, object: toTermPattern(object.quad.object), delta: 1 }
-			])),
-			focus: { edit: edits[0], offsetWithin: 0, target: 'predicate' }
+			]))
 		});
 	}
 

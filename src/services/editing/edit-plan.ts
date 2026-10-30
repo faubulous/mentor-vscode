@@ -1,4 +1,4 @@
-import { TextEditSpec, sortTextEdits } from '@src/utilities/text-edits';
+import { TextEditSpec } from '@src/utilities/text-edits';
 import { TermRef } from './term-ref';
 
 /**
@@ -40,31 +40,6 @@ export interface ExpectedStatementChange {
 }
 
 /**
- * Which cell of a row the focus goes to after an edit.
- */
-export type FocusTarget = 'subject' | 'predicate' | 'value' | 'addProperty' | 'comment';
-
-/**
- * Where the focus should go after the edit, relative to one of the plan's edits. The absolute
- * offset is only known once every edit of the plan is placed, see {@link resolveFocusOffset}.
- */
-export interface FocusRequest {
-	/**
-	 * The edit the focus is relative to.
-	 */
-	edit: TextEditSpec;
-
-	/**
-	 * The offset of the focused term within the inserted text of the edit.
-	 */
-	offsetWithin: number;
-	/**
-	 * Which cell of the row the focus goes to.
-	 */
-	target: FocusTarget;
-}
-
-/**
  * The text edits an operation resolves to, together with what must hold once they are applied.
  */
 export interface EditPlan {
@@ -77,11 +52,6 @@ export interface EditPlan {
 	 * The changes the edits are expected to make to the statements, which the verifier checks.
 	 */
 	expectedChanges: ExpectedStatementChange[];
-
-	/**
-	 * Where the focus should go afterwards, when the operation decides it.
-	 */
-	focus?: FocusRequest;
 }
 
 /**
@@ -92,15 +62,12 @@ export interface EditPlan {
 export function createPlan(plan: Partial<EditPlan>): EditPlan {
 	return {
 		edits: plan.edits ?? [],
-		expectedChanges: plan.expectedChanges ?? [],
-		focus: plan.focus
+		expectedChanges: plan.expectedChanges ?? []
 	};
 }
 
 /**
- * Combine the plans of several operations into the plan of one user action. The focus of the
- * last operation that requests one wins, so a bundled prefix declaration does not steal the
- * focus from the value it was declared for.
+ * Combine the plans of several operations into the plan of one user action.
  * @param plans The plans to combine.
  * @returns The combined plan.
  */
@@ -110,7 +77,6 @@ export function mergePlans(plans: readonly EditPlan[]): EditPlan {
 	for (const plan of plans) {
 		merged.edits.push(...plan.edits);
 		merged.expectedChanges.push(...plan.expectedChanges);
-		merged.focus = plan.focus ?? merged.focus;
 	}
 
 	return merged;
@@ -135,27 +101,3 @@ export function netExpectedChanges(expectedChanges: readonly ExpectedStatementCh
 	return Array.from(net.values()).filter(change => change.delta !== 0);
 }
 
-/**
- * Resolve the focus of a plan to an offset in the edited text.
- * @param plan The plan whose focus to resolve.
- * @returns The offset in the edited text, or `undefined` if the plan requests no focus.
- */
-export function resolveFocusOffset(plan: EditPlan): number | undefined {
-	const focus = plan.focus;
-
-	if (!focus) {
-		return undefined;
-	}
-
-	let shift = 0;
-
-	for (const edit of sortTextEdits(plan.edits)) {
-		if (edit === focus.edit) {
-			return edit.start + shift + focus.offsetWithin;
-		}
-
-		shift += edit.newText.length - (edit.end - edit.start);
-	}
-
-	return undefined;
-}

@@ -1,28 +1,11 @@
 import { TextEditSpec, deleteRange } from '@src/utilities/text-edits';
 import { isCommentToken } from '@src/utilities/tokens';
 import { EditRejectionError } from '../edit-rejection';
-import { FocusRequest } from '../edit-plan';
 import { ObjectSpan, PredicateGroup, SubjectBlock } from '../statement-model';
 import { StatementValueWriter } from '../statement-value-writer';
 import { SynthesisContext } from '../synthesis-context';
 import { NewValue, ValueList, ValueListEntry, ValueListGroup } from '../value-list';
-import { ValueListEdits } from '../value-list-edits';
 import { ValueOperations } from './value-operations';
-
-/**
- * An insertion of new values, with the offset of the first of them within its text.
- */
-interface Insertion {
-	/**
-	 * The edit inserting the values.
-	 */
-	edit: TextEditSpec;
-
-	/**
-	 * The offset the first new value starts at within the text of the edit.
-	 */
-	valueOffset: number;
-}
 
 /**
  * Writes an edit of the values of a predicate into a document that writes the objects of a
@@ -45,9 +28,9 @@ export class ObjectListWriter {
 	 * @returns The edits.
 	 * @throws {EditRejectionError} If a value cannot be written, objects with comments between them change order, or the subject would lose its last statement.
 	 */
-	write(): ValueListEdits {
+	write(): TextEditSpec[] {
 		const edits: TextEditSpec[] = [];
-		const insertions: Insertion[] = [];
+		const insertions: TextEditSpec[] = [];
 		const emptied = new Map<SubjectBlock, PredicateGroup[]>();
 
 		for (const entry of this._list.groups) {
@@ -72,7 +55,7 @@ export class ObjectListWriter {
 	 * @returns The insertion replacing its objects.
 	 * @throws {EditRejectionError} If comments are written between the objects.
 	 */
-	private _rewrite(entry: ValueListGroup): Insertion {
+	private _rewrite(entry: ValueListGroup): TextEditSpec {
 		const { model } = this._context;
 		const objects = entry.group.objects;
 		const start = objects[0].start;
@@ -84,10 +67,8 @@ export class ObjectListWriter {
 
 		const separator = this._separator(entry.block, entry.group);
 		const texts = entry.entries.map(item => item.kind === 'kept' ? model.text.slice(item.span.start, item.span.end) : this._values.write(item.value));
-		const firstNew = entry.entries.findIndex(item => item.kind === 'new');
-		const valueOffset = firstNew < 0 ? 0 : texts.slice(0, firstNew).reduce((sum, text) => sum + text.length + separator.length, 0);
 
-		return { edit: { start, end, newText: texts.join(separator) }, valueOffset };
+		return { start, end, newText: texts.join(separator) };
 	}
 
 	/**
@@ -97,7 +78,7 @@ export class ObjectListWriter {
 	 * @param edits Collects the deletions.
 	 * @param insertions Collects the insertions.
 	 */
-	private _editInPlace(entry: ValueListGroup, edits: TextEditSpec[], insertions: Insertion[]): void {
+	private _editInPlace(entry: ValueListGroup, edits: TextEditSpec[], insertions: TextEditSpec[]): void {
 		const { block, group } = entry;
 		const separator = this._separator(block, group);
 		const kept = entry.entries.flatMap(item => item.kind === 'kept' ? [item.span] : []);
@@ -114,9 +95,9 @@ export class ObjectListWriter {
 			const texts = values.map(value => this._values.write(value));
 
 			if (before) {
-				insertions.push({ edit: { start: before.start, end: before.start, newText: texts.join(separator) + separator }, valueOffset: 0 });
+				insertions.push({ start: before.start, end: before.start, newText: texts.join(separator) + separator });
 			} else if (after) {
-				insertions.push({ edit: { start: after.end, end: after.end, newText: separator + texts.join(separator) }, valueOffset: separator.length });
+				insertions.push({ start: after.end, end: after.end, newText: separator + texts.join(separator) });
 			}
 		});
 	}
@@ -129,14 +110,14 @@ export class ObjectListWriter {
 	 * @param edits Collects the deletions.
 	 * @returns The insertion of the new values.
 	 */
-	private _replaceAll(group: PredicateGroup, values: readonly NewValue[], separator: string, edits: TextEditSpec[]): Insertion {
+	private _replaceAll(group: PredicateGroup, values: readonly NewValue[], separator: string, edits: TextEditSpec[]): TextEditSpec {
 		const { text, tokens } = this._context.model;
 		const start = group.objects[0].start;
 		const end = group.objects[group.objects.length - 1].end;
 
 		edits.push(...deleteRange(text, tokens, start, end));
 
-		return { edit: { start, end: start, newText: values.map(value => this._values.write(value)).join(separator) }, valueOffset: 0 };
+		return { start, end: start, newText: values.map(value => this._values.write(value)).join(separator) };
 	}
 
 	/**
@@ -231,28 +212,23 @@ function _runsAroundKept(entries: readonly ValueListEntry[]): { before?: ObjectS
 
 /**
  * Combine the deletions and insertions of an edit. An insertion at the offset a deletion starts at
- * becomes the text of that deletion, as two edits may not start at the same offset. The first
- * insertion takes the focus.
+ * becomes the text of that deletion, as two edits may not start at the same offset.
  * @param edits The deletions.
  * @param insertions The insertions.
- * @returns The edits with the focus.
+ * @returns The edits.
  */
-function _mergeInsertions(edits: TextEditSpec[], insertions: readonly Insertion[]): ValueListEdits {
+function _mergeInsertions(edits: TextEditSpec[], insertions: readonly TextEditSpec[]): TextEditSpec[] {
 	const merged = [...edits];
-	let focus: FocusRequest | undefined;
 
 	for (const insertion of insertions) {
-		const deletion = merged.find(edit => edit.start === insertion.edit.start && edit !== insertion.edit);
-		const edit = deletion ?? insertion.edit;
+		const deletion = merged.find(edit => edit.start === insertion.start && edit !== insertion);
 
 		if (deletion) {
-			deletion.newText = insertion.edit.newText + deletion.newText;
+			deletion.newText = insertion.newText + deletion.newText;
 		} else {
-			merged.push(edit);
+			merged.push(insertion);
 		}
-
-		focus ??= { edit, offsetWithin: insertion.valueOffset, target: 'value' };
 	}
 
-	return { edits: merged, focus };
+	return merged;
 }

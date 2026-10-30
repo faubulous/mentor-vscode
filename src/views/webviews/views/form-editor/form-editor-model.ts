@@ -6,7 +6,6 @@
  */
 
 import type { ValueKindHint } from '@src/utilities/value-kind';
-import type { FocusTarget } from '@src/services/editing/edit-plan';
 import type { ResourceId } from '@src/services/editing/resource-id';
 import type { TermRef } from '@src/services/editing/term-ref';
 
@@ -385,42 +384,6 @@ export interface ReadOnlyReason {
 	 * The explanation shown to the user.
 	 */
 	message: string;
-}
-
-/**
- * Where the webview should put the focus after an edit was applied. The host resolves it against
- * the re-parsed document, because an edit can renumber blank nodes and shift value indices.
- */
-export interface FocusHint {
-	/**
-	 * The resource that received the edit, or the resource that was created.
-	 */
-	resourceId: ResourceId;
-
-	/**
-	 * The resource holding a newly created nested node, so the webview can expand it.
-	 */
-	parentId?: ResourceId;
-
-	/**
-	 * The property row of the edited value, in the order of the resource detail.
-	 */
-	propertyIndex?: number;
-
-	/**
-	 * The value within the property row, in the order of the resource detail.
-	 */
-	valueIndex?: number;
-
-	/**
-	 * The item within a collection value.
-	 */
-	itemIndex?: number;
-
-	/**
-	 * Which cell of the row to focus. A `comment` is the run of comment lines holding the edit.
-	 */
-	target: FocusTarget;
 }
 
 /**
