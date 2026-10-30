@@ -3,7 +3,7 @@ import { applyTextEdits } from '@src/utilities/text-edits';
 import { DocumentReader } from './document-reader';
 import { EditPlan, ExpectedStatementChange } from './edit-plan';
 import { SynthesisInput } from './synthesis-context';
-import { getPatternKey, getTermKey } from './term-patterns';
+import { getGraphKey, getGraphPatternKey, getPatternKey, getTermKey } from './term-patterns';
 
 /**
  * The outcome of verifying a plan: the parsed result of the edited text, or why it is wrong.
@@ -48,41 +48,34 @@ export class EditVerifier {
 }
 
 /**
- * Compare the change of the statements of a document with the change a plan expects.
+ * Compare the change of the statements of a document with the change a plan expects, statement
+ * by statement and graph by graph.
  * @param before The statements before the edit.
  * @param after The statements after the edit.
  * @param expectedChanges The changes the plan expects.
  * @returns Why the change differs, or `undefined` when it is the expected one.
  */
 function _changeProblem(before: readonly QuadContext[], after: readonly QuadContext[], expectedChanges: readonly ExpectedStatementChange[]): string | undefined {
-	const changes = new Map<string, { statement: string; delta: number }>();
-
-	_count(changes, before, -1);
-	_count(changes, after, 1);
-
+	const actual = new Map<string, number>();
 	const expected = new Map<string, number>();
 
+	_count(actual, before, -1);
+	_count(actual, after, 1);
+
 	for (const change of expectedChanges) {
-		const statement = JSON.stringify([getPatternKey(change.subject), change.predicate, getPatternKey(change.object)]);
+		const key = _keyOf(getGraphPatternKey(change.graph), getPatternKey(change.subject), change.predicate, getPatternKey(change.object));
 
-		expected.set(statement, (expected.get(statement) ?? 0) + change.delta);
+		expected.set(key, (expected.get(key) ?? 0) + change.delta);
 	}
 
-	const actual = new Map<string, number>();
+	for (const key of new Set([...actual.keys(), ...expected.keys()])) {
+		const delta = actual.get(key) ?? 0;
+		const planned = expected.get(key) ?? 0;
 
-	for (const { statement, delta } of changes.values()) {
-		if (delta !== 0) {
-			if (!expected.has(statement)) {
-				return `The edit would change the statement ${_describe(statement)}, which it should leave as it is.`;
-			}
-
-			actual.set(statement, (actual.get(statement) ?? 0) + delta);
-		}
-	}
-
-	for (const [statement, delta] of expected) {
-		if ((actual.get(statement) ?? 0) !== delta) {
-			return `The edit would change the statement ${_describe(statement)} ${actual.get(statement) ?? 0} times instead of ${delta}.`;
+		if (delta !== planned) {
+			return planned === 0
+				? `The edit would change the statement ${_describe(key)}, which it should leave as it is.`
+				: `The edit would change the statement ${_describe(key)} ${delta} times instead of ${planned}.`;
 		}
 	}
 
@@ -91,31 +84,37 @@ function _changeProblem(before: readonly QuadContext[], after: readonly QuadCont
 
 /**
  * Count statements into the changes, by graph and statement.
- * @param changes The changes, by graph and statement.
+ * @param changes The changes by key.
  * @param quadContexts The statements.
  * @param sign `-1` for the statements before the edit, `1` for those after it.
  */
-function _count(changes: Map<string, { statement: string; delta: number }>, quadContexts: readonly QuadContext[], sign: number): void {
+function _count(changes: Map<string, number>, quadContexts: readonly QuadContext[], sign: number): void {
 	for (const quad of quadContexts) {
-		const statement = JSON.stringify([getTermKey(quad.subject), quad.predicate.value, getTermKey(quad.object)]);
-		const key = JSON.stringify([quad.graph.termType === 'DefaultGraph' ? '' : getTermKey(quad.graph), statement]);
-		const entry = changes.get(key);
+		const key = _keyOf(getGraphKey(quad.graph), getTermKey(quad.subject), quad.predicate.value, getTermKey(quad.object));
 
-		if (entry) {
-			entry.delta += sign;
-		} else {
-			changes.set(key, { statement, delta: sign });
-		}
+		changes.set(key, (changes.get(key) ?? 0) + sign);
 	}
 }
 
 /**
- * Write a statement key for a message.
- * @param statement The key.
- * @returns The statement as subject, predicate and object.
+ * The key of a statement in a graph.
+ * @param graph The key of the graph, empty for the default graph.
+ * @param subject The key of the subject.
+ * @param predicate The IRI of the predicate.
+ * @param object The key of the object.
+ * @returns The key.
  */
-function _describe(statement: string): string {
-	const [subject, predicate, object] = JSON.parse(statement) as string[];
+function _keyOf(graph: string, subject: string, predicate: string, object: string): string {
+	return JSON.stringify([graph, subject, predicate, object]);
+}
 
-	return `'${subject} <${predicate}> ${object}'`;
+/**
+ * Write a statement key for a message.
+ * @param key The key.
+ * @returns The statement as subject, predicate and object, with its graph when it has one.
+ */
+function _describe(key: string): string {
+	const [graph, subject, predicate, object] = JSON.parse(key) as string[];
+
+	return `'${subject} <${predicate}> ${object}'${graph ? ` in the graph ${graph}` : ''}`;
 }

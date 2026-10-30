@@ -1,7 +1,7 @@
-import { Term } from '@rdfjs/types';
+import { Quad_Graph, Term } from '@rdfjs/types';
 import { RDF, XSD } from '@faubulous/mentor-rdf';
 import { TermRef } from './term-ref';
-import { TermPattern } from './edit-plan';
+import { GraphPattern, TermPattern } from './edit-plan';
 
 /**
  * Convert an RDF/JS term into the pattern that matches it after a re-parse. Blank node
@@ -26,6 +26,15 @@ export function toTermPattern(term: Term): TermPattern {
 		default:
 			return { kind: 'iri', iri: term.value };
 	}
+}
+
+/**
+ * Convert the graph of a statement into the pattern that matches it after a re-parse.
+ * @param graph The graph, the default graph when absent.
+ * @returns The pattern matching the graph.
+ */
+export function toGraphPattern(graph: Quad_Graph | undefined): GraphPattern {
+	return !graph || graph.termType === 'DefaultGraph' ? { kind: 'default' } : toTermPattern(graph);
 }
 
 /**
@@ -94,5 +103,24 @@ export function getPatternKey(pattern: TermPattern): string {
  */
 function _literalKey(value: string, language: string | undefined, datatype: string | undefined): string {
 	return language ? `${JSON.stringify(value)}@${language.toLowerCase()}` : `${JSON.stringify(value)}^^${_normalizeDatatype(datatype)}`;
+}
+
+/**
+ * The key of the graph of a statement read from the document, as {@link getGraphPatternKey}
+ * gives it for a pattern.
+ * @param graph The graph.
+ * @returns The key, empty for the default graph.
+ */
+export function getGraphKey(graph: Quad_Graph): string {
+	return graph.termType === 'DefaultGraph' ? '' : getTermKey(graph);
+}
+
+/**
+ * The key of the graphs a pattern matches.
+ * @param pattern The pattern.
+ * @returns The key, empty for the default graph.
+ */
+export function getGraphPatternKey(pattern: GraphPattern): string {
+	return pattern.kind === 'default' ? '' : getPatternKey(pattern);
 }
 

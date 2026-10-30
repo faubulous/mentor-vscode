@@ -112,12 +112,22 @@ describe('EditVerifier', () => {
 		expect(result.ok).toBe(false);
 	});
 
+	it('rejects an edit that writes a statement into another graph than it names', () => {
+		const input = createSynthesisInput(`ex:g { ex:s ex:p ex:a . }\n`, { syntax: RdfSyntax.TriG });
+		const start = input.text.indexOf('ex:a');
+		const edit = { start: start + 4, end: start + 4, newText: ', ex:b' };
+		const added = { subject, predicate: `${EX}p`, object: iri('b'), delta: 1 };
+
+		expect(new EditVerifier(input).verify({ edits: [edit], expectedChanges: [{ ...added, graph: { kind: 'default' } }] }).ok).toBe(false);
+		expect(new EditVerifier(input).verify({ edits: [edit], expectedChanges: [{ ...added, graph: { kind: 'iri', iri: `${EX}g` } }] }).ok).toBe(true);
+	});
+
 	it('accepts an edit that changes exactly the statements it names', () => {
 		const input = inputOf(`ex:s ex:p ex:a .\n`);
 		const start = input.text.indexOf('ex:a');
 		const result = new EditVerifier(input).verify({
 			edits: [{ start, end: start + 4, newText: 'ex:b' }],
-			expectedChanges: [{ subject, predicate: `${EX}p`, object: iri('a'), delta: -1 }, { subject, predicate: `${EX}p`, object: iri('b'), delta: 1 }]
+			expectedChanges: [{ subject, predicate: `${EX}p`, object: iri('a'), graph: { kind: 'default' }, delta: -1 }, { subject, predicate: `${EX}p`, object: iri('b'), graph: { kind: 'default' }, delta: 1 }]
 		});
 
 		expect(result.ok).toBe(true);
@@ -127,7 +137,7 @@ describe('EditVerifier', () => {
 		const input = inputOf(`ex:s ex:p ex:a .\n`);
 		const result = new EditVerifier(input).verify({
 			edits: [{ start: input.text.length, end: input.text.length, newText: 'ex:s ex:q ex:b .\n' }],
-			expectedChanges: [{ subject, predicate: `${EX}q`, object: iri('c'), delta: 1 }]
+			expectedChanges: [{ subject, predicate: `${EX}q`, object: iri('c'), graph: { kind: 'default' }, delta: 1 }]
 		});
 
 		expect(result.ok).toBe(false);

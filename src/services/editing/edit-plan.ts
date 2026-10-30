@@ -8,9 +8,15 @@ import { TermRef } from './term-ref';
 export type TermPattern = TermRef | { kind: 'anyBlankNode' };
 
 /**
+ * The graph of a statement to look for: the default graph, or a named one as a term pattern.
+ */
+export type GraphPattern = { kind: 'default' } | TermPattern;
+
+/**
  * A change an edit is expected to make to the statements of the document, which the verifier
- * checks before the edit is applied: the number of statements matching a pattern of subject,
- * predicate and object changes by `delta` between the text before and the text after the edit.
+ * checks before the edit is applied: the number of statements matching a pattern of graph,
+ * subject, predicate and object changes by `delta` between the text before and the text after the
+ * edit.
  * Terms are matched exactly, except blank nodes, whose identifiers change when the edited text is
  * read again, so any blank node matches.
  */
@@ -29,6 +35,12 @@ export interface ExpectedStatementChange {
 	 * The object of the matching statements.
 	 */
 	object: TermPattern;
+
+	/**
+	 * The graph of the matching statements: where a removed statement was written, and where the
+	 * edit writes a new one.
+	 */
+	graph: GraphPattern;
 
 	/**
 	 * By how many the number of matching statements changes: `1` for a statement the edit
@@ -92,7 +104,7 @@ export function netExpectedChanges(expectedChanges: readonly ExpectedStatementCh
 	const net = new Map<string, ExpectedStatementChange>();
 
 	for (const change of expectedChanges) {
-		const key = JSON.stringify([change.subject, change.predicate, change.object]);
+		const key = JSON.stringify([change.graph, change.subject, change.predicate, change.object]);
 		const existing = net.get(key);
 
 		net.set(key, existing ? { ...existing, delta: existing.delta + change.delta } : change);

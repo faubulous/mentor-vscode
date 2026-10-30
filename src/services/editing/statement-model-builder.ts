@@ -6,11 +6,6 @@ import { CollectionItemSpan, ObjectSpan, PredicateGroup, StatementModel, Subject
 import { hasSourcePosition, isCommentToken, nextNonCommentTokenIndex, previousNonCommentTokenIndex, tokenEnd } from '@src/utilities/tokens';
 
 /**
- * The tokens the graph of an N-Quads statement is written as, between its object and its `.`.
- */
-const GRAPH_TERM_TOKEN_NAMES: ReadonlySet<string> = new Set([RdfToken.IRIREF.name, RdfToken.IRIREF_ABS.name, RdfToken.BLANK_NODE_LABEL.name]);
-
-/**
  * The tokens that open a bracketed construct, with the token that closes each.
  */
 const CLOSING_TOKEN_NAMES: Record<string, string> = {
@@ -45,8 +40,6 @@ export class StatementModelBuilder {
 	private readonly _chainSubjectTokens = new Set<IToken>();
 
 	private readonly _collections = new Map<string, CollectionItemSpan[]>();
-
-	private readonly _graphBlocks: { open: IToken; close: IToken }[] = [];
 
 	/**
 	 * Create a builder for a document.
@@ -88,7 +81,6 @@ export class StatementModelBuilder {
 			blocks,
 			blocksBySubject,
 			collections: this._collections,
-			graphBlocks: this._graphBlocks,
 			documentComments: this._documentCommentsAfter(blocks)
 		};
 	}
@@ -157,10 +149,6 @@ export class StatementModelBuilder {
 				const open = stack.pop()!;
 
 				this._matchingClose.set(open, index);
-
-				if (name === RdfToken.RCURLY.name) {
-					this._graphBlocks.push({ open: this._tokens[open], close: token });
-				}
 			}
 		});
 	}
@@ -333,8 +321,7 @@ export class StatementModelBuilder {
 	 * @returns The block holding no groups yet.
 	 */
 	private _createBlock(quad: QuadContext, nested: boolean): SubjectBlock {
-		const graph = quad.graph && quad.graph.termType !== 'DefaultGraph' ? quad.graph.value : undefined;
-
+		const named = quad.graph && quad.graph.termType !== 'DefaultGraph';
 		const startTokenIndex = this._tokenIndexByOffset.get(quad.subjectToken.startOffset)!;
 
 		return {
@@ -345,7 +332,8 @@ export class StatementModelBuilder {
 			leadingComments: nested ? [] : this._leadingCommentsBefore(startTokenIndex),
 			nested,
 			trailingSemicolons: [],
-			graph,
+			graph: named ? quad.graph : undefined,
+			graphToken: named ? quad.graphToken : undefined,
 			start: quad.subjectToken.startOffset,
 			end: tokenEnd(quad.subjectToken),
 			startTokenIndex,
@@ -465,10 +453,6 @@ export class StatementModelBuilder {
 			block.endTokenIndex = lastGroup.endTokenIndex;
 		}
 
-		block.graphBlock = this._graphBlocks.find(
-			candidate => candidate.open.startOffset < block.start && block.start < candidate.close.startOffset
-		);
-
 		if (block.nested) {
 			const closeIndex = this._matchingClose.get(block.startTokenIndex);
 
@@ -481,21 +465,15 @@ export class StatementModelBuilder {
 
 	/**
 	 * Find the `.` that ends a top level block, noting stray semicolons before it. A statement of
-	 * N-Quads writes its graph between its object and the `.`.
+	 * N-Quads writes its graph between its object and the `.`, at the graph token its statements
+	 * report.
 	 * @param block The block to terminate.
 	 */
 	private _findTerminator(block: SubjectBlock): void {
-		let graphTermPending = block.graph !== undefined && block.graphBlock === undefined;
-
 		for (let i = block.endTokenIndex + 1; i < this._tokens.length; i++) {
 			const token = this._tokens[i];
 
-			if (isCommentToken(token)) {
-				continue;
-			}
-
-			if (graphTermPending && GRAPH_TERM_TOKEN_NAMES.has(token.tokenType?.name ?? '')) {
-				graphTermPending = false;
+			if (isCommentToken(token) || token.startOffset === block.graphToken?.startOffset) {
 				continue;
 			}
 

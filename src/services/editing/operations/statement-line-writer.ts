@@ -1,8 +1,9 @@
+import { IToken } from '@faubulous/mentor-rdf-parsers';
 import { TextEditSpec, deleteRange, expandToWholeLines } from '@src/utilities/text-edits';
 import { lineEndOffset } from '@src/utilities/string';
 import { tokenEnd } from '@src/utilities/tokens';
 import { EditRejectionError } from '../edit-rejection';
-import { ObjectSpan, SubjectBlock } from '../statement-model';
+import { SubjectBlock } from '../statement-model';
 import { StatementValueWriter } from '../statement-value-writer';
 import { SynthesisContext } from '../synthesis-context';
 import { NewValue, ValueList, ValueListEntry, ValueListGroup } from '../value-list';
@@ -46,9 +47,7 @@ export class StatementLineWriter {
 	 * @throws {EditRejectionError} If a value cannot be written in the syntax.
 	 */
 	writeNewPredicate(block: SubjectBlock): TextEditSpec[] {
-		const object = block.groups[block.groups.length - 1].objects[0];
-
-		return [this._insertAfter(block, this._lines(block, object, this._list.added))];
+		return [this._insertAfter(block, this._lines(block, this._list.added))];
 	}
 
 	/**
@@ -59,11 +58,10 @@ export class StatementLineWriter {
 	 */
 	private _editLine(entry: ValueListGroup): TextEditSpec[] {
 		const { block, entries } = entry;
-		const object = entry.group.objects[0];
 		const keptIndex = entries.findIndex(item => item.kind === 'kept');
 
 		if (keptIndex < 0) {
-			return entries.length === 0 ? this._deleteLine(block) : [this._replaceLine(block, this._lines(block, object, _newValues(entries)))];
+			return entries.length === 0 ? this._deleteLine(block) : [this._replaceLine(block, this._lines(block, _newValues(entries)))];
 		}
 
 		const before = _newValues(entries.slice(0, keptIndex));
@@ -71,28 +69,28 @@ export class StatementLineWriter {
 		const edits: TextEditSpec[] = [];
 
 		if (before.length > 0) {
-			edits.push(this._insertBefore(block, this._lines(block, object, before)));
+			edits.push(this._insertBefore(block, this._lines(block, before)));
 		}
 
 		if (after.length > 0) {
-			edits.push(this._insertAfter(block, this._lines(block, object, after)));
+			edits.push(this._insertAfter(block, this._lines(block, after)));
 		}
 
 		return edits;
 	}
 
 	/**
-	 * Write the lines of new values in the subject and graph of a line.
+	 * Write the lines of new values in the subject and graph of a line, each written as the line
+	 * writes it.
 	 * @param block The line.
-	 * @param object The object of the line, after which its graph is written.
 	 * @param values The values.
 	 * @returns The lines.
 	 */
-	private _lines(block: SubjectBlock, object: ObjectSpan, values: readonly NewValue[]): string[] {
+	private _lines(block: SubjectBlock, values: readonly NewValue[]): string[] {
 		const { text } = this._context.model;
-		const subject = text.slice(block.subjectToken.startOffset, tokenEnd(block.subjectToken));
+		const subject = _textOf(text, block.subjectToken);
 		const predicate = this._context.writer.writePredicate(this._predicate);
-		const graph = block.terminator ? text.slice(object.end, block.terminator.startOffset).trimEnd() : '';
+		const graph = block.graphToken ? ` ${_textOf(text, block.graphToken)}` : '';
 
 		return values.map(value => `${subject} ${predicate} ${this._values.write(value)}${graph} .`);
 	}
@@ -165,3 +163,14 @@ function _lineEnd(block: SubjectBlock): number {
 
 	return tokenEnd(block.terminator);
 }
+
+/**
+ * The text a token is written as.
+ * @param text The document text.
+ * @param token The token.
+ * @returns The text of the token.
+ */
+function _textOf(text: string, token: IToken): string {
+	return text.slice(token.startOffset, tokenEnd(token));
+}
+
