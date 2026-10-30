@@ -109,25 +109,6 @@ describe('LineSerializer.serializeValue', () => {
 	});
 });
 
-describe('LineSerializer.toStatementText', () => {
-	it('puts commas between the top-level values only', () => {
-		expect(serializer.toStatementText('a owl:Class owl:Thing')).toBe('a owl:Class, owl:Thing');
-		expect(serializer.toStatementText('rdfs:range ( ex:a ex:b ) ex:c')).toBe('rdfs:range ( ex:a ex:b ), ex:c');
-		expect(serializer.toStatementText('rdfs:label "a, b"@en "c"')).toBe('rdfs:label "a, b"@en, "c"');
-	});
-
-	it('appends a placeholder for every blank node the statement keeps', () => {
-		expect(serializer.toStatementText('a owl:Class', 2)).toBe('a owl:Class, […], […]');
-		expect(serializer.toStatementText('rdfs:label', 1)).toBe('rdfs:label […]');
-	});
-
-	it('leaves predicate-only lines and comments alone', () => {
-		expect(serializer.toStatementText('rdfs:label')).toBe('rdfs:label');
-		expect(serializer.toStatementText('# c')).toBe('# c');
-		expect(serializer.toStatementText('')).toBe('');
-	});
-});
-
 describe('LineSerializer.escapeLiteral', () => {
 	it('escapes quotes, backslashes and control characters', () => {
 		expect(LineSerializer.escapeLiteral('a"b\\c\nd\te\r')).toBe('a\\"b\\\\c\\nd\\te\\r');

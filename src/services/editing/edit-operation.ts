@@ -4,6 +4,7 @@
  */
 
 import { CommentAnchor } from './comment-anchor';
+import { StatementValue } from './statement-value';
 import { TermRef } from './term-ref';
 
 /**
@@ -24,12 +25,20 @@ export type EditOperation =
 	| { op: 'addNestedNode'; parent: TermRef; predicate: string; initial: { predicate: string; value: TermRef }[] }
 	| { op: 'addNamespace'; prefix: string; iri: string }
 	/**
-	 * Rewrite the statement of a predicate from one line of Turtle: the predicate with its objects,
-	 * without the subject and the final period. A `[…]` (or `[]`) among the objects stands for a
-	 * blank node already written under the predicate, in order. Without `predicate` the line
-	 * states a new predicate of the subject.
+	 * Make `values` the values of a predicate of the subject, in the syntax of the document. Written
+	 * values that are not listed go with their nested statements; listed ones stay where they are
+	 * written. A new value is written next to the listed value before it, else before the one after
+	 * it, else in the place of the first value that goes, else as a new predicate of the subject.
+	 * Written values keep their order relative to values written elsewhere, such as in another
+	 * block or graph; within one statement they take the order given. No values removes the
+	 * predicate, as `deleteProperty` does.
 	 */
-	| { op: 'replaceStatement'; subject: TermRef; predicate?: string; text: string }
+	| { op: 'setValues'; subject: TermRef; predicate: string; values: StatementValue[] }
+	/**
+	 * Write the values of a predicate of the subject under another predicate, which the subject
+	 * must not carry yet.
+	 */
+	| { op: 'setPredicate'; subject: TermRef; predicate: string; newPredicate: string }
 	/**
 	 * Replace the comment lines written above the first statement of a predicate; an empty list
 	 * removes them.

@@ -117,6 +117,25 @@ export function mergePlans(plans: readonly EditPlan[]): EditPlan {
 }
 
 /**
+ * Add up the expectations of the same statement, dropping those that net out, as a value that goes
+ * and is written again does.
+ * @param expectations The expectations.
+ * @returns The net expectations.
+ */
+export function netExpectations(expectations: readonly QuadExpectation[]): QuadExpectation[] {
+	const net = new Map<string, QuadExpectation>();
+
+	for (const expectation of expectations) {
+		const key = JSON.stringify([expectation.subject, expectation.predicate, expectation.object]);
+		const existing = net.get(key);
+
+		net.set(key, existing ? { ...existing, delta: existing.delta + expectation.delta } : expectation);
+	}
+
+	return Array.from(net.values()).filter(expectation => expectation.delta !== 0);
+}
+
+/**
  * Resolve the focus of a plan to an offset in the edited text.
  * @param plan The plan whose focus to resolve.
  * @returns The offset in the edited text, or `undefined` if the plan requests no focus.

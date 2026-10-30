@@ -33,7 +33,7 @@ function rowsOf(result: ResourceDetail): (string | undefined)[] {
 	return result.properties.map(property => property.predicate.prefixedName);
 }
 
-const replace = pending([{ op: 'replaceStatement', subject, predicate: `${EX}p`, text: 'ex:p "x"' }]);
+const replace = pending([{ op: 'setValues', subject, predicate: `${EX}p`, values: [{ kind: 'term', term: { kind: 'literal', value: 'x' } }] }]);
 
 describe('PendingEdits', () => {
 	it('keeps an edit until the rows of the version it produced have arrived', () => {

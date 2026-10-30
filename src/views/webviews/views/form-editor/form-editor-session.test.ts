@@ -139,7 +139,7 @@ describe('FormEditorSession', () => {
 
 		await receive({ id: 'Ready' });
 
-		const outcome = await session.applyEdit('e1', 1, [{ op: 'replaceStatement', subject: { kind: 'iri', iri: `${EX}s` }, predicate: `${EX}p`, text: 'ex:p "new"' }]);
+		const outcome = await session.applyEdit('e1', 1, [{ op: 'setValues', subject: { kind: 'iri', iri: `${EX}s` }, predicate: `${EX}p`, values: [{ kind: 'term', term: { kind: 'literal', value: 'new' } }] }]);
 
 		expect(outcome).toMatchObject({ ok: true, version: 2 });
 		expect(document.getText()).toBe(`${PREAMBLE}ex:s ex:p "new" .\n`);
@@ -150,7 +150,7 @@ describe('FormEditorSession', () => {
 		expect(snapshots[1]).toMatchObject({ cause: 'formEdit', editId: 'e1' });
 		expect(snapshots[1].snapshot.version).toBe(2);
 		expect(posted.indexOf(snapshots[1])).toBeLessThan(posted.indexOf(applied));
-		expect(applied.focus).toEqual({ resourceId: `i:${EX}s`, propertyIndex: 0, target: 'predicate' });
+		expect(applied.focus).toEqual({ resourceId: `i:${EX}s`, propertyIndex: 0, valueIndex: 0, target: 'value' });
 	});
 
 	it('rejects an edit against a stale version and sends the current snapshot along', async () => {

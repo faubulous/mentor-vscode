@@ -1,6 +1,6 @@
 import { EditOperation } from '../edit-operation';
 import { TermRef } from '../term-ref';
-import { EditPlan, createPlan } from '../edit-plan';
+import { EditPlan, createPlan, netExpectations } from '../edit-plan';
 import { EditRejectionError } from '../edit-rejection';
 import { PredicateGroup, SubjectBlock } from '../statement-model';
 import { ValueOperations } from './value-operations';
@@ -9,6 +9,7 @@ import { deleteRange, expandToWholeLines } from '@src/utilities/text-edits';
 import { countStatementsWithin } from '@src/utilities/quad-contexts';
 import { SynthesisContext } from '../synthesis-context';
 import { toPatternFromRef, toTermPattern } from '../term-patterns';
+import { tokenEnd } from '@src/utilities/tokens';
 
 /**
  * The `deleteProperty` operation of the edit contract.
@@ -19,6 +20,11 @@ type DeletePropertyOperation = Extract<EditOperation, { op: 'deleteProperty' }>;
  * The `moveProperty` operation of the edit contract.
  */
 type MovePropertyOperation = Extract<EditOperation, { op: 'moveProperty' }>;
+
+/**
+ * The `setPredicate` operation of the edit contract.
+ */
+type SetPredicateOperation = Extract<EditOperation, { op: 'setPredicate' }>;
 
 /**
  * The offset of a group within the rewritten run of groups.
@@ -70,6 +76,42 @@ export class PropertyOperations {
 		return createPlan({
 			edits: [edit],
 			focus: { edit, offsetWithin: separator.length + predicate.length + 1, target: 'value' }
+		});
+	}
+
+	/**
+	 * Write the values of a predicate under another predicate: the predicate of every statement
+	 * of it is rewritten, the objects stay as they are.
+	 * @param operation The predicate and its replacement.
+	 * @returns The plan rewriting the predicates, or an empty plan when the predicate stays.
+	 * @throws {EditRejectionError} If the subject does not carry the predicate, already carries the new one, or the new one is not a valid IRI.
+	 */
+	setPredicate(operation: SetPredicateOperation): EditPlan {
+		const context = this._context;
+
+		if (operation.newPredicate === operation.predicate) {
+			return createPlan({});
+		}
+
+		const groups = this.findPredicateGroups(operation.subject, operation.predicate).map(({ group }) => group);
+		const carried = new StatementLocator(context.model).blocksOf(operation.subject).some(block => block.groups.some(group => group.predicateIri === operation.newPredicate));
+
+		if (carried) {
+			throw new EditRejectionError('ambiguous', 'The resource already carries this predicate.');
+		}
+
+		const written = context.writer.writePredicate(operation.newPredicate);
+		const edits = groups.map(group => ({ start: group.predicateToken.startOffset, end: tokenEnd(group.predicateToken), newText: written }));
+		const subject = toPatternFromRef(operation.subject);
+		const objects = groups.flatMap(group => group.objects);
+
+		return createPlan({
+			edits,
+			expectations: netExpectations(objects.flatMap(object => [
+				{ subject, predicate: operation.predicate, object: toTermPattern(object.quad.object), delta: -1 },
+				{ subject, predicate: operation.newPredicate, object: toTermPattern(object.quad.object), delta: 1 }
+			])),
+			focus: { edit: edits[0], offsetWithin: 0, target: 'predicate' }
 		});
 	}
 

@@ -1,0 +1,3 @@
+@prefix ex: <http://example.org/values#> .
+
+ex:s ex:p "a", ex:b .

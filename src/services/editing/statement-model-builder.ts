@@ -6,9 +6,14 @@ import { CollectionItemSpan, ObjectSpan, PredicateGroup, StatementModel, Subject
 import { hasSourcePosition, isCommentToken, nextNonCommentTokenIndex, previousNonCommentTokenIndex, tokenEnd } from '@src/utilities/tokens';
 
 /**
+ * The tokens the graph of an N-Quads statement is written as, between its object and its `.`.
+ */
+const GRAPH_TERM_TOKEN_NAMES: ReadonlySet<string> = new Set([RdfToken.IRIREF.name, RdfToken.IRIREF_ABS.name, RdfToken.BLANK_NODE_LABEL.name]);
+
+/**
  * The tokens that open a bracketed construct, with the token that closes each.
  */
-export const CLOSING_TOKEN_NAMES: Record<string, string> = {
+const CLOSING_TOKEN_NAMES: Record<string, string> = {
 	[RdfToken.LBRACKET.name]: RdfToken.RBRACKET.name,
 	[RdfToken.LPARENT.name]: RdfToken.RPARENT.name,
 	[RdfToken.LCURLY.name]: RdfToken.RCURLY.name,
@@ -460,6 +465,10 @@ export class StatementModelBuilder {
 			block.endTokenIndex = lastGroup.endTokenIndex;
 		}
 
+		block.graphBlock = this._graphBlocks.find(
+			candidate => candidate.open.startOffset < block.start && block.start < candidate.close.startOffset
+		);
+
 		if (block.nested) {
 			const closeIndex = this._matchingClose.get(block.startTokenIndex);
 
@@ -468,21 +477,25 @@ export class StatementModelBuilder {
 		} else {
 			this._findTerminator(block);
 		}
-
-		block.graphBlock = this._graphBlocks.find(
-			candidate => candidate.open.startOffset < block.start && block.start < candidate.close.startOffset
-		);
 	}
 
 	/**
-	 * Find the `.` that ends a top level block, noting stray semicolons before it.
+	 * Find the `.` that ends a top level block, noting stray semicolons before it. A statement of
+	 * N-Quads writes its graph between its object and the `.`.
 	 * @param block The block to terminate.
 	 */
 	private _findTerminator(block: SubjectBlock): void {
+		let graphTermPending = block.graph !== undefined && block.graphBlock === undefined;
+
 		for (let i = block.endTokenIndex + 1; i < this._tokens.length; i++) {
 			const token = this._tokens[i];
 
 			if (isCommentToken(token)) {
+				continue;
+			}
+
+			if (graphTermPending && GRAPH_TERM_TOKEN_NAMES.has(token.tokenType?.name ?? '')) {
+				graphTermPending = false;
 				continue;
 			}
 

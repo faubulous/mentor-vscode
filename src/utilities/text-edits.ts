@@ -161,11 +161,11 @@ export function expandToWholeLines(text: string, start: number, end: number): { 
 
 	const nextLine = nextLineStartOffset(text, end);
 
-	if (nextLine < text.length || lineStart === 0) {
+	if (text.includes('\n', end) || lineStart === 0) {
 		return { start: lineStart, end: nextLine };
 	}
 
-	// The last line of the file: take the line break before it instead of the missing one after.
+	// The last line of the file has no line break after it: take the one before it instead.
 	const breakLength = text[lineStart - 2] === '\r' ? 2 : 1;
 
 	return { start: lineStart - breakLength, end: nextLine };
