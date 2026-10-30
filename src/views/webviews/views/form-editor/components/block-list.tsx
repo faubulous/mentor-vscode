@@ -54,6 +54,12 @@ export interface BlockListProps {
 	pinnedIds?: ReadonlySet<string>;
 
 	/**
+	 * The resources whose writes are not done, whose cards keep their statements mounted even when
+	 * collapsed.
+	 */
+	busyIds?: ReadonlySet<string>;
+
+	/**
 	 * Expands an entry or folds it again.
 	 */
 	onToggle: (resourceId: string) => void;
@@ -87,7 +93,7 @@ export interface BlockListProps {
  * @param props The blocks, the scroll container and the state of the entries.
  * @returns The list.
  */
-export function BlockList({ blocks, dataService, scrollElement, cardStates, pinnedIds, onToggle, revealRequest, railElement, filtering, onCurrentChange }: BlockListProps): React.JSX.Element {
+export function BlockList({ blocks, dataService, scrollElement, cardStates, pinnedIds, busyIds, onToggle, revealRequest, railElement, filtering, onCurrentChange }: BlockListProps): React.JSX.Element {
 	const listRef = useRef<HTMLDivElement>(null);
 	const scrollMargin = useListPlacement(listRef, scrollElement);
 	const stickyHeight = useStickyHeight(scrollElement);
@@ -121,7 +127,7 @@ export function BlockList({ blocks, dataService, scrollElement, cardStates, pinn
 							style={{ position: 'absolute', top: 0, left: 0, width: '100%', transform: `translateY(${item.offset}px)` }}
 						>
 							{block.kind === 'resource'
-								? <ResourceCard summary={block.resource} dataService={dataService} expanded={cardStates.stateOf(block.id).open !== 'collapsed'} current={block.id === currentId} onToggle={onToggle} />
+								? <ResourceCard summary={block.resource} dataService={dataService} expanded={cardStates.stateOf(block.id).open !== 'collapsed'} writing={busyIds?.has(block.id) === true} current={block.id === currentId} onToggle={onToggle} />
 								: <CommentBlock text={block.text} />}
 						</div>
 					);

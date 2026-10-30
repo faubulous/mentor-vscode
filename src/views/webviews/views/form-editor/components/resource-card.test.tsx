@@ -5,6 +5,7 @@ import userEvent from '@testing-library/user-event';
 import { renderWebview } from '@src/utilities/mocks/webview-test-utils';
 import { createResourceDataServiceStub } from '@src/utilities/mocks/resource-data-service-fixtures';
 import { createResourceSummary } from '@src/utilities/mocks/resource-summary-fixtures';
+import { createIriView, createProperty, createTestResourceDetail } from '@src/utilities/mocks/statement-fixtures';
 import { FormEditorContext, FormEditorContextValue } from '../state/form-editor-context';
 import { ResourceCard } from './resource-card';
 
@@ -13,15 +14,16 @@ const TREE = createResourceSummary('Tree', { label: 'Apple tree', description: '
 /**
  * Render a card within a context.
  */
-function renderCard(context: Partial<FormEditorContextValue> = {}, expanded = false, summary = TREE) {
+function renderCard(context: Partial<FormEditorContextValue> = {}, expanded = false, summary = TREE, writing = false) {
 	const onToggle = vi.fn();
+	const dataService = createResourceDataServiceStub([createTestResourceDetail([createProperty('ex:p', [createIriView('ex:A', 'A')])])].map(detail => ({ ...detail, id: summary.id })));
 	const result = renderWebview(
 		<FormEditorContext.Provider value={{ readOnly: true, namespaces: [], ...context }}>
-			<ResourceCard summary={summary} dataService={createResourceDataServiceStub()} expanded={expanded} onToggle={onToggle} />
+			<ResourceCard summary={summary} dataService={dataService} expanded={expanded} writing={writing} onToggle={onToggle} />
 		</FormEditorContext.Provider>
 	);
 
-	return { ...result, onToggle };
+	return { ...result, onToggle, dataService };
 }
 
 describe('ResourceCard', () => {
@@ -72,4 +74,19 @@ describe('ResourceCard', () => {
 
 		expect(container.querySelector('.resource-card')?.classList.contains('is-current')).toBe(true);
 	});
+
+	it('keeps the statements of a collapsed card mounted, hidden, while their writes are not done', () => {
+		const { container } = renderCard({}, false, TREE, true);
+		const list = container.querySelector('.statement-list');
+
+		expect(list).not.toBeNull();
+		expect(list?.parentElement?.hidden).toBe(true);
+	});
+
+	it('shows no statements in a collapsed card without writes', () => {
+		const { container } = renderCard();
+
+		expect(container.querySelector('.statement-list')).toBeNull();
+	});
 });
+

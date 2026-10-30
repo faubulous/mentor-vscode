@@ -1,4 +1,4 @@
-import { KeyboardEvent } from 'react';
+import { KeyboardEvent, useEffect } from 'react';
 import { ResourceSummary } from '../form-editor-model';
 import { useResourceDetail } from '../hooks/use-resource-detail';
 import { IResourceDataService } from '../services/resource-data-service.interface';
@@ -27,6 +27,12 @@ export interface ResourceCardProps {
 	expanded: boolean;
 
 	/**
+	 * Whether writes of the statements of the card are not done yet: the statements stay mounted,
+	 * hidden while the card is collapsed, so they receive the data the writes wait for.
+	 */
+	writing?: boolean;
+
+	/**
 	 * Whether the card is the one under the top of the view, which the context bar names.
 	 */
 	current?: boolean;
@@ -45,12 +51,20 @@ export interface ResourceCardProps {
  * @param props The resource and its state.
  * @returns The card.
  */
-export function ResourceCard({ summary, dataService, expanded, current, onToggle }: ResourceCardProps): React.JSX.Element {
+export function ResourceCard({ summary, dataService, expanded, writing = false, current, onToggle }: ResourceCardProps): React.JSX.Element {
 	const { filterText, dominantTypeIri, revealedResourceId } = useFormEditorContext();
 	const { detail, stale } = useResourceDetail(dataService, summary.id);
 	const showType = summary.typeIri !== undefined && summary.typeIri !== dominantTypeIri;
 	const marked = current === true || revealedResourceId === summary.id;
 	const toggle = (): void => onToggle(summary.id);
+	const showsStatements = expanded || writing;
+
+	// A card showing its statements holds them current, wherever the list is scrolled to.
+	useEffect(() => {
+		if (showsStatements && (!detail || stale)) {
+			dataService.request([summary.id]);
+		}
+	}, [showsStatements, detail, stale, dataService, summary.id]);
 
 	const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
 		if (event.key === 'Enter' || event.key === ' ') {
@@ -71,13 +85,17 @@ export function ResourceCard({ summary, dataService, expanded, current, onToggle
 					<vscode-icon name={expanded ? 'chevron-up' : 'chevron-down'} size={16}></vscode-icon>
 				</span>
 			</div>
-			{(summary.description || expanded) && (
+			{(summary.description || showsStatements) && (
 				<div className="resource-card-body">
 					{summary.description && <div className="resource-card-description"><HighlightedText text={summary.description} query={filterText} /></div>}
 					{expanded && <div className="resource-card-iri">{_identifierOf(summary)}</div>}
-					{expanded && (detail
-						? <StatementList detail={detail} stale={stale} dataService={dataService} depth={0} visited={[summary.id]} />
-						: <div className="resource-form-loading">Loading…</div>)}
+					{showsStatements && (
+						<div hidden={!expanded}>
+							{detail
+								? <StatementList detail={detail} stale={stale} dataService={dataService} depth={0} visited={[summary.id]} />
+								: <div className="resource-form-loading">Loading…</div>}
+						</div>
+					)}
 				</div>
 			)}
 			{summary.usageCount !== undefined && (

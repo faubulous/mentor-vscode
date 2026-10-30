@@ -7,6 +7,11 @@ import { TypedTermReader } from '../services/statement/typed-term-reader';
  */
 export interface StatementRowData {
 	/**
+	 * The identifier of the resource the statement is about.
+	 */
+	resourceId: string;
+
+	/**
 	 * The resource the statement is about.
 	 */
 	subject: TermRef;

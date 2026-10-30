@@ -11,6 +11,7 @@ import { FormToolbar } from './components/form-toolbar';
 import { EmptyState, LoadingState, ProblemState, ReadOnlyBanner } from './components/resource-list-states';
 import { DocumentProblem, DocumentSnapshot, ResourceId } from './form-editor-model';
 import { FormEditorMessages, FormEditorWebviewMessage } from './form-editor-messages';
+import { useBusyResources } from './hooks/use-busy-resources';
 import { useFocusedBlock } from './hooks/use-focused-block';
 import { useFormBlocks } from './hooks/use-form-blocks';
 import { useScrolledPast } from './hooks/use-scrolled-past';
@@ -60,6 +61,7 @@ function FormEditor(): React.JSX.Element {
 	const hostService = useMemo(() => new EditingHostService(message => messagingRef.current?.postMessage(message)), []);
 	const controller = useMemo(() => new EditingController(hostService), [hostService]);
 	const focusedBlockId = useFocusedBlock(scrollElement);
+	const busyIds = useBusyResources(controller);
 	const routeUndo = useUndoRouting(scrollElement);
 
 	const onMessage = useCallback((message: FormEditorMessages) => {
@@ -181,8 +183,9 @@ function FormEditor(): React.JSX.Element {
 	// Nothing is edited in a document that cannot be written back.
 	const editable = snapshot !== undefined && snapshot.readOnly === undefined;
 
-	// The card holding the focus stays mounted while it is scrolled out of view.
-	const pinnedIds = useMemo(() => new Set(focusedBlockId !== undefined ? [focusedBlockId] : []), [focusedBlockId]);
+	// The card holding the focus, and those whose writes are not done, stay mounted while they are
+	// scrolled out of view.
+	const pinnedIds = useMemo(() => new Set([...busyIds, ...(focusedBlockId !== undefined ? [focusedBlockId] : [])]), [busyIds, focusedBlockId]);
 
 	const context: FormEditorContextValue = useMemo(() => ({
 		readOnly: !editable,
@@ -253,6 +256,7 @@ function FormEditor(): React.JSX.Element {
 													scrollElement={scrollElement}
 													cardStates={cardStates}
 													pinnedIds={pinnedIds}
+													busyIds={busyIds}
 													onToggle={handleToggle}
 													revealRequest={revealRequest}
 													railElement={railElement}

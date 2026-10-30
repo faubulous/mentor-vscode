@@ -55,7 +55,7 @@ export function useStatementRows({ detail, version, stale, editing, services }: 
 			return detail.properties.map((property, index) => ({ key: `read-${index}`, property }));
 		}
 
-		return rows.reconcile({ subject: detail.term, properties: detail.properties, version, stale, reader: services.reader, predicateTextOf: property => _predicateText(property, services) });
+		return rows.reconcile({ resourceId: detail.id, subject: detail.term, properties: detail.properties, version, stale, reader: services.reader, predicateTextOf: property => _predicateText(property, services) });
 		// The revision tells that rows opened or went outside of a render.
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [rows, detail, version, stale, services, revision]);
