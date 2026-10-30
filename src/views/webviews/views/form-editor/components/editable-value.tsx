@@ -1,7 +1,7 @@
+import { XSD } from '@faubulous/mentor-rdf/ontologies';
 import { TermView } from '../form-editor-model';
 import { StatementServices } from '../hooks/use-statement-services';
 import { LiteralDatatypes } from '../services/statement/literal-datatypes';
-import { XSD_STRING } from '../services/statement/well-known-iris';
 import { getDatatypeHint, getDatatypeLabel } from './datatype-labels';
 import { EditedRow } from './edited-row';
 import { LiteralField } from './literal-field';
@@ -75,7 +75,7 @@ export function EditableValue({ view, index, edited, ...context }: EditableValue
  * @returns The label, or `undefined` for plain text.
  */
 function _datatypeLabel(datatype: string | undefined, services: StatementServices): string | undefined {
-	if (!datatype || datatype === XSD_STRING) {
+	if (!datatype || datatype === XSD.string) {
 		return undefined;
 	}
 

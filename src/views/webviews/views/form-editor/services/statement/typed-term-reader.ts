@@ -1,8 +1,8 @@
+import { RDF, XSD } from '@faubulous/mentor-rdf/ontologies';
 import { getIriFromText, splitPrefixedName } from '@src/utilities/prefixed-name';
 import { ValueKind } from '@src/utilities/value-kind';
 import { TermRef } from '../../form-editor-model';
 import { TermProblem } from './term-problem';
-import { RDF_TYPE, XSD_NAMESPACE } from './well-known-iris';
 
 /**
  * What a typed text reads as: a term, or why it is none.
@@ -21,10 +21,10 @@ export type IriReading = TermReading<Extract<TermRef, { kind: 'iri' }>>;
  * the order they are tried.
  */
 const BARE_LITERALS: readonly { pattern: RegExp; datatype: string }[] = [
-	{ pattern: /^[+-]?\d+$/, datatype: `${XSD_NAMESPACE}integer` },
-	{ pattern: /^[+-]?\d*\.\d+$/, datatype: `${XSD_NAMESPACE}decimal` },
-	{ pattern: /^[+-]?(\d+\.\d*|\.\d+|\d+)[eE][+-]?\d+$/, datatype: `${XSD_NAMESPACE}double` },
-	{ pattern: /^(true|false)$/, datatype: `${XSD_NAMESPACE}boolean` }
+	{ pattern: /^[+-]?\d+$/, datatype: XSD.integer },
+	{ pattern: /^[+-]?\d*\.\d+$/, datatype: XSD.decimal },
+	{ pattern: /^[+-]?(\d+\.\d*|\.\d+|\d+)[eE][+-]?\d+$/, datatype: XSD.double },
+	{ pattern: /^(true|false)$/, datatype: XSD.boolean }
 ];
 
 /**
@@ -75,7 +75,7 @@ export class TypedTermReader {
 	 * @returns The IRI of the predicate, or why the text names none.
 	 */
 	readPredicate(text: string): IriReading {
-		return text.trim() === 'a' ? { term: { kind: 'iri', iri: RDF_TYPE } } : this.readIri(text);
+		return text.trim() === 'a' ? { term: { kind: 'iri', iri: RDF.type } } : this.readIri(text);
 	}
 
 	/**
