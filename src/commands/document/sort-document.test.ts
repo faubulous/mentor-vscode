@@ -46,6 +46,15 @@ afterEach(() => {
 });
 
 import { sortDocument } from '@src/commands/document/sort-document';
+import { TurtleDocument } from '@src/languages/turtle/turtle-document';
+import { DocumentSyntaxError } from '@src/services/document/document-syntax-error';
+
+/**
+ * A Turtle document context whose parse reports the given syntax errors.
+ */
+function turtleContext(syntaxErrors: DocumentSyntaxError[]): TurtleDocument {
+	return Object.assign(Object.create(TurtleDocument.prototype), { namespaces: {}, baseIri: undefined, getSyntaxErrors: () => syntaxErrors });
+}
 
 describe('sortDocument', () => {
 	it('should show error when no URI and no active editor', async () => {
@@ -59,15 +68,13 @@ describe('sortDocument', () => {
 		const uri = vscode.Uri.parse('file:///test.ttl');
 		const fakeDoc = { uri, getText: () => 'invalid turtle', languageId: 'turtle' };
 		(mockVscode.workspace as any).textDocuments = [fakeDoc];
-		vi.spyOn(mockVscode.languages, 'getDiagnostics').mockReturnValue([
-			{ severity: 0 } as any, // Error severity = 0
-		]);
+		mockDocumentContextService.contexts = { [uri.toString()]: turtleContext([{ message: 'Unexpected token', offset: 0 }]) };
 		const showErrorSpy = vi.spyOn(mockVscode.window, 'showErrorMessage');
 		await sortDocument(uri, {} as any);
 		expect(showErrorSpy).toHaveBeenCalledWith('This document has syntax errors and cannot be sorted.');
 	});
 
-	it('should ignore SHACL error diagnostics and continue sorting', async () => {
+	it('should sort a document that parses, whatever error diagnostics it has', async () => {
 		const uri = vscode.Uri.parse('file:///test.ttl');
 		const fakeDoc = {
 			uri,
@@ -80,10 +87,7 @@ describe('sortDocument', () => {
 			{ severity: 0, source: 'SHACL' } as any,
 		]);
 
-		const docKey = uri.toString();
-		mockDocumentContextService.contexts = {
-			[docKey]: { namespaces: {}, baseIri: undefined },
-		};
+		mockDocumentContextService.contexts = { [uri.toString()]: turtleContext([]) };
 
 		const showErrorSpy = vi.spyOn(mockVscode.window, 'showErrorMessage');
 		const applyEditSpy = vi.spyOn(mockVscode.workspace, 'applyEdit');
@@ -100,7 +104,6 @@ describe('sortDocument', () => {
 		const uri = vscode.Uri.parse('file:///test.ttl');
 		const fakeDoc = { uri, getText: () => 'valid turtle' };
 		(mockVscode.workspace as any).textDocuments = [fakeDoc];
-		vi.spyOn(mockVscode.languages, 'getDiagnostics').mockReturnValue([]);
 		mockDocumentContextService.contexts = {};
 		const showErrorSpy = vi.spyOn(mockVscode.window, 'showErrorMessage');
 		await sortDocument(uri, {} as any);
@@ -115,7 +118,6 @@ describe('sortDocument', () => {
 			positionAt: (offset: number) => new vscode.Position(0, offset),
 		};
 		(mockVscode.workspace as any).textDocuments = [fakeDoc];
-		vi.spyOn(mockVscode.languages, 'getDiagnostics').mockReturnValue([]);
 		const docKey = uri.toString();
 		mockDocumentContextService.contexts = {
 			[docKey]: { namespaces: {}, baseIri: undefined },

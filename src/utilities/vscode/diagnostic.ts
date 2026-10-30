@@ -54,26 +54,3 @@ export function getPrefixesWithErrorCode(document: vscode.TextDocument, diagnost
 
 	return Array.from(result);
 }
-
-/**
- * Indicate whether a diagnostic was reported by SHACL validation.
- * @param diagnostic The diagnostic to inspect.
- * @returns `true` if the diagnostic originates from SHACL validation, `false` otherwise.
- */
-function isShaclDiagnostic(diagnostic: vscode.Diagnostic): boolean {
-	return typeof diagnostic.source === 'string'
-		&& diagnostic.source.toLowerCase().includes('shacl');
-}
-
-/**
- * Indicate whether a document has errors that prevent it from being rewritten. SHACL
- * violations are excluded because they describe invalid data in a syntactically valid
- * document, which can still be parsed and serialized faithfully.
- * @param uri The URI of the document to inspect.
- * @returns `true` if the document has blocking errors, `false` otherwise.
- */
-export function hasBlockingErrors(uri: vscode.Uri): boolean {
-	return vscode.languages.getDiagnostics(uri).some(
-		(diagnostic) => diagnostic.severity === vscode.DiagnosticSeverity.Error && !isShaclDiagnostic(diagnostic)
-	);
-}

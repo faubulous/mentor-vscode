@@ -15,9 +15,11 @@ const URI = 'file:///workspace/test.ttl';
 
 /**
  * Create the document and its parsed context.
+ * @param body The statements, written after the prefix declarations.
+ * @param text The whole text, in place of the declarations and the statements.
  */
-function setup(body: string): { document: EditableTextDocument; context: TurtleDocument } {
-	const document = createEditableTextDocument(PREAMBLE + body, { uri: URI });
+function setup(body: string, text = PREAMBLE + body): { document: EditableTextDocument; context: TurtleDocument } {
+	const document = createEditableTextDocument(text, { uri: URI });
 	const context = createTurtleDocument(URI, RdfSyntax.Turtle);
 
 	context.parse(document.getText());
@@ -69,15 +71,22 @@ describe('FormEditorEditHandler', () => {
 		expect(document.getText()).toContain('"old"');
 	});
 
-	it('maps the read-only reasons of the document onto rejection reasons', async () => {
-		const { document, context } = setup('ex:s ex:p "old" .\n');
+	it('refuses a document whose text does not parse, and a template', async () => {
 		const handler = new FormEditorEditHandler();
+		const broken = setup('ex:s ex:p "old"\n');
+		const template = setup('', `---\n---\n${PREAMBLE}ex:s ex:p "old" .\n`);
 
-		const syntax = await handler.handle(setValueRequest(1, 'new'), { document, context, readOnly: { reason: 'syntaxErrors', message: 'broken' } });
-		const template = await handler.handle(setValueRequest(1, 'new'), { document, context, readOnly: { reason: 'template', message: 'template' } });
+		expect(await handler.handle(setValueRequest(1, 'new'), broken)).toMatchObject({ ok: false, reason: 'parseErrors' });
+		expect(await handler.handle(setValueRequest(1, 'new'), template)).toMatchObject({ ok: false, reason: 'readOnly' });
+	});
 
-		expect(syntax).toMatchObject({ ok: false, reason: 'parseErrors' });
-		expect(template).toMatchObject({ ok: false, reason: 'readOnly', message: 'template' });
+	it('edits a document that parses, whatever error diagnostics it has', async () => {
+		const { document, context } = setup('ex:s ex:p "old" .\n');
+
+		applyEditsTo(document);
+		vi.spyOn(vscode.languages, 'getDiagnostics').mockReturnValue([new vscode.Diagnostic(new vscode.Range(0, 0, 0, 1), 'A lint finding', vscode.DiagnosticSeverity.Error)] as unknown as ReturnType<typeof vscode.languages.getDiagnostics>);
+
+		expect(await new FormEditorEditHandler().handle(setValueRequest(1, 'new'), { document, context })).toEqual({ ok: true, version: 2 });
 	});
 
 	it('re-parses stale tokens before synthesizing, so the edit targets the current text', async () => {

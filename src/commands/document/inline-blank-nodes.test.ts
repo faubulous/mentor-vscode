@@ -89,9 +89,7 @@ describe('inlineBlankNodes command', () => {
 		(mockVscode.workspace as any).textDocuments = [fakeDoc];
 		const context = createTurtleDocument(uri);
 		mockDocumentContextService.contexts = { [uri.toString()]: context };
-		vi.spyOn(mockVscode.languages, 'getDiagnostics').mockReturnValue([
-			{ severity: 0 } as any, // Error severity = 0
-		]);
+		vi.spyOn(context, 'getSyntaxErrors').mockReturnValue([{ message: 'Unexpected token', offset: 0 }]);
 		const showErrorSpy = vi.spyOn(mockVscode.window, 'showErrorMessage');
 		await inlineBlankNodes.handler(uri);
 		expect(showErrorSpy).toHaveBeenCalledWith('This document has syntax errors and cannot be refactored.');
@@ -101,7 +99,6 @@ describe('inlineBlankNodes command', () => {
 		const uri = vscode.Uri.parse('file:///test.ttl');
 		const fakeDoc = { uri, getText: () => 'valid turtle' };
 		(mockVscode.workspace as any).textDocuments = [fakeDoc];
-		vi.spyOn(mockVscode.languages, 'getDiagnostics').mockReturnValue([]);
 		mockDocumentContextService.contexts = {};
 		const showErrorSpy = vi.spyOn(mockVscode.window, 'showErrorMessage');
 		await inlineBlankNodes.handler(uri);
@@ -116,9 +113,9 @@ describe('inlineBlankNodes command', () => {
 			positionAt: (offset: number) => new vscode.Position(0, offset),
 		};
 		(mockVscode.workspace as any).textDocuments = [fakeDoc];
-		vi.spyOn(mockVscode.languages, 'getDiagnostics').mockReturnValue([]);
 		const context = createTurtleDocument(uri);
 		mockDocumentContextService.contexts = { [uri.toString()]: context };
+		vi.spyOn(context, 'getSyntaxErrors').mockReturnValue([]);
 		const applyEditSpy = vi.spyOn(mockVscode.workspace, 'applyEdit');
 		await inlineBlankNodes.handler(uri);
 		expect(applyEditSpy).toHaveBeenCalled();

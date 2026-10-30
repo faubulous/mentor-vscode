@@ -160,6 +160,36 @@ describe('FormEditorSession', () => {
 		expect(postedOf(posted, 'DocumentSnapshot').map(message => message.snapshot.version)).toEqual([1, 1]);
 	});
 
+	it('lets a document that parses be edited, whatever error diagnostics it has', async () => {
+		vi.spyOn(vscode.languages, 'getDiagnostics').mockReturnValue([new vscode.Diagnostic(new vscode.Range(0, 0, 0, 1), 'A lint finding', vscode.DiagnosticSeverity.Error)] as unknown as ReturnType<typeof vscode.languages.getDiagnostics>);
+
+		const { posted, receive } = await createSession('ex:A a ex:Class .\n');
+
+		await receive({ id: 'Ready' });
+
+		expect(postedOf(posted, 'DocumentSnapshot')[0].snapshot).toMatchObject({ readOnly: undefined, problems: [] });
+	});
+
+	it('shows a document that does not parse read only, pointing at where it does not', async () => {
+		const { posted, receive } = await createSession('ex:A a ex:Class\n');
+
+		await receive({ id: 'Ready' });
+
+		const { snapshot } = postedOf(posted, 'DocumentSnapshot')[0];
+
+		expect(snapshot.readOnly?.reason).toBe('syntaxErrors');
+		expect(snapshot.problems.length).toBeGreaterThan(0);
+		expect(snapshot.problems[0].line).toBeGreaterThanOrEqual(2);
+	});
+
+	it('lets a document that states nothing but prefixes be edited', async () => {
+		const { posted, receive } = await createSession('');
+
+		await receive({ id: 'Ready' });
+
+		expect(postedOf(posted, 'DocumentSnapshot')[0].snapshot.readOnly).toBeUndefined();
+	});
+
 	it('rejects an edit against a stale version and sends the current snapshot along', async () => {
 		const { posted, receive } = await createSession('ex:s ex:p "old" .\n');
 
