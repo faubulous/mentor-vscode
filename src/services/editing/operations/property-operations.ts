@@ -6,7 +6,7 @@ import { PredicateGroup, SubjectBlock } from '../statement-model';
 import { ValueOperations } from './value-operations';
 import { StatementLocator } from '../statement-locator';
 import { SynthesisContext } from '../synthesis-context';
-import { toPatternFromRef, toTermPattern } from '../term-patterns';
+import { toGraphPattern, toPatternFromRef, toTermPattern } from '../term-patterns';
 import { TextEditSpec } from '@src/utilities/text-edits';
 import { tokenEnd } from '@src/utilities/tokens';
 
@@ -26,23 +26,32 @@ export class PropertyOperations {
 	constructor(private readonly _context: SynthesisContext) { }
 
 	/**
-	 * Add a statement with a predicate the subject does not carry yet, after its last predicate. A
-	 * nested block written on one line stays on one line; anything else puts the predicate on a line
-	 * of its own, indented like its neighbours. A predicate the subject already carries is handled by
-	 * the value operations, which append to its list instead.
-	 * @param subject The subject to add the predicate to.
+	 * The block a predicate the subject does not carry yet is written into: the brackets of a blank
+	 * node written inside another resource, else the last block of the subject.
+	 * @param subject The subject.
+	 * @returns The block.
+	 * @throws {EditRejectionError} If the subject has no block in the document.
+	 */
+	newPropertyBlock(subject: TermRef): SubjectBlock {
+		const blocks = new StatementLocator(this._context.model).blocksOf(subject);
+
+		return blocks.find(candidate => candidate.nested) ?? blocks[blocks.length - 1];
+	}
+
+	/**
+	 * Add a statement with a predicate the subject does not carry yet, after the last predicate of a
+	 * block. A nested block written on one line stays on one line; anything else puts the predicate
+	 * on a line of its own, indented like its neighbours. A predicate the subject already carries is
+	 * handled by the value operations, which append to its list instead.
+	 * @param block The block to write the statement into.
 	 * @param predicateIri The IRI of the predicate.
 	 * @param written The values as they are to appear in the text.
 	 * @returns The edit inserting the statement.
-	 * @throws {EditRejectionError} If the subject has no block in the document.
 	 */
-	newProperty(subject: TermRef, predicateIri: string, written: string): TextEditSpec {
-		const context = this._context;
-
-		const blocks = new StatementLocator(context.model).blocksOf(subject);
-		const block = blocks.find(candidate => candidate.nested) ?? blocks[blocks.length - 1];
-		const predicate = context.writer.writePredicate(predicateIri);
+	newProperty(block: SubjectBlock, predicateIri: string, written: string): TextEditSpec {
+		const predicate = this._context.writer.writePredicate(predicateIri);
 		const separator = this._separator(block);
+
 		return { start: block.end, end: block.end, newText: `${separator}${predicate} ${written}` };
 	}
 
@@ -75,8 +84,8 @@ export class PropertyOperations {
 		return createPlan({
 			edits,
 			expectedChanges: netExpectedChanges(objects.flatMap(object => [
-				{ subject, predicate: operation.predicate, object: toTermPattern(object.quad.object), delta: -1 },
-				{ subject, predicate: operation.newPredicate, object: toTermPattern(object.quad.object), delta: 1 }
+				{ subject, predicate: operation.predicate, object: toTermPattern(object.quad.object), graph: toGraphPattern(object.quad.graph), delta: -1 },
+				{ subject, predicate: operation.newPredicate, object: toTermPattern(object.quad.object), graph: toGraphPattern(object.quad.graph), delta: 1 }
 			]))
 		});
 	}

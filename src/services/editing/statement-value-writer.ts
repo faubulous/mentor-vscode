@@ -1,6 +1,6 @@
 import { RDF } from '@faubulous/mentor-rdf';
 import { statementsWithin } from '@src/utilities/quad-contexts';
-import { ExpectedStatementChange, TermPattern } from './edit-plan';
+import { ExpectedStatementChange, GraphPattern, TermPattern } from './edit-plan';
 import { EditRejectionError } from './edit-rejection';
 import { CollectionItemSpan } from './statement-model';
 import { StatementValue } from './statement-value';
@@ -38,14 +38,16 @@ export class StatementValueWriter {
 	}
 
 	/**
-	 * The statements a new value adds, as expected changes.
+	 * The statements a new value adds, as expected changes, all in the graph it is written in: a
+	 * list or a value taken over is written there whole.
+	 * @param graph The graph the value is written in.
 	 * @param subject The subject of the statement.
 	 * @param predicate The predicate of the statement.
 	 * @param value The value.
 	 * @returns The expected changes.
 	 */
-	expectedChangesOf(subject: TermPattern, predicate: string, value: StatementValue): ExpectedStatementChange[] {
-		return [{ subject, predicate, object: this._patternOf(value), delta: 1 }, ...this._nestedChangesOf(value)];
+	expectedChangesOf(graph: GraphPattern, subject: TermPattern, predicate: string, value: StatementValue): ExpectedStatementChange[] {
+		return [{ subject, predicate, object: this._patternOf(value), graph, delta: 1 }, ...this._nestedChangesOf(graph, value)];
 	}
 
 	/**
@@ -92,10 +94,11 @@ export class StatementValueWriter {
 
 	/**
 	 * The statements a value adds besides its own, as expected changes.
+	 * @param graph The graph the value is written in.
 	 * @param value The value.
 	 * @returns The expected changes.
 	 */
-	private _nestedChangesOf(value: StatementValue): ExpectedStatementChange[] {
+	private _nestedChangesOf(graph: GraphPattern, value: StatementValue): ExpectedStatementChange[] {
 		if (value.kind === 'term') {
 			return [];
 		}
@@ -107,6 +110,7 @@ export class StatementValueWriter {
 				subject: toTermPattern(quad.subject),
 				predicate: quad.predicate.value,
 				object: toTermPattern(quad.object),
+				graph,
 				delta: 1
 			}));
 		}
@@ -114,9 +118,9 @@ export class StatementValueWriter {
 		const node: TermPattern = { kind: 'anyBlankNode' };
 
 		return value.items.flatMap((item, index) => [
-			{ subject: node, predicate: RDF.first, object: this._patternOf(item), delta: 1 },
-			{ subject: node, predicate: RDF.rest, object: index < value.items.length - 1 ? node : { kind: 'iri', iri: RDF.nil }, delta: 1 },
-			...this._nestedChangesOf(item)
+			{ subject: node, predicate: RDF.first, object: this._patternOf(item), graph, delta: 1 },
+			{ subject: node, predicate: RDF.rest, object: index < value.items.length - 1 ? node : { kind: 'iri', iri: RDF.nil }, graph, delta: 1 },
+			...this._nestedChangesOf(graph, item)
 		]);
 	}
 

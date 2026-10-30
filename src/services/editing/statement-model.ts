@@ -1,5 +1,5 @@
 import { IToken, QuadContext } from '@faubulous/mentor-rdf-parsers';
-import { Term } from '@rdfjs/types';
+import { Quad_Graph, Term } from '@rdfjs/types';
 import { ResourceId } from './resource-id';
 
 /**
@@ -140,14 +140,16 @@ export interface SubjectBlock extends TokenSpan {
 	trailingSemicolons: IToken[];
 
 	/**
-	 * The named graph the block is written in, for TriG documents.
+	 * The named graph the block is written in, for TriG and N-Quads documents; the default graph
+	 * when absent.
 	 */
-	graph?: string;
+	graph?: Quad_Graph;
 
 	/**
-	 * The braces of the graph block enclosing this block, for TriG documents.
+	 * The token the graph is written at: the label before the braces of a TriG graph block, or the
+	 * term after the object of an N-Quads statement.
 	 */
-	graphBlock?: { open: IToken; close: IToken };
+	graphToken?: IToken;
 }
 
 /**
@@ -184,11 +186,6 @@ export interface StatementModel {
 	 * The items of every collection, by the identifier of its head node.
 	 */
 	collections: Map<string, CollectionItemSpan[]>;
-
-	/**
-	 * The graph blocks of a TriG document, in document order.
-	 */
-	graphBlocks: { open: IToken; close: IToken }[];
 
 	/**
 	 * The comments written after the last block, which close the document.
