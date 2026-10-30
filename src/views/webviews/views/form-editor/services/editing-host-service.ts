@@ -17,6 +17,11 @@ interface QueuedEdit {
 	operations: EditOperation[];
 
 	/**
+	 * The document version the operations were built from.
+	 */
+	baseVersion: number;
+
+	/**
 	 * Settles the outcome of the edit.
 	 */
 	resolve: (outcome: EditOutcome) => void;
@@ -24,8 +29,8 @@ interface QueuedEdit {
 
 /**
  * Implements the {@link IEditingHostService} over the webview message channel. Edits are sent one
- * at a time: the next one waits for the outcome of the previous one and is stamped with the
- * version the host reported by then, so a quick second edit is not rejected as stale.
+ * at a time, each with the version it was built from: an edit refers to written values by their
+ * offsets in that version, so the host must not apply it to another one.
  */
 export class EditingHostService implements IEditingHostService {
 	private readonly _queue: QueuedEdit[] = [];
@@ -34,30 +39,16 @@ export class EditingHostService implements IEditingHostService {
 
 	private _nextEditId = 1;
 
-	private _version = -1;
-
 	/**
 	 * Create the service over the message channel.
 	 * @param _post Posts a message to the extension host.
 	 */
 	constructor(private readonly _post: (message: FormEditorWebviewMessage) => void) { }
 
-	get version(): number {
-		return this._version;
-	}
-
-	/**
-	 * Record the document version the host last reported.
-	 * @param version The version.
-	 */
-	setVersion(version: number): void {
-		this._version = version;
-	}
-
-	applyEdit(operations: EditOperation[]): SubmittedEdit {
+	applyEdit(operations: EditOperation[], baseVersion: number): SubmittedEdit {
 		const editId = `edit-${this._nextEditId++}`;
 		const outcome = new Promise<EditOutcome>(resolve => {
-			this._queue.push({ editId, operations, resolve });
+			this._queue.push({ editId, operations, baseVersion, resolve });
 			this._sendNext();
 		});
 
@@ -72,8 +63,7 @@ export class EditingHostService implements IEditingHostService {
 	accept(message: FormEditorHostMessage): boolean {
 		switch (message.id) {
 			case 'EditApplied':
-				this._version = message.version;
-				this._settle(message.editId, { ok: true, version: message.version, focus: message.focus, renamedIds: message.renamedIds ?? [] });
+				this._settle(message.editId, { ok: true, version: message.version });
 				return true;
 			case 'EditRejected':
 				this._settle(message.editId, { ok: false, reason: message.reason, message: message.message, version: message.version });
@@ -111,6 +101,6 @@ export class EditingHostService implements IEditingHostService {
 		const edit = this._queue.shift()!;
 
 		this._inFlight = edit;
-		this._post({ id: 'ApplyEdit', editId: edit.editId, baseVersion: this._version, operations: edit.operations });
+		this._post({ id: 'ApplyEdit', editId: edit.editId, baseVersion: edit.baseVersion, operations: edit.operations });
 	}
 }

@@ -7,7 +7,7 @@ import { renderWebview } from '@src/utilities/mocks/webview-test-utils';
 import { createResourceDataServiceStub } from '@src/utilities/mocks/resource-data-service-fixtures';
 import { createResourceSummary } from '@src/utilities/mocks/resource-summary-fixtures';
 import { createIriView, createLiteralView, createProperty, createSampleResourceDetail, createTestResourceDetail } from '@src/utilities/mocks/statement-fixtures';
-import { EXAMPLE_NAMESPACE } from '@src/utilities/mocks/line-fixtures';
+import { EXAMPLE_NAMESPACE } from '@src/utilities/mocks/statement-fixtures';
 import { ResourceDetail, TermView } from '../form-editor-model';
 import { FormEditorContext, FormEditorContextValue } from '../state/form-editor-context';
 import { StatementList } from './statement-list';

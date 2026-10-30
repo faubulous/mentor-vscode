@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, screen } from '@testing-library/react';
+import { createResourceDataServiceStub } from '@src/utilities/mocks/resource-data-service-fixtures';
 import { renderWebview } from '@src/utilities/mocks/webview-test-utils';
 import { createResourceSummary } from '@src/utilities/mocks/resource-summary-fixtures';
-import { IResourceDataService } from '../services/resource-data-service.interface';
 import { FormEditorContext } from '../state/form-editor-context';
 import { ResourceCardStates } from '../state/resource-card-states';
 import { buildFormBlocks } from '../hooks/use-form-blocks';
@@ -22,15 +22,6 @@ class FakeResizeObserver {
 	unobserve(): void { }
 
 	disconnect(): void { }
-}
-
-/**
- * A data service that remembers what was asked of it.
- */
-function createDataService(): IResourceDataService & { requested: string[] } {
-	const requested: string[] = [];
-
-	return { requested, get: () => undefined, request: ids => requested.push(...ids), subscribe: () => () => undefined };
 }
 
 /**
@@ -72,7 +63,7 @@ describe('BlockList', () => {
 	});
 
 	it('renders the rows of the window only and asks for the statements around it', async () => {
-		const dataService = createDataService();
+		const dataService = createResourceDataServiceStub();
 		const scrollElement = createScrollElement(600);
 		const blocks = buildFormBlocks(RESOURCES, [['The end']], false);
 

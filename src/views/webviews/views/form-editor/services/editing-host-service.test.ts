@@ -17,35 +17,30 @@ function operation(value: string): EditOperation {
  */
 function createService(): { service: EditingHostService; posted: FormEditorWebviewMessage[] } {
 	const posted: FormEditorWebviewMessage[] = [];
-	const service = new EditingHostService(message => posted.push(message));
 
-	service.setVersion(3);
-
-	return { service, posted };
+	return { service: new EditingHostService(message => posted.push(message)), posted };
 }
 
 describe('EditingHostService', () => {
-	it('sends one edit at a time and stamps the next with the version the host reported', async () => {
+	it('sends one edit at a time, each with the version it was built from', async () => {
 		const { service, posted } = createService();
-
-		const first = service.applyEdit([operation('a')]);
-		const second = service.applyEdit([operation('b')]);
+		const first = service.applyEdit([operation('a')], 3);
+		const second = service.applyEdit([operation('b')], 3);
 
 		expect(posted).toHaveLength(1);
 		expect(posted[0]).toMatchObject({ id: 'ApplyEdit', editId: first.editId, baseVersion: 3 });
 
 		service.accept({ id: 'EditApplied', editId: first.editId, version: 4 });
 
-		await expect(first.outcome).resolves.toMatchObject({ ok: true, version: 4, renamedIds: [] });
-		expect(service.version).toBe(4);
+		await expect(first.outcome).resolves.toEqual({ ok: true, version: 4 });
 		expect(posted).toHaveLength(2);
-		expect(posted[1]).toMatchObject({ id: 'ApplyEdit', editId: second.editId, baseVersion: 4 });
+		expect(posted[1]).toMatchObject({ id: 'ApplyEdit', editId: second.editId, baseVersion: 3 });
 	});
 
 	it('resolves a rejection with its reason and sends the next edit', async () => {
 		const { service, posted } = createService();
-		const edit = service.applyEdit([operation('a')]);
-		const next = service.applyEdit([operation('b')]);
+		const edit = service.applyEdit([operation('a')], 3);
+		const next = service.applyEdit([operation('b')], 3);
 
 		service.accept({ id: 'EditRejected', editId: edit.editId, reason: 'notFound', message: 'gone', version: 3 });
 
@@ -56,7 +51,7 @@ describe('EditingHostService', () => {
 	it('ignores an answer for an edit that is not in flight', () => {
 		const { service, posted } = createService();
 
-		service.applyEdit([operation('a')]);
+		service.applyEdit([operation('a')], 1);
 
 		expect(service.accept({ id: 'EditApplied', editId: 'edit-99', version: 9 })).toBe(true);
 		expect(posted).toHaveLength(1);

@@ -130,18 +130,4 @@ export class UndoRoutingService {
 
 		return 'document';
 	}
-
-	/**
-	 * Note the value of a field after it undid or redid a step, so the field counts as untouched
-	 * again once it is back at the value it started with.
-	 * @param field The field.
-	 * @param value Its value now.
-	 */
-	settle(field: object, value: string): void {
-		const history = this._fields.get(field);
-
-		if (history) {
-			history.typed = value !== history.initial;
-		}
-	}
 }

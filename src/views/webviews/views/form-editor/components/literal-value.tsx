@@ -1,6 +1,6 @@
+import { XSD } from '@faubulous/mentor-rdf/ontologies';
 import { getLocalPartAndQuery } from '@src/utilities/uri';
 import { NamespaceInfo, TermRef } from '../form-editor-model';
-import { XSD_STRING } from '../line/well-known-iris';
 import { useFormEditorContext } from '../state/form-editor-context';
 
 /**
@@ -39,7 +39,7 @@ export function LiteralValue({ term }: LiteralValueProps): React.JSX.Element {
  * @returns The tag, or `undefined` for a plain string.
  */
 function _datatypeTagOf(datatype: string | undefined, namespaces: readonly NamespaceInfo[]): string | undefined {
-	if (!datatype || datatype === XSD_STRING) {
+	if (!datatype || datatype === XSD.string) {
 		return undefined;
 	}
 

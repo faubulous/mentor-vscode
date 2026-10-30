@@ -48,7 +48,6 @@ describe('UndoRoutingService.route', () => {
 		typed(service, field, 'Tree');
 
 		expect(service.route(field, 'undo', 'Trees')).toBe('field');
-		service.settle(field, 'Tree');
 		expect(service.route(field, 'undo', 'Tree')).toBe('document');
 	});
 
@@ -57,7 +56,6 @@ describe('UndoRoutingService.route', () => {
 
 		service.focus(field);
 		service.beforeInput(field, '"Tree"', 'insertText');
-		service.settle(field, '"Tree"');
 
 		expect(service.route(field, 'undo', '"Tree"')).toBe('document');
 	});
@@ -68,7 +66,6 @@ describe('UndoRoutingService.route', () => {
 		typed(service, field, 'a');
 		service.route(field, 'undo', 'ab');
 		service.beforeInput(field, 'ab', 'historyUndo');
-		service.settle(field, 'a');
 
 		expect(service.route(field, 'redo', 'a')).toBe('field');
 	});
@@ -78,7 +75,6 @@ describe('UndoRoutingService.route', () => {
 
 		typed(service, field, 'a');
 		service.route(field, 'undo', 'ab');
-		service.settle(field, 'a');
 
 		expect(service.route(field, 'redo', 'a')).toBe('field');
 		expect(service.route(field, 'redo', 'ab')).toBe('document');

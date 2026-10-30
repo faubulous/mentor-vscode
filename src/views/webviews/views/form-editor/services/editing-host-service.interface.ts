@@ -1,11 +1,11 @@
 import { EditOperation, EditRejectionReason } from '@src/services/editing/edit-operation';
-import { FocusHint, ResourceId } from '../form-editor-model';
 
 /**
- * How an edit ended.
+ * How an edit ended, with the document version after it: the version the edit produced, or the
+ * version the host refused it against.
  */
 export type EditOutcome =
-	| { ok: true; version: number; focus?: FocusHint; renamedIds: [ResourceId, ResourceId][] }
+	| { ok: true; version: number }
 	| { ok: false; reason: EditRejectionReason; message: string; version: number };
 
 /**
@@ -30,14 +30,11 @@ export interface SubmittedEdit {
  */
 export interface IEditingHostService {
 	/**
-	 * The document version the host last reported.
-	 */
-	readonly version: number;
-
-	/**
 	 * Apply the operations of one user action as one undo step.
 	 * @param operations The operations to apply.
+	 * @param baseVersion The document version the operations were built from, whose offsets their
+	 * anchors are; the host refuses them against any other version.
 	 * @returns The submitted edit.
 	 */
-	applyEdit(operations: EditOperation[]): SubmittedEdit;
+	applyEdit(operations: EditOperation[], baseVersion: number): SubmittedEdit;
 }

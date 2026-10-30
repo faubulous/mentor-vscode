@@ -6,6 +6,11 @@ import { IResourceDataService } from '@src/views/webviews/views/form-editor/serv
  */
 export interface ResourceDataServiceStub extends IResourceDataService {
 	/**
+	 * The document version the details belong to, which a test moves on as the host would.
+	 */
+	version: number;
+
+	/**
 	 * The identifiers requested so far, in order.
 	 */
 	requested: ResourceId[];
@@ -21,6 +26,7 @@ export function createResourceDataServiceStub(details: readonly ResourceDetail[]
 	const requested: ResourceId[] = [];
 
 	return {
+		version: 1,
 		requested,
 		get: id => byId.get(id),
 		request: ids => requested.push(...ids),
