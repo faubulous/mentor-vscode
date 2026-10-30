@@ -7,7 +7,7 @@ import { ResourceCardStates } from '../state/resource-card-states';
 /**
  * One row of the virtualized block list.
  */
-export interface BlockListItem {
+interface BlockListItem {
 	/**
 	 * The index of the block.
 	 */

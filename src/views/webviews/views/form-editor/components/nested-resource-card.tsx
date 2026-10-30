@@ -9,7 +9,7 @@ import { StatementList } from './statement-list';
  * The nesting depth beyond which blank nodes stop being rendered in place as cards, so that a
  * deeply nested structure cannot expand without bound.
  */
-export const MAX_NESTING_DEPTH = 3;
+const MAX_NESTING_DEPTH = 3;
 
 /**
  * Properties of the {@link NestedResourceCard} component.

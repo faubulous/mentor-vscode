@@ -106,7 +106,7 @@ export interface NestedResourceRef {
  * An RDF collection, written `( a b c )`. Its items have a defined order, unlike the several
  * values a predicate may simply carry.
  */
-export interface CollectionView {
+interface CollectionView {
 	/**
 	 * The items of the collection, in order.
 	 */

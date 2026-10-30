@@ -8,23 +8,26 @@ describe('PersistedViewState', () => {
 	});
 
 	it('repairs a state that lacks fields or holds them in another form', () => {
-		expect(PersistedViewState.read({ version: 1, font: 'mono' })).toEqual(new PersistedViewState());
-		expect(PersistedViewState.read({ version: 1, openIds: ['i:a', 3] }).openIds).toEqual([]);
-		expect(PersistedViewState.read({ version: 1, openIds: [], hideExternalDeclarations: 'yes' }).hideExternalDeclarations).toBeUndefined();
-		expect(PersistedViewState.read({ version: 1, openIds: [], mode: 'write' }).mode).toBeUndefined();
+		expect(PersistedViewState.read({ font: 'mono' })).toEqual(new PersistedViewState());
+		expect(PersistedViewState.read({ openIds: ['i:a', 3] }).openIds).toEqual([]);
+		expect(PersistedViewState.read({ openIds: [], hideExternalDeclarations: 'yes' }).hideExternalDeclarations).toBeUndefined();
+	});
+
+	it('reads a state stored by an earlier version, ignoring what it no longer keeps', () => {
+		expect(PersistedViewState.read({ version: 1, openIds: ['x'], mode: 'edit' })).toEqual(new PersistedViewState(['x']));
 	});
 
 	it('round trips through the stored form', () => {
-		const state = new PersistedViewState(['x'], 'u', true, 'edit');
+		const state = new PersistedViewState(['x'], 'u', true);
 
-		expect(state.toJSON()).toEqual({ version: 1, documentUri: 'u', openIds: ['x'], hideExternalDeclarations: true, mode: 'edit' });
+		expect(state.toJSON()).toEqual({ documentUri: 'u', openIds: ['x'], hideExternalDeclarations: true });
 		expect(PersistedViewState.read(JSON.parse(JSON.stringify(state)))).toEqual(state);
 	});
 
 	it('changes only the fields named', () => {
-		const state = new PersistedViewState(['x'], 'u', true, 'edit');
+		const state = new PersistedViewState(['x'], 'u', true);
 
-		expect(state.with({ openIds: ['y'] })).toEqual(new PersistedViewState(['y'], 'u', true, 'edit'));
-		expect(state.with({ mode: undefined, hideExternalDeclarations: undefined })).toEqual(new PersistedViewState(['x'], 'u'));
+		expect(state.with({ openIds: ['y'] })).toEqual(new PersistedViewState(['y'], 'u', true));
+		expect(state.with({ hideExternalDeclarations: undefined })).toEqual(new PersistedViewState(['x'], 'u'));
 	});
 });

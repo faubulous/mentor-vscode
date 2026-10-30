@@ -9,15 +9,15 @@ describe('buildFormBlocks', () => {
 		const blocks = buildFormBlocks(RESOURCES, [], false);
 
 		expect(blocks.map(block => `${block.kind}:${block.id}`)).toEqual([`comment:comment:${RESOURCES[0].id}:0`, `comment:comment:${RESOURCES[0].id}:1`, `resource:${RESOURCES[0].id}`, `resource:${RESOURCES[1].id}`]);
-		expect(blocks[1]).toMatchObject({ text: 'Above A\nsecond line', anchor: { kind: 'resource', resourceId: RESOURCES[0].id, subject: RESOURCES[0].term, run: 1 } });
+		expect(blocks[1]).toMatchObject({ text: 'Above A\nsecond line' });
 	});
 
-	it('closes the document with its trailing comments, each run named by its first line', () => {
+	it('closes the document with its trailing comments, a block per run', () => {
 		const blocks = buildFormBlocks(RESOURCES, [['The end', 'really'], ['Postscript']], false);
 
 		expect(blocks.slice(-2)).toEqual([
-			{ kind: 'comment', id: `${DOCUMENT_COMMENT_BLOCK_ID}:0`, text: 'The end\nreally', anchor: { kind: 'document', index: 0 } },
-			{ kind: 'comment', id: `${DOCUMENT_COMMENT_BLOCK_ID}:1`, text: 'Postscript', anchor: { kind: 'document', index: 2 } }
+			{ kind: 'comment', id: `${DOCUMENT_COMMENT_BLOCK_ID}:0`, text: 'The end\nreally' },
+			{ kind: 'comment', id: `${DOCUMENT_COMMENT_BLOCK_ID}:1`, text: 'Postscript' }
 		]);
 	});
 

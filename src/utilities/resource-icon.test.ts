@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { OWL, RDF, SH, SKOS, XSD } from '@faubulous/mentor-rdf';
 import * as fs from 'fs';
 import * as path from 'path';
-import { getDatatypeIconName, getPropertyIconName, getResourceIconName } from './resource-icon';
+import { getPropertyIconName, getResourceIconName } from './resource-icon';
 
 /**
  * The glyph names the Mentor icon font carries, read from the glyph sources the font is built
@@ -67,38 +67,13 @@ describe('getPropertyIconName', () => {
 		expect(getPropertyIconName(XSD.dateTime)).toBe('calendar');
 		expect(getPropertyIconName(XSD.boolean)).toBe('symbol-boolean');
 		expect(getPropertyIconName(XSD.base64Binary)).toBe('file-binary');
+		expect(getPropertyIconName(XSD.date)).toBe('calendar');
+		expect(getPropertyIconName(XSD.decimal)).toBe('symbol-number');
+		expect(getPropertyIconName(RDF.langString)).toBe('symbol-text');
 	});
 
 	it('falls back to the object property glyph for an undeclared or unknown range', () => {
 		expect(getPropertyIconName()).toBe('rdf-object-property');
 		expect(getPropertyIconName('http://example.org/Thing')).toBe('rdf-object-property');
-	});
-});
-
-describe('getDatatypeIconName', () => {
-	it('names the shape of the values a datatype holds', () => {
-		expect(getDatatypeIconName(XSD.date)).toBe('calendar');
-		expect(getDatatypeIconName(XSD.dateTime)).toBe('calendar');
-		expect(getDatatypeIconName(XSD.boolean)).toBe('symbol-boolean');
-		expect(getDatatypeIconName(XSD.base64Binary)).toBe('file-binary');
-		expect(getDatatypeIconName(XSD.integer)).toBe('symbol-number');
-		expect(getDatatypeIconName(XSD.decimal)).toBe('symbol-number');
-	});
-
-	it('treats a literal without a datatype as the text it is', () => {
-		expect(getDatatypeIconName()).toBe('symbol-text');
-		expect(getDatatypeIconName(XSD.string)).toBe('symbol-text');
-		expect(getDatatypeIconName(RDF.langString)).toBe('symbol-text');
-	});
-
-	it('names no glyph for a datatype it does not know', () => {
-		expect(getDatatypeIconName('http://example.org/types/thing')).toBeUndefined();
-	});
-
-	it('leaves a property with no range a relation, and one known to take literals text', () => {
-		expect(getPropertyIconName()).toBe('rdf-object-property');
-		expect(getPropertyIconName(undefined, 'literal')).toBe('symbol-text');
-		expect(getPropertyIconName('http://example.org/types/thing', 'literal')).toBe('symbol-text');
-		expect(getPropertyIconName('http://example.org/Person')).toBe('rdf-object-property');
 	});
 });

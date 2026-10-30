@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import { RDFS } from '@faubulous/mentor-rdf';
 import { TEST_NAMESPACES } from './mocks/statement-fixtures';
 import {
-	formatIri,
 	getIriFromPrefixedName,
 	getIriFromText,
 	getNamespaceIriFromPrefixedName,
@@ -103,15 +102,5 @@ describe('getIriFromText', () => {
 		expect(getIriFromText(TEST_NAMESPACES, 'rdfs:label')).toBe(RDFS.label);
 		expect(getIriFromText(TEST_NAMESPACES, 'foo:x')).toBeUndefined();
 		expect(getIriFromText(TEST_NAMESPACES, 'word')).toBeUndefined();
-	});
-});
-
-describe('formatIri', () => {
-	it('writes a prefixed name when a namespace covers the IRI', () => {
-		expect(formatIri(TEST_NAMESPACES, RDFS.label)).toBe('rdfs:label');
-	});
-
-	it('writes an IRI reference otherwise', () => {
-		expect(formatIri(TEST_NAMESPACES, 'http://other/x')).toBe('<http://other/x>');
 	});
 });
