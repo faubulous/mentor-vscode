@@ -1,7 +1,7 @@
 import { ValueKind } from '@src/utilities/value-kind';
 
 /**
- * A predicate the line editor knows: how it is written, what it means and what it takes.
+ * A predicate the statement editor knows: how it is written, what it means and what it takes.
  */
 export interface PredicateEntry {
 	/**

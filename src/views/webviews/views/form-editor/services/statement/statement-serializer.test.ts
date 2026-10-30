@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { OWL, RDF, RDFS, XSD } from '@faubulous/mentor-rdf';
-import { EXAMPLE_NAMESPACE, LINE_TEST_NAMESPACES } from '@src/utilities/mocks/line-fixtures';
-import { PropertyView, TermRef, TermView } from '../form-editor-model';
-import { LineSerializer } from './line-serializer';
+import { EXAMPLE_NAMESPACE, STATEMENT_TEST_NAMESPACES } from '@src/utilities/mocks/statement-vocabulary-fixtures';
+import { PropertyView, TermRef, TermView } from '../../form-editor-model';
+import { StatementSerializer } from './statement-serializer';
 
-const serializer = new LineSerializer(LINE_TEST_NAMESPACES);
+const serializer = new StatementSerializer(STATEMENT_TEST_NAMESPACES);
 
 /**
  * Make a term view.
@@ -34,7 +34,7 @@ function property(predicate: TermView, values: TermView[]): PropertyView {
 	return { predicate, values };
 }
 
-describe('LineSerializer.serializeProperty', () => {
+describe('StatementSerializer.serializeProperty', () => {
 	it('writes rdf:type as a and keeps the term views', () => {
 		const type = iri(RDF.type, 'rdf:type');
 		const owlClass = iri(OWL.Class, 'owl:Class');
@@ -102,14 +102,14 @@ describe('LineSerializer.serializeProperty', () => {
 	});
 });
 
-describe('LineSerializer.serializeValue', () => {
+describe('StatementSerializer.serializeValue', () => {
 	it('writes a value without collecting anything', () => {
 		expect(serializer.serializeValue(view({ kind: 'bnode', id: 'b1' }))).toBe('');
 		expect(serializer.serializeValue(literal('x'))).toBe('"x"');
 	});
 });
 
-describe('LineSerializer.toStatementText', () => {
+describe('StatementSerializer.toStatementText', () => {
 	it('puts commas between the top-level values only', () => {
 		expect(serializer.toStatementText('a owl:Class owl:Thing')).toBe('a owl:Class, owl:Thing');
 		expect(serializer.toStatementText('rdfs:range ( ex:a ex:b ) ex:c')).toBe('rdfs:range ( ex:a ex:b ), ex:c');
@@ -128,8 +128,8 @@ describe('LineSerializer.toStatementText', () => {
 	});
 });
 
-describe('LineSerializer.escapeLiteral', () => {
+describe('StatementSerializer.escapeLiteral', () => {
 	it('escapes quotes, backslashes and control characters', () => {
-		expect(LineSerializer.escapeLiteral('a"b\\c\nd\te\r')).toBe('a\\"b\\\\c\\nd\\te\\r');
+		expect(StatementSerializer.escapeLiteral('a"b\\c\nd\te\r')).toBe('a\\"b\\\\c\\nd\\te\\r');
 	});
 });

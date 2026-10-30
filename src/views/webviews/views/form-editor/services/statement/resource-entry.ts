@@ -1,5 +1,5 @@
 /**
- * A resource the line editor knows, from a vocabulary or from the document itself.
+ * A resource the statement editor knows, from a vocabulary or from the document itself.
  */
 export interface ResourceEntry {
 	/**

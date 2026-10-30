@@ -1,5 +1,5 @@
 import { OWL, RDF, RDFS, SKOS, XSD, _OWL, _RDF, _RDFS, _SKOS, _XSD } from '@faubulous/mentor-rdf';
-import { LineVocabulary } from '@src/views/webviews/views/form-editor/line/line-vocabulary';
+import { StatementVocabulary } from '@src/views/webviews/views/form-editor/services/statement/statement-vocabulary';
 
 /**
  * The namespace of the Dublin Core terms, which mentor-rdf has no constant for.
@@ -7,14 +7,14 @@ import { LineVocabulary } from '@src/views/webviews/views/form-editor/line/line-
 export const DCTERMS_NAMESPACE = 'http://purl.org/dc/terms/';
 
 /**
- * The namespace of the example resources of the line tests.
+ * The namespace of the example resources of the statement tests.
  */
 export const EXAMPLE_NAMESPACE = 'http://example.org/';
 
 /**
- * The namespaces the line tests declare.
+ * The namespaces the statement tests declare.
  */
-export const LINE_TEST_NAMESPACES: Readonly<Record<string, string>> = {
+export const STATEMENT_TEST_NAMESPACES: Readonly<Record<string, string>> = {
 	rdf: _RDF,
 	rdfs: _RDFS,
 	owl: _OWL,
@@ -25,13 +25,13 @@ export const LINE_TEST_NAMESPACES: Readonly<Record<string, string>> = {
 };
 
 /**
- * Build the vocabulary the line tests share: a few predicates of every range and a few
+ * Build the vocabulary the statement tests share: a few predicates of every range and a few
  * vocabulary and local resources.
  * @returns The vocabulary.
  */
-export function createTestLineVocabulary(): LineVocabulary {
-	return new LineVocabulary({
-		namespaces: LINE_TEST_NAMESPACES,
+export function createTestStatementVocabulary(): StatementVocabulary {
+	return new StatementVocabulary({
+		namespaces: STATEMENT_TEST_NAMESPACES,
 		predicates: [
 			{ curie: 'rdf:type', iri: RDF.type, label: 'type', range: 'resource' },
 			{ curie: 'rdfs:label', iri: RDFS.label, label: 'label', range: 'literal' },

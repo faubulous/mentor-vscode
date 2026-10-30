@@ -1,21 +1,21 @@
 import { describe, expect, it } from 'vitest';
 import { OWL, RDF, XSD, _XSD } from '@faubulous/mentor-rdf';
-import { EXAMPLE_NAMESPACE, LINE_TEST_NAMESPACES } from '@src/utilities/mocks/line-fixtures';
-import { TermView } from '../form-editor-model';
-import { LineParser } from './line-parser';
-import { LineSerializer } from './line-serializer';
-import { ParsedLine, isLineProblem } from './parsed-line';
+import { EXAMPLE_NAMESPACE, STATEMENT_TEST_NAMESPACES } from '@src/utilities/mocks/statement-vocabulary-fixtures';
+import { TermView } from '../../form-editor-model';
+import { StatementParser } from './statement-parser';
+import { StatementSerializer } from './statement-serializer';
+import { ParsedStatementText, isStatementTextProblem } from './parsed-statement-text';
 
-const parser = new LineParser(LINE_TEST_NAMESPACES);
-const serializer = new LineSerializer(LINE_TEST_NAMESPACES);
+const parser = new StatementParser(STATEMENT_TEST_NAMESPACES);
+const serializer = new StatementSerializer(STATEMENT_TEST_NAMESPACES);
 
 /**
  * Parse a line that must be a statement.
  */
-function statement(text: string): ParsedLine {
+function statement(text: string): ParsedStatementText {
 	const result = parser.parse(text);
 
-	if (isLineProblem(result)) {
+	if (isStatementTextProblem(result)) {
 		throw new Error(result.message);
 	}
 
@@ -28,7 +28,7 @@ function statement(text: string): ParsedLine {
 function problem(text: string): [string, number, number] {
 	const result = parser.parse(text);
 
-	if (!isLineProblem(result)) {
+	if (!isStatementTextProblem(result)) {
 		throw new Error('expected a problem');
 	}
 
@@ -42,7 +42,7 @@ function view(term: TermView['term'], prefixedName?: string): TermView {
 	return { term, editable: true, prefixedName };
 }
 
-describe('LineParser.parse', () => {
+describe('StatementParser.parse', () => {
 	it('reads a as rdf:type and prefixed names as IRIs', () => {
 		expect(statement('a owl:Class')).toEqual({ predicate: RDF.type, values: [{ kind: 'term', term: { kind: 'iri', iri: OWL.Class } }] });
 	});
@@ -80,9 +80,9 @@ describe('LineParser.parse', () => {
 		expect(statement('a owl:Class, owl:Thing;').values).toHaveLength(2);
 	});
 
-	it('reports what stops a line from being a statement', () => {
-		expect(problem('')).toEqual(['A line starts with its predicate', 0, 0]);
-		expect(problem('"x"')[0]).toBe('A line starts with its predicate');
+	it('reports what stops a text from being a statement', () => {
+		expect(problem('')).toEqual(['A statement starts with its predicate', 0, 0]);
+		expect(problem('"x"')[0]).toBe('A statement starts with its predicate');
 		expect(problem('foo:x "a"')).toEqual(['Unknown prefix "foo:"', 0, 5]);
 		expect(problem('label "a"')).toEqual(['"label" is not a predicate', 0, 5]);
 		expect(problem('ex:p "abc')).toEqual(['Unclosed quote', 5, 9]);
@@ -133,10 +133,10 @@ describe('round trips', () => {
 	});
 });
 
-describe('LineParser.unescapeLiteral', () => {
+describe('StatementParser.unescapeLiteral', () => {
 	it('reads the Turtle escapes', () => {
-		expect(LineParser.unescapeLiteral('a\\"b\\\\c\\n\\t\\r')).toBe('a"b\\c\n\t\r');
-		expect(LineParser.unescapeLiteral('\\u0041\\U00000042')).toBe('AB');
-		expect(LineParser.unescapeLiteral('plain')).toBe('plain');
+		expect(StatementParser.unescapeLiteral('a\\"b\\\\c\\n\\t\\r')).toBe('a"b\\c\n\t\r');
+		expect(StatementParser.unescapeLiteral('\\u0041\\U00000042')).toBe('AB');
+		expect(StatementParser.unescapeLiteral('plain')).toBe('plain');
 	});
 });

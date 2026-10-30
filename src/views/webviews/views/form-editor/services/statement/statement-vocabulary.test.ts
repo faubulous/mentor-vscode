@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { OWL, RDFS } from '@faubulous/mentor-rdf';
-import { EXAMPLE_NAMESPACE, LINE_TEST_NAMESPACES, createTestLineVocabulary } from '@src/utilities/mocks/line-fixtures';
-import { LineVocabulary } from './line-vocabulary';
+import { EXAMPLE_NAMESPACE, STATEMENT_TEST_NAMESPACES, createTestStatementVocabulary } from '@src/utilities/mocks/statement-vocabulary-fixtures';
+import { StatementVocabulary } from './statement-vocabulary';
 
-describe('LineVocabulary', () => {
-	const vocabulary = createTestLineVocabulary();
+describe('StatementVocabulary', () => {
+	const vocabulary = createTestStatementVocabulary();
 
 	it('finds a predicate by prefixed name, IRI reference or IRI', () => {
 		expect(vocabulary.predicate('rdfs:label')).toMatchObject({ label: 'label', range: 'literal' });
@@ -17,7 +17,7 @@ describe('LineVocabulary', () => {
 	});
 
 	it('synthesises rdf:type when the entries lack it', () => {
-		const bare = new LineVocabulary({ namespaces: LINE_TEST_NAMESPACES, predicates: [], resources: [] });
+		const bare = new StatementVocabulary({ namespaces: STATEMENT_TEST_NAMESPACES, predicates: [], resources: [] });
 
 		expect(bare.predicate('a')).toMatchObject({ curie: 'rdf:type', label: 'type', range: 'resource' });
 		expect(bare.predicate('rdf:type')).toBeDefined();
@@ -38,7 +38,7 @@ describe('LineVocabulary', () => {
 
 	it('exposes a copy of the namespaces', () => {
 		expect(vocabulary.namespaces.ex).toBe(EXAMPLE_NAMESPACE);
-		expect(vocabulary.namespaces).not.toBe(LINE_TEST_NAMESPACES);
+		expect(vocabulary.namespaces).not.toBe(STATEMENT_TEST_NAMESPACES);
 	});
 
 	it('resolves IRI references and declared prefixed names', () => {

@@ -1,11 +1,11 @@
 import { FocusEvent, KeyboardEvent, RefObject, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ValueKind } from '@src/utilities/value-kind';
-import { InputFieldElement } from '../input/input-field-element';
-import { InputFieldId } from '../input/input-field-id';
-import { InputFieldKeyAction } from '../input/input-field-key-action';
-import { InputFieldInputKind, InputFieldKeyContext } from '../input/input-field-key-context';
-import { InputFieldKeyResolver } from '../input/input-field-key-resolver';
-import { IStatementTextService } from '../services/statement-text-service.interface';
+import { InputFieldElement } from '../components/input/input-field-element';
+import { InputFieldId } from '../state/input-field-id';
+import { InputFieldKeyAction } from '../components/input/input-field-key-action';
+import { InputFieldInputKind, InputFieldKeyContext } from '../components/input/input-field-key-context';
+import { InputFieldKeyResolver } from '../components/input/input-field-key-resolver';
+import { IStatementTextService } from '../services/statement/statement-text-service.interface';
 import { EditableStatement } from '../state/editable-statement';
 import { EditableValue } from '../state/editable-value';
 import { StatementEditorState } from '../state/statement-editor-state';

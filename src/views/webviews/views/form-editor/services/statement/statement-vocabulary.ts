@@ -7,7 +7,7 @@ import { RDF_TYPE } from './well-known-iris';
  * The entries a vocabulary is built from. The caller assembles them from the term views of a
  * card, the resource summaries of the snapshot and the suggestions the host answered.
  */
-export interface LineVocabularyInput {
+export interface StatementVocabularyInput {
 	/**
 	 * Prefix to namespace IRI.
 	 */
@@ -25,11 +25,11 @@ export interface LineVocabularyInput {
 }
 
 /**
- * What the line editor knows about the terms it may meet: the declared prefixes, the predicates
+ * What the statement editor knows about the terms it may meet: the declared prefixes, the predicates
  * with their ranges and labels, and the resources it can offer, with constant-time lookups by
  * any spelling of a term.
  */
-export class LineVocabulary {
+export class StatementVocabulary {
 	/**
 	 * Prefix to namespace IRI.
 	 */
@@ -43,7 +43,7 @@ export class LineVocabulary {
 	 * Create a vocabulary from its entries. `rdf:type` is always known, so `a` can be written.
 	 * @param input The entries.
 	 */
-	constructor(input: LineVocabularyInput) {
+	constructor(input: StatementVocabularyInput) {
 		this.namespaces = { ...input.namespaces };
 		this._predicates = _indexByIri(input.predicates);
 		this._resources = _indexByIri(input.resources);

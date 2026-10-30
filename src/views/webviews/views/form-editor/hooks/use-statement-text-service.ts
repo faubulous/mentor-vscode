@@ -1,11 +1,11 @@
 import { useMemo } from 'react';
 import { formatIri } from '@src/utilities/prefixed-name';
 import { NamespaceInfo, ResourceDetail, ResourceSummary } from '../form-editor-model';
-import { LineVocabulary } from '../line/line-vocabulary';
-import { PredicateEntry } from '../line/predicate-entry';
-import { ResourceEntry } from '../line/resource-entry';
-import { StatementTextService } from '../services/statement-text-service';
-import { IStatementTextService } from '../services/statement-text-service.interface';
+import { StatementVocabulary } from '../services/statement/statement-vocabulary';
+import { PredicateEntry } from '../services/statement/predicate-entry';
+import { ResourceEntry } from '../services/statement/resource-entry';
+import { StatementTextService } from '../services/statement/statement-text-service';
+import { IStatementTextService } from '../services/statement/statement-text-service.interface';
 import { useFormEditorContext } from '../state/form-editor-context';
 
 /**
@@ -27,7 +27,7 @@ export function useStatementTextService(detail: ResourceDetail): IStatementTextS
  * @param resources The resources of the document.
  * @returns The vocabulary.
  */
-function _vocabularyOf(detail: ResourceDetail, namespaces: readonly NamespaceInfo[], resources: readonly ResourceSummary[] = []): LineVocabulary {
+function _vocabularyOf(detail: ResourceDetail, namespaces: readonly NamespaceInfo[], resources: readonly ResourceSummary[] = []): StatementVocabulary {
 	const prefixes = Object.fromEntries(namespaces.map(namespace => [namespace.prefix, namespace.iri]));
 	const predicates: PredicateEntry[] = [];
 	const entries: ResourceEntry[] = [];
@@ -53,5 +53,5 @@ function _vocabularyOf(detail: ResourceDetail, namespaces: readonly NamespaceInf
 		}
 	}
 
-	return new LineVocabulary({ namespaces: prefixes, predicates, resources: entries });
+	return new StatementVocabulary({ namespaces: prefixes, predicates, resources: entries });
 }

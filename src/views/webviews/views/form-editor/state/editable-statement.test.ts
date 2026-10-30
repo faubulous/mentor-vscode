@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { InputFieldId } from '../input/input-field-id';
+import { InputFieldId } from './input-field-id';
 import { EditableStatement } from './editable-statement';
 
 /**

@@ -1,20 +1,20 @@
 import { splitPrefixedName } from '@src/utilities/prefixed-name';
 import { getLocalPartAndQuery } from '@src/utilities/uri';
 import { ValueKind } from '@src/utilities/value-kind';
-import { LiteralDatatypes } from '../input/literal-datatypes';
-import { PropertyView, TermView } from '../form-editor-model';
-import { LineCanonicalizer } from '../line/line-canonicalizer';
-import { LineLexer } from '../line/line-lexer';
-import { LineParser } from '../line/line-parser';
-import { LineSerializer } from '../line/line-serializer';
-import { LineToken } from '../line/line-token';
-import { LineVocabulary } from '../line/line-vocabulary';
-import { isLineProblem } from '../line/parsed-line';
-import { TermDescriber } from '../line/term-describer';
-import { PillDisplay } from '../line/term-info';
-import { RDF_TYPE, XSD_STRING } from '../line/well-known-iris';
-import { EditableStatement } from '../state/editable-statement';
-import { EditableValue } from '../state/editable-value';
+import { LiteralDatatypes } from './literal-datatypes';
+import { PropertyView, TermView } from '../../form-editor-model';
+import { StatementCanonicalizer } from './statement-canonicalizer';
+import { StatementLexer } from './statement-lexer';
+import { StatementParser } from './statement-parser';
+import { StatementSerializer } from './statement-serializer';
+import { StatementToken } from './statement-token';
+import { StatementVocabulary } from './statement-vocabulary';
+import { isStatementTextProblem } from './parsed-statement-text';
+import { TermDescriber } from './term-describer';
+import { PillDisplay } from './term-info';
+import { RDF_TYPE, XSD_STRING } from './well-known-iris';
+import { EditableStatement } from '../../state/editable-statement';
+import { EditableValue } from '../../state/editable-value';
 import { IStatementTextService } from './statement-text-service.interface';
 
 /**
@@ -28,17 +28,17 @@ const LANGUAGE_SUFFIX = /^@[A-Za-z]+(-[A-Za-z0-9]+)*$/;
 const DATATYPE_SUFFIX = /^\^\^\S+$/;
 
 /**
- * Implements the {@link IStatementTextService} on the line lexer, parser, serializer and
+ * Implements the {@link IStatementTextService} on the statement lexer, parser, serializer and
  * canonicalizer of the form editor.
  */
 export class StatementTextService implements IStatementTextService {
-	private readonly _lexer = new LineLexer();
+	private readonly _lexer = new StatementLexer();
 
-	private readonly _parser: LineParser;
+	private readonly _parser: StatementParser;
 
-	private readonly _serializer: LineSerializer;
+	private readonly _serializer: StatementSerializer;
 
-	private readonly _canonicalizer: LineCanonicalizer;
+	private readonly _canonicalizer: StatementCanonicalizer;
 
 	private readonly _describer: TermDescriber;
 
@@ -46,10 +46,10 @@ export class StatementTextService implements IStatementTextService {
 	 * Create the service of a card.
 	 * @param vocabulary The terms the card knows.
 	 */
-	constructor(readonly vocabulary: LineVocabulary) {
-		this._parser = new LineParser(vocabulary.namespaces);
-		this._serializer = new LineSerializer(vocabulary.namespaces);
-		this._canonicalizer = new LineCanonicalizer(vocabulary);
+	constructor(readonly vocabulary: StatementVocabulary) {
+		this._parser = new StatementParser(vocabulary.namespaces);
+		this._serializer = new StatementSerializer(vocabulary.namespaces);
+		this._canonicalizer = new StatementCanonicalizer(vocabulary);
 		this._describer = new TermDescriber(vocabulary);
 	}
 
@@ -105,7 +105,7 @@ export class StatementTextService implements IStatementTextService {
 	problemOf(text: string): string | undefined {
 		const parsed = this._parser.parse(text);
 
-		return isLineProblem(parsed) ? parsed.message : undefined;
+		return isStatementTextProblem(parsed) ? parsed.message : undefined;
 	}
 
 	valueOfTypedText(text: string, range: ValueKind): EditableValue | undefined {
@@ -119,7 +119,7 @@ export class StatementTextService implements IStatementTextService {
 			return this._valueOfLineText(trimmed);
 		}
 
-		if (range !== 'literal' && LineLexer.bareDatatypeOf(trimmed)) {
+		if (range !== 'literal' && StatementLexer.bareDatatypeOf(trimmed)) {
 			return { kind: 'shorthandLiteral', text: trimmed };
 		}
 
@@ -132,7 +132,7 @@ export class StatementTextService implements IStatementTextService {
 
 	tagLabelOf(value: EditableValue): string {
 		if (value.kind === 'shorthandLiteral') {
-			const bare = LineLexer.bareDatatypeOf(value.text);
+			const bare = StatementLexer.bareDatatypeOf(value.text);
 
 			return bare ? LiteralDatatypes.of(this.vocabulary.iriOf(bare) ?? '')?.label ?? bare : 'Number';
 		}
@@ -152,7 +152,7 @@ export class StatementTextService implements IStatementTextService {
 
 	literalProblemOf(value: EditableValue): string | undefined {
 		if (value.kind === 'shorthandLiteral') {
-			return LineLexer.bareDatatypeOf(value.text.trim()) ? undefined : 'A number, or true or false';
+			return StatementLexer.bareDatatypeOf(value.text.trim()) ? undefined : 'A number, or true or false';
 		}
 
 		if (value.kind !== 'literal' || !value.suffix.startsWith('^^')) {
@@ -213,8 +213,8 @@ export class StatementTextService implements IStatementTextService {
 	 * @returns The value.
 	 */
 	private _valueOfLineText(text: string): EditableValue {
-		const line = `p ${text}`;
-		const groups = this._lexer.valueGroups(this._lexer.tokenize(line));
+		const statementText = `p ${text}`;
+		const groups = this._lexer.valueGroups(this._lexer.tokenize(statementText));
 
 		if (groups.length !== 1) {
 			return { kind: 'source', text };
@@ -223,7 +223,7 @@ export class StatementTextService implements IStatementTextService {
 		const group = groups[0];
 
 		if (group.list || group.items.length !== 1) {
-			return { kind: 'source', text: line.slice(group.start, group.end) };
+			return { kind: 'source', text: statementText.slice(group.start, group.end) };
 		}
 
 		return this._valueOfToken(group.items[0]);
@@ -234,30 +234,30 @@ export class StatementTextService implements IStatementTextService {
 	 * @param token The token.
 	 * @returns The value.
 	 */
-	private _valueOfToken(token: LineToken): EditableValue {
+	private _valueOfToken(token: StatementToken): EditableValue {
 		switch (token.kind) {
 			case 'literal':
-				return { kind: 'literal', value: LineParser.unescapeLiteral(token.value), suffix: token.suffix };
+				return { kind: 'literal', value: StatementParser.unescapeLiteral(token.value), suffix: token.suffix };
 			case 'nestedNode':
 				return { kind: 'nestedNode' };
 			case 'iri':
 				return { kind: 'resource', text: token.text };
 			case 'name':
-				return LineLexer.bareDatatypeOf(token.text) ? { kind: 'shorthandLiteral', text: token.text } : { kind: 'resource', text: token.text };
+				return StatementLexer.bareDatatypeOf(token.text) ? { kind: 'shorthandLiteral', text: token.text } : { kind: 'resource', text: token.text };
 			default:
 				return { kind: 'source', text: token.text };
 		}
 	}
 
 	/**
-	 * Write a value as it stands on the line.
+	 * Write a value as it stands in the statement text.
 	 * @param value The value.
-	 * @returns The text, empty for a blank node, which is not written on the line.
+	 * @returns The text, empty for a blank node, which is not written in the statement text.
 	 */
 	private _valueText(value: EditableValue): string {
 		switch (value.kind) {
 			case 'literal':
-				return `"${LineSerializer.escapeLiteral(value.value)}"${StatementTextService.validSuffix(value.suffix)}`;
+				return `"${StatementSerializer.escapeLiteral(value.value)}"${StatementTextService.validSuffix(value.suffix)}`;
 			case 'nestedNode':
 				return '';
 			default:

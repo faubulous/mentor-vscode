@@ -1,16 +1,16 @@
 import { splitPrefixedName } from '@src/utilities/prefixed-name';
 import { getLocalPartAndQuery } from '@src/utilities/uri';
 import { humanize } from '@src/utilities/string';
-import { TermView } from '../form-editor-model';
-import { LineLexer } from './line-lexer';
-import { LineToken } from './line-token';
-import { LineVocabulary } from './line-vocabulary';
+import { TermView } from '../../form-editor-model';
+import { StatementLexer } from './statement-lexer';
+import { StatementToken } from './statement-token';
+import { StatementVocabulary } from './statement-vocabulary';
 import { ValueKind } from '@src/utilities/value-kind';
-import { LineValueKind, PillDisplay, PredicateInfo, ValueInfo } from './term-info';
+import { StatementValueKind, PillDisplay, PredicateInfo, ValueInfo } from './term-info';
 import { LABEL_PREDICATE_IRIS, RDF_TYPE } from './well-known-iris';
 
 /**
- * Tells what the tokens of a line denote against a vocabulary: whether the first is a predicate
+ * Tells what the tokens of a statement text denote against a vocabulary: whether the first is a predicate
  * and what it takes, what kind of value each of the others is, and how a resource is shown.
  */
 export class TermDescriber {
@@ -18,14 +18,14 @@ export class TermDescriber {
 	 * Create a describer.
 	 * @param _vocabulary The vocabulary of the card.
 	 */
-	constructor(private readonly _vocabulary: LineVocabulary) { }
+	constructor(private readonly _vocabulary: StatementVocabulary) { }
 
 	/**
 	 * Indicate whether a value kind is rendered with a ring: every kind of resource.
 	 * @param kind The value kind.
 	 * @returns `true` for a resource.
 	 */
-	static isResourceKind(kind: LineValueKind): boolean {
+	static isResourceKind(kind: StatementValueKind): boolean {
 		return kind === 'vocabularyTerm' || kind === 'documentResource' || kind === 'newResource' || kind === 'externalResource';
 	}
 
@@ -43,13 +43,13 @@ export class TermDescriber {
 	}
 
 	/**
-	 * Describe the first token of a line as a predicate.
-	 * @param token The token, or `undefined` for an empty line.
+	 * Describe the first token of a statement text as a predicate.
+	 * @param token The token, or `undefined` for an empty statement.
 	 * @returns What the token denotes.
 	 */
-	describePredicate(token: LineToken | undefined): PredicateInfo {
+	describePredicate(token: StatementToken | undefined): PredicateInfo {
 		if (!token) {
-			return { error: 'A line starts with its predicate' };
+			return { error: 'A statement starts with its predicate' };
 		}
 
 		if (token.kind === 'iri') {
@@ -60,7 +60,7 @@ export class TermDescriber {
 		}
 
 		if (token.kind !== 'name') {
-			return { error: 'A line starts with its predicate' };
+			return { error: 'A statement starts with its predicate' };
 		}
 
 		return this._describeNamedPredicate(token.text);
@@ -71,7 +71,7 @@ export class TermDescriber {
 	 * @param token The predicate token.
 	 * @returns The range.
 	 */
-	rangeOf(token: LineToken | undefined): ValueKind {
+	rangeOf(token: StatementToken | undefined): ValueKind {
 		const info = this.describePredicate(token);
 
 		return info.error === undefined ? info.range : 'any';
@@ -82,7 +82,7 @@ export class TermDescriber {
 	 * @param token The token.
 	 * @returns What the token denotes.
 	 */
-	describeValue(token: LineToken): ValueInfo {
+	describeValue(token: StatementToken): ValueInfo {
 		switch (token.kind) {
 			case 'literal':
 				return { kind: 'literal' };
@@ -104,7 +104,7 @@ export class TermDescriber {
 	 * @param token The token.
 	 * @returns The IRI, or `undefined` for tokens that do not denote one.
 	 */
-	tokenIri(token: LineToken): string | undefined {
+	tokenIri(token: StatementToken): string | undefined {
 		if (token.kind === 'iri') {
 			return _innerIri(token.text);
 		}
@@ -121,18 +121,18 @@ export class TermDescriber {
 	 * @param token The token.
 	 * @returns `true` for a resource.
 	 */
-	isResourceToken(token: LineToken): boolean {
+	isResourceToken(token: StatementToken): boolean {
 		return (token.kind === 'name' || token.kind === 'iri') && TermDescriber.isResourceKind(this.describeValue(token).kind);
 	}
 
 	/**
 	 * Indicate whether an item is deleted and skipped as a whole: a valid predicate, a resource,
 	 * or a `[` typed for a new nested node.
-	 * @param items The items of the line.
+	 * @param items The items of the statement text.
 	 * @param index The index of the item.
 	 * @returns `true` for an atomic item.
 	 */
-	isAtomicToken(items: readonly LineToken[], index: number): boolean {
+	isAtomicToken(items: readonly StatementToken[], index: number): boolean {
 		const token = items[index];
 
 		if (index === 0) {
@@ -143,11 +143,11 @@ export class TermDescriber {
 	}
 
 	/**
-	 * Indicate whether the predicate of a line is a label predicate, whose values are shown bold.
+	 * Indicate whether the predicate of a statement text is a label predicate, whose values are shown bold.
 	 * @param token The predicate token.
 	 * @returns `true` for a label predicate.
 	 */
-	isLabelPredicate(token: LineToken | undefined): boolean {
+	isLabelPredicate(token: StatementToken | undefined): boolean {
 		const iri = token ? this.tokenIri(token) : undefined;
 
 		return iri !== undefined && LABEL_PREDICATE_IRIS.has(iri);
@@ -250,7 +250,7 @@ export class TermDescriber {
 	 * @returns What it denotes.
 	 */
 	private _describeNamedValue(text: string): ValueInfo {
-		const datatype = LineLexer.bareDatatypeOf(text);
+		const datatype = StatementLexer.bareDatatypeOf(text);
 
 		if (datatype) {
 			return { kind: 'shorthandLiteral', datatype };

@@ -1,4 +1,4 @@
-import { XSD_NAMESPACE } from '../line/well-known-iris';
+import { XSD_NAMESPACE } from './well-known-iris';
 
 /**
  * A datatype the literal fields know: how it is labelled and what text it takes.

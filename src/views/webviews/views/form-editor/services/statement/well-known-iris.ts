@@ -1,5 +1,5 @@
 /**
- * The IRIs the line editor treats specially. Spelled out here rather than imported from
+ * The IRIs the statement text editor treats specially. Spelled out here rather than imported from
  * mentor-rdf, because that library is not tree-shaken and importing one constant of it adds
  * about 740 KB to the webview bundle; this is the one place in the browser side that names them.
  */

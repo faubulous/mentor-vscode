@@ -1,26 +1,26 @@
-import { LineToken, LiteralToken, ValueGroup } from './line-token';
+import { StatementToken, LiteralToken, ValueGroup } from './statement-token';
 
 const PUNCTUATION = new Set([',', ';', '(', ')']);
 const TAG_CHARACTER = /[A-Za-z0-9-]/;
 
 /**
- * The datatypes a bare number or boolean on a line stands for.
+ * The datatypes a bare number or boolean in a statement text stands for.
  */
 export type BareDatatype = 'xsd:boolean' | 'xsd:integer' | 'xsd:decimal' | 'xsd:double';
 
 /**
- * Splits the text of a statement line into tokens. Every character of the line belongs to
+ * Splits the text of a statement text into tokens. Every character of the statement text belongs to
  * exactly one token, so the tokens can be laid over the text for rendering.
  */
-export class LineLexer {
+export class StatementLexer {
 	/**
-	 * Indicate whether a character separates the terms of a line: whitespace, `,`, `;` or a list
+	 * Indicate whether a character separates the terms of a statement text: whitespace, `,`, `;` or a list
 	 * bracket.
 	 * @param character The character to test.
 	 * @returns `true` for a separator.
 	 */
 	static isSeparator(character: string | undefined): boolean {
-		return LineLexer.isWhitespace(character) || character === ',' || character === ';' || character === '(' || character === ')';
+		return StatementLexer.isWhitespace(character) || character === ',' || character === ';' || character === '(' || character === ')';
 	}
 
 	/**
@@ -33,17 +33,17 @@ export class LineLexer {
 	}
 
 	/**
-	 * Indicate whether a line is a comment, which starts with `#`.
-	 * @param text The text of the line.
-	 * @returns `true` for a comment line.
+	 * Indicate whether a statement text is a comment, which starts with `#`.
+	 * @param text The statement text.
+	 * @returns `true` for a comment.
 	 */
 	static isComment(text: string | undefined): boolean {
 		return /^\s*#/.test(text ?? '');
 	}
 
 	/**
-	 * Get the text of a comment line without its `#` and the space after it.
-	 * @param text The text of the line.
+	 * Get the text of a comment without its `#` and the space after it.
+	 * @param text The statement text.
 	 * @returns The comment text.
 	 */
 	static stripComment(text: string | undefined): string {
@@ -77,12 +77,12 @@ export class LineLexer {
 	}
 
 	/**
-	 * Split the text of a line into tokens.
-	 * @param text The text of the line.
+	 * Split the text of a statement text into tokens.
+	 * @param text The statement text.
 	 * @returns The tokens, covering the text.
 	 */
-	tokenize(text: string): LineToken[] {
-		const tokens: LineToken[] = [];
+	tokenize(text: string): StatementToken[] {
+		const tokens: StatementToken[] = [];
 		let index = 0;
 
 		while (index < text.length) {
@@ -97,31 +97,31 @@ export class LineLexer {
 
 	/**
 	 * Get the tokens that carry meaning: everything except whitespace and punctuation.
-	 * @param tokens The tokens of a line.
+	 * @param tokens The tokens of a statement text.
 	 * @returns The items.
 	 */
-	items(tokens: readonly LineToken[]): LineToken[] {
+	items(tokens: readonly StatementToken[]): StatementToken[] {
 		return tokens.filter(token => token.kind !== 'whitespace' && token.kind !== 'punctuation');
 	}
 
 	/**
 	 * Find the item the caret is in or touches.
-	 * @param text The text of the line.
+	 * @param text The statement text.
 	 * @param caret The caret offset.
 	 * @returns The item, or `undefined` if the caret is in whitespace.
 	 */
-	tokenAt(text: string, caret: number): LineToken | undefined {
+	tokenAt(text: string, caret: number): StatementToken | undefined {
 		return this.items(this.tokenize(text)).find(token => caret >= token.start && caret <= token.start + token.text.length);
 	}
 
 	/**
 	 * Group the values that follow the predicate: every item is a group of its own, except the
 	 * items between `(` and `)`, which form one list group. An unclosed list runs to the end of
-	 * the line.
-	 * @param tokens The tokens of a line.
+	 * the statement text.
+	 * @param tokens The tokens of a statement text.
 	 * @returns The groups.
 	 */
-	valueGroups(tokens: readonly LineToken[]): ValueGroup[] {
+	valueGroups(tokens: readonly StatementToken[]): ValueGroup[] {
 		const groups: ValueGroup[] = [];
 		let list: ValueGroup | undefined;
 		let depth = 0;
@@ -162,14 +162,14 @@ export class LineLexer {
 
 	/**
 	 * Read the token that starts at an index.
-	 * @param text The text of the line.
+	 * @param text The statement text.
 	 * @param index The offset the token starts at.
 	 * @returns The token.
 	 */
-	private _nextToken(text: string, index: number): LineToken {
+	private _nextToken(text: string, index: number): StatementToken {
 		const character = text[index];
 
-		if (LineLexer.isWhitespace(character)) {
+		if (StatementLexer.isWhitespace(character)) {
 			return { kind: 'whitespace', text: text.slice(index, _skipWhitespace(text, index)), start: index };
 		}
 
@@ -198,11 +198,11 @@ export class LineLexer {
 
 	/**
 	 * Read a language tag; when a quoted literal follows it, the tag belongs to that literal.
-	 * @param text The text of the line.
+	 * @param text The statement text.
 	 * @param index The offset of the `@`.
 	 * @returns The tag or the literal it precedes.
 	 */
-	private _tagToken(text: string, index: number): LineToken {
+	private _tagToken(text: string, index: number): StatementToken {
 		let end = index + 1;
 
 		while (end < text.length && TAG_CHARACTER.test(text[end])) {
@@ -220,7 +220,7 @@ export class LineLexer {
 
 	/**
 	 * Read a quoted literal with its language tag or datatype.
-	 * @param text The text of the line.
+	 * @param text The statement text.
 	 * @param start Where the token starts, which is before the quote when a tag precedes it.
 	 * @param quoteStart The offset of the opening quote.
 	 * @param languageBefore A language tag written before the quote, without its `@`.
@@ -261,14 +261,14 @@ export class LineLexer {
 
 /**
  * Advance over spaces and tabs.
- * @param text The text of the line.
+ * @param text The statement text.
  * @param index The offset to start at.
  * @returns The offset of the first character that is not whitespace.
  */
 function _skipWhitespace(text: string, index: number): number {
 	let end = index;
 
-	while (end < text.length && LineLexer.isWhitespace(text[end])) {
+	while (end < text.length && StatementLexer.isWhitespace(text[end])) {
 		end++;
 	}
 
@@ -277,7 +277,7 @@ function _skipWhitespace(text: string, index: number): number {
 
 /**
  * Find the end of the `@lang` or `^^datatype` suffix that follows a closing quote.
- * @param text The text of the line.
+ * @param text The statement text.
  * @param index The offset after the closing quote.
  * @returns The offset after the suffix.
  */
@@ -306,7 +306,7 @@ function _suffixEnd(text: string, index: number): number {
 		return close < 0 ? text.length : close + 1;
 	}
 
-	while (end < text.length && !LineLexer.isSeparator(text[end]) && text[end] !== '"') {
+	while (end < text.length && !StatementLexer.isSeparator(text[end]) && text[end] !== '"') {
 		end++;
 	}
 
@@ -314,14 +314,14 @@ function _suffixEnd(text: string, index: number): number {
 }
 
 /**
- * Read a token enclosed in brackets, up to the closing bracket or the end of the line.
- * @param text The text of the line.
+ * Read a token enclosed in brackets, up to the closing bracket or the end of the text.
+ * @param text The statement text.
  * @param index The offset of the opening bracket.
  * @param close The closing bracket.
  * @param kind The kind of token the brackets enclose.
  * @returns The token.
  */
-function _bracketedToken(text: string, index: number, close: string, kind: 'iri' | 'nestedNode'): LineToken {
+function _bracketedToken(text: string, index: number, close: string, kind: 'iri' | 'nestedNode'): StatementToken {
 	const closeIndex = text.indexOf(close, index);
 	const end = closeIndex < 0 ? text.length : closeIndex + 1;
 
@@ -330,14 +330,14 @@ function _bracketedToken(text: string, index: number, close: string, kind: 'iri'
 
 /**
  * Read a bare word up to the next separator, quote or bracket.
- * @param text The text of the line.
+ * @param text The statement text.
  * @param index The offset the word starts at.
  * @returns The token.
  */
-function _nameToken(text: string, index: number): LineToken {
+function _nameToken(text: string, index: number): StatementToken {
 	let end = index;
 
-	while (end < text.length && !LineLexer.isSeparator(text[end]) && text[end] !== '"' && text[end] !== '[') {
+	while (end < text.length && !StatementLexer.isSeparator(text[end]) && text[end] !== '"' && text[end] !== '[') {
 		end++;
 	}
 

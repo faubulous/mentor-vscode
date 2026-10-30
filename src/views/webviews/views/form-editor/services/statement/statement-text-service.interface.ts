@@ -1,9 +1,9 @@
 import { ValueKind } from '@src/utilities/value-kind';
-import { PropertyView, TermView } from '../form-editor-model';
-import { LineVocabulary } from '../line/line-vocabulary';
-import { PillDisplay } from '../line/term-info';
-import { EditableStatement } from '../state/editable-statement';
-import { EditableValue } from '../state/editable-value';
+import { PropertyView, TermView } from '../../form-editor-model';
+import { StatementVocabulary } from './statement-vocabulary';
+import { PillDisplay } from './term-info';
+import { EditableStatement } from '../../state/editable-statement';
+import { EditableValue } from '../../state/editable-value';
 
 /**
  * Turns the statements of a card into what their rows edit and back into the Turtle the host
@@ -15,7 +15,7 @@ export interface IStatementTextService {
 	 * The terms the card knows: the declared prefixes, its predicates and the resources it can
 	 * name.
 	 */
-	readonly vocabulary: LineVocabulary;
+	readonly vocabulary: StatementVocabulary;
 
 	/**
 	 * Indicate whether the row of a property can be edited as fields: a blank node among the items
@@ -41,7 +41,7 @@ export interface IStatementTextService {
 	termViewsOf(property: PropertyView): Record<string, TermView>;
 
 	/**
-	 * Write a statement as the one line it is stored as, in canonical form: items single-spaced,
+	 * Write a statement as the text it is stored as, in canonical form: items single-spaced,
 	 * literals re-serialized, blank nodes left off.
 	 * @param statement The statement.
 	 * @returns The canonical text, empty without a predicate.

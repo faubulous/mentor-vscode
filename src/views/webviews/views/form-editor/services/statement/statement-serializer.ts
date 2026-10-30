@@ -1,7 +1,7 @@
 import { formatIri } from '@src/utilities/prefixed-name';
-import { PropertyView, TermView } from '../form-editor-model';
-import { LineLexer } from './line-lexer';
-import { LineModel } from './line-model';
+import { PropertyView, TermView } from '../../form-editor-model';
+import { StatementLexer } from './statement-lexer';
+import { SerializedStatement } from './serialized-statement';
 import { RDF_TYPE, XSD_NAMESPACE, XSD_STRING } from './well-known-iris';
 
 /**
@@ -16,19 +16,19 @@ const BARE_DATATYPES: Record<string, string> = {
 
 /**
  * The placeholder a blank node the statement keeps is written as in the statement text sent to
- * the host, which puts the source text of the node back in its place. The line shown to the user
- * never contains it.
+ * the host, which puts the source text of the node back in its place. The fields shown to the user
+ * never contain it.
  */
 export const NESTED_NODE_PLACEHOLDER = '[…]';
 
 /**
- * Writes the properties of a resource as statement lines: the predicate, then its values
+ * Writes the properties of a resource as statement texts: the predicate, then its values
  * single-spaced, prefixed names where a prefix is declared, literals with their tag or datatype,
- * bare numbers and booleans and lists as `( … )`. Blank-node values are left off the line, as they
- * are shown as nested cards below it, and collected in the line model.
+ * bare numbers and booleans and lists as `( … )`. Blank-node values are left out of the statement text, as they
+ * are shown as nested cards below it, and collected in the serialized statement.
  */
-export class LineSerializer {
-	private readonly _lexer = new LineLexer();
+export class StatementSerializer {
+	private readonly _lexer = new StatementLexer();
 
 	/**
 	 * Create a serializer for a document.
@@ -46,12 +46,12 @@ export class LineSerializer {
 	}
 
 	/**
-	 * Write a property as a statement line.
+	 * Write a property as a statement text.
 	 * @param property The property.
-	 * @returns The line with the views of its terms and its blank-node values.
+	 * @returns The statement text with the views of its terms and its blank-node values.
 	 */
-	serializeProperty(property: PropertyView): LineModel {
-		const model: LineModel = { text: '', terms: {}, nestedNodes: [] };
+	serializeProperty(property: PropertyView): SerializedStatement {
+		const model: SerializedStatement = { text: '', terms: {}, nestedNodes: [] };
 		const predicate = this.serializePredicate(property.predicate);
 
 		model.terms[predicate] = property.predicate;
@@ -64,12 +64,12 @@ export class LineSerializer {
 	}
 
 	/**
-	 * Write a value as it appears on a line.
+	 * Write a value as it appears in a statement text.
 	 * @param view The value.
-	 * @param model Collects the term views and the blank nodes the line leaves out, when given.
-	 * @returns The text of the value, empty for a blank node, which is not written on the line.
+	 * @param model Collects the term views and the blank nodes the statement text leaves out, when given.
+	 * @returns The text of the value, empty for a blank node, which is not written in the statement text.
 	 */
-	serializeValue(view: TermView, model?: Pick<LineModel, 'terms' | 'nestedNodes'>): string {
+	serializeValue(view: TermView, model?: Pick<SerializedStatement, 'terms' | 'nestedNodes'>): string {
 		if (view.collection) {
 			const items = view.collection.items.map(item => this.serializeValue(item, model)).filter(text => text !== '');
 
@@ -96,15 +96,15 @@ export class LineSerializer {
 	}
 
 	/**
-	 * Write the canonical text of a line as the statement text for the host: the values separated
+	 * Write the canonical text of a statement text as the statement text for the host: the values separated
 	 * by commas, lists kept whole, and one placeholder appended for every blank node the statement
 	 * keeps, which the host replaces with the source text of the node.
-	 * @param canonical The canonical text of the line, without markers for new nested nodes.
+	 * @param canonical The canonical text of the statement text, without markers for new nested nodes.
 	 * @param nestedNodeCount The number of blank nodes the statement keeps.
 	 * @returns The statement text.
 	 */
 	toStatementText(canonical: string, nestedNodeCount = 0): string {
-		if (LineLexer.isComment(canonical)) {
+		if (StatementLexer.isComment(canonical)) {
 			return canonical;
 		}
 
@@ -145,19 +145,19 @@ export class LineSerializer {
 	 */
 	private _literalText(value: string, language: string | undefined, datatype: string | undefined): string {
 		if (language) {
-			return `"${LineSerializer.escapeLiteral(value)}"@${language}`;
+			return `"${StatementSerializer.escapeLiteral(value)}"@${language}`;
 		}
 
-		const bare = LineLexer.bareDatatypeOf(value);
+		const bare = StatementLexer.bareDatatypeOf(value);
 
 		if (datatype && bare && BARE_DATATYPES[bare] === datatype) {
 			return value;
 		}
 
 		if (datatype && datatype !== XSD_STRING) {
-			return `"${LineSerializer.escapeLiteral(value)}"^^${formatIri(this._namespaces, datatype)}`;
+			return `"${StatementSerializer.escapeLiteral(value)}"^^${formatIri(this._namespaces, datatype)}`;
 		}
 
-		return `"${LineSerializer.escapeLiteral(value)}"`;
+		return `"${StatementSerializer.escapeLiteral(value)}"`;
 	}
 }

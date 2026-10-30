@@ -2,7 +2,7 @@ import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import { PropertyView, ResourceDetail } from '../form-editor-model';
 import { useStatementTextService } from '../hooks/use-statement-text-service';
 import { StatementRowColumn } from '../hooks/use-statement-editor';
-import { InputFieldElement } from '../input/input-field-element';
+import { InputFieldElement } from './input/input-field-element';
 import { IEditingController } from '../state/editing-controller.interface';
 import { IResourceDataService } from '../services/resource-data-service.interface';
 import { CellKey } from '../state/cell-key';

@@ -1,16 +1,16 @@
 import { splitPrefixedName } from '@src/utilities/prefixed-name';
-import { LineLexer } from './line-lexer';
-import { LineToken, ValueGroup } from './line-token';
-import { LineVocabulary } from './line-vocabulary';
+import { StatementLexer } from './statement-lexer';
+import { StatementToken, ValueGroup } from './statement-token';
+import { StatementVocabulary } from './statement-vocabulary';
 import { TermDescriber } from './term-describer';
 import { ValueKind } from '@src/utilities/value-kind';
 
 /**
- * Brings a line into the form it is stored in: items joined by single spaces, literals
- * re-serialized, separators removed, lists kept as `( … )`. A comment line is only trimmed.
+ * Brings a statement text into the form it is stored in: items joined by single spaces, literals
+ * re-serialized, separators removed, lists kept as `( … )`. A comment is only trimmed.
  */
-export class LineCanonicalizer {
-	private readonly _lexer = new LineLexer();
+export class StatementCanonicalizer {
+	private readonly _lexer = new StatementLexer();
 
 	private readonly _describer: TermDescriber;
 
@@ -18,7 +18,7 @@ export class LineCanonicalizer {
 	 * Create a canonicalizer.
 	 * @param vocabulary The vocabulary that decides the range of a predicate.
 	 */
-	constructor(vocabulary: LineVocabulary) {
+	constructor(vocabulary: StatementVocabulary) {
 		this._describer = new TermDescriber(vocabulary);
 	}
 
@@ -29,7 +29,7 @@ export class LineCanonicalizer {
 	 * @param range The range of the predicate.
 	 * @returns The canonical text, or `undefined` for a dangling language tag, which is dropped.
 	 */
-	static canonicalValue(token: LineToken, range: ValueKind): string | undefined {
+	static canonicalValue(token: StatementToken, range: ValueKind): string | undefined {
 		if (token.kind === 'literal') {
 			return _canonicalLiteral(token.value, token.language, token.datatype);
 		}
@@ -38,7 +38,7 @@ export class LineCanonicalizer {
 			return undefined;
 		}
 
-		if (token.kind === 'name' && !LineLexer.bareDatatypeOf(token.text) && (range === 'literal' || (range === 'any' && !splitPrefixedName(token.text)))) {
+		if (token.kind === 'name' && !StatementLexer.bareDatatypeOf(token.text) && (range === 'literal' || (range === 'any' && !splitPrefixedName(token.text)))) {
 			return `"${token.text}"`;
 		}
 
@@ -46,17 +46,17 @@ export class LineCanonicalizer {
 	}
 
 	/**
-	 * Indicate whether a line carries something: values after its predicate, or a comment.
-	 * @param text The text of the line.
+	 * Indicate whether a statement text carries something: values after its predicate, or a comment.
+	 * @param text The statement text.
 	 * @returns `true` when it does.
 	 */
 	hasValues(text: string): boolean {
-		return LineLexer.isComment(text) || this._lexer.items(this._lexer.tokenize(text)).length > 1;
+		return StatementLexer.isComment(text) || this._lexer.items(this._lexer.tokenize(text)).length > 1;
 	}
 
 	/**
-	 * Count the `[` markers typed on a line to add nested blank nodes.
-	 * @param text The text of the line.
+	 * Count the `[` markers typed in a statement text to add nested blank nodes.
+	 * @param text The statement text.
 	 * @returns The number of markers.
 	 */
 	countNestedNodeMarkers(text: string): number {
@@ -64,12 +64,12 @@ export class LineCanonicalizer {
 	}
 
 	/**
-	 * Bring a line into its canonical form.
-	 * @param text The text of the line.
+	 * Bring a statement text into its canonical form.
+	 * @param text The statement text.
 	 * @returns The canonical text.
 	 */
 	canonicalize(text: string): string {
-		if (LineLexer.isComment(text)) {
+		if (StatementLexer.isComment(text)) {
 			return text.trim();
 		}
 
@@ -87,9 +87,9 @@ export class LineCanonicalizer {
 	}
 
 	/**
-	 * Remove the `[` markers typed on a line to add nested blank nodes, once the nodes are added,
+	 * Remove the `[` markers typed in a statement text to add nested blank nodes, once the nodes are added,
 	 * and bring the rest into canonical form.
-	 * @param text The text of the line.
+	 * @param text The statement text.
 	 * @returns The canonical text without the markers.
 	 */
 	removeNestedNodeMarkers(text: string): string {
@@ -121,7 +121,7 @@ function _canonicalLiteral(value: string, language: string | undefined, datatype
  * @returns The canonical text, empty for a group that drops out.
  */
 function _canonicalGroup(group: ValueGroup, range: ValueKind): string {
-	const values = group.items.map(item => LineCanonicalizer.canonicalValue(item, range)).filter((value): value is string => value !== undefined);
+	const values = group.items.map(item => StatementCanonicalizer.canonicalValue(item, range)).filter((value): value is string => value !== undefined);
 
 	if (!group.list) {
 		return values[0] ?? '';

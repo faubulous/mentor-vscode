@@ -1,8 +1,8 @@
 import { ValueKind } from '@src/utilities/value-kind';
-import { BareDatatype } from './line-lexer';
+import { BareDatatype } from './statement-lexer';
 
 /**
- * What the first token of a line denotes: a predicate with its label and range, or the reason
+ * What the first token of a statement text denotes: a predicate with its label and range, or the reason
  * it is not one.
  */
 export type PredicateInfo =
@@ -15,12 +15,12 @@ export type PredicateInfo =
  * of this document, a prefixed name that is not described yet, a `[` typed for a new nested
  * node, or an error.
  */
-export type LineValueKind = 'literal' | 'languageTag' | 'shorthandLiteral' | 'externalResource' | 'vocabularyTerm' | 'documentResource' | 'newResource' | 'nestedNode' | 'error';
+export type StatementValueKind = 'literal' | 'languageTag' | 'shorthandLiteral' | 'externalResource' | 'vocabularyTerm' | 'documentResource' | 'newResource' | 'nestedNode' | 'error';
 
 /**
  * The kinds of value that denote a resource.
  */
-export type ResourceValueKind = Extract<LineValueKind, 'vocabularyTerm' | 'documentResource' | 'newResource' | 'externalResource'>;
+export type ResourceValueKind = Extract<StatementValueKind, 'vocabularyTerm' | 'documentResource' | 'newResource' | 'externalResource'>;
 
 /**
  * What a value token denotes.
@@ -29,7 +29,7 @@ export interface ValueInfo {
 	/**
 	 * The kind of the value.
 	 */
-	kind: LineValueKind;
+	kind: StatementValueKind;
 
 	/**
 	 * The label to show for a resource.

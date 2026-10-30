@@ -3,11 +3,11 @@ import { VscodeTextfield } from '@vscode-elements/elements';
 import { formatIri } from '@src/utilities/prefixed-name';
 import { TermView } from '../form-editor-model';
 import { StatementEditorHandle, StatementEditorOptions, useStatementEditor } from '../hooks/use-statement-editor';
-import { InputFieldId } from '../input/input-field-id';
-import { LiteralDatatypes } from '../input/literal-datatypes';
-import { LineLexer } from '../line/line-lexer';
+import { InputFieldId } from '../state/input-field-id';
+import { LiteralDatatypes } from '../services/statement/literal-datatypes';
+import { StatementLexer } from '../services/statement/statement-lexer';
 import { IResourceDataService } from '../services/resource-data-service.interface';
-import { IStatementTextService } from '../services/statement-text-service.interface';
+import { IStatementTextService } from '../services/statement/statement-text-service.interface';
 import { CellKey } from '../state/cell-key';
 import { EditableValue } from '../state/editable-value';
 import { LiteralInput } from './literal-input';
@@ -370,7 +370,7 @@ function LiteralField({ value, index, editor, service, languages }: LiteralField
 	}
 
 	const text = value.kind === 'literal' ? value.value : value.text;
-	const suffix = value.kind === 'literal' ? value.suffix : `^^${LineLexer.bareDatatypeOf(value.text) ?? ''}`;
+	const suffix = value.kind === 'literal' ? value.suffix : `^^${StatementLexer.bareDatatypeOf(value.text) ?? ''}`;
 	const datatype = service.datatypeIriOf(suffix);
 	const picking = editor.state.pickingTag === index;
 

@@ -1,4 +1,4 @@
-import { InputFieldCaret } from './input-field-focus-request';
+import { InputFieldCaret } from '../../state/input-field-focus-request';
 
 /**
  * The input a field element types into: the element itself when it is a native input, or the

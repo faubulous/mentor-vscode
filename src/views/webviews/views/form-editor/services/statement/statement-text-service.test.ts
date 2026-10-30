@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { OWL, RDFS, XSD } from '@faubulous/mentor-rdf';
-import { createTestLineVocabulary } from '@src/utilities/mocks/line-fixtures';
+import { createTestStatementVocabulary } from '@src/utilities/mocks/statement-vocabulary-fixtures';
 import { createIriView, createLiteralView, createProperty } from '@src/utilities/mocks/statement-fixtures';
-import { TermView } from '../form-editor-model';
-import { EditableStatement } from '../state/editable-statement';
+import { TermView } from '../../form-editor-model';
+import { EditableStatement } from '../../state/editable-statement';
 import { StatementTextService } from './statement-text-service';
 
-const service = new StatementTextService(createTestLineVocabulary());
+const service = new StatementTextService(createTestStatementVocabulary());
 
 /**
  * The view of a blank node value with its nested node.

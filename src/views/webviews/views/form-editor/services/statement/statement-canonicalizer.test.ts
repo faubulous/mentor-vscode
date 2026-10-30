@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { createTestLineVocabulary } from '@src/utilities/mocks/line-fixtures';
-import { LineCanonicalizer } from './line-canonicalizer';
-import { LineLexer } from './line-lexer';
+import { createTestStatementVocabulary } from '@src/utilities/mocks/statement-vocabulary-fixtures';
+import { StatementCanonicalizer } from './statement-canonicalizer';
+import { StatementLexer } from './statement-lexer';
 
-const canonicalizer = new LineCanonicalizer(createTestLineVocabulary());
-const lexer = new LineLexer();
+const canonicalizer = new StatementCanonicalizer(createTestStatementVocabulary());
+const lexer = new StatementLexer();
 
-describe('LineCanonicalizer.canonicalize', () => {
+describe('StatementCanonicalizer.canonicalize', () => {
 	it('joins the items by single spaces', () => {
 		expect(canonicalizer.canonicalize('rdfs:label        "Tree"@en')).toBe('rdfs:label "Tree"@en');
 		expect(canonicalizer.canonicalize('a                 owl:Class     owl:Thing')).toBe('a owl:Class owl:Thing');
@@ -57,15 +57,15 @@ describe('LineCanonicalizer.canonicalize', () => {
 	});
 });
 
-describe('LineCanonicalizer.canonicalValue', () => {
+describe('StatementCanonicalizer.canonicalValue', () => {
 	it('writes literals with their tag or datatype', () => {
-		expect(LineCanonicalizer.canonicalValue(lexer.tokenize('"x"@en')[0], 'any')).toBe('"x"@en');
-		expect(LineCanonicalizer.canonicalValue(lexer.tokenize('"1"^^xsd:int')[0], 'any')).toBe('"1"^^xsd:int');
-		expect(LineCanonicalizer.canonicalValue(lexer.tokenize('@en')[0], 'any')).toBeUndefined();
+		expect(StatementCanonicalizer.canonicalValue(lexer.tokenize('"x"@en')[0], 'any')).toBe('"x"@en');
+		expect(StatementCanonicalizer.canonicalValue(lexer.tokenize('"1"^^xsd:int')[0], 'any')).toBe('"1"^^xsd:int');
+		expect(StatementCanonicalizer.canonicalValue(lexer.tokenize('@en')[0], 'any')).toBeUndefined();
 	});
 });
 
-describe('LineCanonicalizer.hasValues', () => {
+describe('StatementCanonicalizer.hasValues', () => {
 	it('is true for lines with values and for comments', () => {
 		expect(canonicalizer.hasValues('a owl:Class')).toBe(true);
 		expect(canonicalizer.hasValues('# c')).toBe(true);

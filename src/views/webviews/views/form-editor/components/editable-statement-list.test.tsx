@@ -6,14 +6,14 @@ import { renderWebview } from '@src/utilities/mocks/webview-test-utils';
 import { createEditingControllerStub } from '@src/utilities/mocks/editing-controller-fixtures';
 import { createResourceDataServiceStub } from '@src/utilities/mocks/resource-data-service-fixtures';
 import { createIriView, createProperty, createSampleResourceDetail, createTestResourceDetail, TEST_SUBJECT, TEST_SUBJECT_ID } from '@src/utilities/mocks/statement-fixtures';
-import { LINE_TEST_NAMESPACES } from '@src/utilities/mocks/line-fixtures';
+import { STATEMENT_TEST_NAMESPACES } from '@src/utilities/mocks/statement-vocabulary-fixtures';
 import { ResourceDetail, TermView } from '../form-editor-model';
 import { CellKey } from '../state/cell-key';
 import { EditingState } from '../state/editing-state';
 import { FormEditorContext } from '../state/form-editor-context';
 import { EditableStatementList } from './editable-statement-list';
 
-const NAMESPACES = Object.entries(LINE_TEST_NAMESPACES).map(([prefix, iri]) => ({ prefix, iri, usageCount: 1 }));
+const NAMESPACES = Object.entries(STATEMENT_TEST_NAMESPACES).map(([prefix, iri]) => ({ prefix, iri, usageCount: 1 }));
 
 /**
  * The key of a property row of the test subject.

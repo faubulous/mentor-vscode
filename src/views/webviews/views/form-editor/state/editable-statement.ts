@@ -1,4 +1,4 @@
-import { InputFieldId } from '../input/input-field-id';
+import { InputFieldId } from './input-field-id';
 import { EditableValue } from './editable-value';
 
 /**

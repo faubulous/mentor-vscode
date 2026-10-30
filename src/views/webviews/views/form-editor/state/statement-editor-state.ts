@@ -1,5 +1,5 @@
-import { InputFieldCaret, InputFieldFocusRequest } from '../input/input-field-focus-request';
-import { InputFieldId } from '../input/input-field-id';
+import { InputFieldCaret, InputFieldFocusRequest } from './input-field-focus-request';
+import { InputFieldId } from './input-field-id';
 import { EditableStatement } from './editable-statement';
 import { EditableValue } from './editable-value';
 

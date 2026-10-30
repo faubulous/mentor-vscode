@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { LineLexer } from './line-lexer';
+import { StatementLexer } from './statement-lexer';
 
-const lexer = new LineLexer();
+const lexer = new StatementLexer();
 
-describe('LineLexer.tokenize', () => {
+describe('StatementLexer.tokenize', () => {
 	it('covers the text with tokens that carry their offsets', () => {
 		const tokens = lexer.tokenize('rdfs:label "Tree"@en');
 
@@ -60,13 +60,13 @@ describe('LineLexer.tokenize', () => {
 	});
 });
 
-describe('LineLexer.items', () => {
+describe('StatementLexer.items', () => {
 	it('drops whitespace and punctuation', () => {
 		expect(lexer.items(lexer.tokenize('a owl:Class, owl:Thing')).map(token => token.text)).toEqual(['a', 'owl:Class', 'owl:Thing']);
 	});
 });
 
-describe('LineLexer.tokenAt', () => {
+describe('StatementLexer.tokenAt', () => {
 	it('finds the item the caret is in or touches', () => {
 		expect(lexer.tokenAt('a owl:Class', 0)?.text).toBe('a');
 		expect(lexer.tokenAt('a owl:Class', 1)?.text).toBe('a');
@@ -79,7 +79,7 @@ describe('LineLexer.tokenAt', () => {
 	});
 });
 
-describe('LineLexer.valueGroups', () => {
+describe('StatementLexer.valueGroups', () => {
 	it('keeps the items of a list together', () => {
 		const groups = lexer.valueGroups(lexer.tokenize('ex:p ex:a ( ex:b "c" ) ex:d'));
 
@@ -95,38 +95,38 @@ describe('LineLexer.valueGroups', () => {
 	});
 });
 
-describe('LineLexer.bareDatatypeOf', () => {
+describe('StatementLexer.bareDatatypeOf', () => {
 	it('recognises the Turtle shorthand literals', () => {
-		expect(LineLexer.bareDatatypeOf('true')).toBe('xsd:boolean');
-		expect(LineLexer.bareDatatypeOf('false')).toBe('xsd:boolean');
-		expect(LineLexer.bareDatatypeOf('42')).toBe('xsd:integer');
-		expect(LineLexer.bareDatatypeOf('-7')).toBe('xsd:integer');
-		expect(LineLexer.bareDatatypeOf('1.5')).toBe('xsd:decimal');
-		expect(LineLexer.bareDatatypeOf('.5')).toBe('xsd:decimal');
-		expect(LineLexer.bareDatatypeOf('1e10')).toBe('xsd:double');
-		expect(LineLexer.bareDatatypeOf('1.5E-3')).toBe('xsd:double');
+		expect(StatementLexer.bareDatatypeOf('true')).toBe('xsd:boolean');
+		expect(StatementLexer.bareDatatypeOf('false')).toBe('xsd:boolean');
+		expect(StatementLexer.bareDatatypeOf('42')).toBe('xsd:integer');
+		expect(StatementLexer.bareDatatypeOf('-7')).toBe('xsd:integer');
+		expect(StatementLexer.bareDatatypeOf('1.5')).toBe('xsd:decimal');
+		expect(StatementLexer.bareDatatypeOf('.5')).toBe('xsd:decimal');
+		expect(StatementLexer.bareDatatypeOf('1e10')).toBe('xsd:double');
+		expect(StatementLexer.bareDatatypeOf('1.5E-3')).toBe('xsd:double');
 	});
 
 	it('leaves words alone', () => {
-		expect(LineLexer.bareDatatypeOf('abc')).toBeUndefined();
-		expect(LineLexer.bareDatatypeOf('ex:Tree')).toBeUndefined();
-		expect(LineLexer.bareDatatypeOf('')).toBeUndefined();
+		expect(StatementLexer.bareDatatypeOf('abc')).toBeUndefined();
+		expect(StatementLexer.bareDatatypeOf('ex:Tree')).toBeUndefined();
+		expect(StatementLexer.bareDatatypeOf('')).toBeUndefined();
 	});
 });
 
 describe('comments and separators', () => {
 	it('recognises and strips comment lines', () => {
-		expect(LineLexer.isComment('# hello')).toBe(true);
-		expect(LineLexer.isComment('  # x')).toBe(true);
-		expect(LineLexer.isComment('a owl:Class')).toBe(false);
-		expect(LineLexer.stripComment('# hello')).toBe('hello');
-		expect(LineLexer.stripComment('#hello')).toBe('hello');
-		expect(LineLexer.stripComment('  # x ')).toBe('x');
+		expect(StatementLexer.isComment('# hello')).toBe(true);
+		expect(StatementLexer.isComment('  # x')).toBe(true);
+		expect(StatementLexer.isComment('a owl:Class')).toBe(false);
+		expect(StatementLexer.stripComment('# hello')).toBe('hello');
+		expect(StatementLexer.stripComment('#hello')).toBe('hello');
+		expect(StatementLexer.stripComment('  # x ')).toBe('x');
 	});
 
 	it('treats whitespace, commas, semicolons and brackets as separators', () => {
-		expect([' ', '\t', ',', ';', '(', ')'].every(LineLexer.isSeparator)).toBe(true);
-		expect(LineLexer.isSeparator('a')).toBe(false);
-		expect(LineLexer.isSeparator(undefined)).toBe(false);
+		expect([' ', '\t', ',', ';', '(', ')'].every(StatementLexer.isSeparator)).toBe(true);
+		expect(StatementLexer.isSeparator('a')).toBe(false);
+		expect(StatementLexer.isSeparator(undefined)).toBe(false);
 	});
 });

@@ -1,18 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import { RDF } from '@faubulous/mentor-rdf';
-import { EXAMPLE_NAMESPACE, createTestLineVocabulary } from '@src/utilities/mocks/line-fixtures';
-import { LineLexer } from './line-lexer';
-import { LineToken } from './line-token';
+import { EXAMPLE_NAMESPACE, createTestStatementVocabulary } from '@src/utilities/mocks/statement-vocabulary-fixtures';
+import { StatementLexer } from './statement-lexer';
+import { StatementToken } from './statement-token';
 import { TermDescriber } from './term-describer';
-import { LineValueKind } from './term-info';
+import { StatementValueKind } from './term-info';
 
-const describer = new TermDescriber(createTestLineVocabulary());
-const lexer = new LineLexer();
+const describer = new TermDescriber(createTestStatementVocabulary());
+const lexer = new StatementLexer();
 
 /**
  * Lex a single token.
  */
-function token(text: string): LineToken {
+function token(text: string): StatementToken {
 	return lexer.tokenize(text)[0];
 }
 
@@ -31,7 +31,7 @@ describe('TermDescriber.describePredicate', () => {
 	});
 
 	it('reports what is not a predicate', () => {
-		expect(describer.describePredicate(undefined)).toEqual({ error: 'A line starts with its predicate' });
+		expect(describer.describePredicate(undefined)).toEqual({ error: 'A statement starts with its predicate' });
 		expect(describer.describePredicate(token('foo:x'))).toEqual({ error: 'Unknown prefix "foo:"' });
 		expect(describer.describePredicate(token('label')).error).toMatch(/Unknown predicate/);
 		expect(describer.describePredicate(token('"x"')).error).toBeDefined();
@@ -81,8 +81,8 @@ describe('TermDescriber.tokenIri', () => {
 
 describe('resource and atomic tokens', () => {
 	it('rings every kind of resource', () => {
-		const resourceKinds: LineValueKind[] = ['vocabularyTerm', 'documentResource', 'newResource', 'externalResource'];
-		const otherKinds: LineValueKind[] = ['literal', 'languageTag', 'shorthandLiteral', 'nestedNode', 'error'];
+		const resourceKinds: StatementValueKind[] = ['vocabularyTerm', 'documentResource', 'newResource', 'externalResource'];
+		const otherKinds: StatementValueKind[] = ['literal', 'languageTag', 'shorthandLiteral', 'nestedNode', 'error'];
 
 		expect(resourceKinds.every(TermDescriber.isResourceKind)).toBe(true);
 		expect(otherKinds.some(TermDescriber.isResourceKind)).toBe(false);

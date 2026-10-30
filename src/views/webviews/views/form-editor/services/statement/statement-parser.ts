@@ -1,17 +1,17 @@
 import { getIriFromText, splitPrefixedName } from '@src/utilities/prefixed-name';
-import { LineLexer } from './line-lexer';
-import { LineToken, LiteralToken } from './line-token';
-import { LineProblem, ParsedLine, ParsedValue } from './parsed-line';
+import { StatementLexer } from './statement-lexer';
+import { StatementToken, LiteralToken } from './statement-token';
+import { StatementTextProblem, ParsedStatementText, ParsedValue } from './parsed-statement-text';
 import { RDF_TYPE, XSD_NAMESPACE } from './well-known-iris';
 
 const ESCAPES: Record<string, string> = { '"': '"', '\\': '\\', n: '\n', r: '\r', t: '\t', b: '\b', f: '\f', "'": "'" };
 
 /**
- * Reads a canonical line into its predicate and values. The `[` markers typed to add nested
+ * Reads a canonical statement text into its predicate and values. The `[` markers typed to add nested
  * blank nodes are numbered in the order read, lists included, so each can be added in place.
  */
-export class LineParser {
-	private readonly _lexer = new LineLexer();
+export class StatementParser {
+	private readonly _lexer = new StatementLexer();
 
 	/**
 	 * Create a parser for a document.
@@ -35,16 +35,16 @@ export class LineParser {
 	}
 
 	/**
-	 * Read a line.
-	 * @param text The text of the line.
+	 * Read a statement text.
+	 * @param text The statement text.
 	 * @returns The statement, or the first problem that stops it from being one.
 	 */
-	parse(text: string): ParsedLine | LineProblem {
+	parse(text: string): ParsedStatementText | StatementTextProblem {
 		const tokens = this._lexer.tokenize(text);
 		const items = this._lexer.items(tokens);
 
 		if (items.length === 0) {
-			return { message: 'A line starts with its predicate', start: 0, end: text.length };
+			return { message: 'A statement starts with its predicate', start: 0, end: text.length };
 		}
 
 		const predicate = this._parsePredicate(items[0]);
@@ -60,10 +60,10 @@ export class LineParser {
 
 	/**
 	 * Read the predicate: `a`, an `<iri>` or a prefixed name with a declared prefix.
-	 * @param token The first item of the line.
+	 * @param token The first item of the statement text.
 	 * @returns The IRI, or the problem.
 	 */
-	private _parsePredicate(token: LineToken): string | LineProblem {
+	private _parsePredicate(token: StatementToken): string | StatementTextProblem {
 		if (token.kind === 'name' && token.text === 'a') {
 			return RDF_TYPE;
 		}
@@ -74,7 +74,7 @@ export class LineParser {
 			return typeof iri === 'string' ? iri : { ...iri, message: this._predicateMessage(token) };
 		}
 
-		return { message: 'A line starts with its predicate', start: token.start, end: token.start + token.text.length };
+		return { message: 'A statement starts with its predicate', start: token.start, end: token.start + token.text.length };
 	}
 
 	/**
@@ -82,7 +82,7 @@ export class LineParser {
 	 * @param token The token.
 	 * @returns The message.
 	 */
-	private _predicateMessage(token: LineToken): string {
+	private _predicateMessage(token: StatementToken): string {
 		const parts = splitPrefixedName(token.text);
 
 		if (parts && this._namespaces[parts.prefix] === undefined) {
@@ -97,7 +97,7 @@ export class LineParser {
 	 * @param tokens The tokens after the predicate, without whitespace.
 	 * @returns The values, or the problem.
 	 */
-	private _parseValues(tokens: LineToken[]): ParsedValue[] | LineProblem {
+	private _parseValues(tokens: StatementToken[]): ParsedValue[] | StatementTextProblem {
 		const stack: { items: ParsedValue[]; start: number }[] = [{ items: [], start: 0 }];
 		let nestedNodeCount = 0;
 
@@ -139,7 +139,7 @@ export class LineParser {
 	 * @param nestedNodeIndex The number of nested-node markers read before it.
 	 * @returns The value, or the problem.
 	 */
-	private _parseValue(token: LineToken, nestedNodeIndex: number): ParsedValue | LineProblem {
+	private _parseValue(token: StatementToken, nestedNodeIndex: number): ParsedValue | StatementTextProblem {
 		const end = token.start + token.text.length;
 
 		switch (token.kind) {
@@ -166,14 +166,14 @@ export class LineParser {
 	 * @param token The literal token.
 	 * @returns The value, or the problem.
 	 */
-	private _parseLiteral(token: LiteralToken): ParsedValue | LineProblem {
+	private _parseLiteral(token: LiteralToken): ParsedValue | StatementTextProblem {
 		const end = token.start + token.text.length;
 
 		if (!token.closed) {
 			return { message: 'Unclosed quote', start: token.quoteStart, end };
 		}
 
-		const value = LineParser.unescapeLiteral(token.value);
+		const value = StatementParser.unescapeLiteral(token.value);
 
 		if (token.language) {
 			return { kind: 'term', term: { kind: 'literal', value, language: token.language } };
@@ -197,8 +197,8 @@ export class LineParser {
 	 * @param token The name token.
 	 * @returns The value, or the problem.
 	 */
-	private _parseName(token: LineToken): ParsedValue | LineProblem {
-		const bare = LineLexer.bareDatatypeOf(token.text);
+	private _parseName(token: StatementToken): ParsedValue | StatementTextProblem {
+		const bare = StatementLexer.bareDatatypeOf(token.text);
 
 		if (bare) {
 			return { kind: 'term', term: { kind: 'literal', value: token.text, datatype: XSD_NAMESPACE + bare.slice('xsd:'.length) } };
@@ -214,7 +214,7 @@ export class LineParser {
 	 * @param token The token.
 	 * @returns The IRI, or the problem.
 	 */
-	private _parseIri(token: LineToken): string | LineProblem {
+	private _parseIri(token: StatementToken): string | StatementTextProblem {
 		const end = token.start + token.text.length;
 
 		if (token.kind === 'iri') {
