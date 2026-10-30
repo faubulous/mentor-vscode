@@ -77,3 +77,54 @@ export function matchesTermPattern(term: Term, pattern: TermPattern): boolean {
 function _normalizeDatatype(datatype: string | undefined): string {
 	return !datatype || datatype === RDF.langString ? XSD.string : datatype;
 }
+
+/**
+ * The key a term is compared by when the statements before and after an edit are compared: equal
+ * for terms a pattern matches alike. Blank nodes, whose identifiers change when the edited text is
+ * read again, share one key, plain literals take the key of `xsd:string` ones, and language tags
+ * compare case-insensitively.
+ * @param term The term read from the document.
+ * @returns The key.
+ */
+export function getTermKey(term: Term): string {
+	switch (term.termType) {
+		case 'BlankNode':
+			return '_:';
+		case 'Literal': {
+			const literal = term as { value: string; language?: string; datatype?: { value: string } };
+
+			return _literalKey(literal.value, literal.language, literal.datatype?.value);
+		}
+		default:
+			return `<${term.value}>`;
+	}
+}
+
+/**
+ * The key of the terms a pattern matches, as {@link getTermKey} gives it.
+ * @param pattern The pattern.
+ * @returns The key.
+ */
+export function getPatternKey(pattern: TermPattern): string {
+	switch (pattern.kind) {
+		case 'anyBlankNode':
+		case 'bnode':
+			return '_:';
+		case 'literal':
+			return _literalKey(pattern.value, pattern.language, pattern.datatype);
+		default:
+			return `<${pattern.iri}>`;
+	}
+}
+
+/**
+ * The key of a literal.
+ * @param value The text of the literal.
+ * @param language Its language tag, if any.
+ * @param datatype Its datatype, if any.
+ * @returns The key.
+ */
+function _literalKey(value: string, language: string | undefined, datatype: string | undefined): string {
+	return language ? `${JSON.stringify(value)}@${language.toLowerCase()}` : `${JSON.stringify(value)}^^${_normalizeDatatype(datatype)}`;
+}
+

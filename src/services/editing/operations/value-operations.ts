@@ -1,13 +1,13 @@
 import { RdfToken } from '@faubulous/mentor-rdf-parsers';
 import { TermRef } from '../term-ref';
-import { EditPlan, ExpectedStatementChange, createPlan } from '../edit-plan';
+import { EditPlan, ExpectedStatementChange, TermPattern, createPlan } from '../edit-plan';
 import { EditRejectionError } from '../edit-rejection';
 import { ObjectSpan, PredicateGroup, SubjectBlock } from '../statement-model';
 import { PropertyOperations } from './property-operations';
 import { ResolvedValue, StatementLocator, ValueLocation } from '../statement-locator';
 import { toTermRef } from '../resource-id';
 import { TextEditSpec, absorbBlankLine, deleteRange, expandToWholeLines, mergeRanges } from '@src/utilities/text-edits';
-import { countStatementsWithin } from '@src/utilities/quad-contexts';
+import { statementsWithin } from '@src/utilities/quad-contexts';
 import { SynthesisContext } from '../synthesis-context';
 import { toPatternFromRef, toTermPattern } from '../term-patterns';
 import { isCommentToken, isTokenOfType, previousNonCommentTokenIndex, tokenEnd } from '@src/utilities/tokens';
@@ -24,23 +24,6 @@ function _runDeletionRange(block: SubjectBlock, from: number, to: number): { sta
 	}
 
 	return { start: block.groups[from - 1].end, end: block.groups[to].end };
-}
-
-/**
- * Build the change of the number of statements of a value of a block.
- * @param block The block holding the value.
- * @param group The group holding the value.
- * @param span The span of the value.
- * @param delta How its number changes.
- * @returns The expected change.
- */
-function _expectedChange(block: SubjectBlock, group: PredicateGroup, span: ObjectSpan, delta: number): ExpectedStatementChange {
-	return {
-		subject: toPatternFromRef(toTermRef(block.subject)),
-		predicate: group.predicateIri,
-		object: toTermPattern(span.quad.object),
-		delta
-	};
 }
 
 /**
@@ -73,9 +56,27 @@ export class ValueOperations {
 
 		return createPlan({
 			edits,
-			expectedChanges: [_expectedChange(block, group, span, -1)],
-			quadCountDelta: -1 - countStatementsWithin(context.model.quadContexts, span.start, span.end)
+			expectedChanges: this.removalChanges(toPatternFromRef(toTermRef(block.subject)), group.predicateIri, span)
 		});
+	}
+
+	/**
+	 * The statements a written value takes with it when it goes: its own, and those of the blank
+	 * nodes and lists written inside it.
+	 * @param subject The subject of the statement.
+	 * @param predicate The predicate of the statement.
+	 * @param span The value.
+	 * @returns The expected changes.
+	 */
+	removalChanges(subject: TermPattern, predicate: string, span: ObjectSpan): ExpectedStatementChange[] {
+		const nested = statementsWithin(this._context.model.quadContexts, span.start, span.end).map(inner => ({
+			subject: toTermPattern(inner.subject),
+			predicate: inner.predicate.value,
+			object: toTermPattern(inner.object),
+			delta: -1
+		}));
+
+		return [{ subject, predicate, object: toTermPattern(span.quad.object), delta: -1 }, ...nested];
 	}
 
 	/**

@@ -101,12 +101,12 @@ describe('ValueListOperations.setValues in Turtle', () => {
 		expect(setValues(body, [kept(body, 'ex:b')])).toContain('# first');
 	});
 
-	it('keeps a nested node byte for byte and counts the statements of one that goes', () => {
+	it('keeps a nested node byte for byte and declares the statements of one that goes', () => {
 		const body = `ex:s ex:p [ ex:q "x" ;\n        ex:r 1 ], ex:a .\n`;
 		const node = kept(body, '[');
 
 		expect(setValues(body, [node, iri('b')])).toBe(`ex:s ex:p [ ex:q "x" ;\n        ex:r 1 ], ex:b .\n`);
-		expect(synthesizePlan(body, [{ op: 'setValues', subject, predicate: P, values: [kept(body, 'ex:a')] }]).quadCountDelta).toBe(-3);
+		expect(synthesizePlan(body, [{ op: 'setValues', subject, predicate: P, values: [kept(body, 'ex:a')] }]).expectedChanges.map(change => change.delta)).toEqual([-1, -1, -1]);
 		expect(setValues(body, [kept(body, 'ex:a')])).toBe(`ex:s ex:p ex:a .\n`);
 	});
 

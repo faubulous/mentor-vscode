@@ -5,7 +5,6 @@ import { EditRejectionError } from '../edit-rejection';
 import { PredicateGroup, SubjectBlock } from '../statement-model';
 import { ValueOperations } from './value-operations';
 import { StatementLocator } from '../statement-locator';
-import { countStatementsWithin } from '@src/utilities/quad-contexts';
 import { SynthesisContext } from '../synthesis-context';
 import { toPatternFromRef, toTermPattern } from '../term-patterns';
 import { tokenEnd } from '@src/utilities/tokens';
@@ -204,18 +203,18 @@ export class PropertyOperations {
 		const groups = this.findPredicateGroups(operation.subject, operation.predicate);
 		const subject = toPatternFromRef(operation.subject);
 		const plan = createPlan({});
+		const values = new ValueOperations(context);
 		const byBlock = new Map<SubjectBlock, PredicateGroup[]>();
 
 		for (const { block, group } of groups) {
 			byBlock.set(block, [...(byBlock.get(block) ?? []), group]);
 
 			for (const object of group.objects) {
-				plan.expectedChanges.push({ subject, predicate: operation.predicate, object: toTermPattern(object.quad.object), delta: -1 });
-				plan.quadCountDelta -= 1 + countStatementsWithin(context.model.quadContexts, object.start, object.end);
+				plan.expectedChanges.push(...values.removalChanges(subject, operation.predicate, object));
 			}
 		}
 
-		plan.edits.push(...new ValueOperations(context).groupDeletions(byBlock));
+		plan.edits.push(...values.groupDeletions(byBlock));
 
 		return plan;
 	}

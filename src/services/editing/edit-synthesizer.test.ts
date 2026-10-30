@@ -105,6 +105,10 @@ describe('EditSynthesizer', () => {
 			expect(edit(body, [{ op: 'deleteSubject', subject }])).toBe(`ex:o ex:q ex:s .\n`);
 		});
 
+		it('removes the blank nodes written inside the resource with it', () => {
+			expect(edit(`ex:s ex:p [ ex:q "x" ] .\n\nex:o ex:q ex:a .\n`, [{ op: 'deleteSubject', subject }])).toBe(`ex:o ex:q ex:a .\n`);
+		});
+
 		it('removes the comments above a block in TriG too', () => {
 			const body = `ex:g {\n    # about s\n    ex:s ex:p ex:a .\n\n    ex:o ex:q ex:b .\n}\n`;
 
@@ -261,7 +265,7 @@ describe('EditVerifier', () => {
 	it('rejects an edit that breaks the syntax', () => {
 		const input = inputOf(`ex:s ex:p ex:a .\n`);
 		const period = input.text.lastIndexOf('.');
-		const result = new EditVerifier(input).verify({ edits: [{ start: period, end: period + 1, newText: '' }], expectedChanges: [], quadCountDelta: 0 });
+		const result = new EditVerifier(input).verify({ edits: [{ start: period, end: period + 1, newText: '' }], expectedChanges: [] });
 
 		expect(result.ok).toBe(false);
 	});
@@ -270,19 +274,50 @@ describe('EditVerifier', () => {
 		const input = inputOf(`ex:s ex:p ex:a .\n`);
 		const result = new EditVerifier(input).verify({
 			edits: [{ start: input.text.length, end: input.text.length, newText: 'ex:s ex:q ex:b .\n' }],
-			expectedChanges: [],
-			quadCountDelta: 0
+			expectedChanges: []
 		});
 
 		expect(result.ok).toBe(false);
+	});
+
+	it('rejects an edit that replaces a statement it does not name by another one', () => {
+		const input = inputOf(`ex:s ex:p ex:a .\nex:s ex:q ex:b .\n`);
+		const start = input.text.indexOf('ex:b');
+		const result = new EditVerifier(input).verify({
+			edits: [{ start, end: start + 4, newText: 'ex:c' }],
+			expectedChanges: []
+		});
+
+		expect(result).toMatchObject({ ok: false, message: expect.stringContaining(`<${EX}q>`) });
+	});
+
+	it('rejects an edit that moves a statement to another graph', () => {
+		const input = createSynthesisInput(`ex:g { ex:s ex:p ex:a . }\n`, { syntax: RdfSyntax.TriG });
+		const start = input.text.indexOf('ex:g');
+		const result = new EditVerifier(input).verify({
+			edits: [{ start, end: start + 4, newText: 'ex:h' }],
+			expectedChanges: []
+		});
+
+		expect(result.ok).toBe(false);
+	});
+
+	it('accepts an edit that changes exactly the statements it names', () => {
+		const input = inputOf(`ex:s ex:p ex:a .\n`);
+		const start = input.text.indexOf('ex:a');
+		const result = new EditVerifier(input).verify({
+			edits: [{ start, end: start + 4, newText: 'ex:b' }],
+			expectedChanges: [{ subject, predicate: `${EX}p`, object: iri('a'), delta: -1 }, { subject, predicate: `${EX}p`, object: iri('b'), delta: 1 }]
+		});
+
+		expect(result.ok).toBe(true);
 	});
 
 	it('rejects an edit whose expected statement does not appear', () => {
 		const input = inputOf(`ex:s ex:p ex:a .\n`);
 		const result = new EditVerifier(input).verify({
 			edits: [{ start: input.text.length, end: input.text.length, newText: 'ex:s ex:q ex:b .\n' }],
-			expectedChanges: [{ subject, predicate: `${EX}q`, object: iri('c'), delta: 1 }],
-			quadCountDelta: 1
+			expectedChanges: [{ subject, predicate: `${EX}q`, object: iri('c'), delta: 1 }]
 		});
 
 		expect(result.ok).toBe(false);

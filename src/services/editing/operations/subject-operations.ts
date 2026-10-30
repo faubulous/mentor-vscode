@@ -146,7 +146,6 @@ export class SubjectOperations {
 		return createPlan({
 			edits: [edit, ...insertion.extraEdits],
 			expectedChanges: operation.initial.map(statement => ({ subject, predicate: statement.predicate, object: toPatternFromRef(statement.value), delta: 1 })),
-			quadCountDelta: operation.initial.length,
 			focus: { edit, offsetWithin: insertion.prefix.length + written.subjectOffset, target: 'subject' }
 		});
 	}
@@ -173,17 +172,15 @@ export class SubjectOperations {
 			return new ValueOperations(context).deleteValue(this._parentLocation(operation.subject.id));
 		}
 
-		const { quadContexts } = context.model;
+		const values = new ValueOperations(context);
 
 		// The comments around a block describe the resource and go with it.
-		const plan = createPlan({ edits: new ValueOperations(context).blockDeletions(blocks) });
+		const plan = createPlan({ edits: values.blockDeletions(blocks) });
 
 		for (const block of blocks) {
-			plan.quadCountDelta -= quadContexts.filter(quad => quad.subjectToken.startOffset >= block.start && quad.objectToken.startOffset < block.end).length;
-
 			for (const group of block.groups) {
 				for (const object of group.objects) {
-					plan.expectedChanges.push({ subject: toPatternFromRef(toTermRef(block.subject)), predicate: group.predicateIri, object: toTermPattern(object.quad.object), delta: -1 });
+					plan.expectedChanges.push(...values.removalChanges(toPatternFromRef(toTermRef(block.subject)), group.predicateIri, object));
 				}
 			}
 		}
@@ -261,8 +258,6 @@ export class SubjectOperations {
 		for (const statement of operation.initial) {
 			plan.expectedChanges.push({ subject: node, predicate: statement.predicate, object: toPatternFromRef(statement.value), delta: 1 });
 		}
-
-		plan.quadCountDelta += 1 + operation.initial.length;
 
 		return plan;
 	}
