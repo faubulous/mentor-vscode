@@ -5,15 +5,15 @@ import { StatementServices } from '../hooks/use-statement-services';
 import { StatementRowHandle, useStatementRow } from '../hooks/use-statement-row';
 import { IResourceDataService } from '../services/resource-data-service.interface';
 import { LiteralDatatypes } from '../services/statement/literal-datatypes';
-import { XSD_STRING } from '../services/statement/well-known-iris';
+import { XSD_INTEGER, XSD_STRING } from '../services/statement/well-known-iris';
 import { CellKey } from '../state/cell-key';
 import { IEditingController } from '../state/editing-controller.interface';
 import { RowValue } from '../state/row-value';
 import { StatementDraft } from '../state/statement-draft';
 import { LiteralField } from './literal-field';
+import { ResourceValues } from './resource-values';
 import { RowError } from './row-error';
 import { TermValue } from './term-value';
-import { ValuePill } from './value-pill';
 
 /**
  * Where a statement row stands: the card it belongs to and how deep it is nested.
@@ -56,6 +56,7 @@ export function ReadOnlyStatementRow({ property, ...context }: ReadOnlyStatement
 
 	return (
 		<div className="statement-line" role="group" aria-label={label}>
+			<span className="statement-gutter"></span>
 			<span className="statement-predicate" title={_iriOf(property.predicate.term)}>{label}</span>
 			<span className="statement-values">
 				{property.values.map((value, index) => (
@@ -65,6 +66,7 @@ export function ReadOnlyStatementRow({ property, ...context }: ReadOnlyStatement
 					</span>
 				))}
 			</span>
+			<span className="statement-actions"></span>
 		</div>
 	);
 }
@@ -110,10 +112,12 @@ export interface EditableStatementRowProps extends StatementRowContext {
 }
 
 /**
- * A statement as fields: the predicate, a pill per resource with a button that removes it, a field
- * per literal with its language tag or datatype after the text, the card of a blank node and the
- * items of a list as they are read, and the field a new value is typed into. The row is written
- * when the focus leaves it or Enter is pressed in a literal; Escape gives up what was typed.
+ * A statement as fields on the grid of its card: the predicate, a field per literal with the label
+ * of its language tag or datatype after the text, the resources as pills in one box with the input
+ * of the next value after them, and the card of a blank node or the items of a list as they are
+ * read, each with a button that removes it. The fields are plain at rest and draw their box on
+ * intent. The row is written when the focus leaves it or Enter is pressed in a literal; Escape
+ * gives up what was typed.
  * @param props The statement and where its edits go.
  * @returns The row.
  */
@@ -126,6 +130,11 @@ export function EditableStatementRow(props: EditableStatementRowProps): React.JS
 	const predicateView = state.draft.predicate ? services.resolver.viewOf({ kind: 'iri', iri: state.draft.predicate }) : undefined;
 	const predicateLabel = predicateView ? _labelOf(predicateView) : state.predicateText;
 	const error = (property ? editing.state.errorForRow(cellKey.resourceId, cellKey.propertyIndex ?? -1) : editing.state.errorForCell(cellKey))?.message ?? state.problem;
+	const range = property?.valueKind?.kind ?? 'any';
+	const indexed = state.draft.values.map((value, index) => ({ value, kind: _kindOf(_viewOf(value, services)), index }));
+	const literals = indexed.filter(entry => entry.kind === 'literal');
+	const resources = indexed.filter(entry => entry.kind === 'resource');
+	const wholes = indexed.filter(entry => entry.kind === 'whole');
 
 	const handlePredicateKeyDown = (event: KeyboardEvent<VscodeTextfield>): void => {
 		if (event.key === 'Enter') {
@@ -145,6 +154,7 @@ export function EditableStatementRow(props: EditableStatementRowProps): React.JS
 			onKeyDown={row.onKeyDown}
 			onBlur={row.onBlur}
 		>
+			<span className="statement-gutter"></span>
 			<span className="statement-predicate">
 				<vscode-textfield
 					className="input-field is-predicate"
@@ -166,23 +176,48 @@ export function EditableStatementRow(props: EditableStatementRowProps): React.JS
 				/>
 			</span>
 			<span className="statement-values">
-				{state.draft.values.map((value, index) => (
-					<span key={index} className={`statement-value${_isNode(value) ? ' is-node' : ''}`}>
-						{value.kind === 'written' && value.view.comments && <span className="statement-value-comment">{value.view.comments.join('\n')}</span>}
-						<EditableValue value={value} index={index} row={row} services={services} context={context} />
+				{literals.map(({ value, index }) => (
+					<span key={index} className="statement-value">
+						{_commentsOf(value)}
+						<EditableLiteral value={value} index={index} row={row} services={services} />
 					</span>
 				))}
-				<NewValueField row={row} empty={state.draft.values.length === 0} />
+				<span className={`statement-value is-adder${resources.length === 0 && state.draft.values.length > 0 && state.pendingText === '' ? ' is-on-intent' : ''}`}>
+					<ResourceValues
+						resources={resources.map(({ value, index }) => ({ view: _viewOf(value, services), index }))}
+						documentResources={services.resources}
+						range={range}
+						pendingText={state.pendingText}
+						services={services}
+						placeholder={state.draft.values.length === 0 ? 'value' : 'add a value'}
+						onPendingInput={row.onPendingInput}
+						onPick={row.onValueAdded}
+						onCreate={row.onPendingCommit}
+						onRemove={row.onRemoveValue}
+					/>
+				</span>
+				{wholes.map(({ value, index }) => (
+					<span key={index} className={`statement-value${_isNode(value) ? ' is-node' : ''}`}>
+						{_commentsOf(value)}
+						<span className="statement-value-whole" data-value-index={index}>
+							<TermValue view={_viewOf(value, services)} {...context} />
+							<button type="button" className="statement-value-remove" aria-label={`Remove value ${index + 1}`} title="Remove" onClick={() => row.onRemoveValue(index)}>
+								<vscode-icon name="close" size={12}></vscode-icon>
+							</button>
+						</span>
+					</span>
+				))}
 			</span>
+			<span className="statement-actions"></span>
 			{error && <RowError message={error} onDismiss={() => editing.dismissError(cellKey)} />}
 		</div>
 	);
 }
 
 /**
- * Properties of the {@link EditableValue} component.
+ * Properties of the {@link EditableLiteral} component.
  */
-interface EditableValueProps {
+interface EditableLiteralProps {
 	/**
 	 * The value.
 	 */
@@ -199,99 +234,70 @@ interface EditableValueProps {
 	row: StatementRowHandle;
 
 	/**
-	 * Gives typed terms their labels.
+	 * Gives the datatypes their labels and the card its languages.
 	 */
 	services: StatementServices;
-
-	/**
-	 * Where the row stands.
-	 */
-	context: StatementRowContext;
 }
 
 /**
- * One value of an edited statement: a literal as its field, a resource as a pill with a button that
- * removes it, and a blank node or a list as it is read, with that button beside it.
+ * A literal value of an edited statement as its field.
  * @param props The value and its row.
- * @returns The value.
- */
-function EditableValue({ value, index, row, services, context }: EditableValueProps): React.JSX.Element {
-	const view = value.kind === 'written' ? value.view : services.resolver.viewOf(value.term);
-	const remove = (): void => row.onRemoveValue(index);
-
-	if (view.term.kind === 'literal' && !view.collection) {
-		const term = view.term;
-
-		return (
-			<LiteralField
-				index={index}
-				text={term.value}
-				tag={term.language ?? _datatypeLabel(term.datatype, services)}
-				problem={row.literalProblems.get(index)}
-				numeric={term.datatype !== undefined && LiteralDatatypes.isNumeric(term.datatype)}
-				onInput={text => row.onLiteralInput(index, text)}
-			/>
-		);
-	}
-
-	if (view.term.kind === 'iri') {
-		return <span data-value-index={index}><ValuePill view={view} onRemove={remove} /></span>;
-	}
-
-	return (
-		<span className="statement-value-whole" data-value-index={index}>
-			<TermValue view={view} {...context} />
-			<button type="button" className="statement-value-remove" aria-label={`Remove value ${index + 1}`} title="Remove" onClick={remove}>
-				<vscode-icon name="close" size={12}></vscode-icon>
-			</button>
-		</span>
-	);
-}
-
-/**
- * Properties of the {@link NewValueField} component.
- */
-interface NewValueFieldProps {
-	/**
-	 * The row.
-	 */
-	row: StatementRowHandle;
-
-	/**
-	 * Whether the statement has no values yet.
-	 */
-	empty: boolean;
-}
-
-/**
- * The field a new value is typed into: Enter adds the value it reads as, and Backspace in the
- * empty field removes the last value.
- * @param props The row.
  * @returns The field.
  */
-function NewValueField({ row, empty }: NewValueFieldProps): React.JSX.Element {
-	const handleKeyDown = (event: KeyboardEvent<VscodeTextfield>): void => {
-		if (event.key === 'Enter') {
-			event.preventDefault();
-			event.stopPropagation();
-			row.onPendingCommit();
-		} else if (event.key === 'Backspace' && row.state.pendingText === '' && row.state.draft.values.length > 0) {
-			event.preventDefault();
-			row.onRemoveValue(row.state.draft.values.length - 1);
-		}
-	};
+function EditableLiteral({ value, index, row, services }: EditableLiteralProps): React.JSX.Element | null {
+	const term = _viewOf(value, services).term;
+
+	if (term.kind !== 'literal') {
+		return null;
+	}
 
 	return (
-		<vscode-textfield
-			className="input-field is-new"
-			value={row.state.pendingText}
-			placeholder={empty ? 'value' : 'add a value'}
-			aria-label="New value"
-			autocomplete="off"
-			onInput={(event: FormEvent<VscodeTextfield>) => row.onPendingInput(event.currentTarget.value)}
-			onKeyDown={handleKeyDown}
+		<LiteralField
+			index={index}
+			text={term.value}
+			tag={term.language ?? _datatypeLabel(term.datatype, services)}
+			problem={row.literalProblems.get(index)}
+			numeric={term.datatype !== undefined && LiteralDatatypes.isNumeric(term.datatype)}
+			integer={term.datatype === XSD_INTEGER}
+			languages={services.languages}
+			services={services}
+			onInput={text => row.onLiteralInput(index, text)}
+			onTagPick={tag => row.onLiteralTag(index, tag)}
 		/>
 	);
+}
+
+/**
+ * How a value is edited: a literal in a field of its own, a resource as a pill in the box of the
+ * resources, and a blank node or a list whole, as it is read.
+ * @param view The view of the value.
+ * @returns The kind.
+ */
+function _kindOf(view: TermView): 'literal' | 'resource' | 'whole' {
+	if (view.collection || view.term.kind === 'bnode') {
+		return 'whole';
+	}
+
+	return view.term.kind === 'literal' ? 'literal' : 'resource';
+}
+
+/**
+ * The view a value is shown with.
+ * @param value The value.
+ * @param services Gives typed terms their views.
+ * @returns The view.
+ */
+function _viewOf(value: RowValue, services: StatementServices): TermView {
+	return value.kind === 'written' ? value.view : services.resolver.viewOf(value.term);
+}
+
+/**
+ * The comment lines written above a value, if it is written and has any.
+ * @param value The value.
+ * @returns The comment lines.
+ */
+function _commentsOf(value: RowValue): React.JSX.Element | null {
+	return value.kind === 'written' && value.view.comments ? <span className="statement-value-comment">{value.view.comments.join('\n')}</span> : null;
 }
 
 /**
@@ -325,14 +331,15 @@ function _predicateText(property: PropertyView, services: StatementServices): st
 }
 
 /**
- * The label of a datatype: the name the fields know it by, else its prefixed name.
+ * The label of a datatype: the name the fields know it by, else its prefixed name; Text for plain
+ * text.
  * @param datatype The IRI of the datatype.
  * @param services Gives the datatype its prefixed name.
- * @returns The label, or `undefined` for plain text.
+ * @returns The label.
  */
-function _datatypeLabel(datatype: string | undefined, services: StatementServices): string | undefined {
+function _datatypeLabel(datatype: string | undefined, services: StatementServices): string {
 	if (!datatype || datatype === XSD_STRING) {
-		return undefined;
+		return 'Text';
 	}
 
 	return LiteralDatatypes.of(datatype)?.label ?? services.resolver.viewOf({ kind: 'iri', iri: datatype }).prefixedName ?? datatype;

@@ -6,6 +6,7 @@ import { LiteralDatatypes } from '../services/statement/literal-datatypes';
 import { TypedTermReader } from '../services/statement/typed-term-reader';
 import { CellKey } from '../state/cell-key';
 import { IEditingController } from '../state/editing-controller.interface';
+import { LiteralTag } from '../state/literal-tag';
 import { StatementDraft } from '../state/statement-draft';
 import { StatementRowState } from '../state/statement-row-state';
 
@@ -90,9 +91,19 @@ export interface StatementRowHandle {
 	onLiteralInput(index: number, text: string): void;
 
 	/**
+	 * Called with the language tag or datatype picked for a literal.
+	 */
+	onLiteralTag(index: number, tag: LiteralTag): void;
+
+	/**
 	 * Called with the text of the field for a new value as it is typed.
 	 */
 	onPendingInput(text: string): void;
+
+	/**
+	 * Called with a term picked or typed for a new value, which is added at once.
+	 */
+	onValueAdded(term: TermRef): void;
 
 	/**
 	 * Called when the text typed for a new value is confirmed, which adds the value it reads as.
@@ -311,6 +322,8 @@ export function useStatementRow(options: StatementRowOptions): StatementRowHandl
 		onPredicateInput: text => update(latest.current.state.withPredicateText(text)),
 		onPredicateCommit: writePredicate,
 		onLiteralInput: (index, text) => update(latest.current.state.withLiteralText(index, text)),
+		onLiteralTag: (index, tag) => update(latest.current.state.withLiteralTag(index, tag)),
+		onValueAdded: term => update(latest.current.state.withValueAppended(term)),
 		onPendingInput: text => update(latest.current.state.withPendingText(text)),
 		onPendingCommit,
 		onRemoveValue: index => update(latest.current.state.withoutValue(index)),

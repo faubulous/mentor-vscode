@@ -24,4 +24,10 @@ describe('LiteralDatatypes', () => {
 		expect(LiteralDatatypes.problemOfTerm({ kind: 'literal', value: 'x', language: 'en' })).toBeUndefined();
 		expect(LiteralDatatypes.problemOfTerm({ kind: 'iri', iri: 'http://x' })).toBeUndefined();
 	});
+
+	it('offers the datatypes a text fits, text first', () => {
+		expect(LiteralDatatypes.fitting('12').map(datatype => datatype.label)).toEqual(['Text', 'Integer', 'Decimal', 'Double', 'Float', 'Markdown']);
+		expect(LiteralDatatypes.fitting('true').map(datatype => datatype.label)).toEqual(['Text', 'Boolean', 'Markdown']);
+		expect(LiteralDatatypes.fitting('https://x').map(datatype => datatype.label)).toEqual(['Text', 'URI', 'Markdown']);
+	});
 });

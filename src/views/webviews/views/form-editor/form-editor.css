@@ -476,13 +476,20 @@ body {
 
 /* ---------- Statements ---------- */
 
-/* The label of the property beside its values, each value on a line of its own. */
+/*
+ * The grid of a card: a gutter for the grip, the predicate, the values and a column for the
+ * actions of the row. The gutter and the actions are reserved until their controls arrive.
+ */
 .statement-list {
-	--form-line-border: var(--vscode-settings-headerBorder, var(--form-hairline));
+	--form-line-border: color-mix(in oklab, var(--vscode-foreground) 8%, transparent);
 	--statement-line-height: 22px;
+	--form-gutter: 44px;
+	--form-predicate-column: 200px;
+	--form-actions-column: 62px;
+	--form-column-gap: 20px;
 	display: grid;
-	grid-template-columns: 150px minmax(0, 1fr);
-	column-gap: 16px;
+	grid-template-columns: var(--form-gutter) var(--form-predicate-column) minmax(0, 1fr) var(--form-actions-column);
+	column-gap: var(--form-column-gap);
 	align-items: start;
 	margin-top: 6px;
 }
@@ -502,21 +509,29 @@ body {
 	border-top: 0;
 }
 
-.statement-predicate {
+.statement-gutter {
 	grid-column: 1;
+}
+
+.statement-predicate {
+	grid-column: 2;
 	min-width: 0;
-	padding-left: 1px;
 	color: var(--vscode-descriptionForeground);
 	overflow-wrap: anywhere;
 }
 
 .statement-values {
-	grid-column: 2;
+	grid-column: 3;
 	display: flex;
 	flex-direction: column;
 	align-items: stretch;
+	gap: 2px;
 	min-width: 0;
 	color: var(--vscode-foreground);
+}
+
+.statement-actions {
+	grid-column: 4;
 }
 
 .statement-value {
@@ -524,12 +539,6 @@ body {
 	flex-direction: column;
 	align-items: flex-start;
 	min-width: 0;
-}
-
-.statement-value + .statement-value {
-	margin-top: 2px;
-	padding-top: 2px;
-	border-top: 1px dotted var(--form-line-border);
 }
 
 .statement-value.is-node {
@@ -541,7 +550,7 @@ body {
 .statement-value-comment {
 	position: relative;
 	display: block;
-	grid-column: 1 / -1;
+	grid-column: 2 / -1;
 	padding: 2px 0 2px calc(var(--form-comment-bar-width) + var(--mentor-space-3));
 	color: var(--vscode-descriptionForeground);
 	white-space: pre-wrap;
@@ -601,6 +610,7 @@ body {
 
 /* A resource: its glyph and label as a pill, which leads to its card. */
 .value-pill {
+	position: relative;
 	display: inline-flex;
 	align-items: center;
 	gap: 6px;
@@ -608,7 +618,7 @@ body {
 	box-sizing: border-box;
 	padding: 0 8px 0 6px;
 	border: 1px solid transparent;
-	border-radius: 3px;
+	border-radius: 4px;
 	background: var(--form-tint);
 	line-height: var(--statement-line-height);
 	outline: none;
@@ -647,6 +657,10 @@ body {
 }
 
 .resource-card.is-nested > .statement-list {
+	--form-gutter: 0px;
+	--form-predicate-column: 120px;
+	--form-actions-column: 0px;
+	--form-column-gap: 12px;
 	margin-top: 0;
 }
 
@@ -684,48 +698,54 @@ body {
 
 /* ---------- Edited statements ---------- */
 
-/* Where the document can be written, the predicate and the literals are fields that fill their column. */
-.statement-list.is-editable > .statement-line {
-	padding: 3px 0;
-	border-top: 0;
+/*
+ * Plain at rest, field on intent: the fields of an edited row draw no box until the pointer or the
+ * focus is on them, and then the box of a VS Code input at the size they have, so nothing moves.
+ * Every box of one line of text is as tall as a text field.
+ */
+.statement-list.is-editable {
+	--form-field-height: 26px;
+	--form-field-border: var(--vscode-settings-textInputBorder, var(--vscode-settings-textInputBackground, #313131));
+	--form-field-background: var(--vscode-settings-textInputBackground, #313131);
 }
 
-.statement-line.is-editable .statement-values {
-	gap: 4px;
+.statement-list.is-editable > .statement-line {
+	padding: 4px 0;
 }
 
 .statement-line.is-editable .statement-value {
 	align-items: stretch;
 }
 
-.statement-line.is-editable .statement-value + .statement-value {
-	margin-top: 0;
-	padding-top: 0;
-	border-top: 0;
-}
-
 .input-field {
 	display: block;
 	width: 100%;
+	--vscode-settings-textInputBackground: transparent;
+	--vscode-settings-textInputBorder: transparent;
+}
+
+.input-field:hover,
+.input-field:focus-within {
+	--vscode-settings-textInputBackground: var(--form-field-background);
+	--vscode-settings-textInputBorder: var(--form-field-border);
 }
 
 .input-field.is-predicate {
 	--vscode-settings-textInputForeground: var(--vscode-descriptionForeground);
 }
 
-.literal-field.is-numeric {
+.input-field.is-predicate:focus-within {
+	--vscode-settings-textInputForeground: var(--vscode-foreground);
+}
+
+.input-field.is-numeric {
 	--vscode-font-family: var(--vscode-editor-font-family, monospace);
 }
 
-.literal-field-tag {
-	padding: 0 6px;
-	color: var(--vscode-descriptionForeground);
-	font-size: 12px;
-	white-space: nowrap;
-}
-
-.literal-field-tag.is-problem {
-	color: var(--vscode-errorForeground);
+/* A literal: its field, and the muted label of its tag after the text, which opens its picker. */
+.literal-field {
+	position: relative;
+	display: block;
 }
 
 .literal-field.is-multiline {
@@ -734,23 +754,119 @@ body {
 	align-items: start;
 }
 
-/* A resource or a blank node of an edited statement, with the button that removes it. */
-.value-pill-remove,
-.statement-value-remove {
-	display: inline-flex;
-	align-items: center;
-	padding: 0;
-	border: 0;
-	background: none;
+.literal-field-tag {
+	height: 22px;
+	margin: 0 2px 0 4px;
+	padding: 0 6px;
+	border: 1px solid transparent;
+	border-radius: 4px;
+	background: transparent;
 	color: var(--vscode-descriptionForeground);
+	font: inherit;
+	font-size: 12px;
+	white-space: nowrap;
 	cursor: pointer;
 }
 
-.value-pill-remove:hover,
-.statement-value-remove:hover {
+.literal-field-tag:hover,
+.literal-field-tag:focus-visible {
+	border-color: var(--form-field-border);
 	color: var(--vscode-foreground);
+	outline: none;
 }
 
+.literal-field-tag.is-problem {
+	color: var(--vscode-errorForeground);
+}
+
+.tag-picker {
+	position: absolute;
+	top: 0;
+	right: 0;
+	z-index: 3;
+	width: 220px;
+}
+
+/* A row of literals only shows the input of a further value while the focus is in the row. */
+.statement-line:not(:focus-within) > .statement-values > .statement-value.is-adder.is-on-intent {
+	display: none;
+}
+
+/* The resources of a row in one box, the pills before the input of the next value. */
+.resource-values {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 4px;
+	box-sizing: border-box;
+	width: 100%;
+	min-height: var(--form-field-height);
+	padding: 0 2px;
+	border: 1px solid transparent;
+	border-radius: 4px;
+	cursor: text;
+}
+
+.resource-values:hover,
+.resource-values:focus-within {
+	border-color: var(--form-field-border);
+	background: var(--form-field-background);
+}
+
+.resource-values:focus-within {
+	border-color: var(--vscode-focusBorder);
+}
+
+.resource-values > .combobox {
+	flex: 1 1 160px;
+	min-width: 160px;
+}
+
+.resource-values .input-field.is-new {
+	--vscode-settings-textInputBackground: transparent;
+	--vscode-settings-textInputBorder: transparent;
+	--vscode-focusBorder: transparent;
+}
+
+.resource-values .value-pill {
+	line-height: 20px;
+}
+
+.resource-values .value-pill:focus {
+	border-color: var(--vscode-focusBorder);
+}
+
+/* The remove button takes the place of the icon of a pill while the pointer or the focus is on it. */
+.value-pill-remove {
+	position: absolute;
+	top: 50%;
+	left: 4px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 18px;
+	height: 18px;
+	padding: 0;
+	border: 0;
+	border-radius: 3px;
+	background: var(--form-tint);
+	color: var(--vscode-foreground);
+	opacity: 0;
+	transform: translateY(-50%);
+	cursor: pointer;
+}
+
+.value-pill:hover > .value-pill-remove,
+.value-pill:focus > .value-pill-remove {
+	opacity: 1;
+}
+
+.value-pill:hover > .value-pill-icon:has(+ .value-pill-label + .value-pill-remove),
+.value-pill:focus > .value-pill-icon:has(+ .value-pill-label + .value-pill-remove) {
+	visibility: hidden;
+}
+
+/* A blank node or a list of an edited statement, whole, with the button that removes it. */
 .statement-value-whole {
 	display: flex;
 	align-items: flex-start;
@@ -762,12 +878,80 @@ body {
 	min-width: 0;
 }
 
+.statement-value-remove {
+	display: inline-flex;
+	align-items: center;
+	padding: 0;
+	border: 0;
+	background: none;
+	color: var(--vscode-descriptionForeground);
+	cursor: pointer;
+}
+
+.statement-value-remove:hover {
+	color: var(--vscode-foreground);
+}
+
+/* A combobox: its field, and under it the list of the options the typed text matches. */
+.combobox {
+	position: relative;
+	display: block;
+}
+
+.combobox-list {
+	position: absolute;
+	top: calc(100% + 2px);
+	left: 0;
+	z-index: 4;
+	min-width: 100%;
+	max-height: 260px;
+	margin: 0;
+	padding: 2px 0;
+	overflow-y: auto;
+	border: 1px solid var(--vscode-editorWidget-border, var(--vscode-widget-border, var(--form-hairline)));
+	border-radius: 4px;
+	background: var(--vscode-editorWidget-background, var(--vscode-editor-background));
+	box-shadow: 0 2px 8px var(--vscode-widget-shadow, rgba(0, 0, 0, 0.36));
+	list-style: none;
+}
+
+.combobox-option {
+	display: flex;
+	flex-direction: column;
+	padding: 2px 8px;
+	cursor: pointer;
+}
+
+.combobox-option.is-active {
+	background: var(--vscode-list-activeSelectionBackground);
+	color: var(--vscode-list-activeSelectionForeground, var(--vscode-foreground));
+}
+
+.combobox-option-detail {
+	color: var(--vscode-descriptionForeground);
+	font-family: var(--vscode-editor-font-family, monospace);
+	font-size: 11px;
+	white-space: pre;
+}
+
+.combobox-option.is-active .combobox-option-detail {
+	color: inherit;
+}
+
+.combobox-status {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+	clip-path: inset(50%);
+}
+
 /* Why a row was not written, under the row, with the means to dismiss it. */
 .row-error {
 	display: flex;
 	align-items: center;
 	gap: 6px;
-	grid-column: 1 / -1;
+	grid-column: 2 / -1;
 	margin-top: 4px;
 	color: var(--vscode-errorForeground);
 	font-size: 0.92em;
@@ -794,13 +978,21 @@ body {
 	container: card-body / inline-size;
 }
 
-@container card-body (max-width: 400px) {
+@container card-body (max-width: 500px) {
 	.statement-list {
 		grid-template-columns: minmax(0, 1fr);
 	}
 
+	.statement-gutter,
+	.statement-actions {
+		display: none;
+	}
+
 	.statement-predicate,
-	.statement-values {
+	.statement-values,
+	.statement-comment,
+	.statement-value-comment,
+	.row-error {
 		grid-column: 1;
 	}
 }

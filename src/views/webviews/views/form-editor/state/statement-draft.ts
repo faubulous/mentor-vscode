@@ -1,5 +1,6 @@
 import { StatementValue } from '@src/services/editing/statement-value';
 import { PropertyView, TermRef, TermView } from '../form-editor-model';
+import { LiteralTag } from './literal-tag';
 import { RowValue } from './row-value';
 
 /**
@@ -93,6 +94,30 @@ export class StatementDraft {
 		const next: RowValue = original?.term.kind === 'literal' && original.term.value === text && _sameTag(original.term, term)
 			? { kind: 'written', view: original }
 			: { kind: 'term', term: { ...term, value: text }, replaces: original };
+
+		return new StatementDraft(this.predicate, this.values.map((existing, position) => position === index ? next : existing));
+	}
+
+	/**
+	 * Give a literal value another language tag or datatype, keeping its text. Giving it the tag of
+	 * the written value again restores the written value.
+	 * @param index The index of the value.
+	 * @param tag The language tag, or the IRI of the datatype; neither for plain text.
+	 * @returns The draft with the tag, the draft itself when the value is no literal.
+	 */
+	withLiteralTag(index: number, tag: LiteralTag): StatementDraft {
+		const value = this.values[index];
+		const term = value ? _termOf(value) : undefined;
+
+		if (!value || term?.kind !== 'literal') {
+			return this;
+		}
+
+		const original = value.kind === 'written' ? value.view : value.replaces;
+		const tagged: TermRef = { kind: 'literal', value: term.value, language: tag.language, datatype: tag.language ? undefined : tag.datatype };
+		const next: RowValue = original?.term.kind === 'literal' && original.term.value === term.value && _sameTag(original.term, tagged)
+			? { kind: 'written', view: original }
+			: { kind: 'term', term: tagged, replaces: original };
 
 		return new StatementDraft(this.predicate, this.values.map((existing, position) => position === index ? next : existing));
 	}

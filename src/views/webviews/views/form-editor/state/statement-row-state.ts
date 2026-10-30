@@ -1,4 +1,5 @@
 import { TermRef } from '../form-editor-model';
+import { LiteralTag } from './literal-tag';
 import { StatementDraft } from './statement-draft';
 
 /**
@@ -91,6 +92,16 @@ export class StatementRowState {
 	 */
 	withLiteralText(index: number, text: string): StatementRowState {
 		return new StatementRowState(this.stored, this.draft.withLiteralText(index, text), this.predicateText, this.pendingText, this.problem);
+	}
+
+	/**
+	 * Give a literal value another language tag or datatype.
+	 * @param index The index of the value.
+	 * @param tag The tag.
+	 * @returns The next state.
+	 */
+	withLiteralTag(index: number, tag: LiteralTag): StatementRowState {
+		return new StatementRowState(this.stored, this.draft.withLiteralTag(index, tag), this.predicateText, this.pendingText, this.problem);
 	}
 
 	/**

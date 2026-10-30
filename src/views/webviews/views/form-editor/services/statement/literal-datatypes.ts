@@ -37,7 +37,7 @@ const FLOATING_POINT = /^([+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?|[+-]?INF|NaN)$
 const MARKDOWN_DATATYPE = 'https://www.iana.org/assignments/media-types/text/markdown';
 
 /**
- * The datatypes the literal fields know.
+ * The datatypes the literal fields know, in the order the picker offers them.
  */
 const KNOWN: readonly LiteralDatatype[] = [
 	{ iri: `${XSD_NAMESPACE}string`, label: 'Text' },
@@ -56,8 +56,8 @@ const KNOWN: readonly LiteralDatatype[] = [
 const NUMERIC: ReadonlySet<string> = new Set(['integer', 'decimal', 'double', 'float'].map(name => `${XSD_NAMESPACE}${name}`));
 
 /**
- * What the literal fields know about datatypes: their labels, which of them are numbers, and
- * which text each takes.
+ * What the literal fields know about datatypes: their labels, which of them are numbers, which
+ * text each takes, and which of them a text fits.
  */
 export class LiteralDatatypes {
 	/**
@@ -88,6 +88,15 @@ export class LiteralDatatypes {
 		const datatype = LiteralDatatypes.of(iri);
 
 		return datatype?.pattern && !datatype.pattern.test(text) ? datatype.hint : undefined;
+	}
+
+	/**
+	 * The datatypes a text fits, in the order the picker offers them.
+	 * @param text The text.
+	 * @returns The datatypes.
+	 */
+	static fitting(text: string): LiteralDatatype[] {
+		return KNOWN.filter(datatype => !datatype.pattern || datatype.pattern.test(text));
 	}
 
 	/**

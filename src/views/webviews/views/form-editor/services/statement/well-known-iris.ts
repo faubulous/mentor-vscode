@@ -18,3 +18,8 @@ export const XSD_NAMESPACE = 'http://www.w3.org/2001/XMLSchema#';
  * The datatype a plain literal carries, which is never written.
  */
 export const XSD_STRING = `${XSD_NAMESPACE}string`;
+
+/**
+ * The datatype of whole numbers, whose fields step with the arrows.
+ */
+export const XSD_INTEGER = `${XSD_NAMESPACE}integer`;
