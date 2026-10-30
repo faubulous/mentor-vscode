@@ -13,6 +13,7 @@ import { ResourceReferenceProvider } from '@src/providers/resource-reference-pro
 import { Debouncer } from '@src/utilities/debounce';
 import { getSubjectIconName } from '@src/utilities/subject-icon';
 import { hasBlockingErrors } from '@src/utilities/vscode/diagnostic';
+import { tokensMatchText } from '@src/utilities/tokens';
 import { WebviewComponentFactory } from '../../webview-component-factory';
 import { ExecuteCommandMessage } from '../../webview-messaging';
 import { FocusHintResolver } from '../../services/editing/focus-hint-resolver';
@@ -371,6 +372,16 @@ export class FormEditorSession implements vscode.Disposable {
 		}
 
 		const readOnly = this._getReadOnlyReason(context);
+
+		// The parse of an earlier text: its offsets are not those of this version, so the snapshot
+		// of the last parse stays until the parse of this version is delivered. A template is shown
+		// without its statements, and so without offsets.
+		if (readOnly?.reason !== 'template' && !tokensMatchText(context.tokens, this._document.getText())) {
+			this._sendSnapshot(cause, editId);
+
+			return;
+		}
+
 		const problems = this._collectProblems();
 		const key = `${this._document.version}|${readOnly?.reason ?? ''}|${JSON.stringify(problems)}`;
 
