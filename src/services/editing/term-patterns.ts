@@ -38,38 +38,6 @@ export function toPatternFromRef(term: TermRef): TermPattern {
 }
 
 /**
- * Indicate whether a term matches a pattern. Plain literals and `xsd:string` literals are the
- * same literal, and language tags compare case-insensitively.
- * @param term The term read from the document.
- * @param pattern The pattern to match against.
- * @returns `true` when the term matches.
- */
-export function matchesTermPattern(term: Term, pattern: TermPattern): boolean {
-	switch (pattern.kind) {
-		case 'anyBlankNode':
-		case 'bnode':
-			return term.termType === 'BlankNode';
-		case 'iri':
-			return term.termType === 'NamedNode' && term.value === pattern.iri;
-		case 'literal': {
-			if (term.termType !== 'Literal' || term.value !== pattern.value) {
-				return false;
-			}
-
-			const literal = term as { language?: string; datatype?: { value: string } };
-
-			if (pattern.language || literal.language) {
-				return (pattern.language ?? '').toLowerCase() === (literal.language ?? '').toLowerCase();
-			}
-
-			return _normalizeDatatype(pattern.datatype) === _normalizeDatatype(literal.datatype?.value);
-		}
-		default:
-			return false;
-	}
-}
-
-/**
  * Treat a missing datatype as `xsd:string`, which is what a plain literal carries.
  * @param datatype The datatype IRI of a literal, if any.
  * @returns The datatype IRI to compare by.
