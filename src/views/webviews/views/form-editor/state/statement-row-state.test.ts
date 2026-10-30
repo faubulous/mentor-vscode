@@ -33,11 +33,12 @@ describe('StatementRowState', () => {
 	});
 
 	it('shows a problem until the next thing is typed', () => {
-		const state = StatementRowState.of(stored, 'rdfs:label').withProblem('no');
+		const problem = { kind: 'notAName' } as const;
+		const state = StatementRowState.of(stored, 'rdfs:label').withProblem(problem);
 
-		expect(state.problem).toBe('no');
+		expect(state.problem).toBe(problem);
 		expect(state.withPendingText('y').problem).toBeUndefined();
 		expect(state.withPredicateText('ex:p').problem).toBeUndefined();
-		expect(state.withLiteralText(0, 'Oak').problem).toBe('no');
+		expect(state.withLiteralText(0, 'Oak').problem).toBe(problem);
 	});
 });

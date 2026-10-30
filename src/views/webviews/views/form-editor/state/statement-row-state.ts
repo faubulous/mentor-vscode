@@ -1,4 +1,5 @@
 import { TermRef } from '../form-editor-model';
+import { TermProblem } from '../services/statement/term-problem';
 import { StatementDraft } from './statement-draft';
 
 /**
@@ -20,7 +21,7 @@ export class StatementRowState {
 		readonly draft: StatementDraft,
 		readonly predicateText: string,
 		readonly pendingText = '',
-		readonly problem?: string
+		readonly problem?: TermProblem
 	) { }
 
 	/**
@@ -116,7 +117,7 @@ export class StatementRowState {
 	 * @param problem The reason.
 	 * @returns The next state.
 	 */
-	withProblem(problem: string): StatementRowState {
+	withProblem(problem: TermProblem): StatementRowState {
 		return new StatementRowState(this.stored, this.draft, this.predicateText, this.pendingText, problem);
 	}
 }

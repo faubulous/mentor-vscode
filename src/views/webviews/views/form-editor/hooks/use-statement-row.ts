@@ -70,9 +70,9 @@ export interface StatementRowHandle {
 	state: StatementRowState;
 
 	/**
-	 * Why each literal of the row does not fit its datatype, by the index of the value.
+	 * The indexes of the literals of the row whose text their datatype does not take.
 	 */
-	literalProblems: ReadonlyMap<number, string>;
+	unfittingLiterals: ReadonlySet<number>;
 
 	/**
 	 * Called with the text of the predicate field as it is typed.
@@ -155,7 +155,7 @@ export function useStatementRow(options: StatementRowOptions): StatementRowHandl
 	latest.current = { options, state };
 
 	const range: ValueKind = property?.valueKind?.kind ?? 'any';
-	const literalProblems = useMemo(() => _literalProblemsOf(state.draft), [state.draft]);
+	const unfittingLiterals = useMemo(() => _unfittingLiteralsOf(state.draft), [state.draft]);
 
 	const update = useCallback((next: StatementRowState): void => {
 		latest.current.state = next;
@@ -198,8 +198,8 @@ export function useStatementRow(options: StatementRowOptions): StatementRowHandl
 		const { options: current, state: currentState } = latest.current;
 		const reading = current.reader.readPredicate(currentState.predicateText);
 
-		if (!reading.term || reading.term.kind !== 'iri') {
-			update(currentState.withProblem(reading.problem ?? 'A predicate is an IRI.'));
+		if (!reading.term) {
+			update(currentState.withProblem(reading.problem));
 
 			return;
 		}
@@ -292,7 +292,7 @@ export function useStatementRow(options: StatementRowOptions): StatementRowHandl
 		if (event.key === 'Escape') {
 			event.preventDefault();
 			update(StatementRowState.of(currentState.stored, current.predicateText));
-		} else if (event.key === 'Enter' && !event.shiftKey && _literalProblemsOf(currentState.draft).size === 0) {
+		} else if (event.key === 'Enter' && !event.shiftKey && _unfittingLiteralsOf(currentState.draft).size === 0) {
 			writeValues(currentState.draft);
 		}
 	}, [update, writeValues]);
@@ -307,7 +307,7 @@ export function useStatementRow(options: StatementRowOptions): StatementRowHandl
 
 	return {
 		state,
-		literalProblems,
+		unfittingLiterals,
 		onPredicateInput: text => update(latest.current.state.withPredicateText(text)),
 		onPredicateCommit: writePredicate,
 		onLiteralInput: (index, text) => update(latest.current.state.withLiteralText(index, text)),
@@ -320,22 +320,20 @@ export function useStatementRow(options: StatementRowOptions): StatementRowHandl
 }
 
 /**
- * Why each literal of a draft does not fit its datatype.
+ * Find the literals of a draft whose text their datatype does not take.
  * @param draft The draft.
- * @returns The reasons by the index of the value.
+ * @returns The indexes of the values.
  */
-function _literalProblemsOf(draft: StatementDraft): Map<number, string> {
-	const problems = new Map<number, string>();
+function _unfittingLiteralsOf(draft: StatementDraft): Set<number> {
+	const unfitting = new Set<number>();
 
 	draft.values.forEach((value, index) => {
-		const problem = value.kind === 'term' ? LiteralDatatypes.problemOfTerm(value.term) : undefined;
-
-		if (problem) {
-			problems.set(index, problem);
+		if (value.kind === 'term' && !LiteralDatatypes.fitsTerm(value.term)) {
+			unfitting.add(index);
 		}
 	});
 
-	return problems;
+	return unfitting;
 }
 
 /**
@@ -345,14 +343,14 @@ function _literalProblemsOf(draft: StatementDraft): Map<number, string> {
  * @returns The draft that can be written.
  */
 function _withInvalidLiteralsReverted(draft: StatementDraft): StatementDraft {
-	const problems = _literalProblemsOf(draft);
+	const unfitting = _unfittingLiteralsOf(draft);
 
-	if (problems.size === 0) {
+	if (unfitting.size === 0) {
 		return draft;
 	}
 
 	const values = draft.values.flatMap((value, index) => {
-		if (!problems.has(index) || value.kind !== 'term') {
+		if (!unfitting.has(index) || value.kind !== 'term') {
 			return [value];
 		}
 

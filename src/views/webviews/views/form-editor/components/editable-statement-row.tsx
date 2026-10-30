@@ -11,6 +11,7 @@ import { EditableValue } from './editable-value';
 import { NewValueField } from './new-value-field';
 import { RowError } from './row-error';
 import { StatementRowContext } from './statement-row-context';
+import { getTermProblemMessage } from './term-problem-message';
 import { getTermLabel } from './term-labels';
 
 /**
@@ -69,7 +70,7 @@ export function EditableStatementRow(props: EditableStatementRowProps): React.JS
 	const [predicateFocused, setPredicateFocused] = useState(false);
 	const predicateView = state.draft.predicate ? services.resolver.viewOf({ kind: 'iri', iri: state.draft.predicate }) : undefined;
 	const predicateLabel = predicateView ? getTermLabel(predicateView) : state.predicateText;
-	const error = (property ? editing.state.errorForRow(cellKey.resourceId, cellKey.propertyIndex ?? -1) : editing.state.errorForCell(cellKey))?.message ?? state.problem;
+	const error = (property ? editing.state.errorForRow(cellKey.resourceId, cellKey.propertyIndex ?? -1) : editing.state.errorForCell(cellKey))?.message ?? (state.problem ? getTermProblemMessage(state.problem) : undefined);
 
 	const handlePredicateKeyDown = (event: KeyboardEvent<VscodeTextfield>): void => {
 		if (event.key === 'Enter') {

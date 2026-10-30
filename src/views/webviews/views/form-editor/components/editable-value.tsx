@@ -3,6 +3,7 @@ import { StatementRowHandle } from '../hooks/use-statement-row';
 import { LiteralDatatypes } from '../services/statement/literal-datatypes';
 import { XSD_STRING } from '../services/statement/well-known-iris';
 import { RowValue } from '../state/row-value';
+import { getDatatypeHint, getDatatypeLabel } from './datatype-labels';
 import { LiteralField } from './literal-field';
 import { StatementRowContext } from './statement-row-context';
 import { TermValue } from './term-value';
@@ -56,7 +57,7 @@ export function EditableValue({ value, index, row, services, context }: Editable
 				index={index}
 				text={term.value}
 				tag={term.language ?? _datatypeLabel(term.datatype, services)}
-				problem={row.literalProblems.get(index)}
+				problem={row.unfittingLiterals.has(index) && term.datatype ? getDatatypeHint(term.datatype) : undefined}
 				numeric={term.datatype !== undefined && LiteralDatatypes.isNumeric(term.datatype)}
 				onInput={text => row.onLiteralInput(index, text)}
 			/>
@@ -88,5 +89,5 @@ function _datatypeLabel(datatype: string | undefined, services: StatementService
 		return undefined;
 	}
 
-	return LiteralDatatypes.of(datatype)?.label ?? services.resolver.viewOf({ kind: 'iri', iri: datatype }).prefixedName ?? datatype;
+	return getDatatypeLabel(datatype) ?? services.resolver.viewOf({ kind: 'iri', iri: datatype }).prefixedName ?? datatype;
 }
