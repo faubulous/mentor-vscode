@@ -1,5 +1,5 @@
 import { indentBefore, lineStartOffset } from '@src/utilities/string';
-import { TextEditSpec, expandToWholeLines } from '@src/utilities/text-edits';
+import { TextEditSpec, absorbBlankLine, expandToWholeLines } from '@src/utilities/text-edits';
 import { tokenEnd } from '@src/utilities/tokens';
 import { CommentRun, CommentRunResolver } from '../comment-run-resolver';
 import { EditOperation } from '../edit-operation';
@@ -9,7 +9,7 @@ import { StatementLocator } from '../statement-locator';
 import { SynthesisContext } from '../synthesis-context';
 import { TermRef } from '../term-ref';
 import { PropertyOperations } from './property-operations';
-import { BlockInsertion, SubjectOperations, absorbBlankLine } from './subject-operations';
+import { BlockInsertion, SubjectOperations } from './subject-operations';
 
 type SetPropertyCommentsOperation = Extract<EditOperation, { op: 'setPropertyComments' }>;
 type SetCommentOperation = Extract<EditOperation, { op: 'setComment' }>;

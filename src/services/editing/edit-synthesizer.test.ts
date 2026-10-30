@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 
+import { RdfSyntax } from '@faubulous/mentor-rdf-parsers';
 import { RDF, _RDFS } from '@faubulous/mentor-rdf';
 import { createSynthesisInput, EX, PREAMBLE, synthesizeEdit } from '@src/utilities/mocks/edit-synthesis-fixtures';
 import { EditOperation } from './edit-operation';
@@ -102,6 +103,12 @@ describe('EditSynthesizer', () => {
 			const body = `# About s\nex:s ex:p ex:a .\n\nex:o ex:q ex:s .\n\nex:s ex:r ex:c . # end\n`;
 
 			expect(edit(body, [{ op: 'deleteSubject', subject }])).toBe(`ex:o ex:q ex:s .\n`);
+		});
+
+		it('removes the comments above a block in TriG too', () => {
+			const body = `ex:g {\n    # about s\n    ex:s ex:p ex:a .\n\n    ex:o ex:q ex:b .\n}\n`;
+
+			expect(synthesizeEdit(body, [{ op: 'deleteSubject', subject }], { syntax: RdfSyntax.TriG })).toBe(`ex:g {\n    ex:o ex:q ex:b .\n}\n`);
 		});
 
 		it('removes an inline blank node through the value that holds it', () => {

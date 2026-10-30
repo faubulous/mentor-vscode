@@ -150,6 +150,18 @@ describe('ValueListOperations.setValues in Turtle', () => {
 		expect(setValues(`ex:s ex:p ex:a .\n`, [])).toBe('rejected:wouldRemoveSubject');
 	});
 
+	it('keeps a subject whose statements are all of the removed predicate, however many blocks write them', () => {
+		expect(setValues(`ex:s ex:p ex:a .\n\nex:s ex:p ex:b .\n`, [])).toBe('rejected:wouldRemoveSubject');
+		expect(setValues(`ex:s ex:p ex:a .\n\nex:s ex:q ex:b .\n`, [])).toBe(`ex:s ex:q ex:b .\n`);
+	});
+
+	it('removes a block that loses all its statements with the comment above it and one blank line', () => {
+		expect(setValues(`ex:s ex:q ex:a .\n\n# about p\nex:s ex:p ex:b . # b\n\nex:t ex:q ex:c .\n`, [])).toBe(`ex:s ex:q ex:a .\n\nex:t ex:q ex:c .\n`);
+		expect(setValues(`ex:s ex:q ex:a .\n\nex:s ex:p ex:b .\n`, [])).toBe(`ex:s ex:q ex:a .\n`);
+		expect(setValues(`ex:s ex:q ex:a .\n\nex:s ex:p ex:b .\n\nex:s ex:p ex:c .\n`, [])).toBe(`ex:s ex:q ex:a .\n`);
+		expect(setValues(`# Section\n\nex:s ex:p ex:b .\n\nex:s ex:q ex:a .\n`, [])).toBe(`# Section\n\nex:s ex:q ex:a .\n`);
+	});
+
 	it('writes rdf:type as the document does', () => {
 		const body = `ex:s a ex:C .\n`;
 
@@ -189,6 +201,10 @@ describe('ValueListOperations.setValues in TriG', () => {
 
 describe('ValueListOperations.setValues in N-Triples and N-Quads', () => {
 	const line = (object: string, graph = ''): string => `<${NT}s> <${NT}p> ${object}${graph} .`;
+
+	it('keeps a subject whose lines all state the removed predicate', () => {
+		expect(setValues(`${line('"a"')}\n${line('"b"')}\n`, [], NTRIPLES)).toBe('rejected:wouldRemoveSubject');
+	});
 
 	it('writes one line per value, in full form', () => {
 		const body = `${line('"a"')}\n`;
