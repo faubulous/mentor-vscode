@@ -1088,7 +1088,7 @@
         },
         {
           "command": "mentor.command.openFormEditor",
-          "when": "mentor.editor.isRdfDocument && config.mentor.formEditor.enabled && !activeCustomEditorId == 'mentor.formEditor'",
+          "when": "resourceLangId =~ /^(turtle|trig|ntriples|nquads)$/ && config.mentor.formEditor.enabled && activeCustomEditorId != 'mentor.formEditor'",
           "group": "navigation@1"
         },
         {
@@ -1354,7 +1354,7 @@
         },
         {
           "command": "mentor.command.openFormEditor",
-          "when": "mentor.editor.isRdfDocument && config.mentor.formEditor.enabled && !activeCustomEditorId == 'mentor.formEditor'"
+          "when": "resourceLangId =~ /^(turtle|trig|ntriples|nquads)$/ && config.mentor.formEditor.enabled && activeCustomEditorId != 'mentor.formEditor'"
         },
         {
           "command": "mentor.command.openTextEditor",
