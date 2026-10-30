@@ -39,6 +39,17 @@ describe('StatementDraft', () => {
 		expect(changed.toStatementValues()[0]).toEqual({ kind: 'term', term: { kind: 'literal', value: 'Oak', language: 'en' } });
 	});
 
+	it('gives a literal another tag, keeping its text, and restores the written value for its original tag', () => {
+		const stored = StatementDraft.fromProperty(createLabelProperty());
+		const german = stored.withLiteralTag(0, { language: 'de' });
+		const typed = stored.withLiteralTag(0, { datatype: XSD.string });
+
+		expect(german.values[0]).toMatchObject({ kind: 'term', term: { kind: 'literal', value: 'Tree', language: 'de' } });
+		expect(german.withLiteralTag(0, { language: 'en' }).hasSameValues(stored)).toBe(true);
+		expect(typed.values[0]).toMatchObject({ kind: 'term', term: { kind: 'literal', value: 'Tree', datatype: XSD.string } });
+		expect(stored.withLiteralTag(2, { language: 'de' })).toBe(stored);
+	});
+
 	it('adds and removes values and takes a predicate', () => {
 		const draft = StatementDraft.EMPTY.withPredicate(RDFS.comment).withValueAppended({ kind: 'literal', value: 'x' });
 

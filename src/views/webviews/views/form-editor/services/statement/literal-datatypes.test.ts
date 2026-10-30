@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { XSD } from '@faubulous/mentor-rdf';
-import { LiteralDatatypes } from './literal-datatypes';
+import { LiteralDatatypes, MARKDOWN_DATATYPE } from './literal-datatypes';
 
 describe('LiteralDatatypes', () => {
 	it('knows which datatypes are numbers', () => {
@@ -21,5 +21,11 @@ describe('LiteralDatatypes', () => {
 		expect(LiteralDatatypes.fitsTerm({ kind: 'literal', value: 'x', datatype: XSD.integer })).toBe(false);
 		expect(LiteralDatatypes.fitsTerm({ kind: 'literal', value: 'x', language: 'en' })).toBe(true);
 		expect(LiteralDatatypes.fitsTerm({ kind: 'iri', iri: 'http://x' })).toBe(true);
+	});
+
+	it('offers the datatypes a text fits, text first', () => {
+		expect(LiteralDatatypes.fitting('12')).toEqual([XSD.string, XSD.integer, XSD.decimal, XSD.double, XSD.float, MARKDOWN_DATATYPE]);
+		expect(LiteralDatatypes.fitting('true')).toEqual([XSD.string, XSD.boolean, MARKDOWN_DATATYPE]);
+		expect(LiteralDatatypes.fitting('https://x')).toEqual([XSD.string, XSD.anyURI, MARKDOWN_DATATYPE]);
 	});
 });

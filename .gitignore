@@ -15,3 +15,6 @@ media/mentor-icons-inline.css
 media/codicon.css
 media/codicon-inline.css
 media/codicon.ttf
+
+# Screenshots and traces of failed browser component tests
+.vitest/

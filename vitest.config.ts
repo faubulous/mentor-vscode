@@ -21,6 +21,8 @@ export default defineConfig({
       tsconfig: './tsconfig.spec.json'
     },
     include: ['src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
+    // Component tests that need a real browser run with vitest.browser.config.ts.
+    exclude: ['**/node_modules/**', 'src/**/*.browser.test.tsx'],
     // Host code runs in Node. A webview component test opts into jsdom with the docblock
     // `// @vitest-environment jsdom` on its first line; see src/views/webviews/README.md.
     environment: 'node',
@@ -49,6 +51,7 @@ export default defineConfig({
         '**/*.test.{ts,tsx}',
         '**/*.spec.{ts,tsx}',
         '**/*.browser.ts',
+        '**/*.browser.test.tsx',
         '**/*.node.ts',
         'src/extension.ts',
         'src/services/container.ts',

@@ -1,10 +1,11 @@
 import { EditOperation } from '@src/services/editing/edit-operation';
 import { ValueKind } from '@src/utilities/value-kind';
-import { PropertyView } from '../form-editor-model';
+import { PropertyView, TermRef } from '../form-editor-model';
 import { EditOutcome } from '../services/editing-host-service.interface';
 import { LiteralDatatypes } from '../services/statement/literal-datatypes';
 import { EditWriter } from './edit-writer';
 import { IEditingController } from './editing-controller.interface';
+import { LiteralTag } from './literal-tag';
 import { RowValue } from './row-value';
 import { StatementDraft } from './statement-draft';
 import { StatementRowData } from './statement-row-data';
@@ -220,11 +221,28 @@ export class StatementRowEditor implements EditWriter {
 	}
 
 	/**
+	 * Give a literal another language tag or datatype, as the tag picker does.
+	 * @param index The index of the value.
+	 * @param tag The tag.
+	 */
+	inputLiteralTag(index: number, tag: LiteralTag): void {
+		this._update(this._state.withLiteralTag(index, tag));
+	}
+
+	/**
 	 * Take the text of the field for a new value as it is typed.
 	 * @param text The text.
 	 */
 	inputPending(text: string): void {
 		this._update(this._state.withPendingText(text));
+	}
+
+	/**
+	 * Add a value picked or typed for the field of a new value, and empty the field.
+	 * @param term The term.
+	 */
+	addValue(term: TermRef): void {
+		this._update(this._state.withValueAppended(term));
 	}
 
 	/**

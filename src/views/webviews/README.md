@@ -118,4 +118,24 @@ it('asks the host for data when clicked', async () => {
 });
 ```
 
-`host.posted` records what the component posted, `host.receive` delivers a host message through the window's `message` event, and `host.state` is what the component persisted. The web component stubs carry `value` and `checked` properties and a checkbox toggles on click, which is enough to drive a form; the real components are exercised in the Extension Development Host. See `components/badge.test.tsx` and `hooks/use-webview-messaging.test.tsx`.
+`host.posted` records what the component posted, `host.receive` delivers a host message through the window's `message` event, and `host.state` is what the component persisted. The web component stubs carry `value` and `checked` properties and a checkbox toggles on click, which is enough to drive a form. See `components/badge.test.tsx` and `hooks/use-webview-messaging.test.tsx`.
+
+### In a real browser
+
+What depends on the real VS Code elements, such as focus moving into their shadow DOM, the caret, slots and keyboard handling, is tested in Chromium with `npm run test:browser` (`vitest.browser.config.ts`, Playwright). A test file named `*.browser.test.tsx` renders with Testing Library and drives the page with real input from `vitest/browser`; the setup registers the elements from their bundle and applies the webview stylesheets and a dark theme. A failing test leaves a screenshot under `.vitest/`.
+
+```tsx
+import { userEvent } from 'vitest/browser';
+import { render } from '@testing-library/react';
+
+it('takes the typed text', async () => {
+  const { container } = render(<MyField />);
+
+  await userEvent.click(container.querySelector('vscode-textfield')!);
+  await userEvent.keyboard('Oak{Enter}');
+
+  expect(onSubmit).toHaveBeenCalledWith('Oak');
+});
+```
+
+See `views/form-editor/components/combobox.browser.test.tsx`. CI runs these tests in a job of their own after installing Chromium (`npx playwright install --with-deps chromium`).
