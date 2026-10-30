@@ -15,21 +15,12 @@ const BARE_DATATYPES: Record<string, string> = {
 };
 
 /**
- * The placeholder a blank node the statement keeps is written as in the statement text sent to
- * the host, which puts the source text of the node back in its place. The line shown to the user
- * never contains it.
- */
-export const NESTED_NODE_PLACEHOLDER = '[…]';
-
-/**
  * Writes the properties of a resource as statement lines: the predicate, then its values
  * single-spaced, prefixed names where a prefix is declared, literals with their tag or datatype,
  * bare numbers and booleans and lists as `( … )`. Blank-node values are left off the line, as they
  * are shown as nested cards below it, and collected in the line model.
  */
 export class LineSerializer {
-	private readonly _lexer = new LineLexer();
-
 	/**
 	 * Create a serializer for a document.
 	 * @param _namespaces Prefix to namespace IRI.
@@ -93,33 +84,6 @@ export class LineSerializer {
 
 				return '';
 		}
-	}
-
-	/**
-	 * Write the canonical text of a line as the statement text for the host: the values separated
-	 * by commas, lists kept whole, and one placeholder appended for every blank node the statement
-	 * keeps, which the host replaces with the source text of the node.
-	 * @param canonical The canonical text of the line, without markers for new nested nodes.
-	 * @param nestedNodeCount The number of blank nodes the statement keeps.
-	 * @returns The statement text.
-	 */
-	toStatementText(canonical: string, nestedNodeCount = 0): string {
-		if (LineLexer.isComment(canonical)) {
-			return canonical;
-		}
-
-		const tokens = this._lexer.tokenize(canonical);
-		const items = this._lexer.items(tokens);
-
-		if (items.length === 0) {
-			return canonical;
-		}
-
-		const values = this._lexer.valueGroups(tokens).map(group => canonical.slice(group.start, group.end));
-		const placeholders = Array.from({ length: nestedNodeCount }, () => NESTED_NODE_PLACEHOLDER);
-		const objects = [...values, ...placeholders];
-
-		return objects.length > 0 ? `${items[0].text} ${objects.join(', ')}` : items[0].text;
 	}
 
 	/**

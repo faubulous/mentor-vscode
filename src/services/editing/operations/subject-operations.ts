@@ -4,7 +4,7 @@ import { getIriFromPrefixedName } from '@src/utilities/prefixed-name';
 import { getIriFromIriReference } from '@src/utilities/tokens';
 import { EditOperation } from '../edit-operation';
 import { TermRef } from '../term-ref';
-import { EditPlan, QuadExpectation, createPlan } from '../edit-plan';
+import { EditPlan, ExpectedStatementChange, createPlan } from '../edit-plan';
 import { EditRejectionError } from '../edit-rejection';
 import { SubjectBlock } from '../statement-model';
 import { ValueOperations } from './value-operations';
@@ -107,19 +107,19 @@ function _lineIndentOf(text: string, offset: number): string {
 }
 
 /**
- * The expectations a rename produces for one statement.
+ * The expected changes a rename produces for one statement.
  * @param quad The statement to inspect.
  * @param oldIri The IRI being renamed.
  * @param newIri The new IRI.
- * @returns The expectations, or none when the statement does not mention the IRI.
+ * @returns The expected changes, or none when the statement does not mention the IRI.
  */
-function _renameExpectations(quad: SynthesisContext['model']['quadContexts'][number], oldIri: string, newIri: string): QuadExpectation[] {
-	const expectations: QuadExpectation[] = [];
+function _renameChanges(quad: SynthesisContext['model']['quadContexts'][number], oldIri: string, newIri: string): ExpectedStatementChange[] {
+	const expectedChanges: ExpectedStatementChange[] = [];
 	const subjectIsOld = quad.subject.termType === 'NamedNode' && quad.subject.value === oldIri;
 	const objectIsOld = quad.object.termType === 'NamedNode' && quad.object.value === oldIri;
 
 	if (!subjectIsOld && !objectIsOld) {
-		return expectations;
+		return expectedChanges;
 	}
 
 	const subject = subjectIsOld ? { kind: 'iri' as const, iri: oldIri } : toTermPattern(quad.subject);
@@ -127,10 +127,10 @@ function _renameExpectations(quad: SynthesisContext['model']['quadContexts'][num
 	const newSubject = subjectIsOld ? { kind: 'iri' as const, iri: newIri } : subject;
 	const newObject = objectIsOld ? { kind: 'iri' as const, iri: newIri } : object;
 
-	expectations.push({ subject, predicate: quad.predicate.value, object, delta: -1 });
-	expectations.push({ subject: newSubject, predicate: quad.predicate.value, object: newObject, delta: 1 });
+	expectedChanges.push({ subject, predicate: quad.predicate.value, object, delta: -1 });
+	expectedChanges.push({ subject: newSubject, predicate: quad.predicate.value, object: newObject, delta: 1 });
 
-	return expectations;
+	return expectedChanges;
 }
 
 /**
@@ -172,7 +172,7 @@ export class SubjectOperations {
 
 		return createPlan({
 			edits: [edit, ...insertion.extraEdits],
-			expectations: operation.initial.map(statement => ({ subject, predicate: statement.predicate, object: toPatternFromRef(statement.value), delta: 1 })),
+			expectedChanges: operation.initial.map(statement => ({ subject, predicate: statement.predicate, object: toPatternFromRef(statement.value), delta: 1 })),
 			quadCountDelta: operation.initial.length,
 			focus: { edit, offsetWithin: insertion.prefix.length + written.subjectOffset, target: 'subject' }
 		});
@@ -214,7 +214,7 @@ export class SubjectOperations {
 
 			for (const group of block.groups) {
 				for (const object of group.objects) {
-					plan.expectations.push({ subject: toPatternFromRef(toTermRef(block.subject)), predicate: group.predicateIri, object: toTermPattern(object.quad.object), delta: -1 });
+					plan.expectedChanges.push({ subject: toPatternFromRef(toTermRef(block.subject)), predicate: group.predicateIri, object: toTermPattern(object.quad.object), delta: -1 });
 				}
 			}
 		}
@@ -259,7 +259,7 @@ export class SubjectOperations {
 		});
 
 		for (const quad of quadContexts) {
-			plan.expectations.push(..._renameExpectations(quad, oldIri, operation.iri));
+			plan.expectedChanges.push(..._renameChanges(quad, oldIri, operation.iri));
 		}
 
 		return plan;
@@ -287,10 +287,10 @@ export class SubjectOperations {
 		const plan = new ValueOperations(context).appendWrittenValue(operation.parent, operation.predicate, `[ ${statements.join(' ; ')} ]`);
 		const node = { kind: 'anyBlankNode' as const };
 
-		plan.expectations.push({ subject: toPatternFromRef(operation.parent), predicate: operation.predicate, object: node, delta: 1 });
+		plan.expectedChanges.push({ subject: toPatternFromRef(operation.parent), predicate: operation.predicate, object: node, delta: 1 });
 
 		for (const statement of operation.initial) {
-			plan.expectations.push({ subject: node, predicate: statement.predicate, object: toPatternFromRef(statement.value), delta: 1 });
+			plan.expectedChanges.push({ subject: node, predicate: statement.predicate, object: toPatternFromRef(statement.value), delta: 1 });
 		}
 
 		plan.quadCountDelta += 1 + operation.initial.length;

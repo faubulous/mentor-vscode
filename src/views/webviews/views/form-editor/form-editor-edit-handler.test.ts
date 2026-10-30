@@ -33,13 +33,13 @@ function applyEditsTo(document: EditableTextDocument): void {
 }
 
 /**
- * Build a request rewriting the statement of `ex:s ex:p`.
+ * Build a request making a literal the one value of `ex:s ex:p`.
  */
-function replaceRequest(baseVersion: number, text: string): EditRequest {
+function setValueRequest(baseVersion: number, value: string): EditRequest {
 	return {
 		editId: 'e1',
 		baseVersion,
-		operations: [{ op: 'replaceStatement', subject: { kind: 'iri', iri: `${EX}s` }, predicate: `${EX}p`, text }]
+		operations: [{ op: 'setValues', subject: { kind: 'iri', iri: `${EX}s` }, predicate: `${EX}p`, values: [{ kind: 'term', term: { kind: 'literal', value } }] }]
 	};
 }
 
@@ -53,18 +53,18 @@ describe('FormEditorEditHandler', () => {
 
 		applyEditsTo(document);
 
-		const outcome = await new FormEditorEditHandler().handle(replaceRequest(1, 'ex:p "new"'), { document, context });
+		const outcome = await new FormEditorEditHandler().handle(setValueRequest(1, 'new'), { document, context });
 
 		expect(outcome).toMatchObject({ ok: true, version: 2, renamedIds: [] });
 		expect(document.getText()).toBe(`${PREAMBLE}ex:s ex:p "new" .\n`);
 		expect(context.getParseResult(document.getText())).toBeDefined();
-		expect(outcome.ok && outcome.focus).toEqual({ offset: PREAMBLE.length + 'ex:s '.length, target: 'predicate' });
+		expect(outcome.ok && outcome.focus).toEqual({ offset: PREAMBLE.length + 'ex:s ex:p '.length, target: 'value' });
 	});
 
 	it('rejects a request built against an older version of the document', async () => {
 		const { document, context } = setup('ex:s ex:p "old" .\n');
 
-		const outcome = await new FormEditorEditHandler().handle(replaceRequest(0, 'ex:p "new"'), { document, context });
+		const outcome = await new FormEditorEditHandler().handle(setValueRequest(0, 'new'), { document, context });
 
 		expect(outcome).toEqual({ ok: false, reason: 'staleVersion', message: expect.any(String) });
 		expect(document.getText()).toContain('"old"');
@@ -74,8 +74,8 @@ describe('FormEditorEditHandler', () => {
 		const { document, context } = setup('ex:s ex:p "old" .\n');
 		const handler = new FormEditorEditHandler();
 
-		const syntax = await handler.handle(replaceRequest(1, 'ex:p "new"'), { document, context, readOnly: { reason: 'syntaxErrors', message: 'broken' } });
-		const template = await handler.handle(replaceRequest(1, 'ex:p "new"'), { document, context, readOnly: { reason: 'template', message: 'template' } });
+		const syntax = await handler.handle(setValueRequest(1, 'new'), { document, context, readOnly: { reason: 'syntaxErrors', message: 'broken' } });
+		const template = await handler.handle(setValueRequest(1, 'new'), { document, context, readOnly: { reason: 'template', message: 'template' } });
 
 		expect(syntax).toMatchObject({ ok: false, reason: 'parseErrors' });
 		expect(template).toMatchObject({ ok: false, reason: 'readOnly', message: 'template' });
@@ -89,7 +89,7 @@ describe('FormEditorEditHandler', () => {
 		// The user typed in a split text editor and the debounced parse has not run yet.
 		document.setText(`${PREAMBLE}# note\nex:s ex:p "old" .\n`);
 
-		const outcome = await new FormEditorEditHandler().handle(replaceRequest(2, 'ex:p "new"'), { document, context });
+		const outcome = await new FormEditorEditHandler().handle(setValueRequest(2, 'new'), { document, context });
 
 		expect(outcome).toMatchObject({ ok: true });
 		expect(document.getText()).toBe(`${PREAMBLE}# note\nex:s ex:p "new" .\n`);
@@ -109,7 +109,7 @@ describe('FormEditorEditHandler', () => {
 
 		applyEditsTo(document);
 
-		await new FormEditorEditHandler().handle(replaceRequest(1, 'ex:p "new"'), { document, context, tokenSource });
+		await new FormEditorEditHandler().handle(setValueRequest(1, 'new'), { document, context, tokenSource });
 
 		expect(refreshed).toEqual([URI]);
 	});
@@ -138,7 +138,7 @@ describe('FormEditorEditHandler', () => {
 		const request: EditRequest = {
 			editId: 'e3',
 			baseVersion: 1,
-			operations: [{ op: 'replaceStatement', subject: { kind: 'iri', iri: `${EX}s` }, predicate: `${EX}q`, text: 'ex:q "new"' }]
+			operations: [{ op: 'setValues', subject: { kind: 'iri', iri: `${EX}s` }, predicate: `${EX}q`, values: [{ kind: 'term', term: { kind: 'literal', value: 'new' } }] }]
 		};
 		const outcome = await new FormEditorEditHandler().handle(request, { document, context });
 

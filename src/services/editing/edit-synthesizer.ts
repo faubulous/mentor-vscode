@@ -7,7 +7,7 @@ import { LocalStyleDetector } from './local-style-detector';
 import { CommentOperations } from './operations/comment-operations';
 import { NamespaceOperations } from './operations/namespace-operations';
 import { PropertyOperations } from './operations/property-operations';
-import { StatementOperations } from './operations/statement-operations';
+import { ValueListOperations } from './operations/value-list-operations';
 import { SubjectOperations } from './operations/subject-operations';
 import { StatementModelBuilder } from './statement-model-builder';
 import { SynthesisContext, SynthesisInput } from './synthesis-context';
@@ -87,8 +87,10 @@ export class EditSynthesizer {
 	 */
 	private _synthesizeOperation(context: SynthesisContext, operation: EditOperation): EditPlan {
 		switch (operation.op) {
-			case 'replaceStatement':
-				return new StatementOperations(context).replaceStatement(operation);
+			case 'setValues':
+				return new ValueListOperations(context).setValues(operation);
+			case 'setPredicate':
+				return new PropertyOperations(context).setPredicate(operation);
 			case 'deleteProperty':
 				return new PropertyOperations(context).deleteProperty(operation);
 			case 'moveProperty':

@@ -6,10 +6,10 @@ import { EditingHostService } from './editing-host-service';
 const subject = { kind: 'iri' as const, iri: 'http://example.org/s' };
 
 /**
- * Build an operation rewriting a statement.
+ * Build an operation making a literal the one value of a predicate.
  */
-function operation(text: string): EditOperation {
-	return { op: 'replaceStatement', subject, predicate: 'http://example.org/p', text };
+function operation(value: string): EditOperation {
+	return { op: 'setValues', subject, predicate: 'http://example.org/p', values: [{ kind: 'term', term: { kind: 'literal', value } }] };
 }
 
 /**
@@ -28,8 +28,8 @@ describe('EditingHostService', () => {
 	it('sends one edit at a time and stamps the next with the version the host reported', async () => {
 		const { service, posted } = createService();
 
-		const first = service.applyEdit([operation('ex:p "a"')]);
-		const second = service.applyEdit([operation('ex:p "b"')]);
+		const first = service.applyEdit([operation('a')]);
+		const second = service.applyEdit([operation('b')]);
 
 		expect(posted).toHaveLength(1);
 		expect(posted[0]).toMatchObject({ id: 'ApplyEdit', editId: first.editId, baseVersion: 3 });
@@ -44,8 +44,8 @@ describe('EditingHostService', () => {
 
 	it('resolves a rejection with its reason and sends the next edit', async () => {
 		const { service, posted } = createService();
-		const edit = service.applyEdit([operation('ex:p "a"')]);
-		const next = service.applyEdit([operation('ex:p "b"')]);
+		const edit = service.applyEdit([operation('a')]);
+		const next = service.applyEdit([operation('b')]);
 
 		service.accept({ id: 'EditRejected', editId: edit.editId, reason: 'notFound', message: 'gone', version: 3 });
 
@@ -56,7 +56,7 @@ describe('EditingHostService', () => {
 	it('ignores an answer for an edit that is not in flight', () => {
 		const { service, posted } = createService();
 
-		service.applyEdit([operation('ex:p "a"')]);
+		service.applyEdit([operation('a')]);
 
 		expect(service.accept({ id: 'EditApplied', editId: 'edit-99', version: 9 })).toBe(true);
 		expect(posted).toHaveLength(1);

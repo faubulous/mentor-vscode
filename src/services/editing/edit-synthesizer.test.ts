@@ -2,71 +2,29 @@ import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 
-import { _RDFS, _XSD } from '@faubulous/mentor-rdf';
-import { QuadContext, RdfSyntax, TurtleLexer, TurtleParser, TurtleReader, assignBlankNodeIds } from '@faubulous/mentor-rdf-parsers';
+import { RDF, _RDFS } from '@faubulous/mentor-rdf';
+import { createSynthesisInput, EX, PREAMBLE, synthesizeEdit } from '@src/utilities/mocks/edit-synthesis-fixtures';
 import { EditOperation } from './edit-operation';
 import { TermRef } from './term-ref';
 import { EditSynthesizer } from './edit-synthesizer';
 import { isEditRejection } from './edit-rejection';
-import { EditPlan } from './edit-plan';
 import { EditVerifier } from './edit-verifier';
 import { StatementLocator, ValueLocation } from './statement-locator';
 import { SynthesisInput } from './synthesis-context';
 import { applyTextEdits } from '@src/utilities/text-edits';
 
-const EX = 'http://example.org/';
-const RDF_TYPE = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type';
-
-const NAMESPACES = { ex: EX, rdfs: _RDFS, xsd: _XSD };
-
-const PREAMBLE = `@prefix ex: <${EX}> .\n@prefix rdfs: <${_RDFS}> .\n@prefix xsd: <${_XSD}> .\n\n`;
-
-/**
- * Parse Turtle into quad contexts the way the document context does.
- */
-function parse(text: string): { tokens: SynthesisInput['tokens']; quadContexts: QuadContext[] } {
-	const lexer = new TurtleLexer();
-	lexer.blankNodeIdGenerator = undefined;
-
-	const tokens = assignBlankNodeIds(lexer.tokenize(text).tokens);
-	const cst = new TurtleParser().parse(tokens);
-
-	return { tokens, quadContexts: new TurtleReader().readQuadContexts(cst, tokens) };
-}
-
 /**
  * Build the synthesis input of a Turtle body.
  */
 function inputOf(body: string, style: Partial<SynthesisInput['style']> = {}): SynthesisInput {
-	const text = PREAMBLE + body;
-
-	return {
-		text,
-		...parse(text),
-		namespaces: NAMESPACES,
-		syntax: RdfSyntax.Turtle,
-		style: { tabSize: 4, insertSpaces: true, ...style }
-	};
+	return createSynthesisInput(body, { style });
 }
 
 /**
- * Synthesize and verify operations, returning the edited body or the rejection reason.
+ * Synthesize and verify operations on a Turtle body, returning the edited body or the rejection reason.
  */
 function edit(body: string, operations: EditOperation[], style?: Partial<SynthesisInput['style']>): string {
-	const input = inputOf(body, style);
-	const plan = new EditSynthesizer(input).synthesize(operations);
-
-	if (isEditRejection(plan)) {
-		return `rejected:${plan.reason}`;
-	}
-
-	const verification = new EditVerifier(input).verify(plan);
-
-	if (!verification.ok) {
-		return `unverified:${verification.message}`;
-	}
-
-	return applyTextEdits(input.text, plan.edits).slice(PREAMBLE.length);
+	return synthesizeEdit(body, operations, { style });
 }
 
 const subject: TermRef = { kind: 'iri', iri: `${EX}s` };
@@ -110,7 +68,7 @@ describe('EditSynthesizer', () => {
 
 	describe('addSubject', () => {
 		it('appends a block after one blank line, replacing trailing whitespace', () => {
-			const initial = [{ predicate: RDF_TYPE, value: iri('C') }, { predicate: `${_RDFS}label`, value: literal('New', { language: 'en' }) }];
+			const initial = [{ predicate: RDF.type, value: iri('C') }, { predicate: `${_RDFS}label`, value: literal('New', { language: 'en' }) }];
 
 			expect(edit(`ex:s ex:p ex:a .\n\n\n`, [{ op: 'addSubject', iri: `${EX}n`, initial }]))
 				.toBe(`ex:s ex:p ex:a .\n\nex:n a ex:C ;\n    rdfs:label "New"@en .\n`);
@@ -181,7 +139,7 @@ describe('EditSynthesizer', () => {
 
 	describe('addNestedNode', () => {
 		it('adds an inline node with its first statements as a value', () => {
-			const initial = [{ predicate: RDF_TYPE, value: iri('T') }, { predicate: `${EX}q`, value: literal('x') }];
+			const initial = [{ predicate: RDF.type, value: iri('T') }, { predicate: `${EX}q`, value: literal('x') }];
 
 			expect(edit(`ex:s ex:p ex:a .\n`, [{ op: 'addNestedNode', parent: subject, predicate: `${EX}p`, initial }])).toBe(`ex:s ex:p ex:a, [ a ex:T ; ex:q "x" ] .\n`);
 		});
@@ -200,7 +158,7 @@ describe('EditSynthesizer', () => {
 	describe('adding a resource after another', () => {
 		it('writes the new block right after the block of the given resource', () => {
 			const body = `ex:a ex:p ex:x .\n\nex:b ex:p ex:y .\n`;
-			const text = edit(body, [{ op: 'addSubject', iri: `${EX}n`, initial: [{ predicate: RDF_TYPE, value: iri('C') }], after: { kind: 'iri', iri: `${EX}a` } }]);
+			const text = edit(body, [{ op: 'addSubject', iri: `${EX}n`, initial: [{ predicate: RDF.type, value: iri('C') }], after: { kind: 'iri', iri: `${EX}a` } }]);
 
 			expect(text.indexOf('ex:n')).toBeGreaterThan(text.indexOf('ex:a ex:p'));
 			expect(text.indexOf('ex:n')).toBeLessThan(text.indexOf('ex:b ex:p'));
@@ -208,7 +166,7 @@ describe('EditSynthesizer', () => {
 		});
 
 		it('rejects a resource the document does not write', () => {
-			expect(edit(`ex:a ex:p ex:x .\n`, [{ op: 'addSubject', iri: `${EX}n`, initial: [{ predicate: RDF_TYPE, value: iri('C') }], after: { kind: 'iri', iri: `${EX}missing` } }])).toBe('rejected:notFound');
+			expect(edit(`ex:a ex:p ex:x .\n`, [{ op: 'addSubject', iri: `${EX}n`, initial: [{ predicate: RDF.type, value: iri('C') }], after: { kind: 'iri', iri: `${EX}missing` } }])).toBe('rejected:notFound');
 		});
 	});
 
@@ -237,15 +195,15 @@ describe('EditSynthesizer', () => {
 			const body = `ex:s ex:p ex:a ;\n    ex:q ex:b .\n`;
 
 			expect(edit(body, [
-				{ op: 'replaceStatement', subject, predicate: `${EX}p`, text: 'ex:p ex:x' },
-				{ op: 'replaceStatement', subject, predicate: `${EX}q`, text: 'ex:q ex:y' }
+				{ op: 'setValues', subject, predicate: `${EX}p`, values: [{ kind: 'term', term: iri('x') }] },
+				{ op: 'setValues', subject, predicate: `${EX}q`, values: [{ kind: 'term', term: iri('y') }] }
 			])).toBe(`ex:s ex:p ex:x ;\n    ex:q ex:y .\n`);
 		});
 
 		it('rejects operations that touch the same text', () => {
 			expect(edit(`ex:s ex:p ex:a .\n`, [
-				{ op: 'replaceStatement', subject, predicate: `${EX}p`, text: 'ex:p ex:x' },
-				{ op: 'replaceStatement', subject, predicate: `${EX}p`, text: 'ex:p ex:y' }
+				{ op: 'setValues', subject, predicate: `${EX}p`, values: [{ kind: 'term', term: iri('x') }] },
+				{ op: 'setValues', subject, predicate: `${EX}p`, values: [{ kind: 'term', term: iri('y') }] }
 			])).toBe('rejected:ambiguous');
 		});
 
@@ -283,7 +241,7 @@ describe('EditSynthesizer', () => {
 			const input = inputOf(`ex:s ex:p ex:a .\n`, { sortPrefixes: false });
 			const plan = new EditSynthesizer(input).synthesize([
 				{ op: 'addNamespace', prefix: 'foaf', iri: 'http://xmlns.com/foaf/0.1/' },
-				{ op: 'replaceStatement', subject, predicate: `${EX}p`, text: 'ex:p foaf:Person' }
+				{ op: 'setValues', subject, predicate: `${EX}p`, values: [{ kind: 'term', term: { kind: 'iri', iri: 'http://xmlns.com/foaf/0.1/Person' } }] }
 			]);
 
 			expect(isEditRejection(plan)).toBe(false);
@@ -296,7 +254,7 @@ describe('EditVerifier', () => {
 	it('rejects an edit that breaks the syntax', () => {
 		const input = inputOf(`ex:s ex:p ex:a .\n`);
 		const period = input.text.lastIndexOf('.');
-		const result = new EditVerifier(input).verify({ edits: [{ start: period, end: period + 1, newText: '' }], expectations: [], quadCountDelta: 0 });
+		const result = new EditVerifier(input).verify({ edits: [{ start: period, end: period + 1, newText: '' }], expectedChanges: [], quadCountDelta: 0 });
 
 		expect(result.ok).toBe(false);
 	});
@@ -305,7 +263,7 @@ describe('EditVerifier', () => {
 		const input = inputOf(`ex:s ex:p ex:a .\n`);
 		const result = new EditVerifier(input).verify({
 			edits: [{ start: input.text.length, end: input.text.length, newText: 'ex:s ex:q ex:b .\n' }],
-			expectations: [],
+			expectedChanges: [],
 			quadCountDelta: 0
 		});
 
@@ -316,129 +274,11 @@ describe('EditVerifier', () => {
 		const input = inputOf(`ex:s ex:p ex:a .\n`);
 		const result = new EditVerifier(input).verify({
 			edits: [{ start: input.text.length, end: input.text.length, newText: 'ex:s ex:q ex:b .\n' }],
-			expectations: [{ subject, predicate: `${EX}q`, object: iri('c'), delta: 1 }],
+			expectedChanges: [{ subject, predicate: `${EX}q`, object: iri('c'), delta: 1 }],
 			quadCountDelta: 1
 		});
 
 		expect(result.ok).toBe(false);
-	});
-});
-
-describe('replaceStatement', () => {
-	const P = `${EX}p`;
-	const Q = `${EX}q`;
-
-	/**
-	 * Replace the statement of a predicate of `ex:s`.
-	 */
-	function replace(body: string, text: string, predicate = P): string {
-		return edit(body, [{ op: 'replaceStatement', subject, predicate, text }]);
-	}
-
-	/**
-	 * Add a statement to `ex:s` from a line.
-	 */
-	function add(body: string, text: string): string {
-		return edit(body, [{ op: 'replaceStatement', subject, text }]);
-	}
-
-	it('rewrites the values of a predicate in place', () => {
-		expect(replace(`ex:s ex:p ex:a, ex:b .\n`, 'ex:p ex:c, ex:d')).toBe(`ex:s ex:p ex:c, ex:d .\n`);
-	});
-
-	it('adds and removes values', () => {
-		expect(replace(`ex:s ex:p ex:a .\n`, 'ex:p ex:a, "x"@en')).toBe(`ex:s ex:p ex:a, "x"@en .\n`);
-		expect(replace(`ex:s ex:p ex:a, ex:b .\n`, 'ex:p ex:b')).toBe(`ex:s ex:p ex:b .\n`);
-	});
-
-	it('changes the predicate, expecting the statements under the old and the new one', () => {
-		const input = inputOf(`ex:s ex:p ex:a ;\n    ex:q ex:b .\n`);
-		const plan = new EditSynthesizer(input).synthesize([{ op: 'replaceStatement', subject, predicate: P, text: 'ex:r ex:a' }]);
-
-		expect(isEditRejection(plan)).toBe(false);
-		expect((plan as { expectations: { predicate: string; delta: number }[] }).expectations).toEqual([
-			{ subject, predicate: P, object: iri('a'), delta: -1 },
-			{ subject, predicate: `${EX}r`, object: iri('a'), delta: 1 }
-		]);
-		expect(replace(`ex:s ex:p ex:a ;\n    ex:q ex:b .\n`, 'ex:r ex:a')).toBe(`ex:s ex:r ex:a ;\n    ex:q ex:b .\n`);
-	});
-
-	it('writes the predicate the way the document does', () => {
-		expect(edit(`ex:s a ex:C .\n`, [{ op: 'replaceStatement', subject, predicate: RDF_TYPE, text: `<${RDF_TYPE}> ex:D` }])).toBe(`ex:s a ex:D .\n`);
-		expect(replace(`ex:s ex:p ex:a .\n`, `<${EX}p> <${EX}b>`)).toBe(`ex:s ex:p <${EX}b> .\n`);
-	});
-
-	it('splices a kept nested node byte for byte, with its statements', () => {
-		const body = `ex:s ex:p [ ex:q "x" ;\n        ex:r 1 ], ex:a .\n`;
-		const input = inputOf(body);
-		const plan = new EditSynthesizer(input).synthesize([{ op: 'replaceStatement', subject, predicate: P, text: 'ex:p ex:b, […]' }]);
-
-		expect(replace(body, 'ex:p ex:b, […]')).toBe(`ex:s ex:p ex:b, [ ex:q "x" ;\n        ex:r 1 ] .\n`);
-		expect(replace(body, 'ex:p [ ], ex:a')).toBe(body);
-		expect((plan as { quadCountDelta: number }).quadCountDelta).toBe(0);
-	});
-
-	it('counts the statements of a removed nested node', () => {
-		const body = `ex:s ex:p [ ex:q "x" ; ex:r 1 ], ex:a .\n`;
-		const plan = new EditSynthesizer(inputOf(body)).synthesize([{ op: 'replaceStatement', subject, predicate: P, text: 'ex:p ex:a' }]);
-
-		expect((plan as { quadCountDelta: number }).quadCountDelta).toBe(-3);
-		expect(replace(body, 'ex:p ex:a')).toBe(`ex:s ex:p ex:a .\n`);
-	});
-
-	it('rewrites a list', () => {
-		expect(replace(`ex:s ex:p ( ex:a ex:b ) .\n`, 'ex:p ( ex:b ex:a )')).toBe(`ex:s ex:p ( ex:b ex:a ) .\n`);
-		expect(replace(`ex:s ex:p ( ex:a [ ex:q "x" ] ) .\n`, 'ex:p ( […] ex:a )')).toBe(`ex:s ex:p ( [ ex:q "x" ] ex:a ) .\n`);
-	});
-
-	it('keeps the objects one per line when they were written so', () => {
-		expect(replace(`ex:s ex:p ex:a,\n        ex:b .\n`, 'ex:p ex:a, ex:b, ex:c')).toBe(`ex:s ex:p ex:a,\n        ex:b,\n        ex:c .\n`);
-	});
-
-	it('uses a prefix declared in the same action', () => {
-		const input = inputOf(`ex:s ex:p ex:a .\n`, { sortPrefixes: false });
-		const plan = new EditSynthesizer(input).synthesize([
-			{ op: 'addNamespace', prefix: 'foaf', iri: 'http://xmlns.com/foaf/0.1/' },
-			{ op: 'replaceStatement', subject, predicate: P, text: 'ex:p foaf:Person' }
-		]);
-
-		expect(isEditRejection(plan)).toBe(false);
-		expect(new EditVerifier(input).verify(plan as EditPlan).ok).toBe(true);
-		expect(applyTextEdits(input.text, (plan as { edits: { start: number; end: number; newText: string }[] }).edits)).toContain('ex:s ex:p foaf:Person .');
-	});
-
-	it('keeps a comment written inside the statement after it', () => {
-		expect(replace(`ex:s ex:p ex:a , # first\n    ex:b .\n`, 'ex:p ex:x')).toBe(`ex:s ex:p ex:x # first\n .\n`);
-	});
-
-	it('removes further groups of the predicate in the block', () => {
-		expect(replace(`ex:s ex:p ex:a ;\n    ex:q ex:b ;\n    ex:p ex:c .\n`, 'ex:p ex:d')).toBe(`ex:s ex:p ex:d ;\n    ex:q ex:b .\n`);
-	});
-
-	it('edits the statement of a nested node', () => {
-		const body = `ex:s ex:p [ ex:q "x" ] .\n`;
-		const nested = inputOf(body).quadContexts.find(quad => quad.predicate.value === Q)!;
-
-		expect(edit(body, [{ op: 'replaceStatement', subject: { kind: 'bnode', id: nested.subject.value }, predicate: Q, text: 'ex:q "y", 2' }]))
-			.toBe(`ex:s ex:p [ ex:q "y", 2 ] .\n`);
-	});
-
-	it('appends a new predicate after the last one', () => {
-		expect(add(`ex:s ex:p ex:a .\n`, 'ex:q "x", [ ex:r 1 ]')).toBe(`ex:s ex:p ex:a ;\n    ex:q "x", [ ex:r 1 ] .\n`);
-	});
-
-	it('rejects a new line naming a predicate the resource carries', () => {
-		expect(add(`ex:s ex:p ex:a .\n`, 'ex:p ex:b')).toBe('rejected:ambiguous');
-	});
-
-	it('rejects text that does not parse, states several predicates, or mismatches the nested nodes', () => {
-		expect(replace(`ex:s ex:p ex:a .\n`, 'ex:p "unterminated')).toBe('rejected:invalidTerm');
-		expect(replace(`ex:s ex:p ex:a .\n`, 'ex:p ex:a ; ex:q ex:b')).toBe('rejected:invalidTerm');
-		expect(replace(`ex:s ex:p ex:a .\n`, 'ex:p ex:a . ex:t ex:q ex:b')).toBe('rejected:invalidTerm');
-		expect(replace(`ex:s ex:p ex:a .\n`, 'ex:p […]')).toBe('rejected:invalidTerm');
-		expect(replace(`ex:s ex:p [ ex:q "x" ], [ ex:r 1 ] .\n`, 'ex:p […]')).toBe('rejected:invalidTerm');
-		expect(add(`ex:s ex:p ex:a .\n`, 'ex:q […]')).toBe('rejected:invalidTerm');
-		expect(replace(`ex:s ex:p ex:a .\n`, 'ex:q ex:b', `${EX}missing`)).toBe('rejected:notFound');
 	});
 });
 
