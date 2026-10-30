@@ -101,6 +101,28 @@ describe('DefinitionTreeNode', () => {
 
 			expect(root.members().sort()).toEqual(['urn:member:a', 'urn:member:b', 'urn:member:c']);
 		});
+
+		it('ends in a hierarchy that loops, whose nodes get a new path on every level', () => {
+			class TypeNode extends DefinitionTreeNode {
+				members(): string[] {
+					return this.collectMemberIris(node => node.uri.startsWith('urn:member'));
+				}
+			}
+
+			const other = (uri: string) => uri === 'urn:type:a' ? 'urn:type:b' : 'urn:type:a';
+			const typeAt = (path: string, uri: string): DefinitionTreeNode => {
+				const node = new DefinitionTreeNode(makeContext(), path, uri);
+
+				node.getChildren = () => [typeAt(`${path}/<${other(uri)}>`, other(uri)), new DefinitionTreeNode(makeContext(), `${path}/m`, 'urn:member:m')];
+
+				return node;
+			};
+			const root = new TypeNode(makeContext(), 'root', 'urn:type:root');
+
+			root.getChildren = () => [typeAt('root/<urn:type:a>', 'urn:type:a')];
+
+			expect(root.members()).toEqual(['urn:member:m']);
+		});
 	});
 
 	describe('getDocumentGraphs', () => {
