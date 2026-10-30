@@ -79,12 +79,6 @@ export interface EditPlan {
 	expectedChanges: ExpectedStatementChange[];
 
 	/**
-	 * By how many the total number of statements changes, which also covers the statements no
-	 * expected change names.
-	 */
-	quadCountDelta: number;
-
-	/**
 	 * Where the focus should go afterwards, when the operation decides it.
 	 */
 	focus?: FocusRequest;
@@ -99,7 +93,6 @@ export function createPlan(plan: Partial<EditPlan>): EditPlan {
 	return {
 		edits: plan.edits ?? [],
 		expectedChanges: plan.expectedChanges ?? [],
-		quadCountDelta: plan.quadCountDelta ?? 0,
 		focus: plan.focus
 	};
 }
@@ -117,7 +110,6 @@ export function mergePlans(plans: readonly EditPlan[]): EditPlan {
 	for (const plan of plans) {
 		merged.edits.push(...plan.edits);
 		merged.expectedChanges.push(...plan.expectedChanges);
-		merged.quadCountDelta += plan.quadCountDelta;
 		merged.focus = plan.focus ?? merged.focus;
 	}
 

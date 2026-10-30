@@ -1,16 +1,16 @@
 import { RdfToken } from '@faubulous/mentor-rdf-parsers';
 import { TermRef } from '../term-ref';
-import { EditPlan, ExpectedStatementChange, createPlan } from '../edit-plan';
+import { EditPlan, ExpectedStatementChange, TermPattern, createPlan } from '../edit-plan';
 import { EditRejectionError } from '../edit-rejection';
 import { ObjectSpan, PredicateGroup, SubjectBlock } from '../statement-model';
 import { PropertyOperations } from './property-operations';
 import { ResolvedValue, StatementLocator, ValueLocation } from '../statement-locator';
 import { toTermRef } from '../resource-id';
-import { deleteRange, expandToWholeLines } from '@src/utilities/text-edits';
-import { countStatementsWithin } from '@src/utilities/quad-contexts';
+import { TextEditSpec, absorbBlankLine, deleteRange, expandToWholeLines, mergeRanges } from '@src/utilities/text-edits';
+import { statementsWithin } from '@src/utilities/quad-contexts';
 import { SynthesisContext } from '../synthesis-context';
 import { toPatternFromRef, toTermPattern } from '../term-patterns';
-import { isTokenOfType, nextNonCommentTokenIndex, previousNonCommentTokenIndex, tokenEnd } from '@src/utilities/tokens';
+import { isCommentToken, isTokenOfType, previousNonCommentTokenIndex, tokenEnd } from '@src/utilities/tokens';
 
 /**
  * The range removing the groups from one index to another: up to the start of the following
@@ -27,24 +27,8 @@ function _runDeletionRange(block: SubjectBlock, from: number, to: number): { sta
 }
 
 /**
- * Build the change of the number of statements of a value of a block.
- * @param block The block holding the value.
- * @param group The group holding the value.
- * @param span The span of the value.
- * @param delta How its number changes.
- * @returns The expected change.
- */
-function _expectedChange(block: SubjectBlock, group: PredicateGroup, span: ObjectSpan, delta: number): ExpectedStatementChange {
-	return {
-		subject: toPatternFromRef(toTermRef(block.subject)),
-		predicate: group.predicateIri,
-		object: toTermPattern(span.quad.object),
-		delta
-	};
-}
-
-/**
- * The value and group edits the other operations build on: appending a value, deleting a value, a run of groups or a block.
+ * The value and group edits the other operations build on: appending a value, deleting a value,
+ * groups of the blocks of a subject, or blocks.
  */
 export class ValueOperations {
 	/**
@@ -66,17 +50,33 @@ export class ValueOperations {
 
 		const resolved = new StatementLocator(context.model).valueAt(location);
 		const { block, group, span } = resolved;
-		const range = group.objects.length > 1
-			? this._valueDeletionRange(resolved)
-			: this._groupDeletionRange(block, group);
-		const { text, tokens, quadContexts } = context.model;
-		const lines = expandToWholeLines(text, range.start, range.end);
+		const edits = group.objects.length > 1
+			? this._lineDeletions(this._valueDeletionRange(resolved))
+			: this.groupDeletions(new Map([[block, [group]]]));
 
 		return createPlan({
-			edits: deleteRange(text, tokens, lines.start, lines.end),
-			expectedChanges: [_expectedChange(block, group, span, -1)],
-			quadCountDelta: -1 - countStatementsWithin(quadContexts, span.start, span.end)
+			edits,
+			expectedChanges: this.removalChanges(toPatternFromRef(toTermRef(block.subject)), group.predicateIri, span)
 		});
+	}
+
+	/**
+	 * The statements a written value takes with it when it goes: its own, and those of the blank
+	 * nodes and lists written inside it.
+	 * @param subject The subject of the statement.
+	 * @param predicate The predicate of the statement.
+	 * @param span The value.
+	 * @returns The expected changes.
+	 */
+	removalChanges(subject: TermPattern, predicate: string, span: ObjectSpan): ExpectedStatementChange[] {
+		const nested = statementsWithin(this._context.model.quadContexts, span.start, span.end).map(inner => ({
+			subject: toTermPattern(inner.subject),
+			predicate: inner.predicate.value,
+			object: toTermPattern(inner.object),
+			delta: -1
+		}));
+
+		return [{ subject, predicate, object: toTermPattern(span.quad.object), delta: -1 }, ...nested];
 	}
 
 	/**
@@ -156,47 +156,109 @@ export class ValueOperations {
 	}
 
 	/**
-	 * The range removing a predicate with its only value, including the semicolon that joins it to
-	 * the neighbouring predicate.
-	 * @param block The block holding the group.
-	 * @param group The group to remove.
-	 * @returns The range.
-	 * @throws {EditRejectionError} If the group holds the last statement about the subject.
+	 * Remove groups of the blocks of a subject, as one edit removes them. Neighbouring groups of a
+	 * block go as one range, so the ranges never overlap and the separators between them go too. A
+	 * blank node written in brackets that loses all its groups stays as `[ ]`. Any other block that
+	 * loses all its groups goes as a whole, as {@link blockDeletions} removes it, while another
+	 * block of its subject keeps a statement; the blocks are judged together, so an edit cannot
+	 * remove a subject by emptying its blocks one by one.
+	 * @param removed The groups that go, by the block holding them.
+	 * @returns The deletions.
+	 * @throws {EditRejectionError} If no statement about a subject would be left.
 	 */
-	private _groupDeletionRange(block: SubjectBlock, group: PredicateGroup): { start: number; end: number } {
-		const context = this._context;
+	groupDeletions(removed: ReadonlyMap<SubjectBlock, readonly PredicateGroup[]>): TextEditSpec[] {
+		const edits: TextEditSpec[] = [];
+		const emptied: SubjectBlock[] = [];
 
-		const { tokens } = context.model;
-		const index = block.groups.indexOf(group);
-
-		if (block.groups.length === 1) {
-			return this._onlyGroupDeletionRange(block, group);
+		for (const [block, groups] of removed) {
+			if (groups.length < block.groups.length) {
+				edits.push(...this._groupRunRanges(block, groups).flatMap(range => this._lineDeletions(range)));
+			} else if (block.nested) {
+				edits.push(...this._lineDeletions({ start: block.groups[0].start, end: block.end }));
+			} else {
+				emptied.push(block);
+			}
 		}
 
-		if (index < block.groups.length - 1) {
-			const semicolon = nextNonCommentTokenIndex(tokens, group.endTokenIndex);
-			const next = block.groups[index + 1];
+		this._requireSubjectsKept(emptied);
 
-			return { start: group.start, end: isTokenOfType(tokens[semicolon], RdfToken.SEMICOLON.name) ? next.start : tokenEnd(tokens[group.endTokenIndex]) };
-		}
-
-		const previous = block.groups[index - 1];
-
-		return { start: previous.end, end: group.end };
+		return [...edits, ...this.blockDeletions(emptied)];
 	}
 
 	/**
-	 * The ranges removing several groups of a block. Neighbouring removed groups form one range, so
-	 * that the ranges never overlap and the separators between them go with them.
-	 * @param block The block the groups belong to.
-	 * @param removed The groups to remove.
-	 * @returns The ranges in document order.
+	 * Remove top level blocks as a whole: each with the comment lines written directly above it, its
+	 * terminator and the comment that ends its last line. A blank line that separated a removed block
+	 * from its neighbours goes with it, so the blocks that stay keep one blank line between them.
+	 * @param blocks The blocks.
+	 * @returns The deletions, one per run of neighbouring blocks.
 	 */
-	groupRunDeletionRanges(block: SubjectBlock, removed: readonly PredicateGroup[]): { start: number; end: number }[] {
-		if (removed.length === block.groups.length) {
-			return [this._onlyGroupDeletionRange(block, block.groups[0])];
+	blockDeletions(blocks: readonly SubjectBlock[]): TextEditSpec[] {
+		const { text } = this._context.model;
+		const lines = blocks.map(block => {
+			const range = this._blockRange(block);
+
+			return expandToWholeLines(text, range.start, range.end);
+		});
+
+		// Neighbouring blocks may both take the blank line between them; once merged, a run that ends
+		// the document takes the blank line before it instead.
+		const merged = mergeRanges(mergeRanges(lines).map(range => absorbBlankLine(text, range)));
+
+		return merged.map(range => range.end >= text.length ? absorbBlankLine(text, range) : range).map(range => ({ ...range, newText: '' }));
+	}
+
+	/**
+	 * The range of a block with the comment lines written directly above it, without a blank line in
+	 * between, its terminator, and the comment that ends its last line.
+	 * @param block The block.
+	 * @returns The range.
+	 */
+	private _blockRange(block: SubjectBlock): { start: number; end: number } {
+		const { text, tokens } = this._context.model;
+		const terminatorEnd = block.terminator ? tokenEnd(block.terminator) : block.end;
+		const trailing = tokens.find(token => isCommentToken(token) && token.startOffset >= terminatorEnd);
+		const end = trailing && !text.slice(terminatorEnd, trailing.startOffset).includes('\n') ? tokenEnd(trailing) : terminatorEnd;
+		let start = block.start;
+
+		for (let index = block.leadingComments.length - 1; index >= 0; index--) {
+			const comment = block.leadingComments[index];
+
+			if (!/^[ \t]*\r?\n[ \t]*$/.test(text.slice(tokenEnd(comment), start))) {
+				break;
+			}
+
+			start = comment.startOffset;
 		}
 
+		return { start, end };
+	}
+
+	/**
+	 * Require every subject whose blocks are emptied to keep a statement in another block.
+	 * @param emptied The top level blocks that lose all their groups.
+	 * @throws {EditRejectionError} If no statement about a subject would be left.
+	 */
+	private _requireSubjectsKept(emptied: readonly SubjectBlock[]): void {
+		const { blocksBySubject } = this._context.model;
+		const removed = new Set(emptied);
+
+		for (const block of emptied) {
+			const siblings = blocksBySubject.get(block.subjectId) ?? [block];
+
+			if (siblings.every(sibling => removed.has(sibling))) {
+				throw new EditRejectionError('wouldRemoveSubject', 'These are the last statements about the resource. Delete the resource to remove it.');
+			}
+		}
+	}
+
+	/**
+	 * The ranges removing some of the groups of a block. Neighbouring removed groups form one range,
+	 * so that the ranges never overlap and the separators between them go with them.
+	 * @param block The block the groups belong to.
+	 * @param removed The groups to remove, fewer than the block has.
+	 * @returns The ranges in document order.
+	 */
+	private _groupRunRanges(block: SubjectBlock, removed: readonly PredicateGroup[]): { start: number; end: number }[] {
 		const removedSet = new Set(removed);
 		const ranges: { start: number; end: number }[] = [];
 		let runStart: number | undefined;
@@ -219,38 +281,15 @@ export class ValueOperations {
 	}
 
 	/**
-	 * The range removing the only predicate of a block. Inside a blank node the brackets stay, so
-	 * the node survives as `[ ]`; a top level subject with another block loses this one; otherwise
-	 * the deletion would remove the subject and is refused.
-	 * @param block The block holding the group.
-	 * @param group The only group of the block.
-	 * @returns The range.
-	 * @throws {EditRejectionError} If the deletion would remove the subject.
+	 * Delete a range, widened to whole lines where nothing else would remain on them, keeping the
+	 * comments written inside it.
+	 * @param range The range.
+	 * @returns The deletions.
 	 */
-	private _onlyGroupDeletionRange(block: SubjectBlock, group: PredicateGroup): { start: number; end: number } {
-		const context = this._context;
+	private _lineDeletions(range: { start: number; end: number }): TextEditSpec[] {
+		const { text, tokens } = this._context.model;
+		const lines = expandToWholeLines(text, range.start, range.end);
 
-		if (block.nested) {
-			return { start: group.start, end: block.end };
-		}
-
-		const siblings = context.model.blocksBySubject.get(block.subjectId) ?? [];
-
-		if (siblings.length > 1) {
-			return this.blockDeletionRange(block);
-		}
-
-		throw new EditRejectionError('wouldRemoveSubject', 'This is the last statement about the resource. Delete the resource to remove it.');
-	}
-
-	/**
-	 * The range removing a whole top level block including its terminator.
-	 * @param block The block to remove.
-	 * @returns The range.
-	 */
-	blockDeletionRange(block: SubjectBlock): { start: number; end: number } {
-		const end = block.terminator ? tokenEnd(block.terminator) : block.end;
-
-		return { start: block.start, end };
+		return deleteRange(text, tokens, lines.start, lines.end);
 	}
 }

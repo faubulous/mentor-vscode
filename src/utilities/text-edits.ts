@@ -170,3 +170,50 @@ export function expandToWholeLines(text: string, start: number, end: number): { 
 
 	return { start: lineStart - breakLength, end: nextLine };
 }
+
+/**
+ * Take one blank line next to a removed block along, so two blocks do not end up separated by
+ * two: the line after the block, or the line before it when the block ends the document.
+ * @param text The document text.
+ * @param range The whole lines being removed.
+ * @returns The range widened by one blank line, or the range itself.
+ */
+export function absorbBlankLine(text: string, range: { start: number; end: number }): { start: number; end: number } {
+	const lineEnd = lineEndOffset(text, range.end);
+
+	if (range.end < text.length && isBlank(text, range.end, lineEnd) && lineEnd < text.length) {
+		return { start: range.start, end: nextLineStartOffset(text, range.end) };
+	}
+
+	if (range.end >= text.length && range.start > 0) {
+		const previousLineStart = lineStartOffset(text, range.start - 1);
+
+		if (isBlank(text, previousLineStart, range.start - 1)) {
+			return { start: previousLineStart, end: range.end };
+		}
+	}
+
+	return range;
+}
+
+/**
+ * Merge ranges that overlap or touch, as the removals of neighbouring blocks do.
+ * @param ranges The ranges, in any order.
+ * @returns The merged ranges in document order.
+ */
+export function mergeRanges(ranges: readonly { start: number; end: number }[]): { start: number; end: number }[] {
+	const merged: { start: number; end: number }[] = [];
+
+	for (const range of [...ranges].sort((first, second) => first.start - second.start)) {
+		const last = merged[merged.length - 1];
+
+		if (last && range.start <= last.end) {
+			last.end = Math.max(last.end, range.end);
+		} else {
+			merged.push({ ...range });
+		}
+	}
+
+	return merged;
+}
+

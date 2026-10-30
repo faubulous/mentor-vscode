@@ -6,17 +6,15 @@ import { EditOperation } from '../edit-operation';
 import { TermRef } from '../term-ref';
 import { EditPlan, ExpectedStatementChange, createPlan } from '../edit-plan';
 import { EditRejectionError } from '../edit-rejection';
-import { SubjectBlock } from '../statement-model';
 import { ValueOperations } from './value-operations';
 import { StatementLocator, ValueLocation } from '../statement-locator';
 import { toTermRef } from '../resource-id';
-import { expandToWholeLines } from '@src/utilities/text-edits';
 import { SynthesisContext } from '../synthesis-context';
 import { toPatternFromRef, toTermPattern } from '../term-patterns';
 import { validateIri } from '../term-validation';
 import { TextEditSpec } from '@src/utilities/text-edits';
 import { isTokenOfType, previousNonCommentTokenIndex, tokenEnd } from '@src/utilities/tokens';
-import { isBlank, isWhitespace, lineEndOffset, lineStartOffset, nextLineStartOffset } from '@src/utilities/string';
+import { isBlank } from '@src/utilities/string';
 
 /**
  * The `addSubject` operation of the edit contract.
@@ -67,31 +65,6 @@ export interface BlockInsertion {
 	 * Further edits the insertion needs, such as closing a graph block.
 	 */
 	extraEdits: TextEditSpec[];
-}
-
-/**
- * Take one blank line next to a removed block along, so two blocks do not end up separated by
- * two: the line after the block, or the line before it when the block ends the document.
- * @param text The document text.
- * @param range The whole lines being removed.
- * @returns The range widened by one blank line, or the range itself.
- */
-export function absorbBlankLine(text: string, range: { start: number; end: number }): { start: number; end: number } {
-	const lineEnd = lineEndOffset(text, range.end);
-
-	if (range.end < text.length && isBlank(text, range.end, lineEnd) && lineEnd < text.length) {
-		return { start: range.start, end: nextLineStartOffset(text, range.end) };
-	}
-
-	if (range.end >= text.length && range.start > 0) {
-		const previousLineStart = lineStartOffset(text, range.start - 1);
-
-		if (isBlank(text, previousLineStart, range.start - 1)) {
-			return { start: previousLineStart, end: range.end };
-		}
-	}
-
-	return range;
 }
 
 /**
@@ -173,7 +146,6 @@ export class SubjectOperations {
 		return createPlan({
 			edits: [edit, ...insertion.extraEdits],
 			expectedChanges: operation.initial.map(statement => ({ subject, predicate: statement.predicate, object: toPatternFromRef(statement.value), delta: 1 })),
-			quadCountDelta: operation.initial.length,
 			focus: { edit, offsetWithin: insertion.prefix.length + written.subjectOffset, target: 'subject' }
 		});
 	}
@@ -200,21 +172,15 @@ export class SubjectOperations {
 			return new ValueOperations(context).deleteValue(this._parentLocation(operation.subject.id));
 		}
 
-		const { text, quadContexts } = context.model;
-		const plan = createPlan({});
+		const values = new ValueOperations(context);
+
+		// The comments around a block describe the resource and go with it.
+		const plan = createPlan({ edits: values.blockDeletions(blocks) });
 
 		for (const block of blocks) {
-			const range = this._blockWithCommentsRange(block);
-			const lines = absorbBlankLine(text, expandToWholeLines(text, range.start, range.end));
-
-			// The comments around a block describe the resource and go with it, so the range is
-			// removed as a whole rather than around them.
-			plan.edits.push({ start: lines.start, end: lines.end, newText: '' });
-			plan.quadCountDelta -= quadContexts.filter(quad => quad.subjectToken.startOffset >= range.start && quad.objectToken.startOffset < range.end).length;
-
 			for (const group of block.groups) {
 				for (const object of group.objects) {
-					plan.expectedChanges.push({ subject: toPatternFromRef(toTermRef(block.subject)), predicate: group.predicateIri, object: toTermPattern(object.quad.object), delta: -1 });
+					plan.expectedChanges.push(...values.removalChanges(toPatternFromRef(toTermRef(block.subject)), group.predicateIri, object));
 				}
 			}
 		}
@@ -292,8 +258,6 @@ export class SubjectOperations {
 		for (const statement of operation.initial) {
 			plan.expectedChanges.push({ subject: node, predicate: statement.predicate, object: toPatternFromRef(statement.value), delta: 1 });
 		}
-
-		plan.quadCountDelta += 1 + operation.initial.length;
 
 		return plan;
 	}
@@ -453,38 +417,6 @@ export class SubjectOperations {
 		}
 
 		throw new EditRejectionError('notFound', 'The blank node is not held by any value.');
-	}
-
-	/**
-	 * The range of a block including the comment lines introducing it, its terminator, and the
-	 * comment trailing its last line.
-	 *
-	 * Only the comments written directly above the block are taken: the reader reports the comments
-	 * of a block on its first statement, but a comment written inside an earlier block ends up in
-	 * that list too, and reaching back to it would delete the text between them, which belongs to
-	 * another resource. Each comment is therefore accepted only while nothing but blank space
-	 * separates it from what has been taken so far.
-	 */
-	private _blockWithCommentsRange(block: SubjectBlock): { start: number; end: number } {
-		const context = this._context;
-
-		const range = new ValueOperations(context).blockDeletionRange(block);
-		const quads = block.groups.flatMap(group => group.objects.map(object => object.quad));
-		const leading = quads[0]?.leadingComments ?? [];
-		const trailing = quads.map(quad => quad.trailingComment).find(comment => comment && comment.startOffset >= range.end);
-		const end = trailing && isBlank(context.model.text, range.end, trailing.startOffset) ? tokenEnd(trailing) : range.end;
-
-		let start = range.start;
-
-		for (let i = leading.length - 1; i >= 0; i--) {
-			const comment = leading[i];
-
-			if (comment.startOffset < start && isWhitespace(context.model.text, tokenEnd(comment), start)) {
-				start = comment.startOffset;
-			}
-		}
-
-		return { start, end };
 	}
 
 	/**

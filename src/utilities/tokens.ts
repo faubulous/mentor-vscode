@@ -523,6 +523,19 @@ export function tokenEnd(token: IToken): number {
 }
 
 /**
+ * Indicate whether tokens were read from a text: every token is written in it at its offsets.
+ * Offsets taken from the tokens, such as the anchors of written values, are then offsets into
+ * that text. A change that moves or alters any token is told apart; one confined to whitespace
+ * after the last token moves no offset.
+ * @param tokens The tokens.
+ * @param text The text.
+ * @returns `true` when the tokens are those of the text.
+ */
+export function tokensMatchText(tokens: readonly IToken[], text: string): boolean {
+	return tokens.every(token => text.startsWith(token.image, token.startOffset) && tokenEnd(token) <= text.length);
+}
+
+/**
  * Indicate whether a token is of one of the given types.
  * @param token The token to inspect.
  * @param names The token type names to accept.

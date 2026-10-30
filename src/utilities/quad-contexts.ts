@@ -13,14 +13,3 @@ export function statementsWithin<T extends { subjectToken: IToken; objectToken: 
 		quad => quad.subjectToken.startOffset >= start && quad.objectToken.startOffset < end && quad.objectToken.startOffset > start
 	);
 }
-
-/**
- * Count the statements whose tokens lie inside a range.
- * @param quadContexts The quad contexts of the document.
- * @param start The start of the range.
- * @param end The exclusive end of the range.
- * @returns The number of statements inside the range.
- */
-export function countStatementsWithin(quadContexts: readonly { subjectToken: IToken; objectToken: IToken }[], start: number, end: number): number {
-	return statementsWithin(quadContexts, start, end).length;
-}

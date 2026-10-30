@@ -5,8 +5,6 @@ import { EditRejectionError } from '../edit-rejection';
 import { PredicateGroup, SubjectBlock } from '../statement-model';
 import { ValueOperations } from './value-operations';
 import { StatementLocator } from '../statement-locator';
-import { deleteRange, expandToWholeLines } from '@src/utilities/text-edits';
-import { countStatementsWithin } from '@src/utilities/quad-contexts';
 import { SynthesisContext } from '../synthesis-context';
 import { toPatternFromRef, toTermPattern } from '../term-patterns';
 import { tokenEnd } from '@src/utilities/tokens';
@@ -192,12 +190,12 @@ export class PropertyOperations {
 	}
 
 	/**
-	 * Remove a predicate with all its values from every block of the subject. Neighbouring removed
-	 * groups are deleted as one range so their ranges never overlap; a block that loses all its
-	 * groups follows the rules for deleting a lone value.
+	 * Remove a predicate with all its values from every block of the subject, as
+	 * {@link ValueOperations.groupDeletions} removes groups: a block that loses all its groups goes
+	 * with its comments, unless no block of the subject would keep a statement.
 	 * @param operation The predicate to remove.
 	 * @returns The plan removing the groups.
-	 * @throws {EditRejectionError} If the subject does not carry the predicate, or the predicate holds the last statement about the subject.
+	 * @throws {EditRejectionError} If the subject does not carry the predicate, or the predicate holds the last statements about the subject.
 	 */
 	deleteProperty(operation: DeletePropertyOperation): EditPlan {
 		const context = this._context;
@@ -205,24 +203,18 @@ export class PropertyOperations {
 		const groups = this.findPredicateGroups(operation.subject, operation.predicate);
 		const subject = toPatternFromRef(operation.subject);
 		const plan = createPlan({});
+		const values = new ValueOperations(context);
 		const byBlock = new Map<SubjectBlock, PredicateGroup[]>();
 
 		for (const { block, group } of groups) {
 			byBlock.set(block, [...(byBlock.get(block) ?? []), group]);
 
 			for (const object of group.objects) {
-				plan.expectedChanges.push({ subject, predicate: operation.predicate, object: toTermPattern(object.quad.object), delta: -1 });
-				plan.quadCountDelta -= 1 + countStatementsWithin(context.model.quadContexts, object.start, object.end);
+				plan.expectedChanges.push(...values.removalChanges(subject, operation.predicate, object));
 			}
 		}
 
-		for (const [block, removed] of byBlock) {
-			for (const range of new ValueOperations(context).groupRunDeletionRanges(block, removed)) {
-				const lines = expandToWholeLines(context.model.text, range.start, range.end);
-
-				plan.edits.push(...deleteRange(context.model.text, context.model.tokens, lines.start, lines.end));
-			}
-		}
+		plan.edits.push(...values.groupDeletions(byBlock));
 
 		return plan;
 	}

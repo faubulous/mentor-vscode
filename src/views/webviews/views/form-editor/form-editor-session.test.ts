@@ -153,6 +153,16 @@ describe('FormEditorSession', () => {
 		expect(applied.focus).toEqual({ resourceId: `i:${EX}s`, propertyIndex: 0, valueIndex: 0, target: 'value' });
 	});
 
+	it('keeps the snapshot of the last parse until the text it was parsed from is the current one', async () => {
+		const { posted, receive, document } = await createSession('ex:s ex:p "old" .\n');
+
+		await receive({ id: 'Ready' });
+		document.setText(`${PREAMBLE}# a line above\nex:s ex:p "old" .\n`);
+		await receive({ id: 'Ready' });
+
+		expect(postedOf(posted, 'DocumentSnapshot').map(message => message.snapshot.version)).toEqual([1, 1]);
+	});
+
 	it('rejects an edit against a stale version and sends the current snapshot along', async () => {
 		const { posted, receive } = await createSession('ex:s ex:p "old" .\n');
 

@@ -38,6 +38,7 @@ import {
 	isPrefixTokenAtPosition,
 	getTokenRange,
 	hasSourcePosition,
+	tokensMatchText,
 } from '@src/utilities/tokens';
 
 function makeToken(typeName: string, image: string, startLine = 1, startColumn = 1, endLine = 1, endColumn = 10, payload?: any): any {
@@ -619,3 +620,26 @@ describe('splitCommentRuns', () => {
 		expect(splitCommentRuns([])).toEqual([]);
 	});
 });
+
+describe('tokensMatchText', () => {
+	const text = 'ex:s ex:p "x" .';
+	const tokens = [
+		{ image: 'ex:s', startOffset: 0, endOffset: 3 },
+		{ image: 'ex:p', startOffset: 5, endOffset: 8 },
+		{ image: '"x"', startOffset: 10, endOffset: 12 },
+		{ image: '.', startOffset: 14, endOffset: 14 }
+	] as IToken[];
+
+	it('accepts the tokens of a text, also after whitespace was added at its end', () => {
+		expect(tokensMatchText(tokens, text)).toBe(true);
+		expect(tokensMatchText(tokens, `${text}\n\n`)).toBe(true);
+		expect(tokensMatchText([], '')).toBe(true);
+	});
+
+	it('tells tokens that moved or changed apart', () => {
+		expect(tokensMatchText(tokens, ` ${text}`)).toBe(false);
+		expect(tokensMatchText(tokens, 'ex:s ex:p "y" .')).toBe(false);
+		expect(tokensMatchText(tokens, 'ex:s ex:p "x"')).toBe(false);
+	});
+});
+

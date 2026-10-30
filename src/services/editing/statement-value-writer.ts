@@ -38,16 +38,6 @@ export class StatementValueWriter {
 	}
 
 	/**
-	 * How many statements a new value adds: the statement of the value, and for a list its chain
-	 * and the nested statements of the items it takes over.
-	 * @param value The value.
-	 * @returns The number of statements.
-	 */
-	statementCountOf(value: StatementValue): number {
-		return 1 + this._nestedCountOf(value);
-	}
-
-	/**
 	 * The statements a new value adds, as expected changes.
 	 * @param subject The subject of the statement.
 	 * @param predicate The predicate of the statement.
@@ -97,26 +87,6 @@ export class StatementValueWriter {
 				return value.items.length === 0 ? { kind: 'iri', iri: RDF.nil } : { kind: 'anyBlankNode' };
 			default:
 				return toTermPattern(this._item(value.anchor).term);
-		}
-	}
-
-	/**
-	 * How many statements a value adds besides its own: the chain of a list with what its items
-	 * add, and the statements nested in an item taken over.
-	 * @param value The value.
-	 * @returns The number of statements.
-	 */
-	private _nestedCountOf(value: StatementValue): number {
-		switch (value.kind) {
-			case 'term':
-				return 0;
-			case 'list':
-				return value.items.reduce((sum, item) => sum + 2 + this._nestedCountOf(item), 0);
-			default: {
-				const item = this._item(value.anchor);
-
-				return statementsWithin(this._context.model.quadContexts, item.start, item.end).length;
-			}
 		}
 	}
 

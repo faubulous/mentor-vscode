@@ -87,23 +87,27 @@ export class DefinitionTreeNode extends TreeNodeBase {
 
 	/**
 	 * Collect the resources of the nodes below this one that pass a test, walking the whole
-	 * subtree once, as a hierarchy of classes may list a node more than once.
+	 * subtree once. A hierarchy of classes may list a resource more than once, and one that loops
+	 * lists it on every level, under a new path each time; the walk therefore visits each resource
+	 * once per kind of node, not each node.
 	 * @param isMember Whether a node stands for a resource the node lists.
 	 * @returns The IRIs or blank node identifiers of those resources, each once.
 	 */
 	protected collectMemberIris(isMember: (node: DefinitionTreeNode) => boolean): string[] {
 		const members = new Set<string>();
-		const visited = new Set<string>();
+		const visited = new Map<object, Set<string>>();
 		const pending = this.getChildren() as DefinitionTreeNode[];
 
 		while (pending.length > 0) {
 			const node = pending.pop()!;
+			const visitedOfKind = visited.get(node.constructor) ?? new Set<string>();
 
-			if (visited.has(node.id)) {
+			if (visitedOfKind.has(node.uri)) {
 				continue;
 			}
 
-			visited.add(node.id);
+			visitedOfKind.add(node.uri);
+			visited.set(node.constructor, visitedOfKind);
 
 			if (isMember(node)) {
 				members.add(node.uri);

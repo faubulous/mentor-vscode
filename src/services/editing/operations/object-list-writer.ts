@@ -1,4 +1,4 @@
-import { TextEditSpec, deleteRange, expandToWholeLines } from '@src/utilities/text-edits';
+import { TextEditSpec, deleteRange } from '@src/utilities/text-edits';
 import { isCommentToken } from '@src/utilities/tokens';
 import { EditRejectionError } from '../edit-rejection';
 import { FocusRequest } from '../edit-plan';
@@ -60,9 +60,7 @@ export class ObjectListWriter {
 			}
 		}
 
-		for (const [block, groups] of emptied) {
-			edits.push(...this._groupDeletions(block, groups));
-		}
+		edits.push(...new ValueOperations(this._context).groupDeletions(emptied));
 
 		return _mergeInsertions(edits, insertions);
 	}
@@ -174,23 +172,6 @@ export class ObjectListWriter {
 		}
 
 		return deletions;
-	}
-
-	/**
-	 * Remove the statements of a block that are left without objects.
-	 * @param block The block.
-	 * @param groups The statements.
-	 * @returns The deletions.
-	 * @throws {EditRejectionError} If the subject would lose its last statement.
-	 */
-	private _groupDeletions(block: SubjectBlock, groups: readonly PredicateGroup[]): TextEditSpec[] {
-		const { text, tokens } = this._context.model;
-
-		return new ValueOperations(this._context).groupRunDeletionRanges(block, groups).flatMap(range => {
-			const lines = expandToWholeLines(text, range.start, range.end);
-
-			return deleteRange(text, tokens, lines.start, lines.end);
-		});
 	}
 
 	/**
