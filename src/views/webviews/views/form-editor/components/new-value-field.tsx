@@ -1,20 +1,21 @@
 import { FormEvent, KeyboardEvent } from 'react';
 import { VscodeTextfield } from '@vscode-elements/elements';
-import { StatementRowHandle } from '../hooks/use-statement-row';
+import { StatementRowEditor } from '../state/statement-row-editor';
+import { StatementRowState } from '../state/statement-row-state';
 
 /**
  * Properties of the {@link NewValueField} component.
  */
 export interface NewValueFieldProps {
 	/**
-	 * The row.
+	 * Edits the row.
 	 */
-	row: StatementRowHandle;
+	editor: StatementRowEditor;
 
 	/**
-	 * Whether the statement has no values yet.
+	 * The state of the row.
 	 */
-	empty: boolean;
+	state: StatementRowState;
 }
 
 /**
@@ -23,26 +24,26 @@ export interface NewValueFieldProps {
  * @param props The row.
  * @returns The field.
  */
-export function NewValueField({ row, empty }: NewValueFieldProps): React.JSX.Element {
+export function NewValueField({ editor, state }: NewValueFieldProps): React.JSX.Element {
 	const handleKeyDown = (event: KeyboardEvent<VscodeTextfield>): void => {
 		if (event.key === 'Enter') {
 			event.preventDefault();
 			event.stopPropagation();
-			row.onPendingCommit();
-		} else if (event.key === 'Backspace' && row.state.pendingText === '' && row.state.draft.values.length > 0) {
+			editor.commitPending();
+		} else if (event.key === 'Backspace' && state.pendingText === '' && state.draft.values.length > 0) {
 			event.preventDefault();
-			row.onRemoveValue(row.state.draft.values.length - 1);
+			editor.removeValue(state.draft.values.length - 1);
 		}
 	};
 
 	return (
 		<vscode-textfield
 			className="input-field is-new"
-			value={row.state.pendingText}
-			placeholder={empty ? 'value' : 'add a value'}
+			value={state.pendingText}
+			placeholder={state.draft.values.length === 0 ? 'value' : 'add a value'}
 			aria-label="New value"
 			autocomplete="off"
-			onInput={(event: FormEvent<VscodeTextfield>) => row.onPendingInput(event.currentTarget.value)}
+			onInput={(event: FormEvent<VscodeTextfield>) => editor.inputPending(event.currentTarget.value)}
 			onKeyDown={handleKeyDown}
 		/>
 	);

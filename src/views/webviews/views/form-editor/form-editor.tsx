@@ -11,8 +11,6 @@ import { FormToolbar } from './components/form-toolbar';
 import { EmptyState, LoadingState, ProblemState, ReadOnlyBanner } from './components/resource-list-states';
 import { DocumentProblem, DocumentSnapshot, ResourceId } from './form-editor-model';
 import { FormEditorMessages, FormEditorWebviewMessage } from './form-editor-messages';
-import { useEditingController } from './hooks/use-editing-controller';
-import { useFocusRestore } from './hooks/use-focus-restore';
 import { useFocusedBlock } from './hooks/use-focused-block';
 import { useFormBlocks } from './hooks/use-form-blocks';
 import { useScrolledPast } from './hooks/use-scrolled-past';
@@ -61,7 +59,6 @@ function FormEditor(): React.JSX.Element {
 	const dataService = useMemo(() => new ResourceDataService(ids => messagingRef.current?.postMessage({ id: 'RequestResources', ids })), []);
 	const hostService = useMemo(() => new EditingHostService(message => messagingRef.current?.postMessage(message)), []);
 	const controller = useMemo(() => new EditingController(hostService), [hostService]);
-	const editingState = useEditingController(controller);
 	const focusedBlockId = useFocusedBlock(scrollElement);
 	const routeUndo = useUndoRouting(scrollElement);
 
@@ -73,7 +70,6 @@ function FormEditor(): React.JSX.Element {
 				break;
 			case 'ResourcesLoaded':
 				dataService.accept(message.version, message.resources, message.missing);
-				controller.settleDelivered(message.version, message.resources.map(resource => resource.id));
 				break;
 			case 'EditApplied':
 			case 'EditRejected':
@@ -88,7 +84,7 @@ function FormEditor(): React.JSX.Element {
 			default:
 				break;
 		}
-	}, [dataService, hostService, controller]);
+	}, [dataService, hostService]);
 
 	const messaging = useWebviewMessaging<FormEditorMessages>(onMessage);
 
@@ -185,10 +181,8 @@ function FormEditor(): React.JSX.Element {
 	// Nothing is edited in a document that cannot be written back.
 	const editable = snapshot !== undefined && snapshot.readOnly === undefined;
 
-	useFocusRestore(scrollElement, editingState.focusRequest, () => controller.focusFulfilled());
-
-	// The card holding the focus, or about to take it, stays mounted while it is scrolled out of view.
-	const pinnedIds = useMemo(() => new Set([focusedBlockId, editingState.focusRequest?.resourceId].filter((id): id is string => id !== undefined)), [focusedBlockId, editingState.focusRequest]);
+	// The card holding the focus stays mounted while it is scrolled out of view.
+	const pinnedIds = useMemo(() => new Set(focusedBlockId !== undefined ? [focusedBlockId] : []), [focusedBlockId]);
 
 	const context: FormEditorContextValue = useMemo(() => ({
 		readOnly: !editable,
@@ -203,9 +197,7 @@ function FormEditor(): React.JSX.Element {
 		revealedResourceId: revealedId,
 		dominantTypeIri: snapshot?.dominantTypeIri,
 		filterText
-	// The controller is one object throughout; its state changing is what makes the rows read it anew.
-	// eslint-disable-next-line react-hooks/exhaustive-deps
-	}), [snapshot, editable, controller, editingState, handleRevealInTextEditor, handleRevealResource, handleOpenExternal, revealedId, filterText]);
+	}), [snapshot, editable, controller, handleRevealInTextEditor, handleRevealResource, handleOpenExternal, revealedId, filterText]);
 
 	if (!snapshot) {
 		return (

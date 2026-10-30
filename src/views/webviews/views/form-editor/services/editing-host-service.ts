@@ -63,7 +63,7 @@ export class EditingHostService implements IEditingHostService {
 	accept(message: FormEditorHostMessage): boolean {
 		switch (message.id) {
 			case 'EditApplied':
-				this._settle(message.editId, { ok: true, version: message.version, focus: message.focus, renamedIds: message.renamedIds ?? [] });
+				this._settle(message.editId, { ok: true, version: message.version });
 				return true;
 			case 'EditRejected':
 				this._settle(message.editId, { ok: false, reason: message.reason, message: message.message, version: message.version });

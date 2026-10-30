@@ -1,9 +1,9 @@
+import { TermView } from '../form-editor-model';
 import { StatementServices } from '../hooks/use-statement-services';
-import { StatementRowHandle } from '../hooks/use-statement-row';
 import { LiteralDatatypes } from '../services/statement/literal-datatypes';
 import { XSD_STRING } from '../services/statement/well-known-iris';
-import { RowValue } from '../state/row-value';
 import { getDatatypeHint, getDatatypeLabel } from './datatype-labels';
+import { EditedRow } from './edited-row';
 import { LiteralField } from './literal-field';
 import { StatementRowContext } from './statement-row-context';
 import { TermValue } from './term-value';
@@ -12,11 +12,11 @@ import { ValuePill } from './value-pill';
 /**
  * Properties of the {@link EditableValue} component.
  */
-export interface EditableValueProps {
+export interface EditableValueProps extends StatementRowContext {
 	/**
-	 * The value.
+	 * The view of the value.
 	 */
-	value: RowValue;
+	view: TermView;
 
 	/**
 	 * The index of the value among the values of its statement.
@@ -24,19 +24,9 @@ export interface EditableValueProps {
 	index: number;
 
 	/**
-	 * The row.
+	 * The row the value belongs to.
 	 */
-	row: StatementRowHandle;
-
-	/**
-	 * Gives typed terms their labels.
-	 */
-	services: StatementServices;
-
-	/**
-	 * Where the row stands.
-	 */
-	context: StatementRowContext;
+	edited: EditedRow;
 }
 
 /**
@@ -45,9 +35,9 @@ export interface EditableValueProps {
  * @param props The value and its row.
  * @returns The value.
  */
-export function EditableValue({ value, index, row, services, context }: EditableValueProps): React.JSX.Element {
-	const view = value.kind === 'written' ? value.view : services.resolver.viewOf(value.term);
-	const remove = (): void => row.onRemoveValue(index);
+export function EditableValue({ view, index, edited, ...context }: EditableValueProps): React.JSX.Element {
+	const { editor, services } = edited;
+	const remove = (): void => editor.removeValue(index);
 
 	if (view.term.kind === 'literal' && !view.collection) {
 		const term = view.term;
@@ -57,9 +47,9 @@ export function EditableValue({ value, index, row, services, context }: Editable
 				index={index}
 				text={term.value}
 				tag={term.language ?? _datatypeLabel(term.datatype, services)}
-				problem={row.unfittingLiterals.has(index) && term.datatype ? getDatatypeHint(term.datatype) : undefined}
+				problem={editor.unfittingLiterals.has(index) && term.datatype ? getDatatypeHint(term.datatype) : undefined}
 				numeric={term.datatype !== undefined && LiteralDatatypes.isNumeric(term.datatype)}
-				onInput={text => row.onLiteralInput(index, text)}
+				onInput={text => editor.inputLiteral(index, text)}
 			/>
 		);
 	}

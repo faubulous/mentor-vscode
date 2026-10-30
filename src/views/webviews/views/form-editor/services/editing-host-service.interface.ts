@@ -1,11 +1,11 @@
 import { EditOperation, EditRejectionReason } from '@src/services/editing/edit-operation';
-import { FocusHint, ResourceId } from '../form-editor-model';
 
 /**
- * How an edit ended.
+ * How an edit ended, with the document version after it: the version the edit produced, or the
+ * version the host refused it against.
  */
 export type EditOutcome =
-	| { ok: true; version: number; focus?: FocusHint; renamedIds: [ResourceId, ResourceId][] }
+	| { ok: true; version: number }
 	| { ok: false; reason: EditRejectionReason; message: string; version: number };
 
 /**

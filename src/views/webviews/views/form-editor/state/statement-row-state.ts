@@ -1,11 +1,13 @@
 import { TermRef } from '../form-editor-model';
 import { TermProblem } from '../services/statement/term-problem';
+import { RowRejection } from './row-rejection';
 import { StatementDraft } from './statement-draft';
 
 /**
  * The state of one statement row while it is edited: the statement as stored and as edited, the
- * text of the predicate field and of the field a new value is typed into, and why the last thing
- * typed could not be read. Immutable: every transition returns the next state.
+ * text of the predicate field and of the field a new value is typed into, why the last thing
+ * typed could not be read, and why the row was last not written. Immutable: every transition
+ * returns the next state.
  */
 export class StatementRowState {
 	/**
@@ -15,13 +17,15 @@ export class StatementRowState {
 	 * @param predicateText The text of the predicate field.
 	 * @param pendingText The text typed for a new value.
 	 * @param problem Why the last thing typed could not be read.
+	 * @param rejection Why the row was last not written, until it is dismissed or written again.
 	 */
 	constructor(
 		readonly stored: StatementDraft,
 		readonly draft: StatementDraft,
 		readonly predicateText: string,
 		readonly pendingText = '',
-		readonly problem?: TermProblem
+		readonly problem?: TermProblem,
+		readonly rejection?: RowRejection
 	) { }
 
 	/**
@@ -54,7 +58,7 @@ export class StatementRowState {
 	 * @returns The next state.
 	 */
 	withPredicateText(text: string): StatementRowState {
-		return new StatementRowState(this.stored, this.draft, text, this.pendingText);
+		return new StatementRowState(this.stored, this.draft, text, this.pendingText, undefined, this.rejection);
 	}
 
 	/**
@@ -63,7 +67,7 @@ export class StatementRowState {
 	 * @returns The next state.
 	 */
 	withPredicate(iri: string): StatementRowState {
-		return new StatementRowState(this.stored, this.draft.withPredicate(iri), this.predicateText, this.pendingText);
+		return new StatementRowState(this.stored, this.draft.withPredicate(iri), this.predicateText, this.pendingText, undefined, this.rejection);
 	}
 
 	/**
@@ -72,7 +76,7 @@ export class StatementRowState {
 	 * @returns The next state.
 	 */
 	withPendingText(text: string): StatementRowState {
-		return new StatementRowState(this.stored, this.draft, this.predicateText, text);
+		return new StatementRowState(this.stored, this.draft, this.predicateText, text, undefined, this.rejection);
 	}
 
 	/**
@@ -81,7 +85,7 @@ export class StatementRowState {
 	 * @returns The next state.
 	 */
 	withValueAppended(term: TermRef): StatementRowState {
-		return new StatementRowState(this.stored, this.draft.withValueAppended(term), this.predicateText);
+		return new StatementRowState(this.stored, this.draft.withValueAppended(term), this.predicateText, '', undefined, this.rejection);
 	}
 
 	/**
@@ -91,7 +95,7 @@ export class StatementRowState {
 	 * @returns The next state.
 	 */
 	withLiteralText(index: number, text: string): StatementRowState {
-		return new StatementRowState(this.stored, this.draft.withLiteralText(index, text), this.predicateText, this.pendingText, this.problem);
+		return this.withDraft(this.draft.withLiteralText(index, text));
 	}
 
 	/**
@@ -100,7 +104,7 @@ export class StatementRowState {
 	 * @returns The next state.
 	 */
 	withoutValue(index: number): StatementRowState {
-		return new StatementRowState(this.stored, this.draft.withoutValue(index), this.predicateText, this.pendingText, this.problem);
+		return this.withDraft(this.draft.withoutValue(index));
 	}
 
 	/**
@@ -109,7 +113,20 @@ export class StatementRowState {
 	 * @returns The next state.
 	 */
 	withDraft(draft: StatementDraft): StatementRowState {
-		return new StatementRowState(this.stored, draft, this.predicateText, this.pendingText, this.problem);
+		return new StatementRowState(this.stored, draft, this.predicateText, this.pendingText, this.problem, this.rejection);
+	}
+
+	/**
+	 * Carry what was typed over to the statement as the document writes it now.
+	 * @param stored The statement as the document writes it now.
+	 * @param predicateText How its predicate is written, which replaces the text of the predicate
+	 * field when the stored predicate changed.
+	 * @returns The next state.
+	 */
+	rebasedOnto(stored: StatementDraft, predicateText: string): StatementRowState {
+		const text = stored.predicate !== this.stored.predicate ? predicateText : this.predicateText;
+
+		return new StatementRowState(stored, this.draft.rebasedOnto(stored), text, this.pendingText, this.problem, this.rejection);
 	}
 
 	/**
@@ -118,6 +135,15 @@ export class StatementRowState {
 	 * @returns The next state.
 	 */
 	withProblem(problem: TermProblem): StatementRowState {
-		return new StatementRowState(this.stored, this.draft, this.predicateText, this.pendingText, problem);
+		return new StatementRowState(this.stored, this.draft, this.predicateText, this.pendingText, problem, this.rejection);
+	}
+
+	/**
+	 * Show why the row was not written, or stop showing it.
+	 * @param rejection The reason, or `undefined` to remove it.
+	 * @returns The next state.
+	 */
+	withRejection(rejection: RowRejection | undefined): StatementRowState {
+		return new StatementRowState(this.stored, this.draft, this.predicateText, this.pendingText, this.problem, rejection);
 	}
 }

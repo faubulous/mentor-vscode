@@ -32,7 +32,7 @@ describe('EditingHostService', () => {
 
 		service.accept({ id: 'EditApplied', editId: first.editId, version: 4 });
 
-		await expect(first.outcome).resolves.toMatchObject({ ok: true, version: 4, renamedIds: [] });
+		await expect(first.outcome).resolves.toEqual({ ok: true, version: 4 });
 		expect(posted).toHaveLength(2);
 		expect(posted[1]).toMatchObject({ id: 'ApplyEdit', editId: second.editId, baseVersion: 3 });
 	});

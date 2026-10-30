@@ -21,17 +21,24 @@ export interface StatementServices {
 
 /**
  * Build the services of the statement rows of a card from the prefixes and resources of the
- * document and the views the host sent for the terms of the card.
+ * document and the views the host sent for the terms of the card. A card that only reads needs
+ * none, and is spared building them.
  * @param detail The resource of the card.
- * @returns The services.
+ * @param enabled Whether the rows of the card are edited.
+ * @returns The services, or `undefined` when the rows are not edited.
  */
-export function useStatementServices(detail: ResourceDetail): StatementServices {
+export function useStatementServices(detail: ResourceDetail, enabled: boolean): StatementServices | undefined {
 	const { namespaces, resources } = useFormEditorContext();
-	const prefixes = useMemo(() => Object.fromEntries(namespaces.map(namespace => [namespace.prefix, namespace.iri])), [namespaces]);
-	const reader = useMemo(() => new TypedTermReader(prefixes), [prefixes]);
-	const resolver = useMemo(() => new TermViewResolver(prefixes, resources ?? [], _viewsOf(detail)), [prefixes, resources, detail]);
 
-	return { reader, resolver };
+	return useMemo(() => {
+		if (!enabled) {
+			return undefined;
+		}
+
+		const prefixes = Object.fromEntries(namespaces.map(namespace => [namespace.prefix, namespace.iri]));
+
+		return { reader: new TypedTermReader(prefixes), resolver: new TermViewResolver(prefixes, resources ?? [], _viewsOf(detail)) };
+	}, [enabled, namespaces, resources, detail]);
 }
 
 /**
