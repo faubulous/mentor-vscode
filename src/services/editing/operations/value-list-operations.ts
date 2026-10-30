@@ -1,7 +1,7 @@
 import { QuadContext } from '@faubulous/mentor-rdf-parsers';
 import { statementsWithin } from '@src/utilities/quad-contexts';
 import { EditOperation } from '../edit-operation';
-import { EditPlan, QuadExpectation, TermPattern, createPlan, netExpectations } from '../edit-plan';
+import { EditPlan, ExpectedStatementChange, TermPattern, createPlan, netExpectedChanges } from '../edit-plan';
 import { StatementLocator } from '../statement-locator';
 import { StatementValueWriter } from '../statement-value-writer';
 import { SynthesisContext } from '../synthesis-context';
@@ -50,14 +50,14 @@ export class ValueListOperations {
 		const subject = toPatternFromRef(operation.subject);
 		const removed = list.groups.flatMap(group => group.removed);
 		const added = list.groups.length === 0 ? list.added : list.groups.flatMap(group => group.entries.flatMap(entry => entry.kind === 'new' ? [entry.value] : []));
-		const expectations = [
-			...removed.flatMap(span => this._removalExpectations(subject, operation.predicate, span.quad, span.start, span.end)),
-			...added.flatMap(value => writer.expectationsOf(subject, operation.predicate, value))
+		const expectedChanges = [
+			...removed.flatMap(span => this._removalChanges(subject, operation.predicate, span.quad, span.start, span.end)),
+			...added.flatMap(value => writer.expectedChangesOf(subject, operation.predicate, value))
 		];
 		const removedCount = removed.reduce((sum, span) => sum + 1 + statementsWithin(context.model.quadContexts, span.start, span.end).length, 0);
 		const addedCount = added.reduce((sum, value) => sum + writer.statementCountOf(value), 0);
 
-		return createPlan({ edits: written.edits, focus: written.focus, expectations: netExpectations(expectations), quadCountDelta: addedCount - removedCount });
+		return createPlan({ edits: written.edits, focus: written.focus, expectedChanges: netExpectedChanges(expectedChanges), quadCountDelta: addedCount - removedCount });
 	}
 
 	/**
@@ -101,9 +101,9 @@ export class ValueListOperations {
 	 * @param quad The statement of the value.
 	 * @param start The offset the value starts at.
 	 * @param end The offset the value ends at.
-	 * @returns The expectations.
+	 * @returns The expected changes.
 	 */
-	private _removalExpectations(subject: TermPattern, predicate: string, quad: QuadContext, start: number, end: number): QuadExpectation[] {
+	private _removalChanges(subject: TermPattern, predicate: string, quad: QuadContext, start: number, end: number): ExpectedStatementChange[] {
 		const nested = statementsWithin(this._context.model.quadContexts, start, end).map(inner => ({
 			subject: toTermPattern(inner.subject),
 			predicate: inner.predicate.value,

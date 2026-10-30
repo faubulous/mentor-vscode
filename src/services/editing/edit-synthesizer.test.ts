@@ -254,7 +254,7 @@ describe('EditVerifier', () => {
 	it('rejects an edit that breaks the syntax', () => {
 		const input = inputOf(`ex:s ex:p ex:a .\n`);
 		const period = input.text.lastIndexOf('.');
-		const result = new EditVerifier(input).verify({ edits: [{ start: period, end: period + 1, newText: '' }], expectations: [], quadCountDelta: 0 });
+		const result = new EditVerifier(input).verify({ edits: [{ start: period, end: period + 1, newText: '' }], expectedChanges: [], quadCountDelta: 0 });
 
 		expect(result.ok).toBe(false);
 	});
@@ -263,7 +263,7 @@ describe('EditVerifier', () => {
 		const input = inputOf(`ex:s ex:p ex:a .\n`);
 		const result = new EditVerifier(input).verify({
 			edits: [{ start: input.text.length, end: input.text.length, newText: 'ex:s ex:q ex:b .\n' }],
-			expectations: [],
+			expectedChanges: [],
 			quadCountDelta: 0
 		});
 
@@ -274,7 +274,7 @@ describe('EditVerifier', () => {
 		const input = inputOf(`ex:s ex:p ex:a .\n`);
 		const result = new EditVerifier(input).verify({
 			edits: [{ start: input.text.length, end: input.text.length, newText: 'ex:s ex:q ex:b .\n' }],
-			expectations: [{ subject, predicate: `${EX}q`, object: iri('c'), delta: 1 }],
+			expectedChanges: [{ subject, predicate: `${EX}q`, object: iri('c'), delta: 1 }],
 			quadCountDelta: 1
 		});
 

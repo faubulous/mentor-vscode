@@ -1,6 +1,6 @@
 import { RDF } from '@faubulous/mentor-rdf';
 import { statementsWithin } from '@src/utilities/quad-contexts';
-import { QuadExpectation, TermPattern } from './edit-plan';
+import { ExpectedStatementChange, TermPattern } from './edit-plan';
 import { EditRejectionError } from './edit-rejection';
 import { CollectionItemSpan } from './statement-model';
 import { StatementValue } from './statement-value';
@@ -48,14 +48,14 @@ export class StatementValueWriter {
 	}
 
 	/**
-	 * The statements a new value adds, as expectations.
+	 * The statements a new value adds, as expected changes.
 	 * @param subject The subject of the statement.
 	 * @param predicate The predicate of the statement.
 	 * @param value The value.
-	 * @returns The expectations.
+	 * @returns The expected changes.
 	 */
-	expectationsOf(subject: TermPattern, predicate: string, value: StatementValue): QuadExpectation[] {
-		return [{ subject, predicate, object: this._patternOf(value), delta: 1 }, ...this._nestedExpectationsOf(value)];
+	expectedChangesOf(subject: TermPattern, predicate: string, value: StatementValue): ExpectedStatementChange[] {
+		return [{ subject, predicate, object: this._patternOf(value), delta: 1 }, ...this._nestedChangesOf(value)];
 	}
 
 	/**
@@ -121,11 +121,11 @@ export class StatementValueWriter {
 	}
 
 	/**
-	 * The statements a value adds besides its own, as expectations.
+	 * The statements a value adds besides its own, as expected changes.
 	 * @param value The value.
-	 * @returns The expectations.
+	 * @returns The expected changes.
 	 */
-	private _nestedExpectationsOf(value: StatementValue): QuadExpectation[] {
+	private _nestedChangesOf(value: StatementValue): ExpectedStatementChange[] {
 		if (value.kind === 'term') {
 			return [];
 		}
@@ -146,7 +146,7 @@ export class StatementValueWriter {
 		return value.items.flatMap((item, index) => [
 			{ subject: node, predicate: RDF.first, object: this._patternOf(item), delta: 1 },
 			{ subject: node, predicate: RDF.rest, object: index < value.items.length - 1 ? node : { kind: 'iri', iri: RDF.nil }, delta: 1 },
-			...this._nestedExpectationsOf(item)
+			...this._nestedChangesOf(item)
 		]);
 	}
 

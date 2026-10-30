@@ -1,6 +1,6 @@
 import { EditOperation } from '../edit-operation';
 import { TermRef } from '../term-ref';
-import { EditPlan, createPlan, netExpectations } from '../edit-plan';
+import { EditPlan, createPlan, netExpectedChanges } from '../edit-plan';
 import { EditRejectionError } from '../edit-rejection';
 import { PredicateGroup, SubjectBlock } from '../statement-model';
 import { ValueOperations } from './value-operations';
@@ -107,7 +107,7 @@ export class PropertyOperations {
 
 		return createPlan({
 			edits,
-			expectations: netExpectations(objects.flatMap(object => [
+			expectedChanges: netExpectedChanges(objects.flatMap(object => [
 				{ subject, predicate: operation.predicate, object: toTermPattern(object.quad.object), delta: -1 },
 				{ subject, predicate: operation.newPredicate, object: toTermPattern(object.quad.object), delta: 1 }
 			])),
@@ -211,7 +211,7 @@ export class PropertyOperations {
 			byBlock.set(block, [...(byBlock.get(block) ?? []), group]);
 
 			for (const object of group.objects) {
-				plan.expectations.push({ subject, predicate: operation.predicate, object: toTermPattern(object.quad.object), delta: -1 });
+				plan.expectedChanges.push({ subject, predicate: operation.predicate, object: toTermPattern(object.quad.object), delta: -1 });
 				plan.quadCountDelta -= 1 + countStatementsWithin(context.model.quadContexts, object.start, object.end);
 			}
 		}

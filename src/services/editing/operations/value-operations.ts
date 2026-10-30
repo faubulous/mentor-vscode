@@ -1,6 +1,6 @@
 import { RdfToken } from '@faubulous/mentor-rdf-parsers';
 import { TermRef } from '../term-ref';
-import { EditPlan, QuadExpectation, createPlan } from '../edit-plan';
+import { EditPlan, ExpectedStatementChange, createPlan } from '../edit-plan';
 import { EditRejectionError } from '../edit-rejection';
 import { ObjectSpan, PredicateGroup, SubjectBlock } from '../statement-model';
 import { PropertyOperations } from './property-operations';
@@ -27,14 +27,14 @@ function _runDeletionRange(block: SubjectBlock, from: number, to: number): { sta
 }
 
 /**
- * Build the expectation that a value of a block changes in number.
+ * Build the change of the number of statements of a value of a block.
  * @param block The block holding the value.
  * @param group The group holding the value.
  * @param span The span of the value.
  * @param delta How its number changes.
- * @returns The expectation.
+ * @returns The expected change.
  */
-function _expectation(block: SubjectBlock, group: PredicateGroup, span: ObjectSpan, delta: number): QuadExpectation {
+function _expectedChange(block: SubjectBlock, group: PredicateGroup, span: ObjectSpan, delta: number): ExpectedStatementChange {
 	return {
 		subject: toPatternFromRef(toTermRef(block.subject)),
 		predicate: group.predicateIri,
@@ -74,7 +74,7 @@ export class ValueOperations {
 
 		return createPlan({
 			edits: deleteRange(text, tokens, lines.start, lines.end),
-			expectations: [_expectation(block, group, span, -1)],
+			expectedChanges: [_expectedChange(block, group, span, -1)],
 			quadCountDelta: -1 - countStatementsWithin(quadContexts, span.start, span.end)
 		});
 	}

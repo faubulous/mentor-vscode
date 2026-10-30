@@ -1,7 +1,7 @@
 import { IToken, QuadContext } from '@faubulous/mentor-rdf-parsers';
 import { applyTextEdits } from '@src/utilities/text-edits';
 import { DocumentReader } from './document-reader';
-import { EditPlan, QuadExpectation } from './edit-plan';
+import { EditPlan, ExpectedStatementChange } from './edit-plan';
 import { SynthesisInput } from './synthesis-context';
 import { matchesTermPattern } from './term-patterns';
 
@@ -45,11 +45,11 @@ export class EditVerifier {
 			return { ok: false, message: `The edit would change ${countDelta} statements instead of ${plan.quadCountDelta}.` };
 		}
 
-		for (const expectation of plan.expectations) {
-			const delta = EditVerifier._count(quadContexts, expectation) - EditVerifier._count(input.quadContexts, expectation);
+		for (const change of plan.expectedChanges) {
+			const delta = EditVerifier._count(quadContexts, change) - EditVerifier._count(input.quadContexts, change);
 
-			if (delta !== expectation.delta) {
-				return { ok: false, message: `The edit would change the statement '${expectation.predicate}' ${delta} times instead of ${expectation.delta}.` };
+			if (delta !== change.delta) {
+				return { ok: false, message: `The edit would change the statement '${change.predicate}' ${delta} times instead of ${change.delta}.` };
 			}
 		}
 
@@ -57,16 +57,16 @@ export class EditVerifier {
 	}
 
 	/**
-	 * Count the statements matching an expectation.
+	 * Count the statements matching an expected change.
 	 * @param quadContexts The statements to count in.
-	 * @param expectation The expectation to match.
+	 * @param change The expected change to match.
 	 * @returns The number of matching statements.
 	 */
-	private static _count(quadContexts: readonly QuadContext[], expectation: QuadExpectation): number {
+	private static _count(quadContexts: readonly QuadContext[], change: ExpectedStatementChange): number {
 		return quadContexts.filter(
-			quad => quad.predicate.value === expectation.predicate
-				&& matchesTermPattern(quad.subject, expectation.subject)
-				&& matchesTermPattern(quad.object, expectation.object)
+			quad => quad.predicate.value === change.predicate
+				&& matchesTermPattern(quad.subject, change.subject)
+				&& matchesTermPattern(quad.object, change.object)
 		).length;
 	}
 }
