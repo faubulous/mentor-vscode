@@ -32,6 +32,11 @@ export interface StatementRowEntry {
  */
 export interface StatementRowsData {
 	/**
+	 * The identifier of the resource of the card.
+	 */
+	resourceId: string;
+
+	/**
 	 * The resource of the card.
 	 */
 	subject: TermRef;
@@ -133,6 +138,12 @@ export class StatementRows implements StatementRowOwner {
 			unmatched.delete(editor);
 			editor.deliver({ ...data, property, predicateText: data.predicateTextOf(property) });
 			entries.push({ key: `row-${editor.id}`, property, editor });
+		}
+
+		for (const editor of unmatched) {
+			if (!editor.isNew) {
+				editor.retire();
+			}
 		}
 
 		this._editors = this._editors.filter(editor => !unmatched.has(editor) || editor.isNew);

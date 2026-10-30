@@ -11,7 +11,13 @@ const subject = { kind: 'iri' as const, iri: 'http://example.org/s' };
  * A writer that writes one operation of its predicate per request, recording how its edits end.
  */
 class TestWriter implements EditWriter {
+	readonly resourceId: string;
+
 	version = 1;
+
+	awaiting = false;
+
+	sending = false;
 
 	ready = true;
 
@@ -24,20 +30,29 @@ class TestWriter implements EditWriter {
 	 * @param predicate The predicate its operations empty.
 	 * @param onTake Called while it builds its edit.
 	 */
-	constructor(private readonly predicate: string, private readonly onTake?: () => void) { }
+	constructor(private readonly predicate: string, private readonly onTake?: () => void) {
+		this.resourceId = `i:${predicate}`;
+	}
 
 	get wantsToWrite(): boolean {
 		return this.writes > 0;
 	}
 
+	get busy(): boolean {
+		return this.wantsToWrite || this.sending || this.awaiting;
+	}
+
 	takeEdit(): EditOperation[] | undefined {
 		this.writes--;
+		this.sending = true;
 		this.onTake?.();
 
 		return [{ op: 'setValues', subject, predicate: this.predicate, values: [] }];
 	}
 
 	settle(outcome: EditOutcome): void {
+		this.sending = false;
+		this.awaiting = outcome.ok;
 		this.outcomes.push(outcome);
 	}
 
@@ -151,4 +166,27 @@ describe('EditingController', () => {
 		expect(refused.outcomes).toEqual([{ ok: false, reason: 'notFound', message: 'Gone', version: 1 }]);
 		expect(predicatesOf(host.submitted)).toEqual(['p1', 'p2']);
 	});
+
+	it('tells which resources have writes that are not done, until their data arrived', async () => {
+		const host = createEditingHostStub();
+		const controller = new EditingController(host);
+		const writer = new TestWriter('p1');
+		const changes: (readonly string[])[] = [];
+
+		controller.subscribe(() => changes.push([...controller.busyResourceIds]));
+		controller.requestWrite(writer.wanting());
+
+		expect([...controller.busyResourceIds]).toEqual(['i:p1']);
+
+		await host.settle();
+
+		expect([...controller.busyResourceIds]).toEqual(['i:p1']);
+
+		writer.awaiting = false;
+		controller.flush();
+
+		expect([...controller.busyResourceIds]).toEqual([]);
+		expect(changes).toEqual([['i:p1'], []]);
+	});
 });
+

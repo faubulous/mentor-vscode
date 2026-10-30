@@ -8,9 +8,20 @@ import { EditOutcome } from '../services/editing-host-service.interface';
  */
 export interface EditWriter {
 	/**
+	 * The resource the writer edits, whose card has to stay mounted while the writer is busy.
+	 */
+	readonly resourceId: string;
+
+	/**
 	 * The document version the data of the writer belongs to.
 	 */
 	readonly version: number;
+
+	/**
+	 * Whether a write of the writer is not done yet: asked for, on its way, or applied while the
+	 * data it produced has not arrived. The writer needs its data delivered until it is done.
+	 */
+	readonly busy: boolean;
 
 	/**
 	 * Whether the writer can build its operations now: its data is current and no edit of it is

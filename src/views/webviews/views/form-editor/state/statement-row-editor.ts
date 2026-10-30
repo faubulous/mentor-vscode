@@ -60,6 +60,8 @@ export class StatementRowEditor implements EditWriter {
 
 	private _submitted = false;
 
+	private _retired = false;
+
 	private _unfitting?: { draft: StatementDraft; indexes: ReadonlySet<number> };
 
 	/**
@@ -114,8 +116,16 @@ export class StatementRowEditor implements EditWriter {
 		return this._claimedPredicate;
 	}
 
+	get resourceId(): string {
+		return this._data.resourceId;
+	}
+
 	get version(): number {
 		return this._data.version;
+	}
+
+	get busy(): boolean {
+		return this.wantsToWrite || this._sending || this._awaitedVersion !== undefined;
 	}
 
 	get ready(): boolean {
@@ -181,6 +191,16 @@ export class StatementRowEditor implements EditWriter {
 		this._state = keep
 			? this._state.rebasedOnto(stored, data.predicateText)
 			: StatementRowState.of(stored, data.predicateText).withRejection(this._state.rejection);
+	}
+
+	/**
+	 * Give the row up, as its card does once the property of the row is gone: writes asked for
+	 * are dropped, and an applied edit is not waited for. A write on its way still ends.
+	 */
+	retire(): void {
+		this._retired = true;
+		this._writes = { predicate: false, values: false };
+		this._awaitedVersion = undefined;
 	}
 
 	/**
@@ -342,7 +362,7 @@ export class StatementRowEditor implements EditWriter {
 		this._sending = false;
 
 		if (outcome.ok) {
-			this._awaitedVersion = outcome.version;
+			this._awaitedVersion = this._retired ? undefined : outcome.version;
 
 			return;
 		}

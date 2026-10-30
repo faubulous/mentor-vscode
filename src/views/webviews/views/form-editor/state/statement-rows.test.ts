@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { TEST_NAMESPACES, TEST_SUBJECT, createIriView, createProperty, createSampleResourceDetail, withAnchors } from '@src/utilities/mocks/statement-fixtures';
+import { TEST_NAMESPACES, TEST_SUBJECT, TEST_SUBJECT_ID, createIriView, createProperty, createSampleResourceDetail, withAnchors } from '@src/utilities/mocks/statement-fixtures';
 import { PropertyView } from '../form-editor-model';
 import { TypedTermReader } from '../services/statement/typed-term-reader';
 import { StatementRows, StatementRowsData } from './statement-rows';
@@ -11,7 +11,7 @@ const SAMPLE = withAnchors(createSampleResourceDetail()).properties;
  * Make the data of a card.
  */
 function dataOf(properties: readonly PropertyView[], version = 1): StatementRowsData {
-	return { subject: TEST_SUBJECT, properties, version, stale: false, reader, predicateTextOf: property => property.predicate.prefixedName ?? '' };
+	return { resourceId: TEST_SUBJECT_ID, subject: TEST_SUBJECT, properties, version, stale: false, reader, predicateTextOf: property => property.predicate.prefixedName ?? '' };
 }
 
 /**
@@ -39,15 +39,19 @@ describe('StatementRows', () => {
 		expect(after[3].editor).toBe(before[3].editor);
 	});
 
-	it('drops the row of a property that went, and keeps one row open for a new statement', () => {
+	it('drops and retires the row of a property that went, and keeps one row open for a new statement', () => {
 		const rows = createRows();
+		const before = rows.reconcile(dataOf(SAMPLE));
+		const label = before[1].editor!;
 
-		rows.reconcile(dataOf(SAMPLE));
+		label.inputLiteral(0, 'Oak');
+		label.leave();
 
 		const entries = rows.reconcile(dataOf([SAMPLE[0]], 2));
 
 		expect(entries).toHaveLength(2);
 		expect(entries[1].editor?.isOpen).toBe(true);
+		expect(label.busy).toBe(false);
 	});
 
 	it('reads a property whose values cannot all be kept by their place, and names it as one the rows cannot edit', () => {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { RDFS, XSD } from '@faubulous/mentor-rdf';
-import { TEST_NAMESPACES, TEST_SUBJECT, createLiteralView, createProperty, withAnchors, createTestResourceDetail } from '@src/utilities/mocks/statement-fixtures';
+import { TEST_NAMESPACES, TEST_SUBJECT, TEST_SUBJECT_ID, createLiteralView, createProperty, withAnchors, createTestResourceDetail } from '@src/utilities/mocks/statement-fixtures';
 import { PropertyView } from '../form-editor-model';
 import { TypedTermReader } from '../services/statement/typed-term-reader';
 import { EditWriter } from './edit-writer';
@@ -19,7 +19,7 @@ const LABEL: PropertyView = withAnchors(createTestResourceDetail([{ ...createPro
  * Make the data of a row.
  */
 function dataOf(property: PropertyView | undefined, overrides: Partial<StatementRowData> = {}): StatementRowData {
-	return { subject: TEST_SUBJECT, property, predicateText: property ? 'rdfs:label' : '', version: 1, stale: false, reader, ...overrides };
+	return { resourceId: TEST_SUBJECT_ID, subject: TEST_SUBJECT, property, predicateText: property ? 'rdfs:label' : '', version: 1, stale: false, reader, ...overrides };
 }
 
 /**
@@ -160,4 +160,37 @@ describe('StatementRowEditor', () => {
 		expect(editor.state.rejection).toEqual({ kind: 'predicateNotEditable', predicate: RDFS.label });
 		expect(editor.isOpen).toBe(true);
 	});
+
+	it('is busy from the write it asks for until the data the edit produced arrived', () => {
+		const { editor } = createEditor();
+
+		expect(editor.busy).toBe(false);
+
+		editor.inputLiteral(0, 'Oak');
+		editor.leave();
+
+		expect(editor.busy).toBe(true);
+
+		editor.takeEdit();
+		editor.settle({ ok: true, version: 2 });
+
+		expect(editor.busy).toBe(true);
+
+		editor.deliver(dataOf({ ...LABEL, values: [{ ...createLiteralView('Oak', 'en'), anchor: 500 }] }, { version: 2 }));
+
+		expect(editor.busy).toBe(false);
+	});
+
+	it('waits for nothing once retired, not even for an edit that was on its way', () => {
+		const { editor } = createEditor();
+
+		editor.inputLiteral(0, 'Oak');
+		editor.leave();
+		editor.takeEdit();
+		editor.retire();
+		editor.settle({ ok: true, version: 2 });
+
+		expect(editor.busy).toBe(false);
+	});
 });
+
