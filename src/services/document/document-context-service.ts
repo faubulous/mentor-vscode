@@ -520,14 +520,28 @@ export class DocumentContextService {
 	 * @returns A promise that resolves to the activated context or `undefined` if unsupported.
 	 */
 	async activateContextForDocument(document: vscode.TextDocument): Promise<IDocumentContext | undefined> {
-		const context = await this.loadDocument(document);
+		return this._activate(document);
+	}
 
-		if (!context) {
-			return undefined;
+	/**
+	 * Make the context of a document the active one, as a text editor or another editor taking
+	 * the focus does. A document whose context is active already is left as it is, so its
+	 * listeners are not told of a change that did not happen.
+	 * @param document The document.
+	 * @param notebookCellSlug The slug of the notebook cell the document is, if it is one.
+	 * @returns The active context, or `undefined` when the document is not supported.
+	 */
+	private async _activate(document: vscode.TextDocument, notebookCellSlug?: string): Promise<IDocumentContext | undefined> {
+		if (document.uri.toString() === this.activeContext?.uri.toString()) {
+			return this.activeContext;
 		}
 
-		this.activeContext = context;
-		this._onDidChangeDocumentContext.fire(context);
+		const context = await this.loadDocument(document, false, notebookCellSlug);
+
+		if (context) {
+			this.activeContext = context;
+			this._onDidChangeDocumentContext.fire(context);
+		}
 
 		return context;
 	}
@@ -595,12 +609,7 @@ export class DocumentContextService {
 			return;
 		}
 
-		const context = await this.loadDocument(editor.document, false, this._getNotebookCellSlug(editor.document));
-
-		if (context) {
-			this.activeContext = context;
-			this._onDidChangeDocumentContext.fire(context);
-		}
+		const context = await this._activate(editor.document, this._getNotebookCellSlug(editor.document));
 
 		// For XML, isRdfDocument could not be determined from the language ID alone;
 		// update it now that loading is complete.

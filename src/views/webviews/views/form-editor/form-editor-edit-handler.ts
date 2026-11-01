@@ -9,6 +9,7 @@ import { StyleFallback } from '@src/services/editing/local-style';
 import { SynthesisInput } from '@src/services/editing/synthesis-context';
 import { getConfig } from '@src/utilities/vscode/config';
 import { toWorkspaceEdit } from '@src/utilities/vscode/edit';
+import { FormEditorQuadContexts } from './form-editor-quad-contexts';
 import { getFormReadOnlyReason } from './form-editor-read-only';
 
 /**
@@ -50,6 +51,12 @@ export interface EditHandlerContext {
 	 * absent.
 	 */
 	tokenSource?: IDocumentTokenSource;
+
+	/**
+	 * Reads the statements of the document once per parse, shared with the snapshot of the editor;
+	 * read anew when absent.
+	 */
+	quadContexts?: FormEditorQuadContexts;
 }
 
 /**
@@ -93,7 +100,7 @@ export class FormEditorEditHandler {
 		const input: SynthesisInput = {
 			text,
 			tokens: context.tokens,
-			quadContexts: context.getQuadContexts(),
+			quadContexts: handlerContext.quadContexts?.of(context) ?? context.getQuadContexts(),
 			namespaces: context.namespaces,
 			syntax: context.syntax,
 			style: _styleFallback(document)

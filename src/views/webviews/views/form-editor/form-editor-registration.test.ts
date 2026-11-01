@@ -49,14 +49,14 @@ describe('registerFormEditor', () => {
 		configureEnabled(false);
 		registerFormEditor(createContext());
 
-		expect(container.isRegistered(ServiceToken.FormEditorProvider)).toBe(false);
+		expect(container.isRegistered(ServiceToken.DefinitionRevealTarget)).toBe(false);
 	});
 
 	it('registers the provider while the flag is on', () => {
 		configureEnabled(true);
 		registerFormEditor(createContext());
 
-		expect(container.isRegistered(ServiceToken.FormEditorProvider)).toBe(true);
+		expect(container.isRegistered(ServiceToken.DefinitionRevealTarget)).toBe(true);
 	});
 
 	it('offers to reload the window when the flag changes', async () => {

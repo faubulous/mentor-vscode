@@ -462,6 +462,28 @@ describe('DocumentContextService', () => {
 		});
 	});
 
+	describe('activateContextForDocument', () => {
+		it('makes the context of a document active once, and tells the listeners once', async () => {
+			const { service, mockDocumentFactory } = createService();
+			const uri = vscode.Uri.parse('file:///test.ttl');
+			const document = { languageId: 'turtle', uri, scheme: 'file', getText: () => '' } as any;
+			const context = createMockContext({ uri, isLoaded: true });
+			const fired: unknown[] = [];
+
+			service.contexts[uri.toString()] = context;
+			(mockDocumentFactory.create as any).mockReturnValue(context);
+			service.onDidChangeDocumentContext(changed => fired.push(changed));
+
+			const loadDocument = vi.spyOn(service, 'loadDocument');
+
+			expect(await service.activateContextForDocument(document)).toBe(context);
+			expect(await service.activateContextForDocument(document)).toBe(context);
+			expect(service.activeContext).toBe(context);
+			expect(fired).toEqual([context]);
+			expect(loadDocument).toHaveBeenCalledTimes(1);
+		});
+	});
+
 	describe('getContextFromUri', () => {
 		it('returns context for a file: URI directly', () => {
 			const { service } = createService();
