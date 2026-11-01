@@ -2,7 +2,7 @@ import { QuadContext } from '@faubulous/mentor-rdf-parsers';
 import { Quad_Object, Quad_Subject, Term } from '@rdfjs/types';
 import { OWL, RDF, RDFS, SH, Uri } from '@faubulous/mentor-rdf';
 import { IDocumentContext } from '@src/services/document/document-context.interface';
-import { getIriResourceId, getResourceId, toTermRef } from '@src/services/editing/resource-id';
+import { getIriResourceId, toTermRef } from '@src/services/editing/resource-id';
 import { DEFAULT_ICON, getSubjectIconName } from '@src/utilities/subject-icon';
 import { hasSourcePosition } from '@src/utilities/tokens';
 import { ValueKind, ValueKindHint } from '@src/utilities/value-kind';
@@ -223,7 +223,7 @@ export class ResourceViewBuilder {
 			return view;
 		}
 
-		const id = getResourceId(term);
+		const id = this._index.identities.idOf(term);
 		const items = this._index.collections.get(id);
 
 		if (items) {
