@@ -2,8 +2,10 @@ import { Term } from '@rdfjs/types';
 import { TermRef } from './term-ref';
 
 /**
- * Identifier of a resource within one document revision. Blank node identifiers are assigned
- * by the parser in token order, so they are only valid for the revision they were built from.
+ * Identifier of a resource. Built from a blank node identifier of the parser, which numbers
+ * anonymous blank nodes in token order, it is only valid for the revision it was built from, as in
+ * the statement model of an edit. The form editor names its resources across revisions with the
+ * resource identities of its index instead.
  */
 export type ResourceId = string;
 
@@ -24,23 +26,6 @@ export function getIriResourceId(iri: string): ResourceId {
  */
 export function getResourceId(term: Term): ResourceId {
 	return term.termType === 'BlankNode' ? `b:${term.value}` : getIriResourceId(term.value);
-}
-
-/**
- * Build the identifier of a resource named by a term in wire form, so the form can address a
- * resource it is about to create before the host has indexed it.
- * @param term The term of the resource.
- * @returns The resource identifier, or `undefined` for a literal, which names no resource.
- */
-export function getTermRefResourceId(term: TermRef): ResourceId | undefined {
-	switch (term.kind) {
-		case 'bnode':
-			return `b:${term.id}`;
-		case 'iri':
-			return getIriResourceId(term.iri);
-		default:
-			return undefined;
-	}
 }
 
 /**

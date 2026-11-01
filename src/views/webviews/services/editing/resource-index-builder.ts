@@ -2,10 +2,11 @@ import { QuadContext, RdfToken } from '@faubulous/mentor-rdf-parsers';
 import { Term } from '@rdfjs/types';
 import { RDF } from '@faubulous/mentor-rdf';
 import { IDocumentContext } from '@src/services/document/document-context.interface';
-import { getResourceId, toTermRef } from '@src/services/editing/resource-id';
+import { toTermRef } from '@src/services/editing/resource-id';
 import { isTokenOfType } from '@src/utilities/tokens';
 import { NamespaceInfo, ResourceId } from '@src/views/webviews/views/form-editor/form-editor-model';
 import { CollectionItem, ResourceIndex, ResourceIndexEntry } from './resource-index';
+import { ResourceIdentities } from './resource-identities';
 import { ResourceViewBuilder } from './resource-view-builder';
 import { trailingCommentRunsOf } from './statement-comments';
 
@@ -24,12 +25,16 @@ export class ResourceIndexBuilder {
 
 	private readonly _labelledSubjects = new Set<ResourceId>();
 
+	private readonly _identities: ResourceIdentities;
+
 	/**
 	 * Create a builder for the statements of a document.
 	 * @param _quadContexts The quad contexts of the document.
 	 * @param _context The document context, used to resolve labels and prefixes.
 	 */
-	constructor(private readonly _quadContexts: readonly QuadContext[], private readonly _context: IDocumentContext) { }
+	constructor(private readonly _quadContexts: readonly QuadContext[], private readonly _context: IDocumentContext) {
+		this._identities = new ResourceIdentities(_quadContexts);
+	}
 
 	/**
 	 * Build the index.
@@ -49,6 +54,7 @@ export class ResourceIndexBuilder {
 		const index: ResourceIndex = {
 			summaries: [],
 			entries: this._entries,
+			identities: this._identities,
 			namespaces: this._buildNamespaces(),
 			referenceCounts: this._referenceCounts,
 			trailingComments: trailingCommentRunsOf(this._quadContexts),
@@ -80,7 +86,7 @@ export class ResourceIndexBuilder {
 		}
 
 		if (quad.object.termType === 'BlankNode') {
-			const objectId = getResourceId(quad.object);
+			const objectId = this._identities.idOf(quad.object);
 
 			this._referenceCounts.set(objectId, (this._referenceCounts.get(objectId) ?? 0) + 1);
 		}
@@ -93,7 +99,7 @@ export class ResourceIndexBuilder {
 	 * @returns The entry.
 	 */
 	private _entryOf(quad: QuadContext): ResourceIndexEntry {
-		const id = getResourceId(quad.subject);
+		const id = this._identities.idOf(quad.subject);
 		const existing = this._entries.get(id);
 
 		if (existing) {
@@ -140,7 +146,7 @@ export class ResourceIndexBuilder {
 		for (const entry of this._entries.values()) {
 			for (const quad of entry.quads) {
 				if (quad.predicate.value === RDF.rest && quad.object.termType === 'BlankNode') {
-					restTargets.add(getResourceId(quad.object));
+					restTargets.add(this._identities.idOf(quad.object));
 				}
 			}
 		}
@@ -183,7 +189,7 @@ export class ResourceIndexBuilder {
 
 			const next: Term | undefined = current.quads.find(quad => quad.predicate.value === RDF.rest)?.object;
 
-			current = next?.termType === 'BlankNode' ? this._entries.get(getResourceId(next)) : undefined;
+			current = next?.termType === 'BlankNode' ? this._entries.get(this._identities.idOf(next)) : undefined;
 		}
 
 		return items;

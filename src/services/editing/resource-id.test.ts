@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { getIriResourceId, getTermRefResourceId } from './resource-id';
+import { RdfDataFactory } from '@src/utilities/rdf';
+import { getIriResourceId, getResourceId } from './resource-id';
 
-describe('getTermRefResourceId', () => {
-	it('names an IRI and a blank node as the host does, and a literal not at all', () => {
-		expect(getTermRefResourceId({ kind: 'iri', iri: 'http://example.org/a' })).toBe(getIriResourceId('http://example.org/a'));
-		expect(getTermRefResourceId({ kind: 'bnode', id: 'b0' })).toBe('b:b0');
-		expect(getTermRefResourceId({ kind: 'literal', value: 'x' })).toBeUndefined();
+describe('getResourceId', () => {
+	it('names an IRI by the IRI and a blank node by the identifier of the parser', () => {
+		expect(getResourceId(RdfDataFactory.namedNode('http://example.org/a'))).toBe(getIriResourceId('http://example.org/a'));
+		expect(getResourceId(RdfDataFactory.blankNode('b0'))).toBe('b:b0');
 	});
 });
