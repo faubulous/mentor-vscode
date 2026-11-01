@@ -178,6 +178,15 @@ export class FormEditorSession implements vscode.Disposable {
 	}
 
 	/**
+	 * Indicate whether this editor shows a resource, as one of the resources of its document.
+	 * @param resourceId The resource.
+	 * @returns `true` when the snapshot of the document holds the resource.
+	 */
+	describes(resourceId: ResourceId): boolean {
+		return this._snapshot?.resources.some(resource => resource.id === resourceId) === true;
+	}
+
+	/**
 	 * Narrow this editor to the resources the definition tree lists under a node.
 	 * @param label The label of the node.
 	 * @param resourceIds The resources listed under it.

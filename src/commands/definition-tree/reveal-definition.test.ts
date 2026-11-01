@@ -2,15 +2,17 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 
-const { mockActivateDocument, mockActiveContext } = vi.hoisted(() => ({
+const { mockActivateDocument, mockActiveContext, mockRevealTarget } = vi.hoisted(() => ({
 	mockActivateDocument: vi.fn(),
-	mockActiveContext: { graphs: ['urn:g1'] },
+	mockActiveContext: { graphs: ['urn:g1'] } as { graphs: string[]; uri?: unknown },
+	mockRevealTarget: { current: undefined as { revealDefinition: (...args: unknown[]) => boolean; filterDefinitions: (...args: unknown[]) => boolean } | undefined },
 }));
 
 vi.mock('tsyringe', () => ({
 	container: {
-		isRegistered: vi.fn(() => false),
+		isRegistered: vi.fn((token: string) => token === ServiceToken.DefinitionRevealTarget && mockRevealTarget.current !== undefined),
 		resolve: vi.fn((token: string) => {
+			if (token === ServiceToken.DefinitionRevealTarget) return mockRevealTarget.current;
 			if (token === ServiceToken.DocumentContextService) return {
 				activateDocument: mockActivateDocument,
 				activeContext: mockActiveContext,
@@ -50,6 +52,8 @@ function makeLocation(uriStr: string, sl: number, sc: number, el: number, ec: nu
 
 beforeEach(() => {
 	vi.clearAllMocks();
+	mockRevealTarget.current = undefined;
+	mockActiveContext.uri = undefined;
 	(vscode.window as any).activeTextEditor = undefined;
 	mockActivateDocument.mockResolvedValue(undefined);
 });
@@ -100,4 +104,26 @@ describe('revealDefinition', () => {
 
 		expect(execSpy).toHaveBeenCalledWith('mentor.view.definitionTree.focus');
 	});
+
+	it('leaves the definition to an editor in front that shows it, and opens no text editor', async () => {
+		const revealDefinitionSpy = vi.fn(() => true);
+
+		mockRevealTarget.current = { revealDefinition: revealDefinitionSpy, filterDefinitions: vi.fn(() => true) };
+		mockActiveContext.uri = vscode.Uri.parse('file:///doc.ttl');
+
+		await revealDefinition.handler('urn:ex#X');
+
+		expect(revealDefinitionSpy).toHaveBeenCalledWith(mockActiveContext.uri, 'urn:ex#X');
+		expect(mockActivateDocument).not.toHaveBeenCalled();
+	});
+
+	it('opens a text editor when the editor in front does not show the definition', async () => {
+		mockRevealTarget.current = { revealDefinition: vi.fn(() => false), filterDefinitions: vi.fn(() => false) };
+		mockActiveContext.uri = vscode.Uri.parse('file:///doc.ttl');
+
+		await revealDefinition.handler('urn:ex#X');
+
+		expect(mockActivateDocument).toHaveBeenCalled();
+	});
 });
+

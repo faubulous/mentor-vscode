@@ -8,7 +8,8 @@ import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
 import { createMockWebviewPanel } from '@src/utilities/mocks/vscode';
-import { createMockDocumentContextService, createMockTextDocument } from '@src/utilities/mocks/factories';
+import { RdfSyntax } from '@faubulous/mentor-rdf-parsers';
+import { createMockDocumentContextService, createMockTextDocument, createTurtleDocument } from '@src/utilities/mocks/factories';
 import { FormEditorProvider } from './form-editor-provider';
 
 const URI = 'file:///workspace/test.ttl';
@@ -41,7 +42,7 @@ function createProvider(): { provider: FormEditorProvider; subscriptions: vscode
 /**
  * Open a document in the provider, as VS Code does for a tab.
  */
-async function open(provider: FormEditorProvider, uri = URI): Promise<OpenedEditor> {
+async function open(provider: FormEditorProvider, uri = URI, text = ''): Promise<OpenedEditor> {
 	const panel = createMockWebviewPanel();
 	const posted: { id: string }[] = [];
 
@@ -51,7 +52,7 @@ async function open(provider: FormEditorProvider, uri = URI): Promise<OpenedEdit
 		return true;
 	};
 
-	await provider.resolveCustomTextEditor(createMockTextDocument('', { uri }), panel as unknown as vscode.WebviewPanel, { isCancellationRequested: false } as vscode.CancellationToken);
+	await provider.resolveCustomTextEditor(createMockTextDocument(text, { uri }), panel as unknown as vscode.WebviewPanel, { isCancellationRequested: false } as vscode.CancellationToken);
 
 	return { panel, posted };
 }
@@ -84,14 +85,26 @@ describe('FormEditorProvider', () => {
 		expect(provider.isOpen(uri)).toBe(false);
 	});
 
-	it('reveals and filters in every editor showing the document', async () => {
+	it('reveals a resource it describes and filters, in every editor of the document in front', async () => {
+		const text = '@prefix ex: <http://example.org/> .\n\nex:A a ex:Class .\n';
+		const turtle = createTurtleDocument(URI, RdfSyntax.Turtle);
+
+		turtle.parse(text);
+		container.registerInstance(ServiceToken.DocumentContextService, createMockDocumentContextService({ contexts: { [URI]: turtle } }));
+
 		const { provider } = createProvider();
-		const first = await open(provider);
-		const second = await open(provider);
+		const uri = vscode.Uri.parse(URI);
+		const first = await open(provider, URI, text);
+		const second = await open(provider, URI, text);
 		const other = await open(provider, 'file:///workspace/other.ttl');
 
-		provider.revealResource(vscode.Uri.parse(URI), 'i:http://example.org/A');
-		provider.filterResources(vscode.Uri.parse(URI), 'Classes', ['i:http://example.org/A']);
+		expect(provider.revealDefinition(uri, 'http://example.org/A')).toBe(false);
+
+		activateTab(new vscode.TabInputCustom(uri, FormEditorProvider.viewType));
+
+		expect(provider.revealDefinition(uri, 'http://example.org/A')).toBe(true);
+		expect(provider.revealDefinition(uri, 'b0')).toBe(false);
+		expect(provider.filterDefinitions(uri, 'Classes', ['http://example.org/A', 'b0'])).toBe(true);
 
 		// The sessions post the snapshot of the document on their own; the requests follow it.
 		const requestsOf = (editor: OpenedEditor) => editor.posted.map(message => message.id).filter(id => id !== 'DocumentSnapshot');

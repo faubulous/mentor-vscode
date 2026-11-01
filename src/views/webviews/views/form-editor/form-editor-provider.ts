@@ -1,14 +1,15 @@
 import * as vscode from 'vscode';
 import { EditOperation } from '@src/services/editing/edit-operation';
+import { getIriResourceId } from '@src/services/editing/resource-id';
+import { IDefinitionRevealTarget } from '@src/views/trees/definition-tree/definition-reveal-target.interface';
 import { FormEditorSession } from './form-editor-session';
-import { ResourceId } from './form-editor-model';
 
 /**
  * Provides the form based editor for RDF documents. The editor is a custom *text* editor: it
  * works on the ordinary text document, so saving, dirty state, hot exit and undo are handled by
  * VS Code, and every change stays a plain text edit.
  */
-export class FormEditorProvider implements vscode.CustomTextEditorProvider, vscode.Disposable {
+export class FormEditorProvider implements vscode.CustomTextEditorProvider, IDefinitionRevealTarget, vscode.Disposable {
 	/**
 	 * The view type contributed in the manifest.
 	 */
@@ -65,28 +66,34 @@ export class FormEditorProvider implements vscode.CustomTextEditorProvider, vsco
 		await session.initialize();
 	}
 
-	/**
-	 * Reveal a resource in every form editor showing a document.
-	 * @param uri The document to reveal the resource in.
-	 * @param resourceId The resource to scroll to.
-	 */
-	revealResource(uri: vscode.Uri, resourceId: ResourceId): void {
-		for (const session of this._sessionsOf(uri)) {
+	revealDefinition(documentUri: vscode.Uri, resource: string): boolean {
+		if (!this.isActive(documentUri)) {
+			return false;
+		}
+
+		// A blank node of the tree has an identifier of the store, which names no resource of the form.
+		const resourceId = getIriResourceId(resource);
+		const sessions = this._sessionsOf(documentUri).filter(session => session.describes(resourceId));
+
+		for (const session of sessions) {
 			session.revealResource(resourceId);
 		}
+
+		return sessions.length > 0;
 	}
 
-	/**
-	 * Narrow every form editor showing a document to the resources the definition tree lists
-	 * under a node.
-	 * @param uri The document.
-	 * @param label The label of the node.
-	 * @param resourceIds The resources listed under it.
-	 */
-	filterResources(uri: vscode.Uri, label: string, resourceIds: ResourceId[]): void {
-		for (const session of this._sessionsOf(uri)) {
+	filterDefinitions(documentUri: vscode.Uri, label: string, resources: readonly string[]): boolean {
+		if (!this.isActive(documentUri)) {
+			return false;
+		}
+
+		const resourceIds = resources.map(getIriResourceId);
+
+		for (const session of this._sessionsOf(documentUri)) {
 			session.filterResources(label, resourceIds);
 		}
+
+		return true;
 	}
 
 	/**
