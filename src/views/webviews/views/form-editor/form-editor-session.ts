@@ -28,9 +28,16 @@ import { DocumentProblem, DocumentSnapshot, ReadOnlyReason, ResourceDetail, Reso
 
 /**
  * Why a snapshot is built, which decides whether the snapshot of the same document version can be
- * kept.
+ * kept: a parse delivered, or a webview asking again, does not change what the snapshot of that
+ * version shows; the context reading the statements into the store, which names and marks the
+ * resources, and a changed setting or language do.
  */
-type SnapshotCause = 'initial' | 'external' | 'formEdit' | 'settings' | 'language';
+type SnapshotCause = 'initial' | 'external' | 'context' | 'formEdit' | 'settings' | 'language';
+
+/**
+ * The causes after which the snapshot of the same document version can be kept.
+ */
+const KEEPING_CAUSES: ReadonlySet<SnapshotCause> = new Set(['initial', 'external']);
 /**
  * The delay before a snapshot is rebuilt after the document changed. The token source already
  * absorbs keystroke bursts, so this only coalesces the events that follow one delivery.
@@ -82,6 +89,11 @@ export class FormEditorSession implements vscode.Disposable {
 	private readonly _subscriptions: vscode.Disposable[] = [];
 
 	private readonly _refreshDebouncer = new Debouncer(REFRESH_DELAY_MS);
+
+	/**
+	 * The cause of the refresh waiting for the debouncer, the one that asks the most of the snapshot.
+	 */
+	private _pendingCause?: SnapshotCause;
 
 	private readonly _contextService: IDocumentContextService;
 
@@ -159,7 +171,7 @@ export class FormEditorSession implements vscode.Disposable {
 			vscode.workspace.onDidChangeConfiguration(event => this._onDidChangeConfiguration(event)),
 			this._contextService.onDidChangeDocumentContext(context => {
 				if (context?.uri.toString() === this._documentUri) {
-					this._scheduleRefresh('external');
+					this._scheduleRefresh('context');
 				}
 			})
 		);
@@ -348,9 +360,17 @@ export class FormEditorSession implements vscode.Disposable {
 	 * @param cause Why the snapshot is rebuilt.
 	 */
 	private _scheduleRefresh(cause: SnapshotCause): void {
-		if (!this._disposed) {
-			this._refreshDebouncer.schedule(() => this._publishSnapshot(cause));
+		if (this._disposed) {
+			return;
 		}
+
+		this._pendingCause = _strongerCause(this._pendingCause, cause);
+		this._refreshDebouncer.schedule(() => {
+			const pending = this._pendingCause ?? cause;
+
+			this._pendingCause = undefined;
+			this._publishSnapshot(pending);
+		});
 	}
 
 	/**
@@ -434,16 +454,16 @@ export class FormEditorSession implements vscode.Disposable {
 	}
 
 	/**
-	 * Keep the snapshot when it was built from the same document version and problems: a change
-	 * of the document context or of the diagnostics without a new version is no reason to rebuild
-	 * it, and a webview that asks again is sent the one already built. A change of the settings or
-	 * the language always rebuilds, as it changes how the same document is shown.
+	 * Keep the snapshot when it was built from the same document version and problems: a parse
+	 * delivered for that version is no reason to rebuild it, and a webview that asks again is sent
+	 * the one already built. The statements read into the store, a changed setting and a changed
+	 * language always rebuild it, as they change how the same document is shown.
 	 * @param cause Why the snapshot is sent.
 	 * @param key What the snapshot would be built from.
 	 * @returns Whether the snapshot was kept.
 	 */
 	private _reuseSnapshot(cause: SnapshotCause, key: string): boolean {
-		return this._snapshot !== undefined && key === this._snapshotKey && (cause === 'external' || cause === 'initial');
+		return this._snapshot !== undefined && key === this._snapshotKey && KEEPING_CAUSES.has(cause);
 	}
 
 	/**
@@ -618,3 +638,15 @@ export class FormEditorSession implements vscode.Disposable {
 		}
 	}
 }
+
+/**
+ * The cause of a coalesced refresh: one that rebuilds the snapshot is not lost to one that keeps
+ * it, arriving later.
+ * @param pending The cause waiting already, if any.
+ * @param cause The cause arriving.
+ * @returns The cause the refresh goes by.
+ */
+function _strongerCause(pending: SnapshotCause | undefined, cause: SnapshotCause): SnapshotCause {
+	return pending !== undefined && !KEEPING_CAUSES.has(pending) ? pending : cause;
+}
+

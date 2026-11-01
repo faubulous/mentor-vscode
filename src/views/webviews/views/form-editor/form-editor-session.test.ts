@@ -13,6 +13,7 @@ import { IDocumentContext } from '@src/services/document/document-context.interf
 import { createMockWebviewPanel } from '@src/utilities/mocks/vscode';
 import { EditableTextDocument, applyWorkspaceEditTo, createEditableTextDocument, createMockDocumentContext, createMockDocumentContextService, createTurtleDocument } from '@src/utilities/mocks/factories';
 import { FormEditorHostMessage, FormEditorWebviewMessage } from './form-editor-messages';
+import { TurtleDocument } from '@src/languages/turtle/turtle-document';
 import { FormEditorSession } from './form-editor-session';
 
 const EX = 'http://example.org/';
@@ -54,12 +55,13 @@ function createPanel(): TestPanel {
 /**
  * Create a session over a Turtle body, with its parsed context registered for the document.
  */
-async function createSession(body: string, context?: IDocumentContext): Promise<{ session: FormEditorSession; document: EditableTextDocument } & TestPanel> {
+async function createSession(body: string, context?: IDocumentContext): Promise<{ session: FormEditorSession; document: EditableTextDocument; turtle: TurtleDocument; contextChanged: vscode.EventEmitter<IDocumentContext> } & TestPanel> {
 	const document = createEditableTextDocument(PREAMBLE + body, { uri: URI });
 	const turtle = createTurtleDocument(URI, RdfSyntax.Turtle);
+	const contextChanged = new vscode.EventEmitter<IDocumentContext>();
 
 	turtle.parse(document.getText());
-	container.registerInstance(ServiceToken.DocumentContextService, createMockDocumentContextService({ contexts: { [URI]: context ?? turtle } }));
+	container.registerInstance(ServiceToken.DocumentContextService, createMockDocumentContextService({ contexts: { [URI]: context ?? turtle }, onDidChangeDocumentContext: contextChanged.event }));
 
 	const testPanel = createPanel();
 	const extensionContext = { subscriptions: [], extensionUri: vscode.Uri.parse('file:///extension') } as unknown as vscode.ExtensionContext;
@@ -67,7 +69,7 @@ async function createSession(body: string, context?: IDocumentContext): Promise<
 
 	await session.initialize();
 
-	return { session, document, ...testPanel };
+	return { session, document, turtle, contextChanged, ...testPanel };
 }
 
 /**
@@ -188,6 +190,22 @@ describe('FormEditorSession', () => {
 		await receive({ id: 'Ready' });
 
 		expect(postedOf(posted, 'DocumentSnapshot')[0].snapshot.readOnly).toBeUndefined();
+	});
+
+	it('rebuilds the snapshot of the same version once the statements were read into the store', async () => {
+		const { posted, receive, turtle, contextChanged } = await createSession('ex:A a ex:Class .\n');
+
+		await receive({ id: 'Ready' });
+
+		vi.spyOn(turtle, 'getResourceLabel').mockReturnValue({ type: 'Literal', value: 'Inferred A', language: undefined } as never);
+		contextChanged.fire(turtle);
+		await new Promise(resolve => setTimeout(resolve, 200));
+
+		const snapshots = postedOf(posted, 'DocumentSnapshot');
+
+		expect(snapshots).toHaveLength(2);
+		expect(snapshots[1].snapshot.version).toBe(snapshots[0].snapshot.version);
+		expect(snapshots[1].snapshot.resources[0].label).toBe('Inferred A');
 	});
 
 	it('rejects an edit against a stale version and sends the current snapshot along', async () => {
