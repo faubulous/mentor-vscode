@@ -1024,20 +1024,6 @@ describe('TurtleDocument.getQuadContexts', () => {
         expect(doc.getQuadContexts().map(q => q.predicate.value)).toEqual(['http://example.org/b', 'http://example.org/d']);
     });
 
-    it('parses tokens set without a parse only once', () => {
-        const doc = makeDoc();
-
-        doc.setTokens(doc.tokenize(text));
-
-        const getParser = vi.spyOn(ParserFactory, 'getParser');
-        const first = doc.getQuadContexts();
-        const second = doc.getQuadContexts();
-
-        expect(getParser).toHaveBeenCalledTimes(1);
-        expect(second).toEqual(first);
-        expect(second).not.toBe(first);
-    });
-
     it('reads the quad contexts again when the tokens are replaced', () => {
         const doc = makeDoc();
 

@@ -21,6 +21,7 @@ import { ResourceViewBuilder } from '../../services/editing/resource-view-builde
 import { SnapshotBuilder } from '../../services/editing/snapshot-builder';
 import { EditOutcome, FormEditorEditHandler } from './form-editor-edit-handler';
 import { FormEditorHostMessage, FormEditorWebviewMessage } from './form-editor-messages';
+import { FormEditorQuadContexts } from './form-editor-quad-contexts';
 import { getFormReadOnlyReason } from './form-editor-read-only';
 import { DocumentProblem, DocumentSnapshot, ReadOnlyReason, ResourceDetail, ResourceId } from './form-editor-model';
 
@@ -87,6 +88,8 @@ export class FormEditorSession implements vscode.Disposable {
 	private readonly _referenceProvider: ResourceReferenceProvider;
 
 	private readonly _editHandler = new FormEditorEditHandler();
+
+	private readonly _quadContexts = new FormEditorQuadContexts();
 
 	private _tokenSource?: IDocumentTokenSource;
 
@@ -215,7 +218,8 @@ export class FormEditorSession implements vscode.Disposable {
 		const outcome = await this._editHandler.handle({ editId, baseVersion, operations }, {
 			document: this._document,
 			context,
-			tokenSource: this._tokenSource
+			tokenSource: this._tokenSource,
+			quadContexts: this._quadContexts
 		});
 
 		if (!outcome.ok) {
@@ -403,7 +407,7 @@ export class FormEditorSession implements vscode.Disposable {
 		const result = new SnapshotBuilder({
 			version: this._document.version,
 			uri: this._documentUri,
-			quadContexts: readOnly?.reason === 'template' ? [] : context.getQuadContexts(),
+			quadContexts: readOnly?.reason === 'template' ? [] : this._quadContexts.of(context),
 			context,
 			readOnly,
 			problems,
