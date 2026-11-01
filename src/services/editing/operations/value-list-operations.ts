@@ -1,9 +1,9 @@
 import { EditOperation } from '../edit-operation';
 import { EditPlan, createPlan, netExpectedChanges } from '../edit-plan';
-import { StatementLocator } from '../statement-locator';
+import { SubjectBlock } from '../statement-model';
 import { StatementValueWriter } from '../statement-value-writer';
 import { SynthesisContext } from '../synthesis-context';
-import { toPatternFromRef } from '../term-patterns';
+import { toGraphPattern, toPatternFromRef } from '../term-patterns';
 import { NewValue, ValueList } from '../value-list';
 import { TextEditSpec } from '@src/utilities/text-edits';
 import { ValueListResolver } from '../value-list-resolver';
@@ -45,13 +45,16 @@ export class ValueListOperations {
 
 		const list = new ValueListResolver(context.model).resolve(operation.subject, operation.predicate, operation.values);
 		const writer = new StatementValueWriter(context, list.items);
-		const written = list.groups.length === 0 ? this._writeNewPredicate(operation, list, writer) : this._writeValues(operation, list, writer);
+		const target = list.groups.length === 0 ? new PropertyOperations(context).newPropertyBlock(operation.subject) : undefined;
+		const written = target ? this._writeNewPredicate(operation, list, writer, target) : this._writeValues(operation, list, writer);
 		const subject = toPatternFromRef(operation.subject);
 		const removed = list.groups.flatMap(group => group.removed);
-		const added = list.groups.length === 0 ? list.added : list.groups.flatMap(group => group.entries.flatMap(entry => entry.kind === 'new' ? [entry.value] : []));
+		const added = target
+			? list.added.map(value => ({ value, block: target }))
+			: list.groups.flatMap(group => group.entries.flatMap(entry => entry.kind === 'new' ? [{ value: entry.value, block: group.block }] : []));
 		const expectedChanges = [
 			...removed.flatMap(span => new ValueOperations(context).removalChanges(subject, operation.predicate, span)),
-			...added.flatMap(value => writer.expectedChangesOf(subject, operation.predicate, value))
+			...added.flatMap(({ value, block }) => writer.expectedChangesOf(toGraphPattern(block.graph), subject, operation.predicate, value))
 		];
 
 		return createPlan({ edits: written, expectedChanges: netExpectedChanges(expectedChanges) });
@@ -71,21 +74,20 @@ export class ValueListOperations {
 	}
 
 	/**
-	 * Write the values of a predicate the subject does not carry yet, after its last statement.
+	 * Write the values of a predicate the subject does not carry yet into a block of the subject.
 	 * @param operation The operation.
 	 * @param list The resolved edit.
 	 * @param writer Writes the new values.
+	 * @param block The block, which also decides the graph of the values.
 	 * @returns The edits.
 	 */
-	private _writeNewPredicate(operation: SetValuesOperation, list: ValueList, writer: StatementValueWriter): TextEditSpec[] {
+	private _writeNewPredicate(operation: SetValuesOperation, list: ValueList, writer: StatementValueWriter, block: SubjectBlock): TextEditSpec[] {
 		const context = this._context;
 
 		if (!context.writer.abbreviates) {
-			const blocks = new StatementLocator(context.model).blocksOf(operation.subject);
-
-			return new StatementLineWriter(context, operation.predicate, list, writer).writeNewPredicate(blocks[blocks.length - 1]);
+			return new StatementLineWriter(context, operation.predicate, list, writer).writeNewPredicate(block);
 		}
 
-		return [new PropertyOperations(context).newProperty(operation.subject, operation.predicate, list.added.map((value: NewValue) => writer.write(value)).join(', '))];
+		return [new PropertyOperations(context).newProperty(block, operation.predicate, list.added.map((value: NewValue) => writer.write(value)).join(', '))];
 	}
 }

@@ -2,7 +2,7 @@ import { ExpectedStatementChange, TermPattern } from '../edit-plan';
 import { EditRejectionError } from '../edit-rejection';
 import { ObjectSpan, PredicateGroup, SubjectBlock } from '../statement-model';
 import { SynthesisContext } from '../synthesis-context';
-import { toTermPattern } from '../term-patterns';
+import { toGraphPattern, toTermPattern } from '../term-patterns';
 import { statementsWithin } from '@src/utilities/quad-contexts';
 import { TextEditSpec, absorbBlankLine, deleteRange, expandToWholeLines, mergeRanges } from '@src/utilities/text-edits';
 import { isCommentToken, tokenEnd } from '@src/utilities/tokens';
@@ -45,10 +45,11 @@ export class ValueOperations {
 			subject: toTermPattern(inner.subject),
 			predicate: inner.predicate.value,
 			object: toTermPattern(inner.object),
+			graph: toGraphPattern(inner.graph),
 			delta: -1
 		}));
 
-		return [{ subject, predicate, object: toTermPattern(span.quad.object), delta: -1 }, ...nested];
+		return [{ subject, predicate, object: toTermPattern(span.quad.object), graph: toGraphPattern(span.quad.graph), delta: -1 }, ...nested];
 	}
 
 	/**

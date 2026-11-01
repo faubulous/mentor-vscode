@@ -191,6 +191,21 @@ describe('ValueListOperations.setValues in TriG', () => {
 
 		expect(setValues(body, [literal('b'), literal('c')], TRIG)).toBe(`ex:g { ex:s ex:p "b", "c" . }\n`);
 	});
+
+	it('declares the graph of every statement it changes', () => {
+		const body = `ex:g { ex:s ex:p "a" . }\n`;
+		const plan = synthesizePlan(body, [{ op: 'setValues', subject, predicate: P, values: [literal('b')] }], TRIG);
+
+		expect(plan.expectedChanges.map(change => [change.graph, change.delta])).toEqual([[{ kind: 'iri', iri: `${EX}g` }, -1], [{ kind: 'iri', iri: `${EX}g` }, 1]]);
+	});
+
+	it('declares the graph of the block a new predicate is written into', () => {
+		const body = `ex:s ex:q "a" .\nex:g { ex:s ex:r "b" . }\n`;
+		const plan = synthesizePlan(body, [{ op: 'setValues', subject, predicate: P, values: [literal('c')] }], TRIG);
+
+		expect(plan.expectedChanges).toEqual([{ subject, predicate: P, object: { kind: 'literal', value: 'c' }, graph: { kind: 'iri', iri: `${EX}g` }, delta: 1 }]);
+		expect(setValues(body, [literal('c')], TRIG)).toContain('ex:g { ex:s ex:r "b" ;');
+	});
 });
 
 describe('ValueListOperations.setValues in N-Triples and N-Quads', () => {
@@ -227,6 +242,12 @@ describe('ValueListOperations.setValues in N-Triples and N-Quads', () => {
 		const body = `${line('"a"', ` <${NT}g>`)}\n`;
 
 		expect(setValues(body, [kept(body, '"a"', NQUADS), literal('b')], NQUADS)).toBe(`${line('"a"', ` <${NT}g>`)}\n${line('"b"', ` <${NT}g>`)}\n`);
+	});
+
+	it('keeps a blank node graph of the line in N-Quads', () => {
+		const body = `${line('"a"', ' _:g1')}\n`;
+
+		expect(setValues(body, [kept(body, '"a"', NQUADS), literal('b')], NQUADS)).toBe(`${line('"a"', ' _:g1')}\n${line('"b"', ' _:g1')}\n`);
 	});
 
 	it('refuses lists and a new order of lines', () => {
