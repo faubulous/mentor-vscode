@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { RDF } from '@faubulous/mentor-rdf';
 import { BlankNode } from '@rdfjs/types';
 import { readTurtleQuadContexts } from '@src/utilities/mocks/factories';
-import { BlankNodeIdentityRegister } from './blank-node-identity-register';
+import { BlankNodeIdRegister } from './blank-node-id-register';
 
 const EX = 'http://example.org/';
 const PREAMBLE = `@prefix ex: <${EX}> .\n\n`;
@@ -12,12 +12,12 @@ const PREAMBLE = `@prefix ex: <${EX}> .\n\n`;
  */
 function blankNodeIdsOf(body: string): string[] {
 	const quads = readTurtleQuadContexts(PREAMBLE + body);
-	const register = new BlankNodeIdentityRegister(quads);
+	const register = new BlankNodeIdRegister(quads);
 
 	return Array.from(new Set(quads.map(quad => quad.subject).filter((subject): subject is BlankNode => subject.termType === 'BlankNode').map(subject => register.idOf(subject))));
 }
 
-describe('BlankNodeIdentityRegister', () => {
+describe('BlankNodeIdRegister', () => {
 	it('names an anonymous value by the resource holding it, the predicate and its place among the anonymous values', () => {
 		expect(blankNodeIdsOf('ex:s ex:p [ ex:q 1 ], [ ex:q 2 ] ; ex:r [ ex:q 3 ] .\n')).toEqual([
 			`b:i:${EX}s>${EX}p#0`,

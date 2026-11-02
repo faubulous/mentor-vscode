@@ -36,7 +36,7 @@ interface Referrer {
  * the subject of a block of its own, is registered by its place among those, and a labelled blank
  * node by its label, as {@link getResourceId} does.
  */
-export class BlankNodeIdentityRegister {
+export class BlankNodeIdRegister {
 	private readonly _labelled = new Set<string>();
 
 	private readonly _referrers = new Map<string, Referrer>();

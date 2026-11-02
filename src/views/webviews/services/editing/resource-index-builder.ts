@@ -5,7 +5,7 @@ import { IDocumentContext } from '@src/services/document/document-context.interf
 import { getResourceId, toTermRef } from '@src/services/editing/resource-id';
 import { isTokenOfType } from '@src/utilities/tokens';
 import { NamespaceInfo, ResourceId } from '@src/views/webviews/views/form-editor/form-editor-model';
-import { BlankNodeIdentityRegister } from './blank-node-identity-register';
+import { BlankNodeIdRegister } from './blank-node-id-register';
 import { CollectionItem, ResourceIndex, ResourceIndexEntry } from './resource-index';
 import { ResourceViewBuilder } from './resource-view-builder';
 import { trailingCommentRunsOf } from './statement-comments';
@@ -25,7 +25,7 @@ export class ResourceIndexBuilder {
 
 	private readonly _labelledSubjects = new Set<ResourceId>();
 
-	private readonly _blankNodeIds: BlankNodeIdentityRegister;
+	private readonly _blankNodeIds: BlankNodeIdRegister;
 
 	/**
 	 * Create a builder for the statements of a document.
@@ -33,7 +33,7 @@ export class ResourceIndexBuilder {
 	 * @param _context The document context, used to resolve labels and prefixes.
 	 */
 	constructor(private readonly _quadContexts: readonly QuadContext[], private readonly _context: IDocumentContext) {
-		this._blankNodeIds = new BlankNodeIdentityRegister(_quadContexts);
+		this._blankNodeIds = new BlankNodeIdRegister(_quadContexts);
 	}
 
 	/**

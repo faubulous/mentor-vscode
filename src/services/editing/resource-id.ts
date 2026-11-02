@@ -5,7 +5,7 @@ import { TermRef } from './term-ref';
  * Identifier of a resource. Built from a blank node identifier of the parser, which numbers
  * anonymous blank nodes in token order, it is only valid for the revision it was built from, as in
  * the statement model of an edit. The form editor identifies its blank nodes across revisions with
- * the blank node identity register of its index instead.
+ * the blank node id register of its index instead.
  */
 export type ResourceId = string;
 
