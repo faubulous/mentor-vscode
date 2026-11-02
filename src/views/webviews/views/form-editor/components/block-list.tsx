@@ -7,7 +7,7 @@ import { IResourceDataService } from '../services/resource-data-service.interfac
 import { FormBlock } from '../state/form-block';
 import { ResourceCardStates } from '../state/resource-card-states';
 import { CommentBlock } from './comment-block';
-import { PositionRail, RailMark } from './position-rail';
+import { OverviewRuler, RulerMark } from './overview-ruler';
 import { ResourceCard } from './resource-card';
 
 /**
@@ -71,12 +71,12 @@ export interface BlockListProps {
 	revealRequest?: RevealRequest;
 
 	/**
-	 * The column beside the scroll area the position rail is drawn into.
+	 * The element under the scrollbar of the scroll area the overview ruler is drawn into.
 	 */
-	railElement?: HTMLElement | null;
+	rulerElement?: HTMLElement | null;
 
 	/**
-	 * Whether a filter narrows the list, which marks every entry on the rail as a match.
+	 * Whether a filter narrows the list, which marks every entry on the ruler as a match.
 	 */
 	filtering?: boolean;
 
@@ -94,7 +94,7 @@ export interface BlockListProps {
  * @param props The blocks, the scroll container and the state of the entries.
  * @returns The list.
  */
-export function BlockList({ blocks, dataService, scrollElement, cardStates, pinnedIds, busyIds, onToggle, revealRequest, railElement, filtering, onCurrentChange }: BlockListProps): React.JSX.Element {
+export function BlockList({ blocks, dataService, scrollElement, cardStates, pinnedIds, busyIds, onToggle, revealRequest, rulerElement, filtering, onCurrentChange }: BlockListProps): React.JSX.Element {
 	const listRef = useRef<HTMLDivElement>(null);
 	const scrollMargin = useListPlacement(listRef, scrollElement);
 	const stickyHeight = useStickyHeight(scrollElement);
@@ -105,7 +105,7 @@ export function BlockList({ blocks, dataService, scrollElement, cardStates, pinn
 	useRevealRequest(revealRequest, blocks, window.scrollToIndex);
 
 	const currentId = useCurrentEntry(scrollElement, blocks, window.indexAt, scrollMargin, stickyHeight, onCurrentChange);
-	const marks = useRailMarks(blocks, window.offsetOf, window.totalSize, scrollMargin, filtering === true);
+	const marks = useRulerMarks(blocks, window.offsetOf, window.totalSize, scrollMargin, filtering === true);
 	const measureRow = useCallback((element: HTMLElement | null) => window.measureRow(element), [window]);
 
 	return (
@@ -134,7 +134,7 @@ export function BlockList({ blocks, dataService, scrollElement, cardStates, pinn
 					);
 				})}
 			</div>
-			{railElement && createPortal(<PositionRail scrollElement={scrollElement} marks={marks} contentHeight={window.totalSize + scrollMargin} />, railElement)}
+			{rulerElement && createPortal(<OverviewRuler scrollElement={scrollElement} marks={marks} contentHeight={window.totalSize + scrollMargin} />, rulerElement)}
 		</>
 	);
 }
@@ -240,7 +240,7 @@ function _entryAt(blocks: FormBlock[], indexAt: (offset: number) => number, offs
 }
 
 /**
- * The marks of the position rail: a tick per entry, or a match mark while filtering, and a mark
+ * The marks of the overview ruler: a tick per entry, or a match mark while filtering, and a mark
  * per comment, where each starts in the scroll content.
  * @param blocks The blocks of the list.
  * @param offsetOf Finds the offset of a block.
@@ -249,11 +249,10 @@ function _entryAt(blocks: FormBlock[], indexAt: (offset: number) => number, offs
  * @param filtering Whether a filter narrows the list.
  * @returns The marks.
  */
-function useRailMarks(blocks: FormBlock[], offsetOf: (index: number) => number, totalSize: number, scrollMargin: number, filtering: boolean): RailMark[] {
-	return useMemo(() => blocks.map((block, index): RailMark => ({
+function useRulerMarks(blocks: FormBlock[], offsetOf: (index: number) => number, totalSize: number, scrollMargin: number, filtering: boolean): RulerMark[] {
+	return useMemo(() => blocks.map((block, index): RulerMark => ({
 		kind: block.kind === 'comment' ? 'comment' : filtering ? 'match' : 'resource',
-		offset: scrollMargin + offsetOf(index),
-		title: block.kind === 'resource' ? block.resource.label : 'Comment'
+		offset: scrollMargin + offsetOf(index)
 	})),
 	// The offsets change with the measured sizes, which the total size follows.
 	// eslint-disable-next-line react-hooks/exhaustive-deps

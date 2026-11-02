@@ -1,6 +1,6 @@
-import { Virtualizer, useVirtualizer } from '@tanstack/react-virtual';
+import { Virtualizer, measureElement, useVirtualizer } from '@tanstack/react-virtual';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { BlockSizeClass, BlockSizeStats } from '../state/block-size-stats';
+import { BlockSizeClass, BlockSizeStats, SizedBlock } from '../state/block-size-stats';
 import { FormBlock } from '../state/form-block';
 import { ResourceCardStates } from '../state/resource-card-states';
 
@@ -59,7 +59,8 @@ export interface BlockListWindow {
 	scrollToIndex: (index: number, align?: 'start' | 'center' | 'auto') => void;
 
 	/**
-	 * The offset of a block from the top of the list, measured or estimated.
+	 * The offset of a block from the top of the list, laid out from the measured and the estimated
+	 * heights, so that the blocks never rendered have one too.
 	 */
 	offsetOf: (index: number) => number;
 
@@ -121,18 +122,18 @@ export function useBlockListVirtualizer(options: BlockListVirtualizerOptions): B
 
 	const stats = useRef(new BlockSizeStats());
 	const [estimates, setEstimates] = useState(0);
-	const sizeClassOf = useCallback((block: FormBlock) => _sizeClassOf(block, cardStates), [cardStates]);
+	const sizedBlocks = useMemo(() => blocks.map(block => _sizedBlockOf(block, cardStates)), [blocks, cardStates]);
 
 	// The estimates are renewed with the averages of the measured blocks, so the blocks not
 	// measured yet take about the room they will take; `estimates` makes the callback new then.
 	const estimateSize = useCallback((index: number) => {
-		const block = blocks[index];
+		const block = sizedBlocks[index];
 
-		return block ? stats.current.estimate(sizeClassOf(block), _unitsOf(block)) : stats.current.estimate('collapsed');
+		return block ? stats.current.estimate(block.sizeClass, block.units) : stats.current.estimate('collapsed');
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [blocks, sizeClassOf, estimates]);
+	}, [sizedBlocks, estimates]);
 
-	const recordSizes = useSizeRecorder(blocks, sizeClassOf, stats.current, () => setEstimates(revision => revision + 1));
+	const measureSize = useSizeRecorder(sizedBlocks, stats.current, () => setEstimates(revision => revision + 1));
 	const getItemKey = useCallback((index: number) => blocks[index]?.id ?? index, [blocks]);
 
 	const virtualizer = useVirtualizer({
@@ -143,13 +144,20 @@ export function useBlockListVirtualizer(options: BlockListVirtualizerOptions): B
 		overscan,
 		scrollMargin,
 		scrollPaddingStart,
-		onChange: recordSizes,
+		measureElement: measureSize,
 		// Rows are measured as they mount, while React commits: a synchronous render then would be
 		// a render inside a render, which React refuses. The next frame shows the measured rows.
 		useFlushSync: false
 	});
 
 	const virtualItems = virtualizer.getVirtualItems();
+
+	// The virtualizer's total already leaves out the scroll margin above the list.
+	const totalSize = virtualizer.getTotalSize();
+
+	// The offsets change with the measured heights, which the total follows.
+	// eslint-disable-next-line react-hooks/exhaustive-deps
+	const offsets = useMemo(() => stats.current.offsetsOf(sizedBlocks), [sizedBlocks, estimates, totalSize]);
 
 	const items = useMemo(() => {
 		// Offsets are kept relative to the list, which starts at the scroll margin.
@@ -163,14 +171,14 @@ export function useBlockListVirtualizer(options: BlockListVirtualizerOptions): B
 		// that holds the focus.
 		const present = new Set(result.map(item => item.blockId));
 
-		for (const [index, block] of blocks.entries()) {
+		for (const [index, block] of sizedBlocks.entries()) {
 			if (pinnedIds.has(block.id) && !present.has(block.id)) {
-				result.push({ index, blockId: block.id, offset: _startOf(virtualizer.measurementsCache[index], scrollMargin), size: estimateSize(index) });
+				result.push({ index, blockId: block.id, offset: offsets[index] ?? 0, size: stats.current.sizeOf(block) });
 			}
 		}
 
 		return result.sort((first, second) => first.index - second.index);
-	}, [virtualItems, pinnedIds, blocks, virtualizer, estimateSize, scrollMargin]);
+	}, [virtualItems, pinnedIds, sizedBlocks, offsets, scrollMargin]);
 
 	const visibleRange = useMemo(() => ({
 		startIndex: virtualItems[0]?.index ?? 0,
@@ -187,40 +195,37 @@ export function useBlockListVirtualizer(options: BlockListVirtualizerOptions): B
 		virtualizer.scrollToIndex(index, { align });
 	}, [virtualizer]);
 
-	const offsetOf = useCallback((index: number) => _startOf(virtualizer.measurementsCache[index], scrollMargin), [virtualizer, scrollMargin]);
-	const indexAt = useCallback((offset: number) => _indexAt(virtualizer.measurementsCache, offset + scrollMargin), [virtualizer, scrollMargin]);
+	const offsetOf = useCallback((index: number) => offsets[index] ?? 0, [offsets]);
+	const indexAt = useCallback((offset: number) => virtualizer.getVirtualItemForOffset(offset + scrollMargin)?.index ?? 0, [virtualizer, scrollMargin]);
 
 	return useMemo(() => ({
 		items,
-		// The virtualizer's total already leaves out the scroll margin above the list.
-		totalSize: virtualizer.getTotalSize(),
+		totalSize,
 		visibleRange,
 		measureRow,
 		scrollToIndex,
 		offsetOf,
 		indexAt
-	}), [items, virtualizer, visibleRange, measureRow, scrollToIndex, offsetOf, indexAt]);
+	}), [items, totalSize, visibleRange, measureRow, scrollToIndex, offsetOf, indexAt]);
 }
 
 /**
- * Learn from the blocks the list has measured, at most once a frame: their heights go into the
- * statistics, and the estimates are renewed when the averages drifted.
- * @param blocks The blocks of the list.
- * @param sizeClassOf The kind of a block.
+ * Measure the rows as the virtualizer does and learn from their heights: they go into the
+ * statistics, and at most once a frame the estimates are renewed when the averages drifted.
+ * @param sizedBlocks The blocks of the list, by the kind of their height.
  * @param stats The statistics.
  * @param onEstimatesChanged Called when the estimates were renewed.
- * @returns The callback the virtualizer reports its changes to.
+ * @returns The measuring function the virtualizer calls for each row it measures.
  */
 function useSizeRecorder(
-	blocks: FormBlock[],
-	sizeClassOf: (block: FormBlock) => BlockSizeClass,
+	sizedBlocks: SizedBlock[],
 	stats: BlockSizeStats,
 	onEstimatesChanged: () => void
-): (instance: Virtualizer<HTMLElement, Element>) => void {
+): (element: Element, entry: ResizeObserverEntry | undefined, instance: Virtualizer<HTMLElement, Element>) => number {
 	const frame = useRef<number | undefined>(undefined);
-	const latest = useRef({ blocks, sizeClassOf, onEstimatesChanged });
+	const latest = useRef({ sizedBlocks, onEstimatesChanged });
 
-	latest.current = { blocks, sizeClassOf, onEstimatesChanged };
+	latest.current = { sizedBlocks, onEstimatesChanged };
 
 	useEffect(() => () => {
 		if (frame.current !== undefined) {
@@ -228,29 +233,36 @@ function useSizeRecorder(
 		}
 	}, []);
 
-	return useCallback((instance: Virtualizer<HTMLElement, Element>) => {
-		if (frame.current !== undefined) {
-			return;
+	return useCallback((element: Element, entry: ResizeObserverEntry | undefined, instance: Virtualizer<HTMLElement, Element>) => {
+		const size = measureElement(element, entry, instance);
+		const block = latest.current.sizedBlocks[instance.indexFromElement(element)];
+
+		if (block) {
+			stats.record(block.id, block.sizeClass, size, block.units);
 		}
 
-		frame.current = requestAnimationFrame(() => {
-			frame.current = undefined;
+		if (frame.current === undefined) {
+			frame.current = requestAnimationFrame(() => {
+				frame.current = undefined;
 
-			const byId = new Map(latest.current.blocks.map(block => [block.id, block]));
-
-			for (const [key, size] of instance.itemSizeCache) {
-				const block = byId.get(String(key));
-
-				if (block) {
-					stats.record(block.id, latest.current.sizeClassOf(block), size, _unitsOf(block));
+				if (stats.publish()) {
+					latest.current.onEstimatesChanged();
 				}
-			}
+			});
+		}
 
-			if (stats.publish()) {
-				latest.current.onEstimatesChanged();
-			}
-		});
+		return size;
 	}, [stats]);
+}
+
+/**
+ * Describe a block by what its height depends on: its kind, and for an open entry its statements.
+ * @param block The block.
+ * @param cardStates Which entries are open.
+ * @returns The block as far as its height is concerned.
+ */
+function _sizedBlockOf(block: FormBlock, cardStates: ResourceCardStates): SizedBlock {
+	return { id: block.id, sizeClass: _sizeClassOf(block, cardStates), units: _unitsOf(block) };
 }
 
 /**
@@ -278,38 +290,4 @@ function _sizeClassOf(block: FormBlock, cardStates: ResourceCardStates): BlockSi
  */
 function _unitsOf(block: FormBlock): number {
 	return block.kind === 'resource' ? Math.max(1, block.resource.propertyCount) : 1;
-}
-
-/**
- * The offset of a measured row from the top of the list.
- * @param measurement The measurement of the row.
- * @param scrollMargin How far the list starts below the top of the scroll content.
- * @returns The offset.
- */
-function _startOf(measurement: { start: number } | undefined, scrollMargin: number): number {
-	return measurement ? measurement.start - scrollMargin : 0;
-}
-
-/**
- * The index of the block a scroll offset falls in, by a binary search of the measurements, which
- * are in order; the first or the last block beyond them.
- * @param measurements The measurements of the rows.
- * @param offset The offset into the scroll content.
- * @returns The index.
- */
-function _indexAt(measurements: readonly { start: number; end: number }[], offset: number): number {
-	let low = 0;
-	let high = measurements.length - 1;
-
-	while (low < high) {
-		const middle = (low + high) >> 1;
-
-		if (measurements[middle].end <= offset) {
-			low = middle + 1;
-		} else {
-			high = middle;
-		}
-	}
-
-	return Math.max(0, low);
 }

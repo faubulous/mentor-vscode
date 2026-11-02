@@ -48,3 +48,29 @@ describe('BlockSizeStats', () => {
 		expect(stats.estimate('collapsed')).toBe(70);
 	});
 });
+
+describe('BlockSizeStats layout', () => {
+	it('takes the measured height of a block and the estimate of a block not measured', () => {
+		const stats = new BlockSizeStats();
+
+		stats.record('a', 'collapsed', 80);
+
+		expect(stats.sizeOf({ id: 'a', sizeClass: 'collapsed', units: 1 })).toBe(80);
+		expect(stats.sizeOf({ id: 'b', sizeClass: 'open', units: 2 })).toBe(60);
+	});
+
+	it('lays the blocks out one below the other from the measured and the estimated heights', () => {
+		const stats = new BlockSizeStats();
+
+		stats.record('b', 'comment', 50);
+
+		const offsets = stats.offsetsOf([
+			{ id: 'a', sizeClass: 'collapsed', units: 1 },
+			{ id: 'b', sizeClass: 'comment', units: 1 },
+			{ id: 'c', sizeClass: 'open', units: 3 },
+			{ id: 'd', sizeClass: 'collapsed', units: 1 }
+		]);
+
+		expect(offsets).toEqual([0, 66, 116, 206]);
+	});
+});

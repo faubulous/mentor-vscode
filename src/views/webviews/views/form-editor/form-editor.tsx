@@ -29,7 +29,7 @@ import stylesheet from './form-editor.css';
 
 /**
  * The form based editor for RDF documents: the toolbar with the filter, the header of the
- * document, the virtualized list of its resources and comments, and the position rail. Where
+ * document, the virtualized list of its resources and comments, and the overview ruler. Where
  * the document can be written, the statements of the cards are edited in place and handed to
  * the host as edits.
  */
@@ -48,7 +48,7 @@ function FormEditor(): React.JSX.Element {
 	const [currentId, setCurrentId] = useState<string>();
 	const [scrollElement, setScrollElement] = useState<HTMLDivElement | null>(null);
 	const [titleElement, setTitleElement] = useState<HTMLDivElement | null>(null);
-	const [railElement, setRailElement] = useState<HTMLDivElement | null>(null);
+	const [rulerElement, setRulerElement] = useState<HTMLDivElement | null>(null);
 	const filterRef = useRef<VscodeTextfield>(null);
 	const messagingRef = useRef<{ postMessage: (message: FormEditorWebviewMessage) => void } | undefined>(undefined);
 	const revealResourceRef = useRef<(resource: NamedNode | BlankNode) => void>(undefined);
@@ -239,6 +239,7 @@ function FormEditor(): React.JSX.Element {
 					: (
 						<FormErrorBoundary onOpenTextEditor={handleOpenTextEditor} resetKey={snapshot.version}>
 							<div className="form-editor-body">
+								<div className="form-editor-ruler" ref={setRulerElement} />
 								<div className="form-editor-scroll" ref={setScrollElement} tabIndex={-1}>
 									<ContextBar
 										visible={titleScrolledPast}
@@ -264,14 +265,13 @@ function FormEditor(): React.JSX.Element {
 													busyIds={busyIds}
 													onToggle={handleToggle}
 													revealRequest={revealRequest}
-													railElement={railElement}
+													rulerElement={rulerElement}
 													filtering={filtering}
 													onCurrentChange={setCurrentId}
 												/>
 											)}
 									</div>
 								</div>
-								<div className="form-editor-rail" ref={setRailElement} />
 							</div>
 						</FormErrorBoundary>
 					)}
