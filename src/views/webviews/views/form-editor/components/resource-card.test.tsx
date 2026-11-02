@@ -16,7 +16,7 @@ const TREE = createResourceSummary('Tree', { label: 'Apple tree', description: '
  */
 function renderCard(context: Partial<FormEditorContextValue> = {}, expanded = false, summary = TREE, writing = false) {
 	const onToggle = vi.fn();
-	const dataService = createResourceDataServiceStub([createTestResourceDetail([createProperty('ex:p', [createIriView('ex:A', 'A')])])].map(detail => ({ ...detail, id: summary.id })));
+	const dataService = createResourceDataServiceStub([createTestResourceDetail([createProperty('ex:p', [createIriView('ex:A', 'A')])])].map(detail => ({ ...detail, term: summary.term })));
 	const result = renderWebview(
 		<FormEditorContext.Provider value={{ readOnly: true, namespaces: [], languageTags: {}, ...context }}>
 			<ResourceCard summary={summary} dataService={dataService} expanded={expanded} writing={writing} onToggle={onToggle} />
@@ -53,7 +53,7 @@ describe('ResourceCard', () => {
 		await userEvent.keyboard('{Enter}');
 
 		expect(onToggle).toHaveBeenCalledTimes(2);
-		expect(onToggle).toHaveBeenCalledWith(TREE.id);
+		expect(onToggle).toHaveBeenCalledWith(TREE.term);
 		expect(screen.queryByText('ex:Tree')).toBeNull();
 
 		renderCard({}, true);
@@ -70,7 +70,7 @@ describe('ResourceCard', () => {
 	});
 
 	it('marks the revealed card', () => {
-		const { container } = renderCard({ revealedResourceId: TREE.id });
+		const { container } = renderCard({ revealedResource: TREE.term });
 
 		expect(container.querySelector('.resource-card')?.classList.contains('is-current')).toBe(true);
 	});

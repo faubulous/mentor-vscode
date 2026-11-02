@@ -2,19 +2,21 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 
-const { mockActivateDocument, mockActiveContext } = vi.hoisted(() => ({
+const { mockActivateDocument, mockActiveContext, mockFormEditor } = vi.hoisted(() => ({
 	mockActivateDocument: vi.fn(),
-	mockActiveContext: { graphs: ['urn:g1'] },
+	mockActiveContext: { graphs: ['urn:g1'], uri: undefined as unknown },
+	mockFormEditor: { registered: false, isActive: vi.fn(() => true), revealResource: vi.fn(), filterResources: vi.fn() },
 }));
 
 vi.mock('tsyringe', () => ({
 	container: {
-		isRegistered: vi.fn(() => false),
+		isRegistered: vi.fn((token: string) => token === ServiceToken.FormEditorProvider && mockFormEditor.registered),
 		resolve: vi.fn((token: string) => {
 			if (token === ServiceToken.DocumentContextService) return {
 				activateDocument: mockActivateDocument,
 				activeContext: mockActiveContext,
 			};
+			if (token === ServiceToken.FormEditorProvider) return mockFormEditor;
 			return {};
 		}),
 	},
@@ -31,6 +33,7 @@ vi.mock('@faubulous/mentor-rdf', async (importOriginal) => ({
 import * as vscode from 'vscode';
 import { revealDefinition } from '@src/commands/definition-tree/reveal-definition';
 import { ServiceToken } from '@src/services/tokens';
+import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 
 function makeEditor(uriStr = 'file:///doc.ttl') {
 	return {
@@ -50,6 +53,8 @@ function makeLocation(uriStr: string, sl: number, sc: number, el: number, ec: nu
 
 beforeEach(() => {
 	vi.clearAllMocks();
+	mockFormEditor.registered = false;
+	mockActiveContext.uri = undefined;
 	(vscode.window as any).activeTextEditor = undefined;
 	mockActivateDocument.mockResolvedValue(undefined);
 });
@@ -99,5 +104,19 @@ describe('revealDefinition', () => {
 		await revealDefinition.handler('urn:ex#X', true);
 
 		expect(execSpy).toHaveBeenCalledWith('mentor.view.definitionTree.focus');
+	});
+
+	it('reveals the resource in a form editor in front, by an IRI or by the identifier of a blank node', async () => {
+		mockFormEditor.registered = true;
+		mockActiveContext.uri = vscode.Uri.parse('file:///doc.ttl');
+
+		await revealDefinition.handler('http://example.org/A');
+		await revealDefinition.handler('c1x2_k9b3');
+
+		expect(mockFormEditor.revealResource.mock.calls.map(([, resource]) => resource)).toEqual([
+			RdfDataFactory.namedNode('http://example.org/A'),
+			RdfDataFactory.blankNode('c1x2_k9b3')
+		]);
+		expect(mockActivateDocument).not.toHaveBeenCalled();
 	});
 });

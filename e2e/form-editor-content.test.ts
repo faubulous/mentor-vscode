@@ -7,7 +7,7 @@ import { activateMentor, waitFor } from './helpers';
  */
 interface SnapshotView {
 	resources: { label: string; prefixedName?: string; propertyCount: number; iconName: string }[];
-	documentResourceId?: string;
+	documentResource?: { termType: string; value: string };
 	namespaces: { prefix: string }[];
 	readOnly?: unknown;
 }
@@ -39,7 +39,7 @@ suite('form editor content', () => {
 
 		assert.ok(snapshot, 'the snapshot must be built');
 		assert.strictEqual(snapshot.readOnly, undefined, 'a valid fixture must not be read-only');
-		assert.strictEqual(snapshot.documentResourceId, 'i:http://example.org/e2e#', 'the fixture declares an owl:Ontology, which heads the document');
+		assert.strictEqual(snapshot.documentResource?.value, 'http://example.org/e2e#', 'the fixture declares an owl:Ontology, which heads the document');
 
 		const labels = snapshot.resources.map(resource => resource.label);
 

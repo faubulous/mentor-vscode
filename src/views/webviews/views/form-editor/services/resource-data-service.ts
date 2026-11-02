@@ -1,4 +1,6 @@
-import { ResourceDetail, ResourceId } from '../form-editor-model';
+import { BlankNode, NamedNode } from '@rdfjs/types';
+import { termToString } from 'rdf-string';
+import { ResourceDetail } from '../form-editor-model';
 import { IResourceDataService } from './resource-data-service.interface';
 
 /**
@@ -8,20 +10,20 @@ const MAX_BATCH_SIZE = 100;
 
 /**
  * Serves resource detail over the webview message channel. Requests are coalesced into one
- * message per frame so that scrolling does not produce a message per row, and the cache is
- * dropped whenever a new document version arrives because blank node identifiers are only valid
- * within the version they were built from.
+ * message per frame so that scrolling does not produce a message per row. The detail is cached by
+ * the `termToString` key of the resource, and is kept as stale when a new document version arrives
+ * until the detail of that version is loaded.
  */
 export class ResourceDataService implements IResourceDataService {
-	private readonly _loaded = new Map<ResourceId, ResourceDetail>();
+	private readonly _loaded = new Map<string, ResourceDetail>();
 
-	private readonly _stale = new Map<ResourceId, ResourceDetail>();
+	private readonly _stale = new Map<string, ResourceDetail>();
 
 	private readonly _listeners = new Set<() => void>();
 
-	private readonly _pending = new Set<ResourceId>();
+	private readonly _pending = new Map<string, NamedNode | BlankNode>();
 
-	private readonly _requested = new Set<ResourceId>();
+	private readonly _requested = new Set<string>();
 
 	private _version = -1;
 
@@ -31,7 +33,7 @@ export class ResourceDataService implements IResourceDataService {
 	 * Create the service over the message channel.
 	 * @param _send Posts a request for the given resources to the extension host.
 	 */
-	constructor(private readonly _send: (ids: ResourceId[]) => void) { }
+	constructor(private readonly _send: (resources: (NamedNode | BlankNode)[]) => void) { }
 
 	/**
 	 * The document version the loaded detail belongs to.
@@ -41,20 +43,22 @@ export class ResourceDataService implements IResourceDataService {
 		return this._version;
 	}
 
-	get(id: ResourceId): ResourceDetail | undefined {
-		return this._loaded.get(id);
+	get(resource: NamedNode | BlankNode): ResourceDetail | undefined {
+		return this._loaded.get(termToString(resource));
 	}
 
-	getStale(id: ResourceId): ResourceDetail | undefined {
-		return this._stale.get(id);
+	getStale(resource: NamedNode | BlankNode): ResourceDetail | undefined {
+		return this._stale.get(termToString(resource));
 	}
 
-	request(ids: ResourceId[]): void {
+	request(resources: (NamedNode | BlankNode)[]): void {
 		let added = false;
 
-		for (const id of ids) {
-			if (!this._loaded.has(id) && !this._requested.has(id) && !this._pending.has(id)) {
-				this._pending.add(id);
+		for (const resource of resources) {
+			const key = termToString(resource);
+
+			if (!this._loaded.has(key) && !this._requested.has(key) && !this._pending.has(key)) {
+				this._pending.set(key, resource);
 				added = true;
 			}
 		}
@@ -77,19 +81,21 @@ export class ResourceDataService implements IResourceDataService {
 	 * @param resources The delivered detail.
 	 * @param missing Resources the host could not resolve.
 	 */
-	accept(version: number, resources: ResourceDetail[], missing: ResourceId[] = []): void {
+	accept(version: number, resources: ResourceDetail[], missing: (NamedNode | BlankNode)[] = []): void {
 		if (version !== this._version) {
 			return;
 		}
 
 		for (const resource of resources) {
-			this._loaded.set(resource.id, resource);
-			this._stale.delete(resource.id);
-			this._requested.delete(resource.id);
+			const key = termToString(resource.term);
+
+			this._loaded.set(key, resource);
+			this._stale.delete(key);
+			this._requested.delete(key);
 		}
 
-		for (const id of missing) {
-			this._requested.delete(id);
+		for (const resource of missing) {
+			this._requested.delete(termToString(resource));
 		}
 
 		if (resources.length > 0) {
@@ -110,8 +116,8 @@ export class ResourceDataService implements IResourceDataService {
 
 		this._version = version;
 
-		for (const [id, detail] of this._loaded) {
-			this._stale.set(id, detail);
+		for (const [key, detail] of this._loaded) {
+			this._stale.set(key, detail);
 		}
 
 		this._loaded.clear();
@@ -146,14 +152,14 @@ export class ResourceDataService implements IResourceDataService {
 			return;
 		}
 
-		const ids = Array.from(this._pending).slice(0, MAX_BATCH_SIZE);
+		const batch = Array.from(this._pending).slice(0, MAX_BATCH_SIZE);
 
-		for (const id of ids) {
-			this._pending.delete(id);
-			this._requested.add(id);
+		for (const [key] of batch) {
+			this._pending.delete(key);
+			this._requested.add(key);
 		}
 
-		this._send(ids);
+		this._send(batch.map(([, resource]) => resource));
 
 		if (this._pending.size > 0) {
 			this._scheduleFlush();

@@ -9,5 +9,5 @@ import { EditingController } from '../state/editing-controller';
 export function useBusyResources(controller: EditingController): ReadonlySet<string> {
 	const subscribe = useCallback((listener: () => void) => controller.subscribe(listener), [controller]);
 
-	return useSyncExternalStore(subscribe, () => controller.busyResourceIds);
+	return useSyncExternalStore(subscribe, () => controller.busyResourceKeys);
 }

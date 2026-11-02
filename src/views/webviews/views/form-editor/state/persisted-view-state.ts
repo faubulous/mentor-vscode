@@ -8,9 +8,10 @@ export interface ViewStateChanges {
 	documentUri?: string;
 
 	/**
-	 * The cards opened persistently, by the chevron. Transient opens are not remembered.
+	 * The cards opened persistently, by the chevron, as the `termToString` keys of their resources.
+	 * Transient opens are not remembered.
 	 */
-	openIds?: readonly string[];
+	openCards?: readonly string[];
 
 	/**
 	 * Whether the terms of other vocabularies the document only declares are hidden. A
@@ -22,7 +23,9 @@ export interface ViewStateChanges {
 /**
  * The view state persisted across reloads of the webview. Immutable: a change returns the next
  * state. A stored state written by another version of the editor, or half-way through an
- * upgrade, may lack fields or hold them in another form; reading it never breaks the form.
+ * upgrade, may lack fields or hold them in another form; reading it never breaks the form. The
+ * open cards of the editor before resources were keyed by their terms were stored as `openIds`,
+ * which is not read: their keys name no card any more.
  */
 export class PersistedViewState {
 	/**
@@ -32,12 +35,12 @@ export class PersistedViewState {
 
 	/**
 	 * Create a state.
-	 * @param openIds The cards opened persistently.
+	 * @param openCards The keys of the cards opened persistently.
 	 * @param documentUri The document the state belongs to.
 	 * @param hideExternalDeclarations Whether external declarations are hidden.
 	 */
 	constructor(
-		readonly openIds: readonly string[] = [],
+		readonly openCards: readonly string[] = [],
 		readonly documentUri?: string,
 		readonly hideExternalDeclarations?: boolean
 	) { }
@@ -55,7 +58,7 @@ export class PersistedViewState {
 		const state = stored as Record<string, unknown>;
 
 		return new PersistedViewState(
-			_stringArray(state.openIds) ?? [],
+			_stringArray(state.openCards) ?? [],
 			typeof state.documentUri === 'string' ? state.documentUri : undefined,
 			state.hideExternalDeclarations === true ? true : undefined
 		);
@@ -68,7 +71,7 @@ export class PersistedViewState {
 	 */
 	with(changes: ViewStateChanges): PersistedViewState {
 		return new PersistedViewState(
-			changes.openIds ?? this.openIds,
+			changes.openCards ?? this.openCards,
 			'documentUri' in changes ? changes.documentUri : this.documentUri,
 			'hideExternalDeclarations' in changes ? changes.hideExternalDeclarations : this.hideExternalDeclarations
 		);
@@ -81,7 +84,7 @@ export class PersistedViewState {
 	toJSON(): Record<string, unknown> {
 		return {
 			documentUri: this.documentUri,
-			openIds: [...this.openIds],
+			openCards: [...this.openCards],
 			hideExternalDeclarations: this.hideExternalDeclarations
 		};
 	}

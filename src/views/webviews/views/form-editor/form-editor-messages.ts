@@ -6,7 +6,8 @@
 
 import type { EditOperation, EditRejectionReason } from '@src/services/editing/edit-operation';
 import type { ExecuteCommandMessage } from '../../webview-messaging';
-import type { DocumentPosition, DocumentSnapshot, ResourceDetail, ResourceId } from './form-editor-model';
+import type { BlankNode, NamedNode } from '@rdfjs/types';
+import type { DocumentPosition, DocumentSnapshot, ResourceDetail } from './form-editor-model';
 
 /**
  * Messages sent from the extension host to the webview.
@@ -20,7 +21,7 @@ export type FormEditorHostMessage =
 	 * The properties of the resources the webview asked for; `missing` names those the document
 	 * no longer describes.
 	 */
-	| { id: 'ResourcesLoaded'; version: number; resources: ResourceDetail[]; missing: ResourceId[] }
+	| { id: 'ResourcesLoaded'; version: number; resources: ResourceDetail[]; missing: (NamedNode | BlankNode)[] }
 	/**
 	 * An edit of the form was applied, producing the given document version.
 	 */
@@ -30,13 +31,14 @@ export type FormEditorHostMessage =
 	 */
 	| { id: 'EditRejected'; editId: string; reason: EditRejectionReason; message: string; version: number }
 	/**
-	 * Scroll a resource into view.
+	 * Scroll the card of a resource into view.
 	 */
-	| { id: 'ScrollToResource'; resourceId: ResourceId }
+	| { id: 'ScrollToResource'; resource: NamedNode | BlankNode }
 	/**
-	 * Narrow the list to what the definition tree lists under a node; `label` names the node.
+	 * Narrow the list to the cards of what the definition tree lists under a node; `label` names
+	 * the node.
 	 */
-	| { id: 'FilterResources'; label: string; resourceIds: ResourceId[] };
+	| { id: 'FilterResources'; label: string; resources: (NamedNode | BlankNode)[] };
 
 /**
  * Messages sent from the webview to the extension host.
@@ -49,7 +51,7 @@ export type FormEditorWebviewMessage =
 	/**
 	 * The properties of the resources about to be shown.
 	 */
-	| { id: 'RequestResources'; ids: ResourceId[] }
+	| { id: 'RequestResources'; resources: (NamedNode | BlankNode)[] }
 	/**
 	 * The operations of one user action, to apply as one undo step against `baseVersion`.
 	 */

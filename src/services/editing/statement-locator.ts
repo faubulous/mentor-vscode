@@ -1,6 +1,6 @@
 import { EditRejectionError } from './edit-rejection';
 import { BlankNode, NamedNode } from '@rdfjs/types';
-import { ResourceId, getResourceId } from './resource-id';
+import { termToString } from 'rdf-string';
 import { StatementModel, SubjectBlock } from './statement-model';
 
 /**
@@ -14,17 +14,17 @@ export class StatementLocator {
 	constructor(private readonly _model: StatementModel) { }
 
 	/**
-	 * Get the identifier the statement model keys a subject by.
+	 * Get the key the statement model keys a subject by.
 	 * @param subject The subject, as an edit names it.
-	 * @returns The resource identifier.
+	 * @returns The key.
 	 * @throws {EditRejectionError} If the subject is neither an IRI nor a blank node.
 	 */
-	static subjectId(subject: NamedNode | BlankNode): ResourceId {
+	static subjectKey(subject: NamedNode | BlankNode): string {
 		if (subject.termType !== 'NamedNode' && subject.termType !== 'BlankNode') {
 			throw new EditRejectionError('invalidTerm', 'Only an IRI or a blank node can be the subject of a statement.');
 		}
 
-		return getResourceId(subject);
+		return termToString(subject);
 	}
 
 	/**
@@ -34,7 +34,7 @@ export class StatementLocator {
 	 * @throws {EditRejectionError} If the subject has no block in the document.
 	 */
 	blocksOf(subject: NamedNode | BlankNode): SubjectBlock[] {
-		const blocks = this._model.blocksBySubject.get(StatementLocator.subjectId(subject));
+		const blocks = this._model.blocksBySubject.get(StatementLocator.subjectKey(subject));
 
 		if (!blocks || blocks.length === 0) {
 			throw new EditRejectionError('notFound', 'The resource is no longer described in the document.');

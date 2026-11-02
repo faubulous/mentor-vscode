@@ -1,3 +1,4 @@
+import { termToString } from 'rdf-string';
 import { EditOperation } from '@src/services/editing/edit-operation';
 import { IEditingHostService } from '../services/editing-host-service.interface';
 import { EditWriter } from './edit-writer';
@@ -18,7 +19,7 @@ export class EditingController implements IEditingController {
 
 	private readonly _listeners = new Set<() => void>();
 
-	private _busyResourceIds: ReadonlySet<string> = new Set();
+	private _busyResourceKeys: ReadonlySet<string> = new Set();
 
 	private _sending?: EditWriter;
 
@@ -33,15 +34,15 @@ export class EditingController implements IEditingController {
 	constructor(private readonly _hostService: IEditingHostService) { }
 
 	/**
-	 * The resources whose writes are not done yet, whose cards have to stay mounted until they are,
-	 * so their rows receive the data the writes wait for.
+	 * The `termToString` keys of the resources whose writes are not done yet, whose cards have to
+	 * stay mounted until they are, so their rows receive the data the writes wait for.
 	 */
-	get busyResourceIds(): ReadonlySet<string> {
-		return this._busyResourceIds;
+	get busyResourceKeys(): ReadonlySet<string> {
+		return this._busyResourceKeys;
 	}
 
 	/**
-	 * Subscribe to changes of the {@link busyResourceIds}.
+	 * Subscribe to changes of the {@link busyResourceKeys}.
 	 * @param listener Invoked on every change.
 	 * @returns A function that removes the subscription.
 	 */
@@ -88,13 +89,13 @@ export class EditingController implements IEditingController {
 			}
 		}
 
-		const ids = new Set(Array.from(this._busy, writer => writer.resourceId));
+		const keys = new Set(Array.from(this._busy, writer => termToString(writer.subject)));
 
-		if (ids.size === this._busyResourceIds.size && Array.from(ids).every(id => this._busyResourceIds.has(id))) {
+		if (keys.size === this._busyResourceKeys.size && Array.from(keys).every(key => this._busyResourceKeys.has(key))) {
 			return;
 		}
 
-		this._busyResourceIds = ids;
+		this._busyResourceKeys = keys;
 
 		for (const listener of this._listeners) {
 			listener();

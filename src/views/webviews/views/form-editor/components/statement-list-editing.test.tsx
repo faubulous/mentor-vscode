@@ -28,7 +28,7 @@ function renderList(detail: ResourceDetail = SAMPLE) {
 	const dataService = createResourceDataServiceStub([detail]);
 	const ui = (current: ResourceDetail, stale = false) => (
 		<FormEditorContext.Provider value={{ readOnly: false, editing, namespaces: NAMESPACES, languageTags: {}, resources: [] } satisfies FormEditorContextValue}>
-			<StatementList detail={current} stale={stale} dataService={dataService} depth={0} visited={[current.id]} />
+			<StatementList detail={current} stale={stale} dataService={dataService} depth={0} visited={[current.term]} />
 		</FormEditorContext.Provider>
 	);
 	const result = renderWebview(ui(detail));

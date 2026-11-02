@@ -25,7 +25,8 @@ const COLLAPSED_CARD: ResourceCardState = { open: 'collapsed' };
 const OPEN_CARD: ResourceCardState = { open: 'open' };
 
 /**
- * The states of the resource cards, by resource identifier. A card without an entry is collapsed.
+ * The states of the resource cards, by the key of the card: the `termToString` form of its
+ * resource. A card without an entry is collapsed.
  * Immutable: every transition returns the next states, or the states themselves when nothing
  * changes.
  */
@@ -37,20 +38,20 @@ export class ResourceCardStates {
 
 	/**
 	 * Create the states.
-	 * @param _states The states of the open cards, by resource identifier.
+	 * @param _states The states of the open cards, by key.
 	 */
 	constructor(private readonly _states: Readonly<Record<string, ResourceCardState>>) { }
 
 	/**
 	 * Build the states from the open cards of an earlier visit.
-	 * @param openIds The identifiers of the cards that were open.
+	 * @param openCards The keys of the cards that were open.
 	 * @returns The states.
 	 */
-	static fromOpenIds(openIds: readonly string[]): ResourceCardStates {
+	static fromOpenCards(openCards: readonly string[]): ResourceCardStates {
 		const states: Record<string, ResourceCardState> = {};
 
-		for (const id of openIds) {
-			states[id] = OPEN_CARD;
+		for (const key of openCards) {
+			states[key] = OPEN_CARD;
 		}
 
 		return new ResourceCardStates(states);
@@ -58,46 +59,46 @@ export class ResourceCardStates {
 
 	/**
 	 * Get the state of a card, collapsed when it has none.
-	 * @param id The resource identifier of the card.
+	 * @param key The key of the card.
 	 * @returns The state.
 	 */
-	stateOf(id: string): ResourceCardState {
-		return this._states[id] ?? COLLAPSED_CARD;
+	stateOf(key: string): ResourceCardState {
+		return this._states[key] ?? COLLAPSED_CARD;
 	}
 
 	/**
-	 * Get the identifiers of the open cards, which are remembered across reloads of the webview.
-	 * @returns The identifiers.
+	 * Get the keys of the open cards, which are remembered across reloads of the webview.
+	 * @returns The keys.
 	 */
-	openIds(): string[] {
-		return Object.keys(this._states).filter(id => this._states[id].open !== 'collapsed');
+	openCards(): string[] {
+		return Object.keys(this._states).filter(key => this._states[key].open !== 'collapsed');
 	}
 
 
 	/**
 	 * Collapse an open card, or open a collapsed one, as the corner chevron does.
-	 * @param id The resource identifier of the card.
+	 * @param key The key of the card.
 	 * @returns The next states.
 	 */
-	toggle(id: string): ResourceCardStates {
-		return this._with(id, this.stateOf(id).open === 'collapsed' ? OPEN_CARD : COLLAPSED_CARD);
+	toggle(key: string): ResourceCardStates {
+		return this._with(key, this.stateOf(key).open === 'collapsed' ? OPEN_CARD : COLLAPSED_CARD);
 	}
 
 
 	/**
 	 * Replace the state of one card, dropping the entry of a collapsed card so the map holds only
 	 * the open ones.
-	 * @param id The resource identifier of the card.
+	 * @param key The key of the card.
 	 * @param state The new state of the card.
 	 * @returns The next states.
 	 */
-	private _with(id: string, state: ResourceCardState): ResourceCardStates {
+	private _with(key: string, state: ResourceCardState): ResourceCardStates {
 		const states = { ...this._states };
 
 		if (state.open === 'collapsed') {
-			delete states[id];
+			delete states[key];
 		} else {
-			states[id] = state;
+			states[key] = state;
 		}
 
 		return new ResourceCardStates(states);

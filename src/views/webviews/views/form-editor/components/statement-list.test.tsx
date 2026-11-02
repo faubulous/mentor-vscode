@@ -17,7 +17,7 @@ import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
  * The view of a blank node value with its nested node.
  */
 function createNestedView(id: string, extra: Partial<NonNullable<TermView['nested']>> = {}): TermView {
-	return { term: RdfDataFactory.blankNode(id), editable: true, nested: { id: `b:${id}`, propertyCount: 1, ...extra } };
+	return { term: RdfDataFactory.blankNode(id), editable: true, nested: { term: RdfDataFactory.blankNode(id), propertyCount: 1, ...extra } };
 }
 
 /**
@@ -27,7 +27,7 @@ function renderList(detail: ResourceDetail, context: Partial<FormEditorContextVa
 	const dataService = createResourceDataServiceStub([detail, ...details]);
 	const result = renderWebview(
 		<FormEditorContext.Provider value={{ readOnly: true, namespaces: [{ prefix: 'xsd', iri: _XSD }], languageTags: {}, ...context }}>
-			<StatementList detail={detail} dataService={dataService} depth={0} visited={[detail.id]} />
+			<StatementList detail={detail} dataService={dataService} depth={0} visited={[detail.term]} />
 		</FormEditorContext.Provider>
 	);
 
@@ -77,7 +77,7 @@ describe('StatementList', () => {
 		await userEvent.click(screen.getByText('Plant'));
 		await userEvent.click(screen.getByText('Thing'));
 
-		expect(onRevealResource).toHaveBeenCalledWith(`i:${EXAMPLE_NAMESPACE}Plant`);
+		expect(onRevealResource).toHaveBeenCalledWith(RdfDataFactory.namedNode(`${EXAMPLE_NAMESPACE}Plant`));
 		expect(onOpenExternal).toHaveBeenCalledWith(OWL.Thing);
 	});
 
@@ -90,14 +90,14 @@ describe('StatementList', () => {
 	});
 
 	it('renders the card of a blank node in place of its value, with the comments of the node, and asks for one it does not hold', () => {
-		const nestedDetail: ResourceDetail = { id: 'b:b1', term: RdfDataFactory.blankNode('b1'), comments: ['the node'], properties: [createProperty('rdfs:comment', [createLiteralView('inside')])] };
+		const nestedDetail: ResourceDetail = { term: RdfDataFactory.blankNode('b1'), comments: ['the node'], properties: [createProperty('rdfs:comment', [createLiteralView('inside')])] };
 		const detail = createTestResourceDetail([createProperty('ex:has', [createNestedView('b1'), createNestedView('b2')])]);
 		const { dataService } = renderList(detail, {}, [nestedDetail]);
 
-		expect(screen.getByText('inside').closest('.resource-card.is-nested')?.getAttribute('data-resource-id')).toBe('b:b1');
+		expect(screen.getByText('inside').closest('.resource-card.is-nested')?.getAttribute('data-resource-id')).toBe('_:b1');
 		expect(screen.getByText('the node').classList.contains('statement-comment')).toBe(true);
-		expect(screen.getByText('Loading…').closest('.resource-card.is-nested')?.getAttribute('data-resource-id')).toBe('b:b2');
-		expect(dataService.requested).toEqual(['b:b2']);
+		expect(screen.getByText('Loading…').closest('.resource-card.is-nested')?.getAttribute('data-resource-id')).toBe('_:b2');
+		expect(dataService.requested).toEqual([RdfDataFactory.blankNode('b2')]);
 	});
 
 	it('stands in for a node beyond the nesting limit and for one that holds the list already', async () => {
@@ -109,14 +109,14 @@ describe('StatementList', () => {
 
 		renderWebview(
 			<FormEditorContext.Provider value={{ readOnly: true, namespaces: [], languageTags: {}, onRevealResource }}>
-				<StatementList detail={detail} dataService={dataService} depth={3} visited={[detail.id, `b:${RDFS.label}`]} />
+				<StatementList detail={detail} dataService={dataService} depth={3} visited={[detail.term, RdfDataFactory.blankNode(RDFS.label)]} />
 			</FormEditorContext.Provider>
 		);
 
 		await userEvent.click(screen.getByTitle('Show this blank node'));
 
 		expect(screen.getByTitle('Show this blank node').textContent).toContain('[ Opening hours · 2 properties ]');
-		expect(onRevealResource).toHaveBeenCalledWith('b:deep');
+		expect(onRevealResource).toHaveBeenCalledWith(RdfDataFactory.blankNode('deep'));
 		expect(document.querySelectorAll('.resource-card.is-nested')).toHaveLength(0);
 	});
 });

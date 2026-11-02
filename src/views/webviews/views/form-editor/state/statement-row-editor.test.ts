@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { RDFS, XSD } from '@faubulous/mentor-rdf';
-import { TEST_NAMESPACES, TEST_SUBJECT, TEST_SUBJECT_ID, createLiteralView, createProperty, withAnchors, createTestResourceDetail } from '@src/utilities/mocks/statement-fixtures';
+import { TEST_NAMESPACES, TEST_SUBJECT, createLiteralView, createProperty, withAnchors, createTestResourceDetail } from '@src/utilities/mocks/statement-fixtures';
 import { PropertyView } from '../form-editor-model';
 import { TypedTermReader } from '../services/statement/typed-term-reader';
 import { EditWriter } from './edit-writer';
@@ -20,7 +20,7 @@ const LABEL: PropertyView = withAnchors(createTestResourceDetail([{ ...createPro
  * Make the data of a row.
  */
 function dataOf(property: PropertyView | undefined, overrides: Partial<StatementRowData> = {}): StatementRowData {
-	return { resourceId: TEST_SUBJECT_ID, subject: TEST_SUBJECT, property, predicateText: property ? 'rdfs:label' : '', version: 1, stale: false, reader, ...overrides };
+	return { subject: TEST_SUBJECT, property, predicateText: property ? 'rdfs:label' : '', version: 1, stale: false, reader, ...overrides };
 }
 
 /**

@@ -52,7 +52,7 @@ describe('SnapshotBuilder', () => {
 		`);
 
 		expect(snapshot.resources.map(resource => resource.prefixedName)).toEqual(['ex:A', 'ex:onto', 'ex:B', 'ex:scheme', 'ex:C']);
-		expect(snapshot.documentResourceId).toBe(`i:${EX}onto`);
+		expect(snapshot.documentResource?.value).toBe(`${EX}onto`);
 	});
 
 	it('lists the declared namespaces sorted by prefix', () => {
@@ -87,13 +87,13 @@ describe('SnapshotBuilder', () => {
 			ex:B a skos:Concept ; skos:topConceptOf <http://other.org/scheme> .
 		`);
 
-		expect(snapshot.documentResourceId).toBe('i:http://other.org/scheme');
+		expect(snapshot.documentResource?.value).toBe('http://other.org/scheme');
 	});
 
 	it('heads a document with its ontology before a concept scheme', () => {
 		const snapshot = snapshotOf('ex:scheme a skos:ConceptScheme .\nex:onto a owl:Ontology .');
 
-		expect(snapshot.documentResourceId).toBe(`i:${EX}onto`);
+		expect(snapshot.documentResource?.value).toBe(`${EX}onto`);
 	});
 
 	it('heads a document with the ontology that describes itself before one that is only declared', () => {
@@ -103,11 +103,11 @@ describe('SnapshotBuilder', () => {
 			<http://example.org/onto> a owl:Ontology ; rdfs:label "Plants" .
 		`);
 
-		expect(snapshot.documentResourceId).toBe(`i:${EX}onto`);
+		expect(snapshot.documentResource?.value).toBe(`${EX}onto`);
 	});
 
 	it('leaves a document without an ontology or scheme headless', () => {
-		expect(snapshotOf('ex:A a owl:Class .').documentResourceId).toBeUndefined();
+		expect(snapshotOf('ex:A a owl:Class .').documentResource).toBeUndefined();
 	});
 
 	it('marks the terms of other vocabularies that are only declared', () => {

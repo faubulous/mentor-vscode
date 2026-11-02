@@ -12,7 +12,6 @@ export function createResourceSummary(localName: string, extra: Partial<Resource
 	const iri = `${EXAMPLE_NAMESPACE}${localName}`;
 
 	return {
-		id: `i:${iri}`,
 		term: RdfDataFactory.namedNode(iri),
 		label: localName,
 		prefixedName: `ex:${localName}`,

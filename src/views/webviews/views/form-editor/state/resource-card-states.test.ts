@@ -10,13 +10,13 @@ describe('ResourceCardStates', () => {
 		const opened = ResourceCardStates.NONE.toggle('A');
 
 		expect(opened.stateOf('A')).toEqual({ open: 'open' });
-		expect(opened.toggle('A').openIds()).toEqual([]);
+		expect(opened.toggle('A').openCards()).toEqual([]);
 	});
 
 	it('restores and reports the open cards', () => {
-		const states = ResourceCardStates.fromOpenIds(['A', 'B']);
+		const states = ResourceCardStates.fromOpenCards(['A', 'B']);
 
-		expect(states.openIds()).toEqual(['A', 'B']);
-		expect(states.toggle('C').openIds()).toEqual(['A', 'B', 'C']);
+		expect(states.openCards()).toEqual(['A', 'B']);
+		expect(states.toggle('C').openCards()).toEqual(['A', 'B', 'C']);
 	});
 });

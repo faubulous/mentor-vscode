@@ -1,7 +1,7 @@
 import { IToken, QuadContext, RdfToken } from '@faubulous/mentor-rdf-parsers';
 import { Term } from '@rdfjs/types';
 import { RDF } from '@faubulous/mentor-rdf';
-import { getResourceId } from './resource-id';
+import { termToString } from 'rdf-string';
 import { CollectionItemSpan, ObjectSpan, PredicateGroup, StatementModel, SubjectBlock } from './statement-model';
 import { hasSourcePosition, isCommentToken, nextNonCommentTokenIndex, previousNonCommentTokenIndex, tokenEnd } from '@src/utilities/tokens';
 
@@ -68,10 +68,11 @@ export class StatementModelBuilder {
 		const blocksBySubject = new Map<string, SubjectBlock[]>();
 
 		for (const block of blocks) {
-			const list = blocksBySubject.get(block.subjectId) ?? [];
+			const key = termToString(block.subject);
+			const list = blocksBySubject.get(key) ?? [];
 
 			list.push(block);
-			blocksBySubject.set(block.subjectId, list);
+			blocksBySubject.set(key, list);
 		}
 
 		return {
@@ -325,7 +326,6 @@ export class StatementModelBuilder {
 		const startTokenIndex = this._tokenIndexByOffset.get(quad.subjectToken.startOffset)!;
 
 		return {
-			subjectId: getResourceId(quad.subject),
 			subject: quad.subject,
 			subjectToken: quad.subjectToken,
 			groups: [],

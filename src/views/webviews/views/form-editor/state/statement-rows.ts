@@ -33,11 +33,6 @@ export interface StatementRowEntry {
  */
 export interface StatementRowsData {
 	/**
-	 * The identifier of the resource of the card.
-	 */
-	resourceId: string;
-
-	/**
 	 * The resource of the card.
 	 */
 	subject: NamedNode | BlankNode;

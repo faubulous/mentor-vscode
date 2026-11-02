@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { EditOperation } from '@src/services/editing/edit-operation';
 import { FormEditorSession } from './form-editor-session';
-import { ResourceId } from './form-editor-model';
+import { BlankNode, NamedNode } from '@rdfjs/types';
 import { reviveTerms } from '@src/utilities/rdf-terms';
 
 /**
@@ -69,11 +69,11 @@ export class FormEditorProvider implements vscode.CustomTextEditorProvider, vsco
 	/**
 	 * Reveal a resource in every form editor showing a document.
 	 * @param uri The document to reveal the resource in.
-	 * @param resourceId The resource to scroll to.
+	 * @param resource The resource to scroll to.
 	 */
-	revealResource(uri: vscode.Uri, resourceId: ResourceId): void {
+	revealResource(uri: vscode.Uri, resource: NamedNode | BlankNode): void {
 		for (const session of this._sessionsOf(uri)) {
-			session.revealResource(resourceId);
+			session.revealResource(resource);
 		}
 	}
 
@@ -82,11 +82,11 @@ export class FormEditorProvider implements vscode.CustomTextEditorProvider, vsco
 	 * under a node.
 	 * @param uri The document.
 	 * @param label The label of the node.
-	 * @param resourceIds The resources listed under it.
+	 * @param resources The resources listed under it.
 	 */
-	filterResources(uri: vscode.Uri, label: string, resourceIds: ResourceId[]): void {
+	filterResources(uri: vscode.Uri, label: string, resources: (NamedNode | BlankNode)[]): void {
 		for (const session of this._sessionsOf(uri)) {
-			session.filterResources(label, resourceIds);
+			session.filterResources(label, resources);
 		}
 	}
 

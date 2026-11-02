@@ -1,11 +1,11 @@
 import { QuadContext, RdfToken } from '@faubulous/mentor-rdf-parsers';
 import { BlankNode, NamedNode, Term } from '@rdfjs/types';
+import { termToString } from 'rdf-string';
 import { RDF } from '@faubulous/mentor-rdf';
 import { IDocumentContext } from '@src/services/document/document-context.interface';
 import { isTokenOfType } from '@src/utilities/tokens';
-import { NamespaceInfo, ResourceId } from '@src/views/webviews/views/form-editor/form-editor-model';
+import { NamespaceInfo } from '@src/views/webviews/views/form-editor/form-editor-model';
 import { CollectionItem, ResourceIndex, ResourceIndexEntry } from './resource-index';
-import { ResourceIdentities } from './resource-identities';
 import { ResourceViewBuilder } from './resource-view-builder';
 import { trailingCommentRunsOf } from './statement-comments';
 
@@ -16,24 +16,22 @@ import { trailingCommentRunsOf } from './statement-comments';
  * additionally contains inferred triples, which have no representation in the text.
  */
 export class ResourceIndexBuilder {
-	private readonly _entries = new Map<ResourceId, ResourceIndexEntry>();
+	private readonly _entries = new Map<string, ResourceIndexEntry>();
 
-	private readonly _order: ResourceId[] = [];
+	private readonly _order: string[] = [];
 
-	private readonly _referenceCounts = new Map<ResourceId, number>();
+	private readonly _referenceCounts = new Map<string, number>();
 
-	private readonly _labelledSubjects = new Set<ResourceId>();
+	private readonly _holders = new Map<string, NamedNode | BlankNode>();
 
-	private readonly _identities: ResourceIdentities;
+	private readonly _labelledSubjects = new Set<string>();
 
 	/**
 	 * Create a builder for the statements of a document.
 	 * @param _quadContexts The quad contexts of the document.
 	 * @param _context The document context, used to resolve labels and prefixes.
 	 */
-	constructor(private readonly _quadContexts: readonly QuadContext[], private readonly _context: IDocumentContext) {
-		this._identities = new ResourceIdentities(_quadContexts);
-	}
+	constructor(private readonly _quadContexts: readonly QuadContext[], private readonly _context: IDocumentContext) { }
 
 	/**
 	 * Build the index.
@@ -44,27 +42,26 @@ export class ResourceIndexBuilder {
 			this._collect(quad);
 		}
 
-		for (const entry of this._entries.values()) {
+		for (const [key, entry] of this._entries) {
 			entry.nested = entry.term.termType === 'BlankNode'
-				&& !this._labelledSubjects.has(entry.id)
-				&& this._referenceCounts.get(entry.id) === 1;
+				&& !this._labelledSubjects.has(key)
+				&& this._referenceCounts.get(key) === 1;
 		}
 
 		const index: ResourceIndex = {
 			summaries: [],
 			entries: this._entries,
-			identities: this._identities,
 			namespaces: this._buildNamespaces(),
 			referenceCounts: this._referenceCounts,
+			holders: this._holders,
 			trailingComments: trailingCommentRunsOf(this._quadContexts),
 			...this._buildCollections()
 		};
 		const views = new ResourceViewBuilder(index, this._context);
 
 		index.summaries = this._order
-			.map(id => this._entries.get(id)!)
-			.filter(entry => !entry.nested && !index.collectionNodes.has(entry.id))
-			.map(entry => views.buildSummary(entry));
+			.filter(key => !this._entries.get(key)!.nested && !index.collectionNodes.has(key))
+			.map(key => views.buildSummary(this._entries.get(key)!));
 
 		return index;
 	}
@@ -74,46 +71,45 @@ export class ResourceIndexBuilder {
 	 * @param quad The statement.
 	 */
 	private _collect(quad: QuadContext): void {
-		const entry = this._entryOf(quad);
+		const key = termToString(quad.subject);
+		const entry = this._entryOf(key, quad.subject as NamedNode | BlankNode);
 
 		entry.quads.push(quad);
 
 		// A blank node written as `_:label` is a statement subject in its own right and stays top
 		// level. One written as `[ ... ]` in object position has no subject token of its own.
 		if (quad.subject.termType === 'BlankNode' && isTokenOfType(quad.subjectToken, RdfToken.BLANK_NODE_LABEL.name)) {
-			this._labelledSubjects.add(entry.id);
+			this._labelledSubjects.add(key);
 		}
 
 		if (quad.object.termType === 'BlankNode') {
-			const objectId = this._identities.idOf(quad.object);
+			const objectKey = termToString(quad.object);
 
-			this._referenceCounts.set(objectId, (this._referenceCounts.get(objectId) ?? 0) + 1);
+			this._referenceCounts.set(objectKey, (this._referenceCounts.get(objectKey) ?? 0) + 1);
+
+			if (!this._holders.has(objectKey)) {
+				this._holders.set(objectKey, entry.term);
+			}
 		}
-
 	}
 
 	/**
 	 * Find the entry of the subject of a statement, starting it at its first statement.
-	 * @param quad The statement.
+	 * @param key The key of the subject.
+	 * @param subject The subject.
 	 * @returns The entry.
 	 */
-	private _entryOf(quad: QuadContext): ResourceIndexEntry {
-		const id = this._identities.idOf(quad.subject);
-		const existing = this._entries.get(id);
+	private _entryOf(key: string, subject: NamedNode | BlankNode): ResourceIndexEntry {
+		const existing = this._entries.get(key);
 
 		if (existing) {
 			return existing;
 		}
 
-		const entry: ResourceIndexEntry = {
-			id,
-			term: quad.subject as NamedNode | BlankNode,
-			quads: [],
-			nested: false
-		};
+		const entry: ResourceIndexEntry = { term: subject, quads: [], nested: false };
 
-		this._entries.set(id, entry);
-		this._order.push(id);
+		this._entries.set(key, entry);
+		this._order.push(key);
 
 		return entry;
 	}
@@ -138,28 +134,28 @@ export class ResourceIndexBuilder {
 	 * @returns The items of each collection by its head, and every node belonging to a chain.
 	 */
 	private _buildCollections(): Pick<ResourceIndex, 'collections' | 'collectionNodes'> {
-		const collections = new Map<ResourceId, CollectionItem[]>();
-		const collectionNodes = new Set<ResourceId>();
-		const restTargets = new Set<ResourceId>();
+		const collections = new Map<string, CollectionItem[]>();
+		const collectionNodes = new Set<string>();
+		const restTargets = new Set<string>();
 
 		for (const entry of this._entries.values()) {
 			for (const quad of entry.quads) {
 				if (quad.predicate.value === RDF.rest && quad.object.termType === 'BlankNode') {
-					restTargets.add(this._identities.idOf(quad.object));
+					restTargets.add(termToString(quad.object));
 				}
 			}
 		}
 
-		for (const entry of this._entries.values()) {
+		for (const [key, entry] of this._entries) {
 			if (!entry.quads.some(quad => quad.predicate.value === RDF.first)) {
 				continue;
 			}
 
-			collectionNodes.add(entry.id);
+			collectionNodes.add(key);
 
 			// Only a node no other node points its `rdf:rest` at begins a collection.
-			if (!restTargets.has(entry.id)) {
-				collections.set(entry.id, this._walkCollection(entry));
+			if (!restTargets.has(key)) {
+				collections.set(key, this._walkCollection(entry));
 			}
 		}
 
@@ -173,12 +169,12 @@ export class ResourceIndexBuilder {
 	 */
 	private _walkCollection(head: ResourceIndexEntry): CollectionItem[] {
 		const items: CollectionItem[] = [];
-		const visited = new Set<ResourceId>();
+		const visited = new Set<ResourceIndexEntry>();
 		let current: ResourceIndexEntry | undefined = head;
 
 		// A malformed chain can loop; the guard bounds the walk rather than hanging the editor.
-		while (current && !visited.has(current.id)) {
-			visited.add(current.id);
+		while (current && !visited.has(current)) {
+			visited.add(current);
 
 			const first = current.quads.find(quad => quad.predicate.value === RDF.first);
 
@@ -188,7 +184,7 @@ export class ResourceIndexBuilder {
 
 			const next: Term | undefined = current.quads.find(quad => quad.predicate.value === RDF.rest)?.object;
 
-			current = next?.termType === 'BlankNode' ? this._entries.get(this._identities.idOf(next)) : undefined;
+			current = next?.termType === 'BlankNode' ? this._entries.get(termToString(next)) : undefined;
 		}
 
 		return items;

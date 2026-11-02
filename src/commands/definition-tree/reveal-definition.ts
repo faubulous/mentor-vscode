@@ -4,7 +4,8 @@ import { ServiceToken } from '@src/services/tokens';
 import { IDocumentContextService } from '@src/services/document';
 import { ResourceDefinitionProvider } from '@src/providers';
 import { DefinitionTreeNode, getIriFromArgument } from '@src/views/trees/definition-tree/definition-tree-node';
-import { getIriResourceId } from '@src/services/editing/resource-id';
+import { BlankNode, NamedNode } from '@rdfjs/types';
+import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import type { FormEditorProvider } from '@src/views/webviews/views/form-editor';
 
 const contextService = () => container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
@@ -66,17 +67,12 @@ function _showInFormEditor(context: IDocumentContextService, arg: DefinitionTree
 	const members = arg instanceof DefinitionTreeNode ? arg.getMemberIris() : undefined;
 
 	if (members && arg instanceof DefinitionTreeNode) {
-		formEditor.filterResources(documentUri, _labelOf(arg), members.filter(_isIri).map(getIriResourceId));
+		formEditor.filterResources(documentUri, _labelOf(arg), members.map(_termOf));
 
 		return true;
 	}
 
-	// A blank node of the tree has an identifier of the store, which the form does not know.
-	if (!_isIri(iri)) {
-		return false;
-	}
-
-	formEditor.revealResource(documentUri, getIriResourceId(iri));
+	formEditor.revealResource(documentUri, _termOf(iri));
 
 	return true;
 }
@@ -103,10 +99,13 @@ function _labelOf(node: DefinitionTreeNode): string {
 }
 
 /**
- * Indicate whether a resource of the tree is named by an IRI rather than a blank node identifier.
- * @param value The identifier.
- * @returns `true` for an IRI.
+ * Get the term of a resource of the tree, which names it by an IRI or by the identifier of a
+ * blank node. The store names blank nodes as the parser does, so the form knows them by the same
+ * identifiers. An absolute IRI has a scheme, followed by a colon, which a blank node identifier
+ * never holds.
+ * @param value The IRI or the blank node identifier.
+ * @returns The term.
  */
-function _isIri(value: string): boolean {
-	return value.includes(':');
+function _termOf(value: string): NamedNode | BlankNode {
+	return value.includes(':') ? RdfDataFactory.namedNode(value) : RdfDataFactory.blankNode(value);
 }

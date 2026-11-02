@@ -23,7 +23,7 @@ export function NestedResourcePlaceholder({ nested }: NestedResourcePlaceholderP
 	const name = nested.label ?? nested.typeLabel;
 
 	return (
-		<button type="button" className="nested-placeholder" title="Show this blank node" onClick={() => onRevealResource?.(nested.id)}>
+		<button type="button" className="nested-placeholder" title="Show this blank node" onClick={() => onRevealResource?.(nested.term)}>
 			<span>[ {name ? `${name} · ${properties}` : properties} ]</span>
 			<vscode-icon name="arrow-right"></vscode-icon>
 		</button>

@@ -5,7 +5,7 @@ vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 import { RDFS, _OWL, _RDFS, _SH, _XSD } from '@faubulous/mentor-rdf';
 import { ResolvingDocumentContextOptions, createResolvingDocumentContext, readTurtleQuadContexts } from '@src/utilities/mocks/factories';
 import { ResourceDetail } from '@src/views/webviews/views/form-editor/form-editor-model';
-import { ResourceIndexOptions } from './resource-index';
+import { ResourceIndexOptions, getEntry } from './resource-index';
 import { ResourceIndexBuilder } from './resource-index-builder';
 import { ResourceViewBuilder } from './resource-view-builder';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
@@ -20,7 +20,7 @@ const PREAMBLE = Object.entries(NAMESPACES).map(([prefix, iri]) => `@prefix ${pr
 function detailOf(body: string, context: ResolvingDocumentContextOptions = {}, options: ResourceIndexOptions = {}): ResourceDetail {
 	const documentContext = createResolvingDocumentContext({ namespaces: NAMESPACES, ...context });
 	const index = new ResourceIndexBuilder(readTurtleQuadContexts(PREAMBLE + body), documentContext).build();
-	const entry = index.entries.get(index.summaries[0].id)!;
+	const entry = getEntry(index, index.summaries[0].term)!;
 
 	return new ResourceViewBuilder(index, documentContext, options).buildDetail(entry);
 }
@@ -32,9 +32,9 @@ function nestedDetailOf(body: string): ResourceDetail {
 	const documentContext = createResolvingDocumentContext({ namespaces: NAMESPACES });
 	const index = new ResourceIndexBuilder(readTurtleQuadContexts(PREAMBLE + body), documentContext).build();
 	const views = new ResourceViewBuilder(index, documentContext);
-	const parent = views.buildDetail(index.entries.get(index.summaries[0].id)!);
+	const parent = views.buildDetail(getEntry(index, index.summaries[0].term)!);
 
-	return views.buildDetail(index.entries.get(parent.properties[0].values[0].nested!.id)!);
+	return views.buildDetail(getEntry(index, parent.properties[0].values[0].nested!.term)!);
 }
 
 describe('ResourceViewBuilder.buildDetail', () => {

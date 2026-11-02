@@ -1,4 +1,5 @@
-import { ResourceId, ResourceSummary } from '../form-editor-model';
+import { termToString } from 'rdf-string';
+import { ResourceSummary } from '../form-editor-model';
 
 /**
  * A narrowing of the list to the resources the definition tree lists under a node, such as the
@@ -11,9 +12,9 @@ export interface TypeFilter {
 	label: string;
 
 	/**
-	 * The resources the tree lists under the node.
+	 * The `termToString` keys of the resources the tree lists under the node.
 	 */
-	resourceIds: ReadonlySet<ResourceId>;
+	resourceKeys: ReadonlySet<string>;
 }
 
 /**
@@ -92,9 +93,7 @@ export class ResourceListFilter {
 			return true;
 		}
 
-		const iri = resource.term.termType === 'NamedNode' ? resource.term.value : resource.id;
-
-		return [iri, resource.prefixedName ?? '', resource.label, resource.description ?? ''].join(' ').toLowerCase().includes(this._needle);
+		return [resource.term.value, resource.prefixedName ?? '', resource.label, resource.description ?? ''].join(' ').toLowerCase().includes(this._needle);
 	}
 
 	/**
@@ -104,6 +103,6 @@ export class ResourceListFilter {
 	 * @returns `true` when it does.
 	 */
 	private _matchesType(resource: ResourceSummary): boolean {
-		return this._criteria.type === undefined || this._criteria.type.resourceIds.has(resource.id);
+		return this._criteria.type === undefined || this._criteria.type.resourceKeys.has(termToString(resource.term));
 	}
 }

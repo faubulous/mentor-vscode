@@ -1,4 +1,6 @@
-import { ResourceDetail, ResourceId } from '@src/views/webviews/views/form-editor/form-editor-model';
+import { BlankNode, NamedNode } from '@rdfjs/types';
+import { termToString } from 'rdf-string';
+import { ResourceDetail } from '@src/views/webviews/views/form-editor/form-editor-model';
 import { IResourceDataService } from '@src/views/webviews/views/form-editor/services/resource-data-service.interface';
 
 /**
@@ -11,9 +13,9 @@ export interface ResourceDataServiceStub extends IResourceDataService {
 	version: number;
 
 	/**
-	 * The identifiers requested so far, in order.
+	 * The resources requested so far, in order.
 	 */
-	requested: ResourceId[];
+	requested: (NamedNode | BlankNode)[];
 }
 
 /**
@@ -22,14 +24,14 @@ export interface ResourceDataServiceStub extends IResourceDataService {
  * @returns The service.
  */
 export function createResourceDataServiceStub(details: readonly ResourceDetail[] = []): ResourceDataServiceStub {
-	const byId = new Map(details.map(detail => [detail.id, detail]));
-	const requested: ResourceId[] = [];
+	const byKey = new Map(details.map(detail => [termToString(detail.term), detail]));
+	const requested: (NamedNode | BlankNode)[] = [];
 
 	return {
 		version: 1,
 		requested,
-		get: id => byId.get(id),
-		request: ids => requested.push(...ids),
+		get: resource => byKey.get(termToString(resource)),
+		request: resources => requested.push(...resources),
 		subscribe: () => () => undefined
 	};
 }

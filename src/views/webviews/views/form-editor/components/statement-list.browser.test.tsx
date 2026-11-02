@@ -27,7 +27,7 @@ async function renderList(detail: ResourceDetail = SAMPLE) {
 	const ui = (current: ResourceDetail) => (
 		<div className="form-editor">
 			<FormEditorContext.Provider value={{ readOnly: false, editing, namespaces: NAMESPACES, languageTags: {}, resources: RESOURCES }}>
-				<StatementList detail={current} dataService={dataService} depth={0} visited={[current.id]} />
+				<StatementList detail={current} dataService={dataService} depth={0} visited={[current.term]} />
 			</FormEditorContext.Provider>
 			<button type="button" className="outside">Outside</button>
 		</div>

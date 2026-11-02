@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 
 import { RdfSyntax } from '@faubulous/mentor-rdf-parsers';
-import { getIriResourceId } from './resource-id';
+import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { DocumentReader } from './document-reader';
 import { StatementModel, TokenSpan } from './statement-model';
 import { StatementModelBuilder } from './statement-model-builder';
@@ -38,7 +38,7 @@ describe('StatementModelBuilder', () => {
 		const [block] = model.blocks;
 
 		expect(model.blocks).toHaveLength(1);
-		expect(block.subjectId).toBe(getIriResourceId(`${EX}s`));
+		expect(block.subject.equals(RdfDataFactory.namedNode(`${EX}s`))).toBe(true);
 		expect(block.groups.map(group => group.predicateIri)).toEqual([`${EX}p`, `${EX}q`]);
 		expect(block.groups[0].objects.map(object => textOf(model, object))).toEqual(['ex:a', 'ex:b']);
 		expect(block.groups[1].objects.map(object => textOf(model, object))).toEqual(['"x"']);
@@ -49,8 +49,8 @@ describe('StatementModelBuilder', () => {
 		const model = modelOf('ex:s ex:p ex:a .\nex:t ex:p ex:b .\nex:s ex:q ex:c .\n');
 
 		expect(model.blocks).toHaveLength(3);
-		expect(model.blocksBySubject.get(getIriResourceId(`${EX}s`))).toHaveLength(2);
-		expect(model.blocksBySubject.get(getIriResourceId(`${EX}t`))).toHaveLength(1);
+		expect(model.blocksBySubject.get(`${EX}s`)).toHaveLength(2);
+		expect(model.blocksBySubject.get(`${EX}t`)).toHaveLength(1);
 	});
 
 	it('marks a blank node written inside its parent as nested', () => {
