@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { RdfSyntax, TurtleReader } from '@faubulous/mentor-rdf-parsers';
 import { ParserFactory } from '@src/languages/parser-factory';
-import { QuadContextSerializer, TurtleSerializer, QuadSortingStrategy } from '@faubulous/mentor-rdf-serializers';
+import { getLanguageTagSpellings, QuadContextSerializer, TurtleSerializer, QuadSortingStrategy } from '@faubulous/mentor-rdf-serializers';
 import { ServiceToken } from '@src/services/tokens';
 import { IDocumentContextService } from '@src/services/document';
 
@@ -70,7 +70,8 @@ export async function sortDocument(documentUri: vscode.Uri | undefined, strategy
 			prefixes: context.namespaces,
 			baseIri: context.baseIri,
 			sortingStrategy: strategy,
-			inlineSingleUseBlankNodes: true
+			inlineSingleUseBlankNodes: true,
+			languageTags: getLanguageTagSpellings(tokens)
 		});
 
 		// Replace the entire document content with the sorted output.

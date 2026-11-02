@@ -2,6 +2,7 @@ import "@vscode-elements/elements";
 import type { NotebookRendererMessaging } from 'vscode';
 import type { ActivationFunction, OutputItem, RendererContext } from 'vscode-notebook-renderer';
 import { createRoot } from 'react-dom/client';
+import { reviveTerms } from "@src/utilities/rdf-terms";
 import { WebviewMessaging } from "@src/views/webviews/webview-messaging";
 import { SparqlResultsView } from './components/sparql-results-view';
 import { SparqlResultsWebviewMessages } from "./sparql-results-messages";
@@ -43,7 +44,7 @@ export const activate: ActivationFunction = (context: RendererContext<NotebookRe
         },
         onMessage: (handler: (message: SparqlResultsWebviewMessages) => void) => {
             if (context.onDidReceiveMessage) {
-                const subscription = context.onDidReceiveMessage(handler);
+                const subscription = context.onDidReceiveMessage(message => handler(reviveTerms(message)));
 
                 return () => subscription.dispose();
             } else {
@@ -56,7 +57,7 @@ export const activate: ActivationFunction = (context: RendererContext<NotebookRe
 
     return {
         renderOutputItem(data: OutputItem, element: HTMLElement) {
-            const json = data?.json();
+            const json = reviveTerms(data?.json());
 
             let root = elementRoots.get(element);
 

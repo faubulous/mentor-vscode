@@ -53,9 +53,9 @@ describe('SparqlResultSerializer', () => {
 
         it('collects column names from binding keys', async () => {
             const serializer = new SparqlResultSerializer(noPrefixService as any);
-            const binding = new Map([
+            const binding = new Map<any, any>([
                 [{ termType: 'Variable', value: 'x' }, { termType: 'NamedNode', value: 'http://example.org/foo' }],
-                [{ termType: 'Variable', value: 'y' }, { termType: 'Literal', value: 'hello', datatype: { value: 'http://www.w3.org/2001/XMLSchema#string' }, language: '' }],
+                [{ termType: 'Variable', value: 'y' }, RdfDataFactory.literal('hello')],
             ]);
             const result = await serializer.serializeBindings(
                 makeContext() as any,
@@ -80,6 +80,27 @@ describe('SparqlResultSerializer', () => {
             const row = result.rows[0];
             expect(row['s'].termType).toBe('NamedNode');
             expect(row['s'].value).toBe('http://example.org/subject');
+        });
+
+        it('keeps the direction of a literal and the graph of a quad term', async () => {
+            const serializer = new SparqlResultSerializer(noPrefixService as any);
+            const literal = RdfDataFactory.literal('مرحبا', { language: 'ar', direction: 'rtl' });
+            const quad = RdfDataFactory.quad(
+                RdfDataFactory.namedNode('http://example.org/s'),
+                RdfDataFactory.namedNode('http://example.org/p'),
+                literal,
+                RdfDataFactory.namedNode('http://example.org/g')
+            );
+            const binding = new Map<any, any>([
+                [{ termType: 'Variable', value: 'label' }, literal],
+                [{ termType: 'Variable', value: 'triple' }, quad],
+            ]);
+            const result = await serializer.serializeBindings(makeContext() as any, asyncGen(binding) as any, token as any);
+            const row = JSON.parse(JSON.stringify(result.rows[0]));
+
+            expect(row['label'].direction).toBe('rtl');
+            expect(row['triple'].graph.value).toBe('http://example.org/g');
+            expect(row['triple'].object.direction).toBe('rtl');
         });
 
         it('serializes Literal term with datatype and language', async () => {
