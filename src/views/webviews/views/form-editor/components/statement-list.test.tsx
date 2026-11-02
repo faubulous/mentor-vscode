@@ -2,7 +2,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { OWL, RDFS, XSD } from '@faubulous/mentor-rdf';
+import { OWL, RDFS, XSD, _XSD } from '@faubulous/mentor-rdf';
 import { renderWebview } from '@src/utilities/mocks/webview-test-utils';
 import { createResourceDataServiceStub } from '@src/utilities/mocks/resource-data-service-fixtures';
 import { createResourceSummary } from '@src/utilities/mocks/resource-summary-fixtures';
@@ -11,12 +11,13 @@ import { EXAMPLE_NAMESPACE } from '@src/utilities/mocks/statement-fixtures';
 import { ResourceDetail, TermView } from '../form-editor-model';
 import { FormEditorContext, FormEditorContextValue } from '../state/form-editor-context';
 import { StatementList } from './statement-list';
+import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 
 /**
  * The view of a blank node value with its nested node.
  */
 function createNestedView(id: string, extra: Partial<NonNullable<TermView['nested']>> = {}): TermView {
-	return { term: { kind: 'bnode', id }, editable: true, nested: { id: `b:${id}`, propertyCount: 1, ...extra } };
+	return { term: RdfDataFactory.blankNode(id), editable: true, nested: { id: `b:${id}`, propertyCount: 1, ...extra } };
 }
 
 /**
@@ -25,7 +26,7 @@ function createNestedView(id: string, extra: Partial<NonNullable<TermView['neste
 function renderList(detail: ResourceDetail, context: Partial<FormEditorContextValue> = {}, details: ResourceDetail[] = []) {
 	const dataService = createResourceDataServiceStub([detail, ...details]);
 	const result = renderWebview(
-		<FormEditorContext.Provider value={{ readOnly: true, namespaces: [{ prefix: 'xsd', iri: 'http://www.w3.org/2001/XMLSchema#' }], ...context }}>
+		<FormEditorContext.Provider value={{ readOnly: true, namespaces: [{ prefix: 'xsd', iri: _XSD }], languageTags: {}, ...context }}>
 			<StatementList detail={detail} dataService={dataService} depth={0} visited={[detail.id]} />
 		</FormEditorContext.Provider>
 	);
@@ -45,8 +46,8 @@ describe('StatementList', () => {
 
 	it('shows the datatype of a literal as a tag by its prefix, and none for a plain string', () => {
 		const detail = createTestResourceDetail([createProperty('ex:p', [
-			{ term: { kind: 'literal', value: '42', datatype: XSD.integer }, editable: true },
-			{ term: { kind: 'literal', value: 'plain', datatype: XSD.string }, editable: true }
+			{ term: RdfDataFactory.literal('42', RdfDataFactory.namedNode(XSD.integer)), editable: true },
+			{ term: RdfDataFactory.literal('plain', RdfDataFactory.namedNode(XSD.string)), editable: true }
 		])]);
 
 		renderList(detail);
@@ -81,7 +82,7 @@ describe('StatementList', () => {
 	});
 
 	it('shows the items of a list on lines of their own', () => {
-		const list: TermView = { term: { kind: 'bnode', id: 'l1' }, editable: true, collection: { items: [createIriView('ex:A', 'A'), createLiteralView('b')] } };
+		const list: TermView = { term: RdfDataFactory.blankNode('l1'), editable: true, collection: { items: [createIriView('ex:A', 'A'), createLiteralView('b')] } };
 
 		renderList(createTestResourceDetail([createProperty('owl:unionOf', [list])]));
 
@@ -89,7 +90,7 @@ describe('StatementList', () => {
 	});
 
 	it('renders the card of a blank node in place of its value, with the comments of the node, and asks for one it does not hold', () => {
-		const nestedDetail: ResourceDetail = { id: 'b:b1', term: { kind: 'bnode', id: 'b1' }, comments: ['the node'], properties: [createProperty('rdfs:comment', [createLiteralView('inside')])] };
+		const nestedDetail: ResourceDetail = { id: 'b:b1', term: RdfDataFactory.blankNode('b1'), comments: ['the node'], properties: [createProperty('rdfs:comment', [createLiteralView('inside')])] };
 		const detail = createTestResourceDetail([createProperty('ex:has', [createNestedView('b1'), createNestedView('b2')])]);
 		const { dataService } = renderList(detail, {}, [nestedDetail]);
 
@@ -107,7 +108,7 @@ describe('StatementList', () => {
 		const dataService = createResourceDataServiceStub([detail]);
 
 		renderWebview(
-			<FormEditorContext.Provider value={{ readOnly: true, namespaces: [], onRevealResource }}>
+			<FormEditorContext.Provider value={{ readOnly: true, namespaces: [], languageTags: {}, onRevealResource }}>
 				<StatementList detail={detail} dataService={dataService} depth={3} visited={[detail.id, `b:${RDFS.label}`]} />
 			</FormEditorContext.Provider>
 		);

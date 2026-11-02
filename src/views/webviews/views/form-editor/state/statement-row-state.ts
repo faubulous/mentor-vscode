@@ -1,4 +1,4 @@
-import { TermRef } from '../form-editor-model';
+import { TermView } from '../form-editor-model';
 import { TermProblem } from '../services/statement/term-problem';
 import { LiteralTag } from './literal-tag';
 import { RowRejection } from './row-rejection';
@@ -85,7 +85,7 @@ export class StatementRowState {
 	 * @param term The term.
 	 * @returns The next state.
 	 */
-	withValueAppended(term: TermRef): StatementRowState {
+	withValueAppended(term: TermView['term']): StatementRowState {
 		return new StatementRowState(this.stored, this.draft.withValueAppended(term), this.predicateText, '', undefined, this.rejection);
 	}
 

@@ -9,6 +9,7 @@ import { ValueListOperations } from './operations/value-list-operations';
 import { StatementModelBuilder } from './statement-model-builder';
 import { SynthesisContext, SynthesisInput } from './synthesis-context';
 import { TermWriter } from './term-writer';
+import { getLanguageTagSpellings } from '@faubulous/mentor-rdf-serializers';
 
 /**
  * Turns the operations of one user action into the text edits that carry them out. The edits
@@ -61,7 +62,8 @@ export class EditSynthesizer {
 			namespaces,
 			syntax: input.syntax,
 			useTypeKeyword: style.useTypeKeyword,
-			blankNodeLabels: this._collectBlankNodeLabels()
+			blankNodeLabels: this._collectBlankNodeLabels(),
+			languageTags: getLanguageTagSpellings(input.tokens)
 		});
 
 		return { input, model, style, styleDetector, writer, namespaces };

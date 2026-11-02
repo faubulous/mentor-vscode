@@ -1,16 +1,18 @@
+import { Quad_Graph, Term } from '@rdfjs/types';
 import { TextEditSpec } from '@src/utilities/text-edits';
-import { TermRef } from './term-ref';
+import { AnyBlankNode } from './any-blank-node';
+import { getPatternMatchKey } from './term-patterns';
 
 /**
  * A term to look for when verifying an edit. Blank node identifiers are assigned per parse and
- * cannot be compared across the edit, so a blank node matches any blank node.
+ * cannot be compared across the edit, so a blank node is looked for as any blank node.
  */
-export type TermPattern = TermRef | { kind: 'anyBlankNode' };
+export type TermPattern = Term | AnyBlankNode;
 
 /**
  * The graph of a statement to look for: the default graph, or a named one as a term pattern.
  */
-export type GraphPattern = { kind: 'default' } | TermPattern;
+export type GraphPattern = Quad_Graph | AnyBlankNode;
 
 /**
  * A change an edit is expected to make to the statements of the document, which the verifier
@@ -104,7 +106,7 @@ export function netExpectedChanges(expectedChanges: readonly ExpectedStatementCh
 	const net = new Map<string, ExpectedStatementChange>();
 
 	for (const change of expectedChanges) {
-		const key = JSON.stringify([change.graph, change.subject, change.predicate, change.object]);
+		const key = JSON.stringify([getPatternMatchKey(change.graph), getPatternMatchKey(change.subject), change.predicate, getPatternMatchKey(change.object)]);
 		const existing = net.get(key);
 
 		net.set(key, existing ? { ...existing, delta: existing.delta + change.delta } : change);

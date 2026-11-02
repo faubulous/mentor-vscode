@@ -1,5 +1,7 @@
 import { OWL, RDF, RDFS, _OWL, _RDF, _RDFS, _SKOS, _XSD } from '@faubulous/mentor-rdf';
-import { PropertyView, ResourceDetail, TermRef, TermView } from '@src/views/webviews/views/form-editor/form-editor-model';
+import { NamedNode } from '@rdfjs/types';
+import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
+import { PropertyView, ResourceDetail, TermView } from '@src/views/webviews/views/form-editor/form-editor-model';
 
 /**
  * The namespace of the example resources of the webview tests.
@@ -22,7 +24,7 @@ export const TEST_NAMESPACES: Readonly<Record<string, string>> = {
 /**
  * The subject of the statement fixtures.
  */
-export const TEST_SUBJECT: TermRef = { kind: 'iri', iri: `${EXAMPLE_NAMESPACE}Tree` };
+export const TEST_SUBJECT: NamedNode = RdfDataFactory.namedNode(`${EXAMPLE_NAMESPACE}Tree`);
 
 /**
  * The resource identifier of the test subject.
@@ -38,7 +40,7 @@ export const TEST_SUBJECT_ID = 'i:tree';
 export function createIriView(prefixedName: string, label?: string): TermView {
 	const [prefix, localName] = prefixedName.split(':');
 
-	return { term: { kind: 'iri', iri: TEST_NAMESPACES[prefix] + localName }, prefixedName, label, editable: true };
+	return { term: RdfDataFactory.namedNode(TEST_NAMESPACES[prefix] + localName), prefixedName, label, editable: true };
 }
 
 /**
@@ -48,7 +50,7 @@ export function createIriView(prefixedName: string, label?: string): TermView {
  * @returns The view.
  */
 export function createLiteralView(value: string, language?: string): TermView {
-	return { term: { kind: 'literal', value, language }, editable: true };
+	return { term: RdfDataFactory.literal(value, language), editable: true };
 }
 
 /**
@@ -76,9 +78,9 @@ export function createTestResourceDetail(properties: PropertyView[]): ResourceDe
  */
 export function createSampleResourceDetail(): ResourceDetail {
 	return createTestResourceDetail([
-		{ predicate: { term: { kind: 'iri', iri: RDF.type }, prefixedName: 'rdf:type', editable: true }, values: [{ term: { kind: 'iri', iri: OWL.Class }, prefixedName: 'owl:Class', label: 'Class', editable: true }] },
-		{ predicate: { term: { kind: 'iri', iri: RDFS.label }, prefixedName: 'rdfs:label', editable: true }, values: [createLiteralView('Tree', 'en')] },
-		{ predicate: { term: { kind: 'iri', iri: RDFS.subClassOf }, prefixedName: 'rdfs:subClassOf', editable: true }, values: [{ term: { kind: 'iri', iri: OWL.Thing }, prefixedName: 'owl:Thing', label: 'Thing', editable: true }] }
+		{ predicate: { term: RdfDataFactory.namedNode(RDF.type), prefixedName: 'rdf:type', editable: true }, values: [{ term: RdfDataFactory.namedNode(OWL.Class), prefixedName: 'owl:Class', label: 'Class', editable: true }] },
+		{ predicate: { term: RdfDataFactory.namedNode(RDFS.label), prefixedName: 'rdfs:label', editable: true }, values: [createLiteralView('Tree', 'en')] },
+		{ predicate: { term: RdfDataFactory.namedNode(RDFS.subClassOf), prefixedName: 'rdfs:subClassOf', editable: true }, values: [{ term: RdfDataFactory.namedNode(OWL.Thing), prefixedName: 'owl:Thing', label: 'Thing', editable: true }] }
 	]);
 }
 

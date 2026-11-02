@@ -30,7 +30,7 @@ export interface DocumentHeaderProps {
  */
 export function DocumentHeader({ fileName, documentResource, titleRef }: DocumentHeaderProps): React.JSX.Element {
 	const title = documentResource?.label ?? fileName;
-	const iri = documentResource?.term.kind === 'iri' ? documentResource.term.iri : undefined;
+	const iri = documentResource?.term.termType === 'NamedNode' ? documentResource.term.value : undefined;
 
 	return (
 		<header className="document-header">

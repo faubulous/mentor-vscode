@@ -2,7 +2,7 @@ import { EditRejectionError } from './edit-rejection';
 import { CollectionItemSpan, ObjectSpan, PredicateGroup, StatementModel, SubjectBlock } from './statement-model';
 import { StatementLocator } from './statement-locator';
 import { StatementValue } from './statement-value';
-import { TermRef } from './term-ref';
+import { BlankNode, NamedNode } from '@rdfjs/types';
 import { NewValue, ValueList, ValueListEntry, ValueListGroup } from './value-list';
 
 /**
@@ -39,7 +39,7 @@ export class ValueListResolver {
 	 * @returns What the edit does to each statement of the predicate.
 	 * @throws {EditRejectionError} If a value refers to nothing written under the predicate, is listed twice, or would move between statements.
 	 */
-	resolve(subject: TermRef, predicate: string, values: readonly StatementValue[]): ValueList {
+	resolve(subject: NamedNode | BlankNode, predicate: string, values: readonly StatementValue[]): ValueList {
 		const located = this._locate(subject, predicate);
 		const items = this._itemsOf(located);
 		const objects = new Map(located.flatMap(({ group }, groupIndex) => group.objects.map(span => [span.start, { span, groupIndex }] as const)));
@@ -62,7 +62,7 @@ export class ValueListResolver {
 	 * @returns The statements with the blocks holding them.
 	 * @throws {EditRejectionError} If the subject is not described in the document.
 	 */
-	private _locate(subject: TermRef, predicate: string): { block: SubjectBlock; group: PredicateGroup }[] {
+	private _locate(subject: NamedNode | BlankNode, predicate: string): { block: SubjectBlock; group: PredicateGroup }[] {
 		return new StatementLocator(this._model).blocksOf(subject).flatMap(block => block.groups.filter(group => group.predicateIri === predicate).map(group => ({ block, group })));
 	}
 

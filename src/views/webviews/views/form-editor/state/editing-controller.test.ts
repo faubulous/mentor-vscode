@@ -4,8 +4,9 @@ import { createEditingHostStub } from '@src/utilities/mocks/editing-host-fixture
 import { EditOutcome } from '../services/editing-host-service.interface';
 import { EditWriter } from './edit-writer';
 import { EditingController } from './editing-controller';
+import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 
-const subject = { kind: 'iri' as const, iri: 'http://example.org/s' };
+const subject = RdfDataFactory.namedNode('http://example.org/s');
 
 /**
  * A writer that writes one operation of its predicate per request, recording how its edits end.

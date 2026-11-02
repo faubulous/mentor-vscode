@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { XSD } from '@faubulous/mentor-rdf';
 import { LiteralDatatypes, MARKDOWN_DATATYPE } from './literal-datatypes';
+import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 
 describe('LiteralDatatypes', () => {
 	it('knows which datatypes are numbers', () => {
@@ -18,9 +19,9 @@ describe('LiteralDatatypes', () => {
 	});
 
 	it('tells whether a term fits its datatype', () => {
-		expect(LiteralDatatypes.fitsTerm({ kind: 'literal', value: 'x', datatype: XSD.integer })).toBe(false);
-		expect(LiteralDatatypes.fitsTerm({ kind: 'literal', value: 'x', language: 'en' })).toBe(true);
-		expect(LiteralDatatypes.fitsTerm({ kind: 'iri', iri: 'http://x' })).toBe(true);
+		expect(LiteralDatatypes.fitsTerm(RdfDataFactory.literal('x', RdfDataFactory.namedNode(XSD.integer)))).toBe(false);
+		expect(LiteralDatatypes.fitsTerm(RdfDataFactory.literal('x', 'en'))).toBe(true);
+		expect(LiteralDatatypes.fitsTerm(RdfDataFactory.namedNode('http://x'))).toBe(true);
 	});
 
 	it('offers the datatypes a text fits, text first', () => {

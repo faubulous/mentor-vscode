@@ -1,12 +1,12 @@
 import { EditOperation } from '../edit-operation';
-import { TermRef } from '../term-ref';
+import { BlankNode, NamedNode } from '@rdfjs/types';
 import { EditPlan, createPlan, netExpectedChanges } from '../edit-plan';
 import { EditRejectionError } from '../edit-rejection';
 import { PredicateGroup, SubjectBlock } from '../statement-model';
 import { ValueOperations } from './value-operations';
 import { StatementLocator } from '../statement-locator';
 import { SynthesisContext } from '../synthesis-context';
-import { toGraphPattern, toPatternFromRef, toTermPattern } from '../term-patterns';
+import { toGraphPattern, toTermPattern } from '../term-patterns';
 import { TextEditSpec } from '@src/utilities/text-edits';
 import { tokenEnd } from '@src/utilities/tokens';
 
@@ -32,7 +32,7 @@ export class PropertyOperations {
 	 * @returns The block.
 	 * @throws {EditRejectionError} If the subject has no block in the document.
 	 */
-	newPropertyBlock(subject: TermRef): SubjectBlock {
+	newPropertyBlock(subject: NamedNode | BlankNode): SubjectBlock {
 		const blocks = new StatementLocator(this._context.model).blocksOf(subject);
 
 		return blocks.find(candidate => candidate.nested) ?? blocks[blocks.length - 1];
@@ -78,7 +78,7 @@ export class PropertyOperations {
 
 		const written = context.writer.writePredicate(operation.newPredicate);
 		const edits = groups.map(group => ({ start: group.predicateToken.startOffset, end: tokenEnd(group.predicateToken), newText: written }));
-		const subject = toPatternFromRef(operation.subject);
+		const subject = toTermPattern(operation.subject);
 		const objects = groups.flatMap(group => group.objects);
 
 		return createPlan({
@@ -114,11 +114,11 @@ export class PropertyOperations {
 	 * @returns The plan removing the groups.
 	 * @throws {EditRejectionError} If the subject does not carry the predicate, or the predicate holds the last statements about the subject.
 	 */
-	deleteProperty(subjectRef: TermRef, predicate: string): EditPlan {
+	deleteProperty(subjectRef: NamedNode | BlankNode, predicate: string): EditPlan {
 		const context = this._context;
 
 		const groups = this.findPredicateGroups(subjectRef, predicate);
-		const subject = toPatternFromRef(subjectRef);
+		const subject = toTermPattern(subjectRef);
 		const plan = createPlan({});
 		const values = new ValueOperations(context);
 		const byBlock = new Map<SubjectBlock, PredicateGroup[]>();
@@ -143,7 +143,7 @@ export class PropertyOperations {
 	 * @returns The groups with the blocks holding them.
 	 * @throws {EditRejectionError} If the subject does not carry the predicate.
 	 */
-	findPredicateGroups(subject: TermRef, predicate: string): { block: SubjectBlock; group: PredicateGroup }[] {
+	findPredicateGroups(subject: NamedNode | BlankNode, predicate: string): { block: SubjectBlock; group: PredicateGroup }[] {
 		const context = this._context;
 
 		const found: { block: SubjectBlock; group: PredicateGroup }[] = [];

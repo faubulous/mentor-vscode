@@ -23,6 +23,7 @@ import { EditOutcome, FormEditorEditHandler } from './form-editor-edit-handler';
 import { FormEditorHostMessage, FormEditorWebviewMessage } from './form-editor-messages';
 import { getFormReadOnlyReason } from './form-editor-read-only';
 import { DocumentProblem, DocumentSnapshot, ReadOnlyReason, ResourceDetail, ResourceId } from './form-editor-model';
+import { reviveTerms } from '@src/utilities/rdf-terms';
 
 
 /**
@@ -151,7 +152,8 @@ export class FormEditorSession implements vscode.Disposable {
 		await new Promise(resolve => setTimeout(resolve, 0));
 
 		this._subscriptions.push(
-			this._panel.webview.onDidReceiveMessage((message: FormEditorWebviewMessage) => this._onDidReceiveMessage(message)),
+			// Messages arrive as plain data; the RDF/JS terms of an edit are revived before it is read.
+			this._panel.webview.onDidReceiveMessage((message: FormEditorWebviewMessage) => this._onDidReceiveMessage(reviveTerms(message))),
 			this._panel.onDidChangeViewState(() => this._onDidChangeViewState()),
 			vscode.workspace.onDidChangeConfiguration(event => this._onDidChangeConfiguration(event)),
 			this._contextService.onDidChangeDocumentContext(context => {
@@ -590,6 +592,7 @@ export class FormEditorSession implements vscode.Disposable {
 			fileName: this._document.uri.path.split('/').pop() ?? '',
 			namespaces: [],
 			resources: [],
+			languageTags: {},
 			readOnly,
 			problems: []
 		};

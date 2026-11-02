@@ -3,6 +3,7 @@ import { RDFS, XSD } from '@faubulous/mentor-rdf';
 import { createIriView, createLiteralView, createProperty, withAnchors, createTestResourceDetail } from '@src/utilities/mocks/statement-fixtures';
 import { PropertyView, TermView } from '../form-editor-model';
 import { StatementDraft } from './statement-draft';
+import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 
 /**
  * A property of `rdfs:label` with two literals and a resource, each with an anchor.
@@ -32,11 +33,11 @@ describe('StatementDraft', () => {
 		const stored = StatementDraft.fromProperty(createLabelProperty());
 		const changed = stored.withLiteralText(0, 'Oak');
 
-		expect(changed.values[0]).toMatchObject({ kind: 'term', term: { kind: 'literal', value: 'Oak', language: 'en' } });
+		expect(changed.values[0]).toMatchObject({ kind: 'term', term: RdfDataFactory.literal('Oak', 'en') });
 		expect(changed.hasSameValues(stored)).toBe(false);
 		expect(changed.withLiteralText(0, 'Tree').hasSameValues(stored)).toBe(true);
 		expect(stored.withLiteralText(2, 'x')).toBe(stored);
-		expect(changed.toStatementValues()[0]).toEqual({ kind: 'term', term: { kind: 'literal', value: 'Oak', language: 'en' } });
+		expect(changed.toStatementValues()[0]).toEqual({ kind: 'term', term: RdfDataFactory.literal('Oak', 'en') });
 	});
 
 	it('gives a literal another tag, keeping its text, and restores the written value for its original tag', () => {
@@ -44,31 +45,40 @@ describe('StatementDraft', () => {
 		const german = stored.withLiteralTag(0, { language: 'de' });
 		const typed = stored.withLiteralTag(0, { datatype: XSD.string });
 
-		expect(german.values[0]).toMatchObject({ kind: 'term', term: { kind: 'literal', value: 'Tree', language: 'de' } });
+		expect(german.values[0]).toMatchObject({ kind: 'term', term: RdfDataFactory.literal('Tree', 'de') });
 		expect(german.withLiteralTag(0, { language: 'en' }).hasSameValues(stored)).toBe(true);
-		expect(typed.values[0]).toMatchObject({ kind: 'term', term: { kind: 'literal', value: 'Tree', datatype: XSD.string } });
+		expect(typed.values[0]).toMatchObject({ kind: 'term', term: RdfDataFactory.literal('Tree', RdfDataFactory.namedNode(XSD.string)) });
 		expect(stored.withLiteralTag(2, { language: 'de' })).toBe(stored);
 	});
 
 	it('adds and removes values and takes a predicate', () => {
-		const draft = StatementDraft.EMPTY.withPredicate(RDFS.comment).withValueAppended({ kind: 'literal', value: 'x' });
+		const draft = StatementDraft.EMPTY.withPredicate(RDFS.comment).withValueAppended(RdfDataFactory.literal('x'));
 
 		expect(StatementDraft.EMPTY.isComplete).toBe(false);
 		expect(draft.isComplete).toBe(true);
 		expect(draft.withoutValue(0).isComplete).toBe(false);
 	});
 
+	it('compares values as terms, whatever object holds them', () => {
+		const draft = new StatementDraft(RDFS.label, [{ kind: 'term', term: RdfDataFactory.literal('Oak', 'en') }]);
+		const revived = new StatementDraft(RDFS.label, [{ kind: 'term', term: RdfDataFactory.fromTerm(RdfDataFactory.literal('Oak', 'en')) }]);
+		const other = new StatementDraft(RDFS.label, [{ kind: 'term', term: RdfDataFactory.literal('Oak', 'de') }]);
+
+		expect(draft.hasSameValues(revived)).toBe(true);
+		expect(draft.hasSameValues(other)).toBe(false);
+	});
+
 	it('carries a draft over to the statement as written after an edit, by term and by the place of blank nodes', () => {
-		const node: TermView = { term: { kind: 'bnode', id: 'n1' }, editable: true, anchor: 1, nested: { id: 'b:n1', propertyCount: 1 } };
-		const before = new StatementDraft(RDFS.label, [{ kind: 'written', view: node }, { kind: 'term', term: { kind: 'literal', value: 'Oak', language: 'en' } }, { kind: 'term', term: { kind: 'literal', value: '1', datatype: XSD.integer } }]);
+		const node: TermView = { term: RdfDataFactory.blankNode('n1'), editable: true, anchor: 1, nested: { id: 'b:n1', propertyCount: 1 } };
+		const before = new StatementDraft(RDFS.label, [{ kind: 'written', view: node }, { kind: 'term', term: RdfDataFactory.literal('Oak', 'en') }, { kind: 'term', term: RdfDataFactory.literal('1', RdfDataFactory.namedNode(XSD.integer)) }]);
 		const after = withAnchors(createTestResourceDetail([createProperty('rdfs:label', [
-			{ term: { kind: 'bnode', id: 'n7' }, editable: true, nested: { id: 'b:n7', propertyCount: 1 } },
+			{ term: RdfDataFactory.blankNode('n7'), editable: true, nested: { id: 'b:n7', propertyCount: 1 } },
 			createLiteralView('Oak', 'en')
 		])])).properties[0];
 		const rebased = before.rebasedOnto(StatementDraft.fromProperty(after));
 
 		expect(rebased.values.map(value => value.kind)).toEqual(['written', 'written', 'term']);
-		expect(rebased.toStatementValues()).toEqual([{ kind: 'existing', anchor: 110 }, { kind: 'existing', anchor: 120 }, { kind: 'term', term: { kind: 'literal', value: '1', datatype: XSD.integer } }]);
+		expect(rebased.toStatementValues()).toEqual([{ kind: 'existing', anchor: 110 }, { kind: 'existing', anchor: 120 }, { kind: 'term', term: RdfDataFactory.literal('1', RdfDataFactory.namedNode(XSD.integer)) }]);
 		expect(rebased.hasSameValues(StatementDraft.fromProperty(after))).toBe(false);
 	});
 });

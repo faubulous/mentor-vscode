@@ -92,7 +92,7 @@ export class ResourceListFilter {
 			return true;
 		}
 
-		const iri = resource.term.kind === 'iri' ? resource.term.iri : resource.id;
+		const iri = resource.term.termType === 'NamedNode' ? resource.term.value : resource.id;
 
 		return [iri, resource.prefixedName ?? '', resource.label, resource.description ?? ''].join(' ').toLowerCase().includes(this._needle);
 	}

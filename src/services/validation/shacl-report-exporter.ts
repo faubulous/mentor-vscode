@@ -1,6 +1,6 @@
 import { Store } from '@faubulous/mentor-rdf';
 import { getSeverityLabel } from '@src/utilities/shacl';
-import { RdfDataFactory } from '@src/utilities/rdf';
+import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { ShaclValidationResult } from './shacl-validator-engine';
 
 /**

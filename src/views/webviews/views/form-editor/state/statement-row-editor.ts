@@ -1,6 +1,6 @@
 import { EditOperation } from '@src/services/editing/edit-operation';
 import { ValueKind } from '@src/utilities/value-kind';
-import { PropertyView, TermRef } from '../form-editor-model';
+import { PropertyView, TermView } from '../form-editor-model';
 import { EditOutcome } from '../services/editing-host-service.interface';
 import { LiteralDatatypes } from '../services/statement/literal-datatypes';
 import { EditWriter } from './edit-writer';
@@ -225,8 +225,8 @@ export class StatementRowEditor implements EditWriter {
 		}
 
 		if (this.isNew) {
-			this._update(this._state.withPredicate(reading.term.iri));
-		} else if (reading.term.iri !== this._state.stored.predicate) {
+			this._update(this._state.withPredicate(reading.term.value));
+		} else if (reading.term.value !== this._state.stored.predicate) {
 			this._request('predicate');
 		}
 	}
@@ -261,7 +261,7 @@ export class StatementRowEditor implements EditWriter {
 	 * Add a value picked or typed for the field of a new value, and empty the field.
 	 * @param term The term.
 	 */
-	addValue(term: TermRef): void {
+	addValue(term: TermView['term']): void {
 		this._update(this._state.withValueAppended(term));
 	}
 
@@ -416,13 +416,13 @@ export class StatementRowEditor implements EditWriter {
 		const reading = this._data.reader.readPredicate(this._state.predicateText);
 		const predicate = this._state.stored.predicate;
 
-		if (!reading.term || !predicate || reading.term.iri === predicate) {
+		if (!reading.term || !predicate || reading.term.value === predicate) {
 			return undefined;
 		}
 
-		this._claimedPredicate = reading.term.iri;
+		this._claimedPredicate = reading.term.value;
 
-		return { op: 'setPredicate', subject: this._data.subject, predicate, newPredicate: reading.term.iri };
+		return { op: 'setPredicate', subject: this._data.subject, predicate, newPredicate: reading.term.value };
 	}
 
 	/**

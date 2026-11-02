@@ -3,7 +3,7 @@ import { applyTextEdits } from '@src/utilities/text-edits';
 import { DocumentReader } from './document-reader';
 import { EditPlan, ExpectedStatementChange } from './edit-plan';
 import { SynthesisInput } from './synthesis-context';
-import { getGraphKey, getGraphPatternKey, getPatternKey, getTermKey } from './term-patterns';
+import { getMatchKey, getPatternMatchKey } from './term-patterns';
 
 /**
  * The outcome of verifying a plan: the parsed result of the edited text, or why it is wrong.
@@ -63,7 +63,7 @@ function _changeProblem(before: readonly QuadContext[], after: readonly QuadCont
 	_count(actual, after, 1);
 
 	for (const change of expectedChanges) {
-		const key = _keyOf(getGraphPatternKey(change.graph), getPatternKey(change.subject), change.predicate, getPatternKey(change.object));
+		const key = _keyOf(getPatternMatchKey(change.graph), getPatternMatchKey(change.subject), change.predicate, getPatternMatchKey(change.object));
 
 		expected.set(key, (expected.get(key) ?? 0) + change.delta);
 	}
@@ -90,7 +90,7 @@ function _changeProblem(before: readonly QuadContext[], after: readonly QuadCont
  */
 function _count(changes: Map<string, number>, quadContexts: readonly QuadContext[], sign: number): void {
 	for (const quad of quadContexts) {
-		const key = _keyOf(getGraphKey(quad.graph), getTermKey(quad.subject), quad.predicate.value, getTermKey(quad.object));
+		const key = _keyOf(getMatchKey(quad.graph), getMatchKey(quad.subject), quad.predicate.value, getMatchKey(quad.object));
 
 		changes.set(key, (changes.get(key) ?? 0) + sign);
 	}

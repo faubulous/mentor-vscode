@@ -6,9 +6,9 @@ import { RDF, XSD } from '@faubulous/mentor-rdf';
 import { RdfSyntax } from '@faubulous/mentor-rdf-parsers';
 import { EX, SynthesisFixtureOptions, anchorOf, createSynthesisInput, synthesizeEdit, synthesizePlan } from '@src/utilities/mocks/edit-synthesis-fixtures';
 import { StatementValue } from '../statement-value';
-import { TermRef } from '../term-ref';
+import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 
-const subject: TermRef = { kind: 'iri', iri: `${EX}s` };
+const subject = RdfDataFactory.namedNode(`${EX}s`);
 const P = `${EX}p`;
 const NT = 'http://example.org/';
 const NTRIPLES: SynthesisFixtureOptions = { syntax: RdfSyntax.NTriples };
@@ -19,14 +19,14 @@ const TRIG: SynthesisFixtureOptions = { syntax: RdfSyntax.TriG };
  * A new IRI value in the example namespace.
  */
 function iri(name: string): StatementValue {
-	return { kind: 'term', term: { kind: 'iri', iri: `${EX}${name}` } };
+	return { kind: 'term', term: RdfDataFactory.namedNode(`${EX}${name}`) };
 }
 
 /**
  * A new literal value.
  */
 function literal(value: string, extra: { language?: string; datatype?: string } = {}): StatementValue {
-	return { kind: 'term', term: { kind: 'literal', value, ...extra } };
+	return { kind: 'term', term: RdfDataFactory.literal(value, extra.language ?? (extra.datatype ? RdfDataFactory.namedNode(extra.datatype) : undefined)) };
 }
 
 /**
@@ -74,6 +74,17 @@ describe('ValueListOperations.setValues in Turtle', () => {
 		expect(setValues(body, [kept(body, 'ex:a'), kept(body, 'ex:b'), iri('c')])).toBe(`ex:s ex:p ex:a,\n        ex:b,\n        ex:c .\n`);
 	});
 
+	it('writes a literal with a base direction, and a language tag in the spelling of the document', () => {
+		const body = `ex:s ex:p "Color"@en-US .\n`;
+		const values: StatementValue[] = [
+			kept(body, '"Color"'),
+			{ kind: 'term', term: RdfDataFactory.literal('Colour', 'en-US') },
+			{ kind: 'term', term: RdfDataFactory.literal('مرحبا', { language: 'ar', direction: 'rtl' }) }
+		];
+
+		expect(setValues(body, values)).toBe(`ex:s ex:p "Color"@en-US, "Colour"@en-US, "مرحبا"@ar--rtl .\n`);
+	});
+
 	it('writes literals, numbers and the datatypes the way the document does', () => {
 		const body = `ex:s ex:p ex:a .\n`;
 
@@ -113,7 +124,7 @@ describe('ValueListOperations.setValues in Turtle', () => {
 		const body = `ex:s ex:p [ ex:q "x" ] .\n`;
 		const node = createSynthesisInput(body).quadContexts.find(quad => quad.predicate.value === `${EX}q`)!.subject;
 
-		expect(synthesizeEdit(body, [{ op: 'setValues', subject: { kind: 'bnode', id: node.value }, predicate: `${EX}q`, values: [literal('y'), literal('2', { datatype: XSD.integer })] }]))
+		expect(synthesizeEdit(body, [{ op: 'setValues', subject: RdfDataFactory.blankNode(node.value), predicate: `${EX}q`, values: [literal('y'), literal('2', { datatype: XSD.integer })] }]))
 			.toBe(`ex:s ex:p [ ex:q "y", 2 ] .\n`);
 	});
 
@@ -179,7 +190,7 @@ describe('ValueListOperations.setValues in Turtle', () => {
 
 		expect(setValues(body, [{ kind: 'existing', anchor: 3 }])).toBe('rejected:notFound');
 		expect(setValues(body, [kept(body, 'ex:a'), kept(body, 'ex:a')])).toBe('rejected:invalidTerm');
-		expect(setValues(body, [{ kind: 'term', term: { kind: 'iri', iri: 'not an iri' } }])).toBe('rejected:invalidTerm');
+		expect(setValues(body, [{ kind: 'term', term: RdfDataFactory.namedNode('not an iri') }])).toBe('rejected:invalidTerm');
 		expect(setValues(body, [literal('x', { language: 'not a tag' })])).toBe('rejected:invalidTerm');
 		expect(setValues(body, [{ kind: 'list', items: [{ kind: 'existing', anchor: anchorOf(body, 'ex:a') }] }])).toBe('rejected:notFound');
 	});
@@ -196,14 +207,14 @@ describe('ValueListOperations.setValues in TriG', () => {
 		const body = `ex:g { ex:s ex:p "a" . }\n`;
 		const plan = synthesizePlan(body, [{ op: 'setValues', subject, predicate: P, values: [literal('b')] }], TRIG);
 
-		expect(plan.expectedChanges.map(change => [change.graph, change.delta])).toEqual([[{ kind: 'iri', iri: `${EX}g` }, -1], [{ kind: 'iri', iri: `${EX}g` }, 1]]);
+		expect(plan.expectedChanges.map(change => [change.graph, change.delta])).toEqual([[RdfDataFactory.namedNode(`${EX}g`), -1], [RdfDataFactory.namedNode(`${EX}g`), 1]]);
 	});
 
 	it('declares the graph of the block a new predicate is written into', () => {
 		const body = `ex:s ex:q "a" .\nex:g { ex:s ex:r "b" . }\n`;
 		const plan = synthesizePlan(body, [{ op: 'setValues', subject, predicate: P, values: [literal('c')] }], TRIG);
 
-		expect(plan.expectedChanges).toEqual([{ subject, predicate: P, object: { kind: 'literal', value: 'c' }, graph: { kind: 'iri', iri: `${EX}g` }, delta: 1 }]);
+		expect(plan.expectedChanges).toEqual([{ subject, predicate: P, object: RdfDataFactory.literal('c'), graph: RdfDataFactory.namedNode(`${EX}g`), delta: 1 }]);
 		expect(setValues(body, [literal('c')], TRIG)).toContain('ex:g { ex:s ex:r "b" ;');
 	});
 });

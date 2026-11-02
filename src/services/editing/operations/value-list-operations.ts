@@ -3,7 +3,7 @@ import { EditPlan, createPlan, netExpectedChanges } from '../edit-plan';
 import { SubjectBlock } from '../statement-model';
 import { StatementValueWriter } from '../statement-value-writer';
 import { SynthesisContext } from '../synthesis-context';
-import { toGraphPattern, toPatternFromRef } from '../term-patterns';
+import { toGraphPattern, toTermPattern } from '../term-patterns';
 import { NewValue, ValueList } from '../value-list';
 import { TextEditSpec } from '@src/utilities/text-edits';
 import { ValueListResolver } from '../value-list-resolver';
@@ -47,7 +47,7 @@ export class ValueListOperations {
 		const writer = new StatementValueWriter(context, list.items);
 		const target = list.groups.length === 0 ? new PropertyOperations(context).newPropertyBlock(operation.subject) : undefined;
 		const written = target ? this._writeNewPredicate(operation, list, writer, target) : this._writeValues(operation, list, writer);
-		const subject = toPatternFromRef(operation.subject);
+		const subject = toTermPattern(operation.subject);
 		const removed = list.groups.flatMap(group => group.removed);
 		const added = target
 			? list.added.map(value => ({ value, block: target }))

@@ -4,12 +4,13 @@ import { act, renderHook } from '@testing-library/react';
 import { ResourceDetail } from '../form-editor-model';
 import { ResourceDataService } from '../services/resource-data-service';
 import { useResourceDetail } from './use-resource-detail';
+import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 
 /**
  * Create a resource detail with no properties.
  */
 function detail(id: string): ResourceDetail {
-	return { id, term: { kind: 'iri', iri: `http://example.org/${id}` }, properties: [] };
+	return { id, term: RdfDataFactory.namedNode(`http://example.org/${id}`), properties: [] };
 }
 
 describe('useResourceDetail', () => {

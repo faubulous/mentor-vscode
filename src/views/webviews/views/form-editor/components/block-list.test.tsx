@@ -69,7 +69,7 @@ describe('BlockList', () => {
 
 		await act(async () => {
 			renderWebview(
-				<FormEditorContext.Provider value={{ readOnly: true, namespaces: [] }}>
+				<FormEditorContext.Provider value={{ readOnly: true, namespaces: [], languageTags: {} }}>
 					<BlockList blocks={blocks} dataService={dataService} scrollElement={scrollElement} cardStates={ResourceCardStates.NONE} onToggle={() => undefined} />
 				</FormEditorContext.Provider>
 			);

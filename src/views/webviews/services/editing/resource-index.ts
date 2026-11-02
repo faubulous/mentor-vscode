@@ -1,7 +1,7 @@
 import { QuadContext } from '@faubulous/mentor-rdf-parsers';
 import { RDF } from '@faubulous/mentor-rdf';
-import { Term } from '@rdfjs/types';
-import { NamespaceInfo, ResourceId, ResourceSummary, TermRef } from '@src/views/webviews/views/form-editor/form-editor-model';
+import { BlankNode, NamedNode, Term } from '@rdfjs/types';
+import { NamespaceInfo, ResourceId, ResourceSummary } from '@src/views/webviews/views/form-editor/form-editor-model';
 import { ResourceIdentities } from './resource-identities';
 
 /**
@@ -16,7 +16,7 @@ export interface ResourceIndexEntry {
 	/**
 	 * The term naming the resource.
 	 */
-	term: TermRef;
+	term: NamedNode | BlankNode;
 
 	/**
 	 * The statements about the resource, in document order.

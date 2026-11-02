@@ -1,25 +1,7 @@
-import { BaseQuad, DatasetCore, Literal, Quad, Quad_Graph, Term } from '@rdfjs/types';
+import { BaseQuad, Literal, Quad, Quad_Graph, Term } from '@rdfjs/types';
 import { termToString } from 'rdf-string';
-import { DataFactory } from 'rdf-data-factory';
-import { RdfStore } from 'rdf-stores';
 import { GraphUriGenerator, LanguageTagUsageStats, Store, XSD, RDF, RDFS } from '@faubulous/mentor-rdf';
 import { InferenceUri } from '@src/providers/inference-uri';
-
-/**
- * The shared RDF/JS DataFactory of the extension, extended with a `dataset()` method
- * (DatasetCoreFactory) as required by libraries that consume an RDF/JS environment such as
- * shacl-engine.
- *
- * `literal()` must tolerate `null` as the language/datatype argument, because
- * shacl-engine calls `factory.literal(text, message.language || null)` when there
- * is no language tag. The rdf-data-factory implementation treats `null` like
- * `undefined` and returns an `xsd:string` literal.
- */
-export const RdfDataFactory = Object.assign(new DataFactory(), {
-	dataset(): DatasetCore {
-		return RdfStore.createDefault().asDataset();
-	}
-});
 
 /**
  * The shared graph URI generator of the store's reasoner. It names the inference graphs the way

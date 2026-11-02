@@ -3,6 +3,7 @@ import { _RDF, _XSD, RDF, XSD } from '@faubulous/mentor-rdf';
 import { RdfSyntax } from '@faubulous/mentor-rdf-parsers';
 import { EditRejectionError } from './edit-rejection';
 import { TermWriter, TermWriterOptions } from './term-writer';
+import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 
 const EX = 'http://example.org/';
 
@@ -15,6 +16,7 @@ function writer(overrides: Partial<TermWriterOptions> = {}): TermWriter {
 		syntax: RdfSyntax.Turtle,
 		useTypeKeyword: true,
 		blankNodeLabels: new Map(),
+		languageTags: {},
 		...overrides
 	});
 }
@@ -23,7 +25,7 @@ describe('TermWriter', () => {
 	describe('IRIs', () => {
 		it('writes a prefixed name where the document declares the prefix', () => {
 			expect(writer().writeIri(`${EX}a`)).toBe('ex:a');
-			expect(writer().writeObject({ kind: 'iri', iri: `${EX}a` })).toBe('ex:a');
+			expect(writer().writeObject(RdfDataFactory.namedNode(`${EX}a`))).toBe('ex:a');
 		});
 
 		it('writes a full IRI where no prefix matches', () => {
@@ -55,45 +57,52 @@ describe('TermWriter', () => {
 
 	describe('literals', () => {
 		it('writes plain strings quoted', () => {
-			expect(writer().writeLiteral({ kind: 'literal', value: 'Tree' })).toBe('"Tree"');
+			expect(writer().writeLiteral(RdfDataFactory.literal('Tree'))).toBe('"Tree"');
+		});
+
+		it('writes a language tag the document writes in its spelling, and any other in lower case', () => {
+			const spelled = writer({ languageTags: { 'en-us': 'en-US' } });
+
+			expect(spelled.writeLiteral(RdfDataFactory.literal('Color', 'en-US'))).toBe('"Color"@en-US');
+			expect(spelled.writeLiteral(RdfDataFactory.literal('Farbe', 'de-DE'))).toBe('"Farbe"@de-de');
 		});
 
 		it('writes language tags and datatypes', () => {
-			expect(writer().writeLiteral({ kind: 'literal', value: 'Tree', language: 'en' })).toBe('"Tree"@en');
-			expect(writer().writeLiteral({ kind: 'literal', value: 'x', datatype: `${EX}T` })).toBe('"x"^^ex:T');
+			expect(writer().writeLiteral(RdfDataFactory.literal('Tree', 'en'))).toBe('"Tree"@en');
+			expect(writer().writeLiteral(RdfDataFactory.literal('x', RdfDataFactory.namedNode(`${EX}T`)))).toBe('"x"^^ex:T');
 		});
 
 		it('writes numbers and booleans bare where the syntax allows', () => {
-			expect(writer().writeLiteral({ kind: 'literal', value: '42', datatype: XSD.integer })).toBe('42');
-			expect(writer().writeLiteral({ kind: 'literal', value: '4.2', datatype: XSD.decimal })).toBe('4.2');
-			expect(writer().writeLiteral({ kind: 'literal', value: 'true', datatype: XSD.boolean })).toBe('true');
+			expect(writer().writeLiteral(RdfDataFactory.literal('42', RdfDataFactory.namedNode(XSD.integer)))).toBe('42');
+			expect(writer().writeLiteral(RdfDataFactory.literal('4.2', RdfDataFactory.namedNode(XSD.decimal)))).toBe('4.2');
+			expect(writer().writeLiteral(RdfDataFactory.literal('true', RdfDataFactory.namedNode(XSD.boolean)))).toBe('true');
 		});
 
 		it('quotes a number whose value is not a valid lexical form', () => {
-			expect(writer().writeLiteral({ kind: 'literal', value: 'abc', datatype: XSD.integer })).toBe('"abc"^^xsd:integer');
+			expect(writer().writeLiteral(RdfDataFactory.literal('abc', RdfDataFactory.namedNode(XSD.integer)))).toBe('"abc"^^xsd:integer');
 		});
 
 		it('writes typed literals in full in N-Triples', () => {
-			expect(writer({ syntax: RdfSyntax.NTriples }).writeLiteral({ kind: 'literal', value: '42', datatype: XSD.integer })).toBe(`"42"^^<${XSD.integer}>`);
+			expect(writer({ syntax: RdfSyntax.NTriples }).writeLiteral(RdfDataFactory.literal('42', RdfDataFactory.namedNode(XSD.integer)))).toBe(`"42"^^<${XSD.integer}>`);
 		});
 
 		it('escapes quotes and uses long strings for line breaks', () => {
-			expect(writer().writeLiteral({ kind: 'literal', value: 'a "b"' })).toBe('"a \\"b\\""');
-			expect(writer().writeLiteral({ kind: 'literal', value: 'one\ntwo' })).toBe('"""one\ntwo"""');
+			expect(writer().writeLiteral(RdfDataFactory.literal('a "b"'))).toBe('"a \\"b\\""');
+			expect(writer().writeLiteral(RdfDataFactory.literal('one\ntwo'))).toBe('"""one\ntwo"""');
 		});
 
 		it('rejects an invalid language tag', () => {
-			expect(() => writer().writeLiteral({ kind: 'literal', value: 'x', language: 'en us' })).toThrow(EditRejectionError);
+			expect(() => writer().writeLiteral(RdfDataFactory.literal('x', 'en us'))).toThrow(EditRejectionError);
 		});
 	});
 
 	describe('subjects', () => {
 		it('rejects a literal as subject', () => {
-			expect(() => writer().writeSubject({ kind: 'literal', value: 'x' })).toThrow(EditRejectionError);
+			expect(() => writer().writeSubject(RdfDataFactory.literal('x'))).toThrow(EditRejectionError);
 		});
 
 		it('writes an IRI subject like an object', () => {
-			expect(writer().writeSubject({ kind: 'iri', iri: `${EX}s` })).toBe('ex:s');
+			expect(writer().writeSubject(RdfDataFactory.namedNode(`${EX}s`))).toBe('ex:s');
 		});
 	});
 });

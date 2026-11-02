@@ -18,7 +18,7 @@ function renderCard(context: Partial<FormEditorContextValue> = {}, expanded = fa
 	const onToggle = vi.fn();
 	const dataService = createResourceDataServiceStub([createTestResourceDetail([createProperty('ex:p', [createIriView('ex:A', 'A')])])].map(detail => ({ ...detail, id: summary.id })));
 	const result = renderWebview(
-		<FormEditorContext.Provider value={{ readOnly: true, namespaces: [], ...context }}>
+		<FormEditorContext.Provider value={{ readOnly: true, namespaces: [], languageTags: {}, ...context }}>
 			<ResourceCard summary={summary} dataService={dataService} expanded={expanded} writing={writing} onToggle={onToggle} />
 		</FormEditorContext.Provider>
 	);

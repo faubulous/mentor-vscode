@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { Store, VocabularyRepository } from '@faubulous/mentor-rdf';
-import { QuadContext, RdfSyntax } from '@faubulous/mentor-rdf-parsers';
+import { IToken, QuadContext, RdfSyntax } from '@faubulous/mentor-rdf-parsers';
 import { DocumentReader } from '@src/services/editing/document-reader';
 import { ISettingsService } from '@src/services/core/settings-service.interface';
 import { IDocumentContextService } from '@src/services/document/document-context-service.interface';
@@ -627,6 +627,11 @@ export interface ResolvingDocumentContextOptions {
 	 * The predicates labels and descriptions are read from.
 	 */
 	predicates?: { label: string[]; description: string[] };
+
+	/**
+	 * The tokens of the document; none by default.
+	 */
+	tokens?: IToken[];
 }
 
 /**
@@ -651,5 +656,5 @@ export function createResolvingDocumentContext(options: ResolvingDocumentContext
 		getResourceDescription: iri => (descriptions[iri] ? { value: descriptions[iri], language: undefined } : undefined)
 	});
 
-	return { ...context, syntax: RdfSyntax.Turtle } as ITokenizedDocumentContext;
+	return { ...context, syntax: RdfSyntax.Turtle, tokens: options.tokens ?? [] } as ITokenizedDocumentContext;
 }

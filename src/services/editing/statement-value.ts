@@ -1,4 +1,4 @@
-import { TermRef } from './term-ref';
+import { BlankNode, Literal, NamedNode } from '@rdfjs/types';
 
 /**
  * A value of a statement as an edit states it. Values written in the document are referred to
@@ -14,7 +14,7 @@ export type StatementValue =
 	/**
 	 * A new IRI, literal or labelled blank node.
 	 */
-	| { kind: 'term'; term: TermRef }
+	| { kind: 'term'; term: NamedNode | BlankNode | Literal }
 	/**
 	 * A new list of values.
 	 */

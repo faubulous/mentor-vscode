@@ -5,7 +5,9 @@ import { EditRejectionError } from './edit-rejection';
 import { CollectionItemSpan } from './statement-model';
 import { StatementValue } from './statement-value';
 import { SynthesisContext } from './synthesis-context';
-import { toPatternFromRef, toTermPattern } from './term-patterns';
+import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
+import { ANY_BLANK_NODE } from './any-blank-node';
+import { toTermPattern } from './term-patterns';
 
 /**
  * Writes the new values of an edit in the syntax of the document and tells which statements
@@ -84,9 +86,9 @@ export class StatementValueWriter {
 	private _patternOf(value: StatementValue): TermPattern {
 		switch (value.kind) {
 			case 'term':
-				return toPatternFromRef(value.term);
+				return toTermPattern(value.term);
 			case 'list':
-				return value.items.length === 0 ? { kind: 'iri', iri: RDF.nil } : { kind: 'anyBlankNode' };
+				return value.items.length === 0 ? RdfDataFactory.namedNode(RDF.nil) : ANY_BLANK_NODE;
 			default:
 				return toTermPattern(this._item(value.anchor).term);
 		}
@@ -115,11 +117,11 @@ export class StatementValueWriter {
 			}));
 		}
 
-		const node: TermPattern = { kind: 'anyBlankNode' };
+		const node: TermPattern = ANY_BLANK_NODE;
 
 		return value.items.flatMap((item, index) => [
 			{ subject: node, predicate: RDF.first, object: this._patternOf(item), graph, delta: 1 },
-			{ subject: node, predicate: RDF.rest, object: index < value.items.length - 1 ? node : { kind: 'iri', iri: RDF.nil }, graph, delta: 1 },
+			{ subject: node, predicate: RDF.rest, object: index < value.items.length - 1 ? node : RdfDataFactory.namedNode(RDF.nil), graph, delta: 1 },
 			...this._nestedChangesOf(graph, item)
 		]);
 	}

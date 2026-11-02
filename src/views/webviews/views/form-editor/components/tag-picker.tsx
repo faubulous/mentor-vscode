@@ -1,3 +1,4 @@
+import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { XSD } from '@faubulous/mentor-rdf/ontologies';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { VscodeTextfield } from '@vscode-elements/elements';
@@ -72,7 +73,7 @@ export function TagPicker({ text, languages, services, onPick, onCancel }: TagPi
 		const reading = services.reader.readIri(trimmed);
 
 		if (reading.term) {
-			onPick({ datatype: reading.term.iri });
+			onPick({ datatype: reading.term.value });
 		}
 	};
 
@@ -92,7 +93,7 @@ export function TagPicker({ text, languages, services, onPick, onCancel }: TagPi
  */
 function _optionsOf(text: string, languages: readonly string[], services: StatementServices): ComboboxOption<LiteralTag>[] {
 	const datatypes = LiteralDatatypes.fitting(text).map(iri => {
-		const prefixedName = services.resolver.viewOf({ kind: 'iri', iri }).prefixedName;
+		const prefixedName = services.resolver.viewOf(RdfDataFactory.namedNode(iri)).prefixedName;
 
 		return { label: getDatatypeLabel(iri) ?? prefixedName ?? iri, detail: prefixedName ?? iri, keywords: prefixedName, value: iri === XSD.string ? {} : { datatype: iri } };
 	});

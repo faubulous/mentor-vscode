@@ -8,6 +8,7 @@ import { TurtleDocument } from '@src/languages/turtle/turtle-document';
 import { IDocumentTokenSource } from '@src/services/document/document-token-source.interface';
 import { EditableTextDocument, applyWorkspaceEditTo, createEditableTextDocument, createTurtleDocument } from '@src/utilities/mocks/factories';
 import { EditRequest, FormEditorEditHandler } from './form-editor-edit-handler';
+import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 
 const EX = 'http://example.org/';
 const PREAMBLE = `@prefix ex: <${EX}> .\n\n`;
@@ -41,7 +42,7 @@ function setValueRequest(baseVersion: number, value: string): EditRequest {
 	return {
 		editId: 'e1',
 		baseVersion,
-		operations: [{ op: 'setValues', subject: { kind: 'iri', iri: `${EX}s` }, predicate: `${EX}p`, values: [{ kind: 'term', term: { kind: 'literal', value } }] }]
+		operations: [{ op: 'setValues', subject: RdfDataFactory.namedNode(`${EX}s`), predicate: `${EX}p`, values: [{ kind: 'term', term: RdfDataFactory.literal(value) }] }]
 	};
 }
 
@@ -128,7 +129,7 @@ describe('FormEditorEditHandler', () => {
 		const request: EditRequest = {
 			editId: 'e2',
 			baseVersion: 1,
-			operations: [{ op: 'setValues', subject: { kind: 'iri', iri: `${EX}s` }, predicate: `${EX}p`, values: [] }]
+			operations: [{ op: 'setValues', subject: RdfDataFactory.namedNode(`${EX}s`), predicate: `${EX}p`, values: [] }]
 		};
 
 		const outcome = await new FormEditorEditHandler().handle(request, { document, context });

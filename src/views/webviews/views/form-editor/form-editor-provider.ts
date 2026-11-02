@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { EditOperation } from '@src/services/editing/edit-operation';
 import { FormEditorSession } from './form-editor-session';
 import { ResourceId } from './form-editor-model';
+import { reviveTerms } from '@src/utilities/rdf-terms';
 
 /**
  * Provides the form based editor for RDF documents. The editor is a custom *text* editor: it
@@ -148,7 +149,7 @@ export class FormEditorProvider implements vscode.CustomTextEditorProvider, vsco
 					throw new Error(`No form editor shows ${documentUri}.`);
 				}
 
-				return session.applyEdit(`e2e-${Date.now()}`, version, operations);
+				return session.applyEdit(`e2e-${Date.now()}`, version, reviveTerms(operations));
 			})
 		);
 	}

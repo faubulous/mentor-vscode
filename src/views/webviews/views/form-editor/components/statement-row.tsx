@@ -1,4 +1,5 @@
 import { FocusEvent, KeyboardEvent } from 'react';
+import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { PropertyView, TermView } from '../form-editor-model';
 import { useRowEditorState } from '../hooks/use-row-editor-state';
 import { StatementServices } from '../hooks/use-statement-services';
@@ -190,11 +191,11 @@ function _shownValues(values: readonly RowValue[], services: StatementServices |
  * @returns The kind.
  */
 function _kindOf(view: TermView): 'literal' | 'resource' | 'whole' {
-	if (view.collection || view.term.kind === 'bnode') {
+	if (view.collection || view.term.termType === 'BlankNode') {
 		return 'whole';
 	}
 
-	return view.term.kind === 'literal' ? 'literal' : 'resource';
+	return view.term.termType === 'Literal' ? 'literal' : 'resource';
 }
 
 /**
@@ -204,5 +205,5 @@ function _kindOf(view: TermView): 'literal' | 'resource' | 'whole' {
  * @returns The view, or `undefined` while the row names no predicate.
  */
 function _editedPredicateView(state: StatementRowState, services: StatementServices): TermView | undefined {
-	return state.draft.predicate ? services.resolver.viewOf({ kind: 'iri', iri: state.draft.predicate }) : undefined;
+	return state.draft.predicate ? services.resolver.viewOf(RdfDataFactory.namedNode(state.draft.predicate)) : undefined;
 }

@@ -1,16 +1,10 @@
 import { Literal, Quad, Term } from '@rdfjs/types';
-import { DataFactory } from 'rdf-data-factory';
+import { RdfDataFactory } from './rdf-data-factory';
 
 /**
  * The term types of RDF/JS.
  */
 const TERM_TYPES = new Set(['NamedNode', 'BlankNode', 'Literal', 'Variable', 'DefaultGraph', 'Quad']);
-
-/**
- * Creates the terms of revived messages. It is the factory of `rdf-data-factory`, which the store
- * creates its terms with as well.
- */
-const factory = new DataFactory();
 
 /**
  * Turn the RDF/JS terms in a message that crossed the boundary between the extension host and a
@@ -56,16 +50,16 @@ export function copyTerm<T extends Term>(term: T): T {
 	if (term.termType === 'Literal' && (term as Literal).direction) {
 		const literal = term as Literal;
 
-		return factory.literal(literal.value, { language: literal.language, direction: literal.direction! }) as unknown as T;
+		return RdfDataFactory.literal(literal.value, { language: literal.language, direction: literal.direction! }) as unknown as T;
 	}
 
 	if (term.termType === 'Quad') {
 		const quad = term as unknown as Quad;
 
-		return factory.quad(copyTerm(quad.subject), copyTerm(quad.predicate), copyTerm(quad.object), copyTerm(quad.graph)) as unknown as T;
+		return RdfDataFactory.quad(copyTerm(quad.subject), copyTerm(quad.predicate), copyTerm(quad.object), copyTerm(quad.graph)) as unknown as T;
 	}
 
-	return factory.fromTerm(term);
+	return RdfDataFactory.fromTerm(term);
 }
 
 /**

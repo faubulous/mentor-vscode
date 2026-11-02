@@ -1,5 +1,7 @@
 import { StatementValue } from '@src/services/editing/statement-value';
-import { PropertyView, TermRef, TermView } from '../form-editor-model';
+import { Literal } from '@rdfjs/types';
+import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
+import { PropertyView, TermView } from '../form-editor-model';
 import { LiteralTag } from './literal-tag';
 import { RowValue } from './row-value';
 
@@ -26,7 +28,7 @@ export class StatementDraft {
 	 * @returns The draft.
 	 */
 	static fromProperty(property: PropertyView): StatementDraft {
-		const predicate = property.predicate.term.kind === 'iri' ? property.predicate.term.iri : undefined;
+		const predicate = property.predicate.term.termType === 'NamedNode' ? property.predicate.term.value : undefined;
 
 		return new StatementDraft(predicate, property.values.map(view => ({ kind: 'written', view })));
 	}
@@ -38,7 +40,7 @@ export class StatementDraft {
 	 * @returns `true` when the row can be edited.
 	 */
 	static canEdit(property: PropertyView): boolean {
-		return property.predicate.editable && property.predicate.term.kind === 'iri' && property.values.every(view => view.anchor !== undefined);
+		return property.predicate.editable && property.predicate.term.termType === 'NamedNode' && property.values.every(view => view.anchor !== undefined);
 	}
 
 	/**
@@ -62,7 +64,7 @@ export class StatementDraft {
 	 * @param term The term of the value.
 	 * @returns The draft with the value.
 	 */
-	withValueAppended(term: TermRef): StatementDraft {
+	withValueAppended(term: TermView['term']): StatementDraft {
 		return new StatementDraft(this.predicate, [...this.values, { kind: 'term', term }]);
 	}
 
@@ -86,16 +88,11 @@ export class StatementDraft {
 		const value = this.values[index];
 		const term = value ? _termOf(value) : undefined;
 
-		if (!value || term?.kind !== 'literal') {
+		if (!value || term?.termType !== 'Literal') {
 			return this;
 		}
 
-		const original = value.kind === 'written' ? value.view : value.replaces;
-		const next: RowValue = original?.term.kind === 'literal' && original.term.value === text && _sameTag(original.term, term)
-			? { kind: 'written', view: original }
-			: { kind: 'term', term: { ...term, value: text }, replaces: original };
-
-		return new StatementDraft(this.predicate, this.values.map((existing, position) => position === index ? next : existing));
+		return this._withLiteral(index, value, RdfDataFactory.literal(text, _tagOf(term)));
 	}
 
 	/**
@@ -109,15 +106,31 @@ export class StatementDraft {
 		const value = this.values[index];
 		const term = value ? _termOf(value) : undefined;
 
-		if (!value || term?.kind !== 'literal') {
+		if (!value || term?.termType !== 'Literal') {
 			return this;
 		}
 
+		const direction = tag.language && tag.language.toLowerCase() === term.language ? term.direction : undefined;
+		const languageOrDatatype = tag.language
+			? (direction ? { language: tag.language, direction } : tag.language)
+			: (tag.datatype ? RdfDataFactory.namedNode(tag.datatype) : undefined);
+
+		return this._withLiteral(index, value, RdfDataFactory.literal(term.value, languageOrDatatype));
+	}
+
+	/**
+	 * Put a changed literal in the place of a value. The written value is restored when the literal
+	 * equals it again.
+	 * @param index The index of the value.
+	 * @param value The value.
+	 * @param literal The changed literal.
+	 * @returns The draft with the literal.
+	 */
+	private _withLiteral(index: number, value: RowValue, literal: Literal): StatementDraft {
 		const original = value.kind === 'written' ? value.view : value.replaces;
-		const tagged: TermRef = { kind: 'literal', value: term.value, language: tag.language, datatype: tag.language ? undefined : tag.datatype };
-		const next: RowValue = original?.term.kind === 'literal' && original.term.value === term.value && _sameTag(original.term, tagged)
+		const next: RowValue = original?.term.equals(literal)
 			? { kind: 'written', view: original }
-			: { kind: 'term', term: tagged, replaces: original };
+			: { kind: 'term', term: literal, replaces: original };
 
 		return new StatementDraft(this.predicate, this.values.map((existing, position) => position === index ? next : existing));
 	}
@@ -137,9 +150,9 @@ export class StatementDraft {
 
 		const values = this.values.map((value): RowValue => {
 			const term = _termOf(value);
-			const match = term.kind === 'bnode'
-				? available.filter(view => view.term.kind === 'bnode')[blankNodes++]
-				: available.find(view => !used.has(view) && JSON.stringify(view.term) === JSON.stringify(term));
+			const match = term.termType === 'BlankNode'
+				? available.filter(view => view.term.termType === 'BlankNode')[blankNodes++]
+				: available.find(view => !used.has(view) && view.term.equals(term));
 
 			if (match && !used.has(match)) {
 				used.add(match);
@@ -187,18 +200,21 @@ export class StatementDraft {
  * @param value The value.
  * @returns The term.
  */
-function _termOf(value: RowValue): TermRef {
+function _termOf(value: RowValue): TermView['term'] {
 	return value.kind === 'written' ? value.view.term : value.term;
 }
 
 /**
- * Indicate whether two literals carry the same language tag and datatype.
- * @param first The first literal.
- * @param second The second literal.
- * @returns `true` for the same tag.
+ * The language tag, with its direction, or the datatype of a literal, as the data factory takes it.
+ * @param literal The literal.
+ * @returns The language tag or the datatype.
  */
-function _sameTag(first: Extract<TermRef, { kind: 'literal' }>, second: Extract<TermRef, { kind: 'literal' }>): boolean {
-	return (first.language ?? '') === (second.language ?? '') && (first.datatype ?? '') === (second.datatype ?? '');
+function _tagOf(literal: Literal): string | { language: string; direction: 'ltr' | 'rtl' } | Literal['datatype'] {
+	if (!literal.language) {
+		return literal.datatype;
+	}
+
+	return literal.direction ? { language: literal.language, direction: literal.direction } : literal.language;
 }
 
 /**
@@ -216,5 +232,5 @@ function _sameValue(first: RowValue, second: RowValue | undefined): boolean {
 		return first.view.anchor === second.view.anchor;
 	}
 
-	return JSON.stringify(_termOf(first)) === JSON.stringify(_termOf(second));
+	return _termOf(first).equals(_termOf(second));
 }

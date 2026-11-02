@@ -1,4 +1,4 @@
-import { TermRef, TermView } from '../form-editor-model';
+import { TermView } from '../form-editor-model';
 
 /**
  * One value of a statement row while it is edited: a value as it is written in the document,
@@ -7,4 +7,4 @@ import { TermRef, TermView } from '../form-editor-model';
  */
 export type RowValue =
 	| { kind: 'written'; view: TermView }
-	| { kind: 'term'; term: TermRef; replaces?: TermView };
+	| { kind: 'term'; term: TermView['term']; replaces?: TermView };

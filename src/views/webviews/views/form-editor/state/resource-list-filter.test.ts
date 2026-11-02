@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { ResourceSummary } from '../form-editor-model';
 import { ResourceListFilter } from './resource-list-filter';
+import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 
 /**
  * Build a resource summary.
  */
 function summaryOf(iri: string, label: string, options: { prefixedName?: string; description?: string; externalDeclaration?: boolean } = {}): ResourceSummary {
-	return { id: `i:${iri}`, term: { kind: 'iri', iri }, label, iconName: '', propertyCount: 1, hasLabel: false, ...options };
+	return { id: `i:${iri}`, term: RdfDataFactory.namedNode(iri), label, iconName: '', propertyCount: 1, hasLabel: false, ...options };
 }
 
 const TREE = summaryOf('http://example.org/Tree', 'Tree', { prefixedName: 'ex:Tree', description: 'A woody plant.' });

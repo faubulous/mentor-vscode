@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { Quad, Quad_Object } from '@rdfjs/types';
 import { LanguageTagUsageStats, Store } from '@faubulous/mentor-rdf';
-import { addLanguageTagUsage, InferenceGraphUriGenerator, RdfDataFactory, replaceGraphQuads } from '@src/utilities/rdf';
+import { addLanguageTagUsage, InferenceGraphUriGenerator, replaceGraphQuads } from '@src/utilities/rdf';
+import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 
 describe('addLanguageTagUsage', () => {
 	it('counts literals by their language tag and untagged literals under the empty tag', () => {
@@ -22,30 +23,6 @@ describe('addLanguageTagUsage', () => {
 		addLanguageTagUsage(stats, RdfDataFactory.blankNode('b0'));
 
 		expect(stats).toEqual({});
-	});
-});
-
-describe('RdfDataFactory', () => {
-	it('creates an xsd:string literal when the language or datatype is null', () => {
-		const literal = RdfDataFactory.literal('Shape violation', null as any);
-
-		expect(literal.language).toBe('');
-		expect(literal.datatype.value).toBe('http://www.w3.org/2001/XMLSchema#string');
-	});
-
-	it('creates an empty dataset that accepts quads', () => {
-		const dataset = RdfDataFactory.dataset();
-		const quad = RdfDataFactory.quad(
-			RdfDataFactory.namedNode('http://example.org/s'),
-			RdfDataFactory.namedNode('http://example.org/p'),
-			RdfDataFactory.literal('o')
-		);
-
-		expect(dataset.size).toBe(0);
-
-		dataset.add(quad);
-
-		expect(dataset.has(quad)).toBe(true);
 	});
 });
 
