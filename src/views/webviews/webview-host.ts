@@ -1,3 +1,4 @@
+import { reviveTerms } from "@src/utilities/rdf-terms";
 import { WebviewMessage } from "./webview-messaging";
 
 /**
@@ -38,7 +39,8 @@ export class WebviewHost {
 	}
 
 	/**
-	 * Get the messaging API for the VS Code extension host.
+	 * Get the messaging API for the VS Code extension host. The RDF/JS terms in the messages
+	 * received are revived, see {@link reviveTerms}.
 	 * @returns An object with `postMessage` and `onMessage` methods for communication.
 	 * @throws Error if `acquireVsCodeApi` is not available.
 	 */
@@ -48,7 +50,7 @@ export class WebviewHost {
 		return {
 			postMessage: (message: T) => vscode.postMessage(message),
 			onMessage: (handler: (message: T) => void) => {
-				const messageHandler = (event: MessageEvent) => handler(event.data);
+				const messageHandler = (event: MessageEvent) => handler(reviveTerms(event.data));
 				
 				window.addEventListener('message', messageHandler);
 
@@ -58,13 +60,13 @@ export class WebviewHost {
 	}
 
 	/**
-	 * Get the current state of the VS Code webview.
+	 * Get the current state of the VS Code webview, with its RDF/JS terms revived.
 	 * @returns The current state of the VS Code webview.
 	 */
 	public static getState() {
 		const vscode = this.getInstance();
 
-		return vscode.getState();
+		return reviveTerms(vscode.getState());
 	}
 
 	/**

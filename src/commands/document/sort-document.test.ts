@@ -3,13 +3,16 @@ import * as vscode from 'vscode';
 import * as mockVscode from '@src/utilities/mocks/vscode';
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 
+const serializedOptions = vi.hoisted(() => [] as any[]);
+
 vi.mock('@faubulous/mentor-rdf-serializers', () => ({
+	getLanguageTagSpellings: () => ({ 'en-us': 'en-US' }),
 	AlphabeticalSortingStrategy: class {},
 	PrioritySortingStrategy: class { constructor(public options: any) {} },
 	SemanticSortingStrategy: class {},
 	QuadContextSerializer: class {
 		constructor(public serializer: any) {}
-		serialize(_quads: any, _opts: any) { return { output: 'result turtle' }; }
+		serialize(_quads: any, opts: any) { serializedOptions.push(opts); return { output: 'result turtle' }; }
 	},
 	TurtleSerializer: class {},
 }));
@@ -126,5 +129,6 @@ describe('sortDocument', () => {
 		const strategy = { sort: vi.fn((q: any) => q) };
 		await sortDocument(uri, strategy as any);
 		expect(applyEditSpy).toHaveBeenCalled();
+		expect(serializedOptions[serializedOptions.length - 1].languageTags).toEqual({ 'en-us': 'en-US' });
 	});
 });
