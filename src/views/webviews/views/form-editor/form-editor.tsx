@@ -1,5 +1,7 @@
 import { KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
+import { BlankNode, NamedNode } from '@rdfjs/types';
+import { termToString } from 'rdf-string';
 import { VscodeTextfield } from '@vscode-elements/elements';
 import { useStylesheet, useWebviewMessaging, useWebviewState } from '@src/views/webviews/hooks';
 import { useSharedStylesheets } from '@src/views/webviews/hooks/use-shared-stylesheets';
@@ -9,7 +11,7 @@ import { DocumentHeader } from './components/document-header';
 import { FormErrorBoundary } from './components/form-error-boundary';
 import { FormToolbar } from './components/form-toolbar';
 import { EmptyState, LoadingState, ProblemState, ReadOnlyBanner } from './components/resource-list-states';
-import { DocumentProblem, DocumentSnapshot, ResourceId } from './form-editor-model';
+import { DocumentProblem, DocumentSnapshot } from './form-editor-model';
 import { FormEditorMessages, FormEditorWebviewMessage } from './form-editor-messages';
 import { useBusyResources } from './hooks/use-busy-resources';
 import { useFocusedBlock } from './hooks/use-focused-block';
@@ -38,18 +40,18 @@ function FormEditor(): React.JSX.Element {
 	const [snapshot, setSnapshot] = useState<DocumentSnapshot>();
 	const [storedViewState, setStoredViewState] = useWebviewState<unknown>(PersistedViewState.INITIAL.toJSON());
 	const viewState = useMemo(() => PersistedViewState.read(storedViewState), [storedViewState]);
-	const [cardStates, setCardStates] = useState(() => ResourceCardStates.fromOpenIds(PersistedViewState.read(storedViewState).openIds));
+	const [cardStates, setCardStates] = useState(() => ResourceCardStates.fromOpenCards(PersistedViewState.read(storedViewState).openCards));
 	const [filterText, setFilterText] = useState('');
 	const [typeFilter, setTypeFilter] = useState<TypeFilter>();
 	const [revealRequest, setRevealRequest] = useState<RevealRequest>();
-	const [revealedId, setRevealedId] = useState<ResourceId>();
+	const [revealed, setRevealed] = useState<NamedNode | BlankNode>();
 	const [currentId, setCurrentId] = useState<string>();
 	const [scrollElement, setScrollElement] = useState<HTMLDivElement | null>(null);
 	const [titleElement, setTitleElement] = useState<HTMLDivElement | null>(null);
 	const [railElement, setRailElement] = useState<HTMLDivElement | null>(null);
 	const filterRef = useRef<VscodeTextfield>(null);
 	const messagingRef = useRef<{ postMessage: (message: FormEditorWebviewMessage) => void } | undefined>(undefined);
-	const revealResourceRef = useRef<(resourceId: ResourceId) => void>(undefined);
+	const revealResourceRef = useRef<(resource: NamedNode | BlankNode) => void>(undefined);
 	const titleScrolledPast = useScrolledPast(scrollElement, titleElement);
 
 	// Every update starts from a state read the current way, whatever an earlier version stored.
@@ -57,7 +59,7 @@ function FormEditor(): React.JSX.Element {
 		setStoredViewState((current: unknown) => PersistedViewState.read(current).with(changes).toJSON());
 	}, [setStoredViewState]);
 
-	const dataService = useMemo(() => new ResourceDataService(ids => messagingRef.current?.postMessage({ id: 'RequestResources', ids })), []);
+	const dataService = useMemo(() => new ResourceDataService(resources => messagingRef.current?.postMessage({ id: 'RequestResources', resources })), []);
 	const hostService = useMemo(() => new EditingHostService(message => messagingRef.current?.postMessage(message)), []);
 	const controller = useMemo(() => new EditingController(hostService), [hostService]);
 	const focusedBlockId = useFocusedBlock(scrollElement);
@@ -78,10 +80,10 @@ function FormEditor(): React.JSX.Element {
 				hostService.accept(message);
 				break;
 			case 'ScrollToResource':
-				revealResourceRef.current?.(message.resourceId);
+				revealResourceRef.current?.(message.resource);
 				break;
 			case 'FilterResources':
-				setTypeFilter({ label: message.label, resourceIds: new Set(message.resourceIds) });
+				setTypeFilter({ label: message.label, resourceKeys: new Set(message.resources.map(resource => termToString(resource))) });
 				break;
 			default:
 				break;
@@ -104,7 +106,7 @@ function FormEditor(): React.JSX.Element {
 		if (documentUri !== undefined && viewState.documentUri !== documentUri) {
 			setCardStates(ResourceCardStates.NONE);
 			setTypeFilter(undefined);
-			updateViewState({ documentUri, openIds: [] });
+			updateViewState({ documentUri, openCards: [] });
 		}
 		// Only when the document changes.
 		// eslint-disable-next-line react-hooks/exhaustive-deps
@@ -112,54 +114,56 @@ function FormEditor(): React.JSX.Element {
 
 	// The open cards are remembered as they change.
 	useEffect(() => {
-		const openIds = cardStates.openIds();
+		const openCards = cardStates.openCards();
 
-		if (!_sameIds(viewState.openIds, openIds)) {
-			updateViewState({ openIds });
+		if (!_sameKeys(viewState.openCards, openCards)) {
+			updateViewState({ openCards });
 		}
-	}, [cardStates, viewState.openIds, updateViewState]);
+	}, [cardStates, viewState.openCards, updateViewState]);
 
-	const handleToggle = useCallback((resourceId: string) => {
-		if (cardStates.stateOf(resourceId).open === 'collapsed') {
-			dataService.request([resourceId]);
+	const handleToggle = useCallback((resource: NamedNode | BlankNode) => {
+		const key = termToString(resource);
+
+		if (cardStates.stateOf(key).open === 'collapsed') {
+			dataService.request([resource]);
 		}
 
-		setRevealedId(undefined);
-		setCardStates(current => current.toggle(resourceId));
+		setRevealed(undefined);
+		setCardStates(current => current.toggle(key));
 	}, [cardStates, dataService]);
 
 	const declarationsHidden = viewState.hideExternalDeclarations === true;
 	const listFilter = useMemo(() => new ResourceListFilter({ text: filterText, type: typeFilter, hideExternalDeclarations: declarationsHidden }), [filterText, typeFilter, declarationsHidden]);
 	const filtering = listFilter.hasText || typeFilter !== undefined;
 	const visibleResources = useMemo(() => listFilter.apply(snapshot?.resources ?? []), [listFilter, snapshot?.resources]);
-	const documentResourceId = snapshot?.documentResourceId;
-	const documentResource = useMemo(() => snapshot?.resources.find(resource => resource.id === documentResourceId), [snapshot?.resources, documentResourceId]);
+	const documentTerm = snapshot?.documentResource;
+	const documentResource = useMemo(() => snapshot?.resources.find(resource => documentTerm?.equals(resource.term)), [snapshot?.resources, documentTerm]);
 
 	// The resource describing the document heads the form; every other resource is a card.
-	const listed = useMemo(() => visibleResources.filter(resource => resource.id !== documentResourceId), [visibleResources, documentResourceId]);
+	const listed = useMemo(() => visibleResources.filter(resource => !documentTerm?.equals(resource.term)), [visibleResources, documentTerm]);
 	const blocks = useFormBlocks(listed, snapshot?.trailingComments ?? [], filtering);
 
 	const handleToggleExternalDeclarations = useCallback(() => {
 		updateViewState({ hideExternalDeclarations: declarationsHidden ? undefined : true });
 	}, [updateViewState, declarationsHidden]);
 
-	const handleRevealResource = useCallback((resourceId: ResourceId) => {
+	const handleRevealResource = useCallback((resource: NamedNode | BlankNode) => {
 		// A resource the filter leaves out is revealed among all of them, hidden declarations included.
-		if (!visibleResources.some(resource => resource.id === resourceId)) {
+		if (!visibleResources.some(visible => visible.term.equals(resource))) {
 			setTypeFilter(undefined);
 			setFilterText('');
 			updateViewState({ hideExternalDeclarations: undefined });
 		}
 
 		// The card is marked rather than opened: what it holds is the reader's to open.
-		setRevealedId(resourceId);
+		setRevealed(resource);
 
-		if (resourceId === documentResourceId) {
+		if (documentTerm?.equals(resource)) {
 			scrollElement?.scrollTo({ top: 0 });
 		} else {
-			setRevealRequest({ resourceId });
+			setRevealRequest({ resource });
 		}
-	}, [visibleResources, updateViewState, documentResourceId, scrollElement]);
+	}, [visibleResources, updateViewState, documentTerm, scrollElement]);
 
 	revealResourceRef.current = handleRevealResource;
 
@@ -195,10 +199,10 @@ function FormEditor(): React.JSX.Element {
 		resources: snapshot?.resources,
 		onRevealResource: handleRevealResource,
 		onOpenExternal: handleOpenExternal,
-		revealedResourceId: revealedId,
+		revealedResource: revealed,
 		dominantTypeIri: snapshot?.dominantTypeIri,
 		filterText
-	}), [snapshot, editable, controller, handleRevealResource, handleOpenExternal, revealedId, filterText]);
+	}), [snapshot, editable, controller, handleRevealResource, handleOpenExternal, revealed, filterText]);
 
 	if (!snapshot) {
 		return (
@@ -209,7 +213,7 @@ function FormEditor(): React.JSX.Element {
 	}
 
 	const blocking = snapshot.readOnly !== undefined && snapshot.resources.length === 0;
-	const current = currentId ? listed.find(resource => resource.id === currentId) : undefined;
+	const current = currentId ? listed.find(resource => termToString(resource.term) === currentId) : undefined;
 
 	return (
 		<FormEditorContext.Provider value={context}>
@@ -285,13 +289,13 @@ function _isMac(): boolean {
 }
 
 /**
- * Indicate whether two lists of identifiers hold the same identifiers in the same order.
+ * Indicate whether two lists of keys hold the same keys in the same order.
  * @param first The first list.
  * @param second The second list.
  * @returns `true` when they are the same.
  */
-function _sameIds(first: readonly string[], second: readonly string[]): boolean {
-	return first.length === second.length && first.every((id, index) => id === second[index]);
+function _sameKeys(first: readonly string[], second: readonly string[]): boolean {
+	return first.length === second.length && first.every((key, index) => key === second[index]);
 }
 
 const root = createRoot(document.getElementById('root')!);

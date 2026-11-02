@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { getIriResourceId } from '@src/services/editing/resource-id';
+import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { useFormEditorContext } from '../state/form-editor-context';
 
 /**
@@ -11,10 +11,10 @@ export function useIriNavigation(): (iri: string) => void {
 	const { resources, onRevealResource, onOpenExternal } = useFormEditorContext();
 
 	return useCallback((iri: string) => {
-		const id = getIriResourceId(iri);
+		const resource = RdfDataFactory.namedNode(iri);
 
-		if (resources?.some(resource => resource.id === id)) {
-			onRevealResource?.(id);
+		if (resources?.some(summary => summary.term.equals(resource))) {
+			onRevealResource?.(resource);
 		} else {
 			onOpenExternal?.(iri);
 		}

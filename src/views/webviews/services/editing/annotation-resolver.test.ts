@@ -14,7 +14,7 @@ function entryOf(name: string, statements: [string, string, string?][]): Resourc
 		object: { termType: 'Literal', value, language: language ?? '' }
 	})) as unknown as QuadContext[];
 
-	return { id: `i:${name}`, term: RdfDataFactory.namedNode(name), quads, nested: false };
+	return { term: RdfDataFactory.namedNode(name), quads, nested: false };
 }
 
 describe('AnnotationResolver.findLabel', () => {

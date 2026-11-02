@@ -4,11 +4,11 @@ import { screen } from '@testing-library/react';
 import { renderWebview } from '@src/utilities/mocks/webview-test-utils';
 import { createResourceDataServiceStub } from '@src/utilities/mocks/resource-data-service-fixtures';
 import { createResourceSummary } from '@src/utilities/mocks/resource-summary-fixtures';
-import { createSampleResourceDetail, TEST_SUBJECT_ID } from '@src/utilities/mocks/statement-fixtures';
+import { createSampleResourceDetail, TEST_SUBJECT } from '@src/utilities/mocks/statement-fixtures';
 import { FormEditorContext } from '../state/form-editor-context';
 import { ResourceCard } from './resource-card';
 
-const TREE = createResourceSummary('Tree', { id: TEST_SUBJECT_ID });
+const TREE = createResourceSummary('Tree', { term: TEST_SUBJECT });
 
 describe('ResourceCard statements', () => {
 	it('shows the statements of an expanded card once they are loaded, and says so until then', () => {

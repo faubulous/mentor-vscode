@@ -1,4 +1,6 @@
 import { KeyboardEvent, useEffect } from 'react';
+import { BlankNode, NamedNode } from '@rdfjs/types';
+import { termToString } from 'rdf-string';
 import { ResourceSummary } from '../form-editor-model';
 import { useResourceDetail } from '../hooks/use-resource-detail';
 import { IResourceDataService } from '../services/resource-data-service.interface';
@@ -40,7 +42,7 @@ export interface ResourceCardProps {
 	/**
 	 * Expands the card or folds it again.
 	 */
-	onToggle: (resourceId: string) => void;
+	onToggle: (resource: NamedNode | BlankNode) => void;
 }
 
 /**
@@ -52,19 +54,19 @@ export interface ResourceCardProps {
  * @returns The card.
  */
 export function ResourceCard({ summary, dataService, expanded, writing = false, current, onToggle }: ResourceCardProps): React.JSX.Element {
-	const { filterText, dominantTypeIri, revealedResourceId } = useFormEditorContext();
-	const { detail, stale } = useResourceDetail(dataService, summary.id);
+	const { filterText, dominantTypeIri, revealedResource } = useFormEditorContext();
+	const { detail, stale } = useResourceDetail(dataService, summary.term);
 	const showType = summary.typeIri !== undefined && summary.typeIri !== dominantTypeIri;
-	const marked = current === true || revealedResourceId === summary.id;
-	const toggle = (): void => onToggle(summary.id);
+	const marked = current === true || revealedResource?.equals(summary.term) === true;
+	const toggle = (): void => onToggle(summary.term);
 	const showsStatements = expanded || writing;
 
 	// A card showing its statements holds them current, wherever the list is scrolled to.
 	useEffect(() => {
 		if (showsStatements && (!detail || stale)) {
-			dataService.request([summary.id]);
+			dataService.request([summary.term]);
 		}
-	}, [showsStatements, detail, stale, dataService, summary.id]);
+	}, [showsStatements, detail, stale, dataService, summary.term]);
 
 	const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
 		if (event.key === 'Enter' || event.key === ' ') {
@@ -74,7 +76,7 @@ export function ResourceCard({ summary, dataService, expanded, writing = false, 
 	};
 
 	return (
-		<article className={`resource-card${expanded ? ' is-expanded' : ''}${marked ? ' is-current' : ''}`} data-resource-id={summary.id}>
+		<article className={`resource-card${expanded ? ' is-expanded' : ''}${marked ? ' is-current' : ''}`} data-resource-id={termToString(summary.term)}>
 			<div className="resource-card-header" role="button" tabIndex={0} aria-expanded={expanded} onClick={toggle} onKeyDown={handleKeyDown}>
 				<div className="resource-card-glyph"><ResourceIcon iconName={summary.iconName} /></div>
 				<div className="resource-card-title">
@@ -92,7 +94,7 @@ export function ResourceCard({ summary, dataService, expanded, writing = false, 
 					{showsStatements && (
 						<div hidden={!expanded}>
 							{detail
-								? <StatementList detail={detail} stale={stale} dataService={dataService} depth={0} visited={[summary.id]} />
+								? <StatementList detail={detail} stale={stale} dataService={dataService} depth={0} visited={[summary.term]} />
 								: <div className="resource-form-loading">Loading…</div>}
 						</div>
 					)}

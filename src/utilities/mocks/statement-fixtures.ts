@@ -27,11 +27,6 @@ export const TEST_NAMESPACES: Readonly<Record<string, string>> = {
 export const TEST_SUBJECT: NamedNode = RdfDataFactory.namedNode(`${EXAMPLE_NAMESPACE}Tree`);
 
 /**
- * The resource identifier of the test subject.
- */
-export const TEST_SUBJECT_ID = 'i:tree';
-
-/**
  * Make the view of an IRI written with a test prefix.
  * @param prefixedName The prefixed name.
  * @param label The label of the term.
@@ -69,7 +64,7 @@ export function createProperty(predicate: string, values: TermView[]): PropertyV
  * @returns The detail.
  */
 export function createTestResourceDetail(properties: PropertyView[]): ResourceDetail {
-	return { id: TEST_SUBJECT_ID, term: TEST_SUBJECT, properties };
+	return { term: TEST_SUBJECT, properties };
 }
 
 /**

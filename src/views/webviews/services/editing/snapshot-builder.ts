@@ -1,10 +1,12 @@
 import { DCAT, OWL, RDF, SKOS } from '@faubulous/mentor-rdf';
 import { QuadContext } from '@faubulous/mentor-rdf-parsers';
+import { NamedNode } from '@rdfjs/types';
+import { termToString } from 'rdf-string';
 import { ITokenizedDocumentContext } from '@src/services/document/document-context.interface';
 import { getFileName } from '@src/utilities/uri';
-import { DocumentProblem, DocumentSnapshot, ReadOnlyReason, ResourceId, ResourceSummary } from '@src/views/webviews/views/form-editor/form-editor-model';
+import { DocumentProblem, DocumentSnapshot, ReadOnlyReason, ResourceSummary } from '@src/views/webviews/views/form-editor/form-editor-model';
 import { ExternalDeclarationDetector } from './external-declaration-detector';
-import { ResourceIndex, ResourceIndexEntry, typeIrisOf } from './resource-index';
+import { ResourceIndex, ResourceIndexEntry, getEntry, typeIrisOf } from './resource-index';
 import { ResourceIndexBuilder } from './resource-index-builder';
 import { getLanguageTagSpellings } from '@faubulous/mentor-rdf-serializers';
 
@@ -89,11 +91,11 @@ export class SnapshotBuilder {
 		const { context, quadContexts } = this._input;
 		const index = new ResourceIndexBuilder(quadContexts, context).build();
 		const externals = new ExternalDeclarationDetector(index, context.namespaces);
-		const documentResourceId = SnapshotBuilder._findDocumentResource(index);
+		const documentResource = SnapshotBuilder._findDocumentResource(index);
 		const resources = index.summaries.map(summary => ({
 			...summary,
 			usageCount: this._countUsages(summary, index),
-			externalDeclaration: externals.isExternalDeclaration(index.entries.get(summary.id)!) || undefined
+			externalDeclaration: externals.isExternalDeclaration(getEntry(index, summary.term)!) || undefined
 		}));
 
 		return {
@@ -104,12 +106,12 @@ export class SnapshotBuilder {
 				fileName: getFileName(this._input.uri),
 				namespaces: index.namespaces,
 				resources,
-				documentResourceId,
+				documentResource,
 				trailingComments: index.trailingComments.length > 0 ? index.trailingComments : undefined,
 				languageTags: getLanguageTagSpellings(this._input.context.tokens),
 				readOnly: this._input.readOnly,
 				problems: this._input.problems ?? [],
-				dominantTypeIri: _dominantTypeOf(resources.filter(resource => resource.id !== documentResourceId))
+				dominantTypeIri: _dominantTypeOf(resources.filter(resource => !documentResource?.equals(resource.term)))
 			}
 		};
 	}
@@ -127,7 +129,7 @@ export class SnapshotBuilder {
 			return this._input.countUsages?.(summary.term.value);
 		}
 
-		return index.referenceCounts.get(summary.id) ?? 0;
+		return index.referenceCounts.get(termToString(summary.term)) ?? 0;
 	}
 
 	/**
@@ -135,15 +137,15 @@ export class SnapshotBuilder {
 	 * scheme or a dataset, and one that says something about itself before one that is only
 	 * declared, as a file written by Protégé declares the ontology it is about besides its own.
 	 * @param index The index of the document.
-	 * @returns The identifier of the resource, or `undefined` when none describes the document.
+	 * @returns The resource, or `undefined` when none describes the document.
 	 */
-	private static _findDocumentResource(index: ResourceIndex): ResourceId | undefined {
+	private static _findDocumentResource(index: ResourceIndex): NamedNode | undefined {
 		const candidates = Array.from(index.entries.values())
 			.filter(entry => entry.term.termType === 'NamedNode' && typeIrisOf(entry).some(type => DOCUMENT_TYPES.has(type)));
 		const described = candidates.filter(entry => !ExternalDeclarationDetector.statesNothingOfItsOwn(entry));
 		const entry = described.find(_isOntology) ?? candidates.find(_isOntology) ?? described[0] ?? candidates[0];
 
-		return entry?.id;
+		return entry?.term as NamedNode | undefined;
 	}
 }
 

@@ -9,8 +9,8 @@ import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 /**
  * Create a resource detail with no properties.
  */
-function detail(id: string): ResourceDetail {
-	return { id, term: RdfDataFactory.namedNode(`http://example.org/${id}`), properties: [] };
+function detail(localName: string): ResourceDetail {
+	return { term: RdfDataFactory.namedNode(`http://example.org/${localName}`), properties: [] };
 }
 
 describe('useResourceDetail', () => {
@@ -19,7 +19,7 @@ describe('useResourceDetail', () => {
 
 		service.setVersion(1);
 
-		const { result } = renderHook(() => useResourceDetail(service, 'a'));
+		const { result } = renderHook(() => useResourceDetail(service, detail('a').term));
 
 		expect(result.current).toEqual({ detail: undefined, stale: true });
 

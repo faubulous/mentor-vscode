@@ -3,8 +3,10 @@ import { describe, expect, it, vi } from 'vitest';
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 
 import { OWL, RDFS, SKOS, _OWL, _RDFS, _SH, _SKOS, _XSD } from '@faubulous/mentor-rdf';
-import { ResolvingDocumentContextOptions, createResolvingDocumentContext, readTurtleQuadContexts } from '@src/utilities/mocks/factories';
-import { ResourceIndex } from './resource-index';
+import { RdfSyntax } from '@faubulous/mentor-rdf-parsers';
+import { ResolvingDocumentContextOptions, createResolvingDocumentContext, createTurtleDocument, readTurtleQuadContexts } from '@src/utilities/mocks/factories';
+import { termToString } from 'rdf-string';
+import { ResourceIndex, findCardResource } from './resource-index';
 import { ResourceIndexBuilder } from './resource-index-builder';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 
@@ -21,6 +23,25 @@ function indexOf(body: string, options: ResolvingDocumentContextOptions = {}): R
 	return new ResourceIndexBuilder(readTurtleQuadContexts(PREAMBLE + body), context).build();
 }
 
+/**
+ * Build the index of a Turtle body as the form editor builds it for an open document, whose
+ * blank nodes the parser names by where they are written.
+ */
+function documentIndexOf(body: string): ResourceIndex {
+	const document = createTurtleDocument('file:///workspace/test.ttl', RdfSyntax.Turtle);
+
+	document.parse(PREAMBLE + body);
+
+	return new ResourceIndexBuilder(document.getQuadContexts(), createResolvingDocumentContext({ namespaces: NAMESPACES })).build();
+}
+
+/**
+ * The blank node resources of an index, in document order.
+ */
+function blankNodesOf(index: ResourceIndex): string[] {
+	return Array.from(index.entries.values()).filter(entry => entry.term.termType === 'BlankNode').map(entry => entry.term.value);
+}
+
 describe('ResourceIndexBuilder', () => {
 	it('lists subjects in document order', () => {
 		const index = indexOf('ex:Zebra a ex:Animal .\nex:Ant a ex:Animal .\nex:Moose a ex:Animal .\n');
@@ -35,14 +56,14 @@ describe('ResourceIndexBuilder', () => {
 	it('groups the statements of a subject written as separate blocks', () => {
 		const index = indexOf('ex:Thing a ex:Class .\nex:Other a ex:Class .\nex:Thing ex:label "second block" .\n');
 
-		expect(index.entries.get(`i:${EX}Thing`)?.quads).toHaveLength(2);
+		expect(index.entries.get(`${EX}Thing`)?.quads).toHaveLength(2);
 		expect(index.summaries).toHaveLength(2);
 	});
 
 	it('keeps duplicate statements distinguishable', () => {
 		const index = indexOf('ex:Thing ex:note "same" , "same" .\n');
 
-		expect(index.entries.get(`i:${EX}Thing`)?.quads).toHaveLength(2);
+		expect(index.entries.get(`${EX}Thing`)?.quads).toHaveLength(2);
 	});
 
 	it('treats an anonymous blank node used once as an object as nested', () => {
@@ -64,7 +85,7 @@ describe('ResourceIndexBuilder', () => {
 		const index = indexOf('_:shared a owl:Class .\nex:A rdfs:subClassOf _:shared .\nex:B rdfs:subClassOf _:shared .\n');
 		const shared = index.summaries.find(summary => summary.term.termType === 'BlankNode')!;
 
-		expect(index.referenceCounts.get(shared.id)).toBe(2);
+		expect(index.referenceCounts.get(termToString(shared.term))).toBe(2);
 	});
 
 	it('counts the properties, not the values', () => {
@@ -178,5 +199,39 @@ describe('ResourceIndexBuilder comments', () => {
 
 		expect(index.summaries[0].comments).toBeUndefined();
 		expect(index.trailingComments).toEqual([]);
+	});
+});
+
+describe('ResourceIndexBuilder on an open document', () => {
+	it('keeps the blank nodes of the resources when an anonymous node is added before them', () => {
+		const before = blankNodesOf(documentIndexOf('ex:s ex:p [ ex:q 1 ] .\nex:t ex:p [ ex:q [ ex:r 2 ] ] .\n[ ex:p 3 ] .\n'));
+		const after = blankNodesOf(documentIndexOf('ex:a ex:p [ ex:q 0 ] .\nex:s ex:p [ ex:q 1 ] .\nex:t ex:p [ ex:q [ ex:r 2 ] ] .\n[ ex:p 3 ] .\n'));
+
+		expect(before).toHaveLength(4);
+		expect(after.slice(1)).toEqual(before);
+	});
+
+	it('tells the anonymous values of a resource apart by their predicate and their place', () => {
+		const nodes = blankNodesOf(documentIndexOf('ex:s ex:p [ ex:q 1 ], [ ex:q 2 ] ; ex:r [ ex:q 3 ] .\n'));
+
+		expect(new Set(nodes).size).toBe(3);
+	});
+
+	it('keeps the label of a labelled blank node', () => {
+		const [labelled] = blankNodesOf(documentIndexOf('_:x ex:p 2 .\n'));
+
+		expect(labelled).toMatch(/_x$/);
+	});
+
+	it('finds the card a resource is shown in: its own, or that of the resource it is written in', () => {
+		const index = documentIndexOf('ex:s ex:p [ ex:q [ ex:r 1 ] ] ; ex:l ( [ ex:q 2 ] ) .\n_:x ex:p 2 .\n');
+		const owner = RdfDataFactory.namedNode(`${EX}s`);
+		const nested = Array.from(index.entries.values()).filter(entry => entry.nested).map(entry => entry.term);
+		const labelled = index.summaries[1].term;
+
+		expect(nested.length).toBeGreaterThan(2);
+		expect(nested.map(term => findCardResource(index, term))).toEqual(nested.map(() => owner));
+		expect(findCardResource(index, labelled)).toEqual(labelled);
+		expect(findCardResource(index, RdfDataFactory.blankNode('unknown'))).toBeUndefined();
 	});
 });

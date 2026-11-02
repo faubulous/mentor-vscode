@@ -1,6 +1,5 @@
 import { IToken, QuadContext } from '@faubulous/mentor-rdf-parsers';
 import { Quad_Graph, Term } from '@rdfjs/types';
-import { ResourceId } from './resource-id';
 
 /**
  * A range of the document covered by a run of tokens. Offsets are exclusive at the end.
@@ -100,11 +99,6 @@ export interface PredicateGroup extends TokenSpan {
  */
 export interface SubjectBlock extends TokenSpan {
 	/**
-	 * The identifier of the subject.
-	 */
-	subjectId: ResourceId;
-
-	/**
 	 * The subject term.
 	 */
 	subject: Term;
@@ -178,9 +172,9 @@ export interface StatementModel {
 	blocks: SubjectBlock[];
 
 	/**
-	 * The blocks of each subject, in document order.
+	 * The blocks of each subject, in document order, by the `termToString` key of the subject.
 	 */
-	blocksBySubject: Map<ResourceId, SubjectBlock[]>;
+	blocksBySubject: Map<string, SubjectBlock[]>;
 
 	/**
 	 * The items of every collection, by the identifier of its head node.

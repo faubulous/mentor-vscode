@@ -1,4 +1,5 @@
 import { createContext, useContext } from 'react';
+import { BlankNode, NamedNode } from '@rdfjs/types';
 import { NamespaceInfo, ResourceSummary } from '../form-editor-model';
 import { IEditingController } from './editing-controller.interface';
 
@@ -37,7 +38,7 @@ export interface FormEditorContextValue {
 	/**
 	 * Scroll to a resource, used by nested blank node placeholders.
 	 */
-	onRevealResource?: (resourceId: string) => void;
+	onRevealResource?: (resource: NamedNode | BlankNode) => void;
 
 	/**
 	 * Open an IRI the document does not describe outside the editor.
@@ -48,7 +49,7 @@ export interface FormEditorContextValue {
 	 * The resource last revealed, as from the definition tree, whose entry is marked until the
 	 * form is used.
 	 */
-	revealedResourceId?: string;
+	revealedResource?: NamedNode | BlankNode;
 
 	/**
 	 * The type most definitions have, which their entries do not repeat.

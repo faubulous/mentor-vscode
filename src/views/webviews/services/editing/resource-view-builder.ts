@@ -2,7 +2,7 @@ import { QuadContext } from '@faubulous/mentor-rdf-parsers';
 import { BlankNode, Literal, NamedNode, Quad_Object, Quad_Subject, Term } from '@rdfjs/types';
 import { OWL, RDF, RDFS, SH, Uri } from '@faubulous/mentor-rdf';
 import { IDocumentContext } from '@src/services/document/document-context.interface';
-import { getIriResourceId } from '@src/services/editing/resource-id';
+import { termToString } from 'rdf-string';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { DEFAULT_ICON, getSubjectIconName } from '@src/utilities/subject-icon';
 import { hasSourcePosition } from '@src/utilities/tokens';
@@ -11,12 +11,11 @@ import {
 	NestedResourceRef,
 	PropertyView,
 	ResourceDetail,
-	ResourceId,
 	ResourceSummary,
 	TermView
 } from '@src/views/webviews/views/form-editor/form-editor-model';
 import { AnnotationResolver } from './annotation-resolver';
-import { CollectionItem, ResourceIndex, ResourceIndexEntry, ResourceIndexOptions, isCollectionChainPredicate, typeIrisOf } from './resource-index';
+import { CollectionItem, ResourceIndex, ResourceIndexEntry, ResourceIndexOptions, getEntry, isCollectionChainPredicate, typeIrisOf } from './resource-index';
 import { leadingCommentRunsOf, splitLeadingComments } from './statement-comments';
 
 /**
@@ -68,7 +67,6 @@ export class ResourceViewBuilder {
 		const label = this._resolveLabel(entry.term);
 
 		return {
-			id: entry.id,
 			term: entry.term,
 			label: label.text,
 			description: this._annotations.findDescription(entry)?.text,
@@ -93,7 +91,6 @@ export class ResourceViewBuilder {
 		const { groups, resourceComments } = this._collectProperties(entry);
 
 		return {
-			id: entry.id,
 			term: entry.term,
 			properties: groups.map(group => ({ ...group, valueKind: _valueKindOf(group.values) })),
 			// A resource of its own shows them above its card, where they were written; a node
@@ -223,26 +220,25 @@ export class ResourceViewBuilder {
 			return view;
 		}
 
-		const id = this._index.identities.idOf(term);
-		const items = this._index.collections.get(id);
+		const items = this._index.collections.get(termToString(term));
 
 		if (items) {
 			return { ...view, collection: { items: items.map(item => this._toItemTermView(item)) } };
 		}
 
-		const nested = this._toNestedRef(id, inlineOnly);
+		const nested = this._toNestedRef(term, inlineOnly);
 
 		return nested ? { ...view, nested } : view;
 	}
 
 	/**
 	 * Build the reference from a value to the blank node resource it denotes.
-	 * @param id The identifier of the blank node.
+	 * @param term The blank node.
 	 * @param inlineOnly Whether only a blank node written inline is referred to.
 	 * @returns The reference, or `undefined` when the node has no form of its own.
 	 */
-	private _toNestedRef(id: ResourceId, inlineOnly: boolean): NestedResourceRef | undefined {
-		const nested = this._index.entries.get(id);
+	private _toNestedRef(term: BlankNode, inlineOnly: boolean): NestedResourceRef | undefined {
+		const nested = getEntry(this._index, term);
 
 		if (!nested || (inlineOnly && !nested.nested)) {
 			return undefined;
@@ -251,7 +247,7 @@ export class ResourceViewBuilder {
 		const typeIris = typeIrisOf(nested);
 
 		return {
-			id,
+			term,
 			propertyCount: _countProperties(nested),
 			label: this._resolveLabel(nested.term).text || undefined,
 			typeLabel: typeIris.length > 0 ? this._resolveLabel(RdfDataFactory.namedNode(typeIris[0])).text : undefined
@@ -268,7 +264,7 @@ export class ResourceViewBuilder {
 	 * @returns The marked view.
 	 */
 	private _withResourceMark(view: TermView, iri: string): TermView {
-		const entry = this._index.entries.get(getIriResourceId(iri));
+		const entry = getEntry(this._index, RdfDataFactory.namedNode(iri));
 		const stated = entry ? this._resolveIconName(entry, typeIrisOf(entry)) : undefined;
 		const iconName = stated && stated !== DEFAULT_ICON ? stated : this._options.resolveObjectIcon?.(iri) ?? stated;
 

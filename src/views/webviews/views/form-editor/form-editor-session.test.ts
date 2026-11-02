@@ -14,6 +14,8 @@ import { createMockWebviewPanel } from '@src/utilities/mocks/vscode';
 import { EditableTextDocument, applyWorkspaceEditTo, createEditableTextDocument, createMockDocumentContext, createMockDocumentContextService, createTurtleDocument } from '@src/utilities/mocks/factories';
 import { FormEditorHostMessage, FormEditorWebviewMessage } from './form-editor-messages';
 import { FormEditorSession } from './form-editor-session';
+import { ResourceDetail } from './form-editor-model';
+import { BlankNode, NamedNode } from '@rdfjs/types';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 
 const EX = 'http://example.org/';
@@ -78,6 +80,18 @@ function postedOf<K extends FormEditorHostMessage['id']>(posted: FormEditorHostM
 	return posted.filter((message): message is Extract<FormEditorHostMessage, { id: K }> => message.id === id);
 }
 
+/**
+ * Ask the session for the details of resources, as the webview does.
+ * @returns The details it posted in answer.
+ */
+async function requestDetails(panel: TestPanel, resources: (NamedNode | BlankNode)[]): Promise<ResourceDetail[]> {
+	await panel.receive({ id: 'RequestResources', resources });
+
+	const loaded = postedOf(panel.posted, 'ResourcesLoaded');
+
+	return loaded[loaded.length - 1].resources;
+}
+
 describe('FormEditorSession', () => {
 	beforeEach(() => {
 		container.reset();
@@ -114,13 +128,13 @@ describe('FormEditorSession', () => {
 		const { posted, receive } = await createSession('ex:A a ex:Class ; ex:p "x" .\n');
 
 		await receive({ id: 'Ready' });
-		await receive({ id: 'RequestResources', ids: [`i:${EX}A`, `i:${EX}missing`] });
+		await receive({ id: 'RequestResources', resources: [RdfDataFactory.namedNode(`${EX}A`), RdfDataFactory.namedNode(`${EX}missing`)] });
 
 		const [message] = postedOf(posted, 'ResourcesLoaded');
 
 		expect(message.resources).toHaveLength(1);
 		expect(message.resources[0].properties.map(property => property.predicate.term)).toEqual([RdfDataFactory.namedNode(RDF.type), RdfDataFactory.namedNode(`${EX}p`)]);
-		expect(message.missing).toEqual([`i:${EX}missing`]);
+		expect(message.missing).toEqual([RdfDataFactory.namedNode(`${EX}missing`)]);
 	});
 
 	it('tells the webview when the document cannot be shown', async () => {
@@ -218,19 +232,42 @@ describe('FormEditorSession', () => {
 
 	it('forwards reveal and filter requests to the webview', async () => {
 		const { session, posted } = await createSession('ex:A a ex:Class .\n');
+		const resource = RdfDataFactory.namedNode(`${EX}A`);
 
-		session.revealResource(`i:${EX}A`);
-		session.filterResources('Classes', [`i:${EX}A`]);
+		session.revealResource(resource);
+		session.filterResources('Classes', [resource]);
 
-		expect(postedOf(posted, 'ScrollToResource')).toEqual([{ id: 'ScrollToResource', resourceId: `i:${EX}A` }]);
-		expect(postedOf(posted, 'FilterResources')).toEqual([{ id: 'FilterResources', label: 'Classes', resourceIds: [`i:${EX}A`] }]);
+		expect(postedOf(posted, 'ScrollToResource')).toEqual([{ id: 'ScrollToResource', resource }]);
+		expect(postedOf(posted, 'FilterResources')).toEqual([{ id: 'FilterResources', label: 'Classes', resources: [resource] }]);
+	});
+
+	it('reveals a blank node written inside another resource by the card it is written in', async () => {
+		const testSession = await createSession('ex:A ex:p [ ex:q [ ex:r "x" ] ] .\n_:b ex:p ex:B .\n');
+		const { session, posted } = testSession;
+
+		await testSession.receive({ id: 'Ready' });
+
+		const [snapshot] = postedOf(posted, 'DocumentSnapshot');
+		const owner = RdfDataFactory.namedNode(`${EX}A`);
+		const labelled = snapshot.snapshot.resources.find(resource => resource.term.termType === 'BlankNode')!.term;
+		const [detail] = await requestDetails(testSession, [owner]);
+		const outer = detail.properties[0].values[0].term as BlankNode;
+		const [outerDetail] = await requestDetails(testSession, [outer]);
+		const inner = outerDetail.properties[0].values[0].term as BlankNode;
+
+		session.revealResource(inner);
+		session.revealResource(labelled);
+		session.filterResources('Nodes', [outer, inner, labelled]);
+
+		expect(postedOf(posted, 'ScrollToResource').map(message => message.resource)).toEqual([owner, labelled]);
+		expect(postedOf(posted, 'FilterResources')[0].resources).toEqual([owner, labelled]);
 	});
 
 	it('posts nothing once disposed', async () => {
 		const { session, posted } = await createSession('ex:A a ex:Class .\n');
 
 		session.dispose();
-		session.revealResource(`i:${EX}A`);
+		session.revealResource(RdfDataFactory.namedNode(`${EX}A`));
 
 		expect(postedOf(posted, 'ScrollToResource')).toHaveLength(0);
 	});

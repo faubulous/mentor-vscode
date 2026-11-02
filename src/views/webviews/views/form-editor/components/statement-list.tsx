@@ -1,3 +1,4 @@
+import { BlankNode, NamedNode } from '@rdfjs/types';
 import { Fragment } from 'react';
 import { ResourceDetail } from '../form-editor-model';
 import { useStatementRows } from '../hooks/use-statement-rows';
@@ -34,7 +35,7 @@ export interface StatementListProps {
 	/**
 	 * The resources that hold the list, which guard against cycles.
 	 */
-	visited: readonly string[];
+	visited: readonly (NamedNode | BlankNode)[];
 }
 
 /**

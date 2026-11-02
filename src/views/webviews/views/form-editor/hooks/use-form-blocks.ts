@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { termToString } from 'rdf-string';
 import { ResourceSummary } from '../form-editor-model';
 import { FormBlock } from '../state/form-block';
 
@@ -23,7 +24,7 @@ export function buildFormBlocks(resources: readonly ResourceSummary[], trailingC
 			(resource.comments ?? []).forEach((lines, run) => blocks.push(_resourceCommentBlock(resource, lines, run)));
 		}
 
-		blocks.push({ kind: 'resource', id: resource.id, resource });
+		blocks.push({ kind: 'resource', id: termToString(resource.term), resource });
 	}
 
 	if (!filtering) {
@@ -52,7 +53,7 @@ export function useFormBlocks(resources: readonly ResourceSummary[], trailingCom
  * @returns The block.
  */
 function _resourceCommentBlock(resource: ResourceSummary, lines: string[], run: number): FormBlock {
-	return { kind: 'comment', id: `comment:${resource.id}:${run}`, text: lines.join('\n') };
+	return { kind: 'comment', id: `comment:${termToString(resource.term)}:${run}`, text: lines.join('\n') };
 }
 
 /**

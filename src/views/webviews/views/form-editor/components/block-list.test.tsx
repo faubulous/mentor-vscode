@@ -83,6 +83,6 @@ describe('BlockList', () => {
 		expect(document.querySelector('.form-block')?.getAttribute('data-block-id')).toBe(blocks[0].id);
 		expect(dataService.requested.length).toBeGreaterThan(0);
 		expect(dataService.requested.length).toBeLessThan(RESOURCES.length);
-		expect(dataService.requested[0]).toBe(RESOURCES[0].id);
+		expect(dataService.requested[0]).toBe(RESOURCES[0].term);
 	});
 });

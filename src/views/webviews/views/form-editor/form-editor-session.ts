@@ -1,6 +1,8 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { isTemplate } from 'triplate';
+import { BlankNode, NamedNode } from '@rdfjs/types';
+import { termToString } from 'rdf-string';
 import { RdfSyntax } from '@faubulous/mentor-rdf-parsers';
 import { VocabularyRepository, rdf } from '@faubulous/mentor-rdf';
 import { ServiceToken } from '@src/services/tokens';
@@ -16,13 +18,13 @@ import { tokensMatchText } from '@src/utilities/tokens';
 import { DocumentSyntaxError } from '@src/services/document/document-syntax-error';
 import { WebviewComponentFactory } from '../../webview-component-factory';
 import { ExecuteCommandMessage } from '../../webview-messaging';
-import { ResourceIndex, ResourceIndexOptions } from '../../services/editing/resource-index';
+import { ResourceIndex, ResourceIndexOptions, findCardResource, getEntry } from '../../services/editing/resource-index';
 import { ResourceViewBuilder } from '../../services/editing/resource-view-builder';
 import { SnapshotBuilder } from '../../services/editing/snapshot-builder';
 import { EditOutcome, FormEditorEditHandler } from './form-editor-edit-handler';
 import { FormEditorHostMessage, FormEditorWebviewMessage } from './form-editor-messages';
 import { getFormReadOnlyReason } from './form-editor-read-only';
-import { DocumentProblem, DocumentSnapshot, ReadOnlyReason, ResourceDetail, ResourceId } from './form-editor-model';
+import { DocumentProblem, DocumentSnapshot, ReadOnlyReason, ResourceDetail } from './form-editor-model';
 import { reviveTerms } from '@src/utilities/rdf-terms';
 
 
@@ -172,20 +174,45 @@ export class FormEditorSession implements vscode.Disposable {
 	}
 
 	/**
-	 * Reveal a resource in this editor.
-	 * @param resourceId The resource to scroll to.
+	 * Reveal a resource in this editor: its own card, or the card it is written in.
+	 * @param resource The resource to scroll to.
 	 */
-	revealResource(resourceId: ResourceId): void {
-		this._postMessage({ id: 'ScrollToResource', resourceId });
+	revealResource(resource: NamedNode | BlankNode): void {
+		const card = this._cardResourceOf(resource);
+
+		if (card) {
+			this._postMessage({ id: 'ScrollToResource', resource: card });
+		}
 	}
 
 	/**
-	 * Narrow this editor to the resources the definition tree lists under a node.
+	 * Narrow this editor to the resources the definition tree lists under a node: their own cards,
+	 * or the cards they are written in.
 	 * @param label The label of the node.
-	 * @param resourceIds The resources listed under it.
+	 * @param resources The resources listed under it.
 	 */
-	filterResources(label: string, resourceIds: ResourceId[]): void {
-		this._postMessage({ id: 'FilterResources', label, resourceIds });
+	filterResources(label: string, resources: (NamedNode | BlankNode)[]): void {
+		const cards = new Map<string, NamedNode | BlankNode>();
+
+		for (const resource of resources) {
+			const card = this._cardResourceOf(resource);
+
+			if (card) {
+				cards.set(termToString(card), card);
+			}
+		}
+
+		this._postMessage({ id: 'FilterResources', label, resources: Array.from(cards.values()) });
+	}
+
+	/**
+	 * Find the resource whose card shows a resource. Before the document is indexed, every resource
+	 * is taken to have a card of its own.
+	 * @param resource The resource.
+	 * @returns The resource with the card, or `undefined` when the document shows no card for it.
+	 */
+	private _cardResourceOf(resource: NamedNode | BlankNode): NamedNode | BlankNode | undefined {
+		return this._index ? findCardResource(this._index, resource) : resource;
 	}
 
 	/**
@@ -293,7 +320,7 @@ export class FormEditorSession implements vscode.Disposable {
 				this._publishSnapshot('initial');
 				break;
 			case 'RequestResources':
-				this._publishResources(message.ids);
+				this._publishResources(message.resources);
 				break;
 			case 'ApplyEdit':
 				await this.applyEdit(message.editId, message.baseVersion, message.operations);
@@ -437,9 +464,9 @@ export class FormEditorSession implements vscode.Disposable {
 
 	/**
 	 * Post the properties of the requested resources.
-	 * @param ids The resources.
+	 * @param requested The resources.
 	 */
-	private _publishResources(ids: ResourceId[]): void {
+	private _publishResources(requested: (NamedNode | BlankNode)[]): void {
 		const context = this._getTokenizedContext();
 
 		if (!this._index || !this._snapshot || !context) {
@@ -448,15 +475,15 @@ export class FormEditorSession implements vscode.Disposable {
 
 		const views = new ResourceViewBuilder(this._index, context, this._getIndexOptions());
 		const resources: ResourceDetail[] = [];
-		const missing: ResourceId[] = [];
+		const missing: (NamedNode | BlankNode)[] = [];
 
-		for (const id of ids) {
-			const entry = this._index.entries.get(id);
+		for (const resource of requested) {
+			const entry = getEntry(this._index, resource);
 
 			if (entry) {
 				resources.push(views.buildDetail(entry));
 			} else {
-				missing.push(id);
+				missing.push(resource);
 			}
 		}
 

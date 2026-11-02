@@ -1,3 +1,4 @@
+import { BlankNode, NamedNode } from '@rdfjs/types';
 import { EditOperation } from '@src/services/editing/edit-operation';
 import { EditOutcome } from '../services/editing-host-service.interface';
 
@@ -10,7 +11,7 @@ export interface EditWriter {
 	/**
 	 * The resource the writer edits, whose card has to stay mounted while the writer is busy.
 	 */
-	readonly resourceId: string;
+	readonly subject: NamedNode | BlankNode;
 
 	/**
 	 * The document version the data of the writer belongs to.

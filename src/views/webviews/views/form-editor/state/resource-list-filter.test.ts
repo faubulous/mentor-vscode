@@ -7,7 +7,7 @@ import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
  * Build a resource summary.
  */
 function summaryOf(iri: string, label: string, options: { prefixedName?: string; description?: string; externalDeclaration?: boolean } = {}): ResourceSummary {
-	return { id: `i:${iri}`, term: RdfDataFactory.namedNode(iri), label, iconName: '', propertyCount: 1, hasLabel: false, ...options };
+	return { term: RdfDataFactory.namedNode(iri), label, iconName: '', propertyCount: 1, hasLabel: false, ...options };
 }
 
 const TREE = summaryOf('http://example.org/Tree', 'Tree', { prefixedName: 'ex:Tree', description: 'A woody plant.' });
@@ -34,7 +34,7 @@ describe('ResourceListFilter', () => {
 	});
 
 	it('keeps the resources the tree lists under the node, in document order', () => {
-		const filter = new ResourceListFilter({ type: { label: 'Plants', resourceIds: new Set([LEAF.id, TREE.id]) } });
+		const filter = new ResourceListFilter({ type: { label: 'Plants', resourceKeys: new Set([LEAF.term.value, TREE.term.value]) } });
 
 		expect(filter.apply(RESOURCES)).toEqual([TREE, LEAF]);
 	});
@@ -44,7 +44,7 @@ describe('ResourceListFilter', () => {
 	});
 
 	it('narrows by every criterion at once', () => {
-		const filter = new ResourceListFilter({ text: 'e', type: { label: 'Plants', resourceIds: new Set([TREE.id, THING.id]) }, hideExternalDeclarations: true });
+		const filter = new ResourceListFilter({ text: 'e', type: { label: 'Plants', resourceKeys: new Set([TREE.term.value, THING.term.value]) }, hideExternalDeclarations: true });
 
 		expect(filter.apply(RESOURCES)).toEqual([TREE]);
 	});

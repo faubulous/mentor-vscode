@@ -1,18 +1,13 @@
 import { QuadContext } from '@faubulous/mentor-rdf-parsers';
 import { RDF } from '@faubulous/mentor-rdf';
 import { BlankNode, NamedNode, Term } from '@rdfjs/types';
-import { NamespaceInfo, ResourceId, ResourceSummary } from '@src/views/webviews/views/form-editor/form-editor-model';
-import { ResourceIdentities } from './resource-identities';
+import { termToString } from 'rdf-string';
+import { NamespaceInfo, ResourceSummary } from '@src/views/webviews/views/form-editor/form-editor-model';
 
 /**
  * A resource collected from the document, together with the statements that describe it.
  */
 export interface ResourceIndexEntry {
-	/**
-	 * The identifier of the resource within the index.
-	 */
-	id: ResourceId;
-
 	/**
 	 * The term naming the resource.
 	 */
@@ -46,7 +41,9 @@ export interface CollectionItem {
 }
 
 /**
- * The resources of a document, in the order they appear in the source.
+ * The resources of a document, in the order they appear in the source. Its maps and sets are keyed
+ * by the `termToString` form of a term, the key the store uses. Blank nodes keep their identifiers
+ * across versions of the document, as the parser names an anonymous node by where it is written.
  */
 export interface ResourceIndex {
 	/**
@@ -55,15 +52,9 @@ export interface ResourceIndex {
 	summaries: ResourceSummary[];
 
 	/**
-	 * The resources by identifier.
+	 * The resources, by the key of their term.
 	 */
-	entries: Map<ResourceId, ResourceIndexEntry>;
-
-	/**
-	 * Names the resources, blank nodes by where they are written, so they keep their identifiers
-	 * across versions of the document.
-	 */
-	identities: ResourceIdentities;
+	entries: Map<string, ResourceIndexEntry>;
 
 	/**
 	 * The namespace declarations of the document, ordered by prefix.
@@ -71,19 +62,24 @@ export interface ResourceIndex {
 	namespaces: NamespaceInfo[];
 
 	/**
-	 * The items of each collection, by the identifier of the node that heads it.
+	 * The items of each collection, by the key of the node that heads it.
 	 */
-	collections: Map<ResourceId, CollectionItem[]>;
+	collections: Map<string, CollectionItem[]>;
 
 	/**
-	 * Every node that is part of a collection chain, none of which is shown on its own.
+	 * The keys of every node that is part of a collection chain, none of which is shown on its own.
 	 */
-	collectionNodes: Set<ResourceId>;
+	collectionNodes: Set<string>;
 
 	/**
-	 * How often each resource stands as the object of a statement of the document.
+	 * How often each blank node stands as the object of a statement of the document, by its key.
 	 */
-	referenceCounts: Map<ResourceId, number>;
+	referenceCounts: Map<string, number>;
+
+	/**
+	 * The resource each blank node is first written under as a value, by the key of the node.
+	 */
+	holders: Map<string, NamedNode | BlankNode>;
 
 	/**
 	 * The comments written after the last statement of the document, which close it, as the
@@ -114,6 +110,44 @@ export function typeIrisOf(entry: ResourceIndexEntry): string[] {
 		.map(quad => quad.object.value);
 
 	return [...new Set(types)];
+}
+
+/**
+ * Get the entry of a resource.
+ * @param index The index.
+ * @param term The term naming the resource.
+ * @returns The entry, or `undefined` when the document says nothing about the resource.
+ */
+export function getEntry(index: ResourceIndex, term: Term): ResourceIndexEntry | undefined {
+	return index.entries.get(termToString(term));
+}
+
+/**
+ * Find the resource whose card shows a resource: the resource itself when it has a card of its
+ * own, else the resource of the card it is written in, as a node written inside another or the
+ * node of a collection is.
+ * @param index The index.
+ * @param term The term naming the resource.
+ * @returns The resource with the card, or `undefined` when the document shows no card for it.
+ */
+export function findCardResource(index: ResourceIndex, term: NamedNode | BlankNode): NamedNode | BlankNode | undefined {
+	const visited = new Set<string>();
+	let current: NamedNode | BlankNode | undefined = term;
+
+	// A malformed collection chain can loop; the guard bounds the walk.
+	while (current && !visited.has(termToString(current))) {
+		const key = termToString(current);
+		const entry = index.entries.get(key);
+
+		if (entry && !entry.nested && !index.collectionNodes.has(key)) {
+			return current;
+		}
+
+		visited.add(key);
+		current = index.holders.get(key);
+	}
+
+	return undefined;
 }
 
 /**

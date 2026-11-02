@@ -1,4 +1,5 @@
 import { Term } from '@rdfjs/types';
+import { termToString } from 'rdf-string';
 import { ExpectedStatementChange } from '../edit-plan';
 import { EditRejectionError } from '../edit-rejection';
 import { ObjectSpan, PredicateGroup, SubjectBlock } from '../statement-model';
@@ -140,7 +141,7 @@ export class ValueOperations {
 		const removed = new Set(emptied);
 
 		for (const block of emptied) {
-			const siblings = blocksBySubject.get(block.subjectId) ?? [block];
+			const siblings = blocksBySubject.get(termToString(block.subject)) ?? [block];
 
 			if (siblings.every(sibling => removed.has(sibling))) {
 				throw new EditRejectionError('wouldRemoveSubject', 'These are the last statements about the resource. Delete the resource to remove it.');

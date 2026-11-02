@@ -44,15 +44,15 @@ describe('ExternalDeclarationDetector', () => {
 			ex:A a owl:Class .
 			ex:B a owl:Class ; rdfs:label "B" .
 		`);
-		const marked = Object.fromEntries(Array.from(index.entries.values()).map(entry => [entry.id, detector.isExternalDeclaration(entry)]));
+		const marked = Object.fromEntries(Array.from(index.entries).map(([key, entry]) => [key, detector.isExternalDeclaration(entry)]));
 
 		expect(marked).toEqual({
-			[`i:${_RDFS}label`]: true,
-			[`i:${_OWL}Thing`]: true,
-			[`i:${_RDFS}seeAlso`]: false,
-			[`i:${EX}`]: true,
-			[`i:${EX}A`]: false,
-			[`i:${EX}B`]: false
+			[`${_RDFS}label`]: true,
+			[`${_OWL}Thing`]: true,
+			[`${_RDFS}seeAlso`]: false,
+			[`${EX}`]: true,
+			[`${EX}A`]: false,
+			[`${EX}B`]: false
 		});
 	});
 
@@ -60,7 +60,7 @@ describe('ExternalDeclarationDetector', () => {
 		const { index } = detectorOf('ex:A a owl:Class .\nex:B a owl:Class ; rdfs:label "B" .\n');
 		const statesNothing = (id: string) => ExternalDeclarationDetector.statesNothingOfItsOwn(index.entries.get(id)!);
 
-		expect(statesNothing(`i:${EX}A`)).toBe(true);
-		expect(statesNothing(`i:${EX}B`)).toBe(false);
+		expect(statesNothing(`${EX}A`)).toBe(true);
+		expect(statesNothing(`${EX}B`)).toBe(false);
 	});
 });

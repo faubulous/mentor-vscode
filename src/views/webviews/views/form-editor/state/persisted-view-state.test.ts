@@ -9,25 +9,29 @@ describe('PersistedViewState', () => {
 
 	it('repairs a state that lacks fields or holds them in another form', () => {
 		expect(PersistedViewState.read({ font: 'mono' })).toEqual(new PersistedViewState());
-		expect(PersistedViewState.read({ openIds: ['i:a', 3] }).openIds).toEqual([]);
-		expect(PersistedViewState.read({ openIds: [], hideExternalDeclarations: 'yes' }).hideExternalDeclarations).toBeUndefined();
+		expect(PersistedViewState.read({ openCards: ['http://example.org/a', 3] }).openCards).toEqual([]);
+		expect(PersistedViewState.read({ openCards: [], hideExternalDeclarations: 'yes' }).hideExternalDeclarations).toBeUndefined();
 	});
 
 	it('reads a state stored by an earlier version, ignoring what it no longer keeps', () => {
-		expect(PersistedViewState.read({ version: 1, openIds: ['x'], mode: 'edit' })).toEqual(new PersistedViewState(['x']));
+		expect(PersistedViewState.read({ version: 1, openCards: ['x'], mode: 'edit' })).toEqual(new PersistedViewState(['x']));
+	});
+
+	it('drops the open cards stored by resource identifier, which name no card any more', () => {
+		expect(PersistedViewState.read({ openIds: ['i:http://example.org/a'], documentUri: 'u' })).toEqual(new PersistedViewState([], 'u'));
 	});
 
 	it('round trips through the stored form', () => {
 		const state = new PersistedViewState(['x'], 'u', true);
 
-		expect(state.toJSON()).toEqual({ documentUri: 'u', openIds: ['x'], hideExternalDeclarations: true });
+		expect(state.toJSON()).toEqual({ documentUri: 'u', openCards: ['x'], hideExternalDeclarations: true });
 		expect(PersistedViewState.read(JSON.parse(JSON.stringify(state)))).toEqual(state);
 	});
 
 	it('changes only the fields named', () => {
 		const state = new PersistedViewState(['x'], 'u', true);
 
-		expect(state.with({ openIds: ['y'] })).toEqual(new PersistedViewState(['y'], 'u', true));
+		expect(state.with({ openCards: ['y'] })).toEqual(new PersistedViewState(['y'], 'u', true));
 		expect(state.with({ hideExternalDeclarations: undefined })).toEqual(new PersistedViewState(['x'], 'u'));
 	});
 });

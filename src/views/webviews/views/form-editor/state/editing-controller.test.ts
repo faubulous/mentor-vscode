@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { EditOperation } from '@src/services/editing/edit-operation';
 import { createEditingHostStub } from '@src/utilities/mocks/editing-host-fixtures';
 import { EditOutcome } from '../services/editing-host-service.interface';
+import { NamedNode } from '@rdfjs/types';
 import { EditWriter } from './edit-writer';
 import { EditingController } from './editing-controller';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
@@ -12,7 +13,7 @@ const subject = RdfDataFactory.namedNode('http://example.org/s');
  * A writer that writes one operation of its predicate per request, recording how its edits end.
  */
 class TestWriter implements EditWriter {
-	readonly resourceId: string;
+	readonly subject: NamedNode;
 
 	version = 1;
 
@@ -32,7 +33,7 @@ class TestWriter implements EditWriter {
 	 * @param onTake Called while it builds its edit.
 	 */
 	constructor(private readonly predicate: string, private readonly onTake?: () => void) {
-		this.resourceId = `i:${predicate}`;
+		this.subject = RdfDataFactory.namedNode(predicate);
 	}
 
 	get wantsToWrite(): boolean {
@@ -174,20 +175,20 @@ describe('EditingController', () => {
 		const writer = new TestWriter('p1');
 		const changes: (readonly string[])[] = [];
 
-		controller.subscribe(() => changes.push([...controller.busyResourceIds]));
+		controller.subscribe(() => changes.push([...controller.busyResourceKeys]));
 		controller.requestWrite(writer.wanting());
 
-		expect([...controller.busyResourceIds]).toEqual(['i:p1']);
+		expect([...controller.busyResourceKeys]).toEqual(['p1']);
 
 		await host.settle();
 
-		expect([...controller.busyResourceIds]).toEqual(['i:p1']);
+		expect([...controller.busyResourceKeys]).toEqual(['p1']);
 
 		writer.awaiting = false;
 		controller.flush();
 
-		expect([...controller.busyResourceIds]).toEqual([]);
-		expect(changes).toEqual([['i:p1'], []]);
+		expect([...controller.busyResourceKeys]).toEqual([]);
+		expect(changes).toEqual([['p1'], []]);
 	});
 });
 

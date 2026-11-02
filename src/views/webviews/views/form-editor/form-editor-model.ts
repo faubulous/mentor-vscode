@@ -7,9 +7,6 @@
 
 import type { BlankNode, Literal, NamedNode } from '@rdfjs/types';
 import type { ValueKindHint } from '@src/utilities/value-kind';
-import type { ResourceId } from '@src/services/editing/resource-id';
-
-export type { ResourceId };
 
 /**
  * A position in the document, used to reveal a term in the text editor.
@@ -82,9 +79,9 @@ export interface TermView {
  */
 export interface NestedResourceRef {
 	/**
-	 * The identifier of the nested resource.
+	 * The blank node naming the nested resource.
 	 */
-	id: ResourceId;
+	term: BlankNode;
 
 	/**
 	 * How many properties the nested resource has.
@@ -144,12 +141,8 @@ export interface PropertyView {
  */
 export interface ResourceSummary {
 	/**
-	 * The identifier of the resource within the snapshot.
-	 */
-	id: ResourceId;
-
-	/**
-	 * The term naming the resource.
+	 * The term naming the resource. A blank node keeps its identifier across versions of the
+	 * document, as the parser names an anonymous node by where it is written.
 	 */
 	term: NamedNode | BlankNode;
 
@@ -215,11 +208,6 @@ export interface ResourceSummary {
  * The properties of a single resource, loaded on demand.
  */
 export interface ResourceDetail {
-	/**
-	 * The identifier of the resource within the snapshot.
-	 */
-	id: ResourceId;
-
 	/**
 	 * The term naming the resource.
 	 */
@@ -320,7 +308,7 @@ export interface DocumentSnapshot {
 	/**
 	 * The resource describing the document, such as its ontology, which heads the form.
 	 */
-	documentResourceId?: ResourceId;
+	documentResource?: NamedNode;
 
 	/**
 	 * The comments written after the last statement of the document, which close it, as the

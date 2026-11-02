@@ -1,4 +1,5 @@
 import { RefObject, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { BlankNode, NamedNode } from '@rdfjs/types';
 import { createPortal } from 'react-dom';
 import { useBlockListVirtualizer } from '../hooks/use-block-list-virtualizer';
 import { useStickyHeight } from '../hooks/use-sticky-height';
@@ -21,7 +22,7 @@ export interface RevealRequest {
 	/**
 	 * The resource.
 	 */
-	resourceId: string;
+	resource: NamedNode | BlankNode;
 }
 
 /**
@@ -62,7 +63,7 @@ export interface BlockListProps {
 	/**
 	 * Expands an entry or folds it again.
 	 */
-	onToggle: (resourceId: string) => void;
+	onToggle: (resource: NamedNode | BlankNode) => void;
 
 	/**
 	 * A resource to scroll to.
@@ -82,7 +83,7 @@ export interface BlockListProps {
 	/**
 	 * Tells which card is under the top of the view, or none while the header is in view.
 	 */
-	onCurrentChange?: (resourceId: string | undefined) => void;
+	onCurrentChange?: (blockId: string | undefined) => void;
 }
 
 /**
@@ -151,13 +152,13 @@ function usePrefetch(dataService: IResourceDataService, blocks: FormBlock[], sta
 	useEffect(() => {
 		const from = Math.max(0, startIndex - PREFETCH_MARGIN);
 		const to = Math.min(blocks.length - 1, endIndex + PREFETCH_MARGIN);
-		const needed: string[] = [];
+		const needed: (NamedNode | BlankNode)[] = [];
 
 		for (let index = from; index <= to; index++) {
 			const block = blocks[index];
 
-			if (block?.kind === 'resource' && !dataService.get(block.id)) {
-				needed.push(block.id);
+			if (block?.kind === 'resource' && !dataService.get(block.resource.term)) {
+				needed.push(block.resource.term);
 			}
 		}
 
@@ -185,7 +186,7 @@ function useCurrentEntry(
 	indexAt: (offset: number) => number,
 	scrollMargin: number,
 	stickyHeight: number,
-	onCurrentChange: ((resourceId: string | undefined) => void) | undefined
+	onCurrentChange: ((blockId: string | undefined) => void) | undefined
 ): string | undefined {
 	const [current, setCurrent] = useState<string>();
 
@@ -274,7 +275,7 @@ function useRevealRequest(request: RevealRequest | undefined, blocks: FormBlock[
 			return;
 		}
 
-		const index = blocks.findIndex(block => block.kind === 'resource' && block.id === request.resourceId);
+		const index = blocks.findIndex(block => block.kind === 'resource' && block.resource.term.equals(request.resource));
 
 		// The blocks may not hold the resource yet, while a filter that left it out is being lifted.
 		if (index >= 0) {

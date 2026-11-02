@@ -1,4 +1,5 @@
 import { EditOperation } from '@src/services/editing/edit-operation';
+import { BlankNode, NamedNode } from '@rdfjs/types';
 import { ValueKind } from '@src/utilities/value-kind';
 import { PropertyView, TermView } from '../form-editor-model';
 import { EditOutcome } from '../services/editing-host-service.interface';
@@ -116,8 +117,8 @@ export class StatementRowEditor implements EditWriter {
 		return this._claimedPredicate;
 	}
 
-	get resourceId(): string {
-		return this._data.resourceId;
+	get subject(): NamedNode | BlankNode {
+		return this._data.subject;
 	}
 
 	get version(): number {

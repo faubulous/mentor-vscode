@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { TEST_NAMESPACES, TEST_SUBJECT, TEST_SUBJECT_ID, createIriView, createProperty, createSampleResourceDetail, withAnchors } from '@src/utilities/mocks/statement-fixtures';
+import { TEST_NAMESPACES, TEST_SUBJECT, createIriView, createProperty, createSampleResourceDetail, withAnchors } from '@src/utilities/mocks/statement-fixtures';
 import { PropertyView } from '../form-editor-model';
 import { TypedTermReader } from '../services/statement/typed-term-reader';
 import { StatementRows, StatementRowsData } from './statement-rows';
@@ -11,7 +11,7 @@ const SAMPLE = withAnchors(createSampleResourceDetail()).properties;
  * Make the data of a card.
  */
 function dataOf(properties: readonly PropertyView[], version = 1): StatementRowsData {
-	return { resourceId: TEST_SUBJECT_ID, subject: TEST_SUBJECT, properties, version, stale: false, reader, predicateTextOf: property => property.predicate.prefixedName ?? '' };
+	return { subject: TEST_SUBJECT, properties, version, stale: false, reader, predicateTextOf: property => property.predicate.prefixedName ?? '' };
 }
 
 /**

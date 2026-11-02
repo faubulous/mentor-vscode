@@ -1,3 +1,4 @@
+import { BlankNode, NamedNode } from '@rdfjs/types';
 import { IResourceDataService } from '../services/resource-data-service.interface';
 
 /**
@@ -17,5 +18,5 @@ export interface StatementRowContext {
 	/**
 	 * The resources that hold the row, which guard against cycles.
 	 */
-	visited: readonly string[];
+	visited: readonly (NamedNode | BlankNode)[];
 }

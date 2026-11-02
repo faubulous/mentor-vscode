@@ -1,4 +1,6 @@
+import { BlankNode, NamedNode } from '@rdfjs/types';
 import { useEffect } from 'react';
+import { termToString } from 'rdf-string';
 import { NestedResourceRef } from '../form-editor-model';
 import { useResourceDetail } from '../hooks/use-resource-detail';
 import { IResourceDataService } from '../services/resource-data-service.interface';
@@ -33,7 +35,7 @@ export interface NestedResourceCardProps {
 	/**
 	 * The resources that hold this card, which guard against cycles.
 	 */
-	visited: readonly string[];
+	visited: readonly (NamedNode | BlankNode)[];
 }
 
 /**
@@ -44,16 +46,16 @@ export interface NestedResourceCardProps {
  * @returns The card, or nothing for a node that holds this card already.
  */
 export function NestedResourceCard({ nested, dataService, depth, visited }: NestedResourceCardProps): React.JSX.Element | null {
-	const { detail, stale } = useResourceDetail(dataService, nested.id);
+	const { detail, stale } = useResourceDetail(dataService, nested.term);
 
 	// The node is asked for when nothing is known of it, and again after the document changed.
 	useEffect(() => {
 		if (!detail || stale) {
-			dataService.request([nested.id]);
+			dataService.request([nested.term]);
 		}
-	}, [detail, stale, dataService, nested.id]);
+	}, [detail, stale, dataService, nested.term]);
 
-	if (visited.includes(nested.id)) {
+	if (visited.some(resource => resource.equals(nested.term))) {
 		return null;
 	}
 
@@ -62,13 +64,13 @@ export function NestedResourceCard({ nested, dataService, depth, visited }: Nest
 	}
 
 	if (!detail) {
-		return <div className="resource-card is-nested" data-resource-id={nested.id}><div className="resource-form-loading">Loading…</div></div>;
+		return <div className="resource-card is-nested" data-resource-id={termToString(nested.term)}><div className="resource-form-loading">Loading…</div></div>;
 	}
 
 	return (
-		<div className="resource-card is-nested" data-resource-id={nested.id}>
+		<div className="resource-card is-nested" data-resource-id={termToString(nested.term)}>
 			{detail.comments && <div className="statement-comment">{detail.comments.join('\n')}</div>}
-			<StatementList detail={detail} dataService={dataService} depth={depth} visited={[...visited, nested.id]} />
+			<StatementList detail={detail} dataService={dataService} depth={depth} visited={[...visited, nested.term]} />
 		</div>
 	);
 }

@@ -9,6 +9,7 @@ import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
 import { createMockWebviewPanel } from '@src/utilities/mocks/vscode';
 import { createMockDocumentContextService, createMockTextDocument } from '@src/utilities/mocks/factories';
+import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { FormEditorProvider } from './form-editor-provider';
 
 const URI = 'file:///workspace/test.ttl';
@@ -90,8 +91,10 @@ describe('FormEditorProvider', () => {
 		const second = await open(provider);
 		const other = await open(provider, 'file:///workspace/other.ttl');
 
-		provider.revealResource(vscode.Uri.parse(URI), 'i:http://example.org/A');
-		provider.filterResources(vscode.Uri.parse(URI), 'Classes', ['i:http://example.org/A']);
+		const resource = RdfDataFactory.namedNode('http://example.org/A');
+
+		provider.revealResource(vscode.Uri.parse(URI), resource);
+		provider.filterResources(vscode.Uri.parse(URI), 'Classes', [resource]);
 
 		// The sessions post the snapshot of the document on their own; the requests follow it.
 		const requestsOf = (editor: OpenedEditor) => editor.posted.map(message => message.id).filter(id => id !== 'DocumentSnapshot');

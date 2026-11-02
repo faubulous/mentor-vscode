@@ -61,6 +61,6 @@ describe('EditingHostService', () => {
 	it('leaves the messages of other kinds to others', () => {
 		const { service } = createService();
 
-		expect(service.accept({ id: 'ScrollToResource', resourceId: 'i:x' })).toBe(false);
+		expect(service.accept({ id: 'ScrollToResource', resource: RdfDataFactory.namedNode('http://example.org/x') })).toBe(false);
 	});
 });

@@ -1,13 +1,21 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { NamedNode } from '@rdfjs/types';
 import { ResourceDetail } from '../form-editor-model';
 import { ResourceDataService } from './resource-data-service';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 
 /**
+ * Create a resource of the example namespace.
+ */
+function resource(localName: string): NamedNode {
+	return RdfDataFactory.namedNode(`http://example.org/${localName}`);
+}
+
+/**
  * Create a resource detail with no properties.
  */
-function detail(id: string): ResourceDetail {
-	return { id, term: RdfDataFactory.namedNode(`http://example.org/${id}`), properties: [] };
+function detail(localName: string): ResourceDetail {
+	return { term: resource(localName), properties: [] };
 }
 
 /**
@@ -36,21 +44,21 @@ describe('ResourceDataService', () => {
 	it('coalesces concurrent requests into one message', () => {
 		const { service, send } = createService();
 
-		service.request(['a']);
-		service.request(['b']);
-		service.request(['c']);
+		service.request([resource('a')]);
+		service.request([resource('b')]);
+		service.request([resource('c')]);
 		vi.runAllTimers();
 
 		expect(send).toHaveBeenCalledTimes(1);
-		expect([...send.mock.calls[0][0]].sort()).toEqual(['a', 'b', 'c']);
+		expect(send.mock.calls[0][0]).toEqual([resource('a'), resource('b'), resource('c')]);
 	});
 
 	it('does not request the same resource twice', () => {
 		const { service, send } = createService();
 
-		service.request(['a']);
+		service.request([resource('a')]);
 		vi.runAllTimers();
-		service.request(['a']);
+		service.request([resource('a')]);
 		vi.runAllTimers();
 
 		expect(send).toHaveBeenCalledTimes(1);
@@ -63,7 +71,7 @@ describe('ResourceDataService', () => {
 		service.subscribe(listener);
 		service.accept(1, [detail('a')]);
 
-		expect(service.get('a')).toEqual(detail('a'));
+		expect(service.get(resource('a'))).toEqual(detail('a'));
 		expect(listener).toHaveBeenCalled();
 	});
 
@@ -73,7 +81,7 @@ describe('ResourceDataService', () => {
 		service.setVersion(2);
 		service.accept(1, [detail('a')]);
 
-		expect(service.get('a')).toBeUndefined();
+		expect(service.get(resource('a'))).toBeUndefined();
 	});
 
 	it('keeps the detail of the previous version as stale until the new one arrives', () => {
@@ -82,22 +90,22 @@ describe('ResourceDataService', () => {
 		service.accept(1, [detail('a')]);
 		service.setVersion(2);
 
-		expect(service.get('a')).toBeUndefined();
-		expect(service.getStale('a')).toEqual(detail('a'));
+		expect(service.get(resource('a'))).toBeUndefined();
+		expect(service.getStale(resource('a'))).toEqual(detail('a'));
 
 		service.accept(2, [detail('a')]);
 
-		expect(service.get('a')).toEqual(detail('a'));
-		expect(service.getStale('a')).toBeUndefined();
+		expect(service.get(resource('a'))).toEqual(detail('a'));
+		expect(service.getStale(resource('a'))).toBeUndefined();
 	});
 
 	it('allows a resource to be requested again after a version change', () => {
 		const { service, send } = createService();
 
-		service.request(['a']);
+		service.request([resource('a')]);
 		vi.runAllTimers();
 		service.setVersion(2);
-		service.request(['a']);
+		service.request([resource('a')]);
 		vi.runAllTimers();
 
 		expect(send).toHaveBeenCalledTimes(2);
@@ -106,10 +114,10 @@ describe('ResourceDataService', () => {
 	it('stops tracking resources the host could not resolve', () => {
 		const { service, send } = createService();
 
-		service.request(['gone']);
+		service.request([resource('gone')]);
 		vi.runAllTimers();
-		service.accept(1, [], ['gone']);
-		service.request(['gone']);
+		service.accept(1, [], [resource('gone')]);
+		service.request([resource('gone')]);
 		vi.runAllTimers();
 
 		expect(send).toHaveBeenCalledTimes(2);
@@ -118,7 +126,7 @@ describe('ResourceDataService', () => {
 	it('splits a large request into batches', () => {
 		const { service, send } = createService();
 
-		service.request(Array.from({ length: 150 }, (_, index) => `r${index}`));
+		service.request(Array.from({ length: 150 }, (_, index) => resource(`r${index}`)));
 		vi.runAllTimers();
 
 		expect(send).toHaveBeenCalledTimes(2);
