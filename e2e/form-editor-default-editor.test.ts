@@ -26,7 +26,7 @@ function viewTypesOf(uri: vscode.Uri): string[] {
 /**
  * The documents these tests open, written fresh for this suite and removed afterwards.
  */
-const OWN_DOCUMENTS = ['data/default-view-a.ttl', 'data/default-view-b.ttl'];
+const OWN_DOCUMENTS = ['data/default-editor-a.ttl', 'data/default-editor-b.ttl'];
 
 /**
  * The URI of a document of this suite.
@@ -43,21 +43,22 @@ function turtleAssociation(): string | undefined {
 }
 
 /**
- * Set the default view and wait until the editor associations follow it.
- * @param view The default view, or `undefined` to reset the setting.
+ * Make the form editor the default editor of Turtle files, as VS Code's "Configure default editor
+ * for '*.ttl'" does, or take it back.
+ * @param viewType The editor to associate, or `undefined` to remove the association.
  */
-async function setDefaultView(view: 'form' | undefined): Promise<void> {
-	await vscode.workspace.getConfiguration('mentor').update('formEditor.defaultView', view, vscode.ConfigurationTarget.Global);
-	await waitFor(() => (turtleAssociation() === FORM_EDITOR_VIEW_TYPE) === (view === 'form'), { label: `the editor associations to follow the default view '${view}'` });
+async function setTurtleAssociation(viewType: string | undefined): Promise<void> {
+	await vscode.workspace.getConfiguration('workbench').update('editorAssociations', viewType ? { '*.ttl': viewType } : undefined, vscode.ConfigurationTarget.Global);
+	await waitFor(() => turtleAssociation() === viewType, { label: `the Turtle association to be '${viewType}'` });
 }
 
 /**
- * With the form editor configured as the default view, the RDF file types are associated with it,
- * so VS Code opens a document in the form editor right away and reveals an open form instead of
- * opening a text editor beside it. A switch to the text editor is a one-off that VS Code leaves
- * alone.
+ * With the RDF file types associated with the form editor, VS Code opens a document in the form
+ * editor right away and reveals an open form instead of opening a text editor beside it. A switch
+ * to the text editor is a one-off that VS Code leaves alone. Mentor itself never writes the
+ * associations: they are the user's.
  */
-suite('form editor default view', () => {
+suite('form editor as default editor', () => {
 	suiteSetup(async () => {
 		await activateMentor();
 
@@ -75,14 +76,14 @@ suite('form editor default view', () => {
 	});
 
 	teardown(async () => {
-		await setDefaultView(undefined);
+		await setTurtleAssociation(undefined);
 		await vscode.commands.executeCommand('workbench.action.closeAllEditors');
 	});
 
 	test('opens an RDF document in the form editor right away, without a text editor first', async () => {
 		const uri = ownDocument(0);
 
-		await setDefaultView('form');
+		await setTurtleAssociation(FORM_EDITOR_VIEW_TYPE);
 		await vscode.commands.executeCommand('vscode.open', uri);
 
 		assert.deepStrictEqual(viewTypesOf(uri), [FORM_EDITOR_VIEW_TYPE], 'the document must open in the form editor and nothing else');
@@ -93,7 +94,7 @@ suite('form editor default view', () => {
 		const first = ownDocument(0);
 		const second = ownDocument(1);
 
-		await setDefaultView('form');
+		await setTurtleAssociation(FORM_EDITOR_VIEW_TYPE);
 		await vscode.commands.executeCommand('vscode.open', first, { preview: false });
 		await waitFor(() => viewTypesOf(first).join(',') === FORM_EDITOR_VIEW_TYPE, { label: 'the first document to open in the form editor' });
 		await vscode.commands.executeCommand('vscode.open', second, { preview: false });
@@ -105,11 +106,11 @@ suite('form editor default view', () => {
 		assert.deepStrictEqual(viewTypesOf(second), [FORM_EDITOR_VIEW_TYPE], 'the second document must keep its form editor');
 	});
 
-	test('opens an RDF document in the text editor again once the text editor is the default', async () => {
+	test('opens an RDF document in the text editor again once the association is removed', async () => {
 		const uri = ownDocument(1);
 
-		await setDefaultView('form');
-		await setDefaultView(undefined);
+		await setTurtleAssociation(FORM_EDITOR_VIEW_TYPE);
+		await setTurtleAssociation(undefined);
 		await vscode.commands.executeCommand('vscode.open', uri);
 
 		assert.deepStrictEqual(viewTypesOf(uri), ['text']);
@@ -118,7 +119,7 @@ suite('form editor default view', () => {
 	test('keeps the text editor the user switched to', async () => {
 		const [uri] = await vscode.workspace.findFiles('data/instances.ttl', undefined, 1);
 
-		await setDefaultView('form');
+		await setTurtleAssociation(FORM_EDITOR_VIEW_TYPE);
 		await vscode.commands.executeCommand('mentor.command.openFormEditor', uri);
 		await waitFor(() => viewTypesOf(uri).join(',') === FORM_EDITOR_VIEW_TYPE, { label: 'the form editor to open' });
 

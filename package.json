@@ -2382,22 +2382,7 @@
             "type": "boolean",
             "default": false,
             "title": "Enable Form Editor",
-            "description": "Register the form based editor for RDF documents, which the editor title bar switches to. Takes effect after the window is reloaded.",
-            "experimental": true
-          },
-          "mentor.formEditor.defaultView": {
-            "type": "string",
-            "enum": [
-              "text",
-              "form"
-            ],
-            "enumDescriptions": [
-              "Open RDF documents in the text editor.",
-              "Open RDF documents in the form editor."
-            ],
-            "default": "text",
-            "title": "Default View",
-            "description": "Which view RDF documents open in while the form editor is enabled. Choosing the form editor associates the RDF file types with it in `workbench.editorAssociations`, in the scope this setting is set in; choosing the text editor removes those associations again. The editor title bar switches between the text and the form view at any time.",
+            "description": "Register the form based editor for RDF documents, which the editor title bar switches to. To open a file type in the form editor by default, run 'Reopen Editor With...' on a document of that type and choose 'Configure default editor for ...'. Takes effect after the window is reloaded.",
             "experimental": true
           }
         }
