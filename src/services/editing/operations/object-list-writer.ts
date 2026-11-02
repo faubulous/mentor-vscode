@@ -62,7 +62,7 @@ export class ObjectListWriter {
 		const end = objects[objects.length - 1].end;
 
 		if (model.tokens.some(token => isCommentToken(token) && token.startOffset > start && token.startOffset < end)) {
-			throw new EditRejectionError('unsupportedConstruct', 'Values with comments between them cannot change their order.');
+			throw new EditRejectionError({ kind: 'commentsBetweenValues' });
 		}
 
 		const separator = this._separator(entry.block, entry.group);

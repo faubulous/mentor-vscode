@@ -163,9 +163,9 @@ describe('EditingController', () => {
 
 		controller.requestWrite(refused.wanting());
 		controller.requestWrite(next.wanting());
-		await host.settle({ ok: false, reason: 'notFound', message: 'Gone', version: 1 });
+		await host.settle({ ok: false, problem: { kind: 'valueMoved' }, version: 1 });
 
-		expect(refused.outcomes).toEqual([{ ok: false, reason: 'notFound', message: 'Gone', version: 1 }]);
+		expect(refused.outcomes).toEqual([{ ok: false, problem: { kind: 'valueMoved' }, version: 1 }]);
 		expect(predicatesOf(host.submitted)).toEqual(['p1', 'p2']);
 	});
 

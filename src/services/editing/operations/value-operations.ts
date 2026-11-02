@@ -144,7 +144,7 @@ export class ValueOperations {
 			const siblings = blocksBySubject.get(termToString(block.subject)) ?? [block];
 
 			if (siblings.every(sibling => removed.has(sibling))) {
-				throw new EditRejectionError('wouldRemoveSubject', 'These are the last statements about the resource. Delete the resource to remove it.');
+				throw new EditRejectionError({ kind: 'lastStatements' });
 			}
 		}
 	}

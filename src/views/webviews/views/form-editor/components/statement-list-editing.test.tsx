@@ -258,12 +258,12 @@ describe('StatementList, edited', () => {
 		const { host } = renderList();
 
 		await typeNewStatement('rdfs:comment', 'A tree');
-		await settle(host, { ok: false, reason: 'invalidTerm', message: 'Nope', version: 1 });
+		await settle(host, { ok: false, problem: { kind: 'invalidIri', iri: 'ex: tree' }, version: 1 });
 
 		const refused = rows()[3];
 
 		expect(refused.classList.contains('is-editable')).toBe(true);
-		expect(within(refused).getByRole('alert').textContent).toContain('Nope');
+		expect(within(refused).getByRole('alert').textContent).toContain("'ex: tree' is not a valid IRI.");
 		expect((within(refused).getByLabelText('Value 1') as HTMLInputElement).value).toBe('A tree');
 
 		fireEvent.click(within(refused).getByLabelText('Dismiss'));

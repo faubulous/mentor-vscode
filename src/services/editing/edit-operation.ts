@@ -27,18 +27,3 @@ export type EditOperation =
 	 */
 	| { op: 'setPredicate'; subject: NamedNode | BlankNode; predicate: string; newPredicate: string };
 
-/**
- * Why an edit was not applied.
- */
-export type EditRejectionReason =
-	| 'staleVersion'
-	| 'readOnly'
-	| 'parseErrors'
-	| 'notFound'
-	| 'ambiguous'
-	| 'unsupportedConstruct'
-	| 'unsupportedSyntax'
-	| 'invalidTerm'
-	| 'verificationFailed'
-	| 'applyFailed'
-	| 'wouldRemoveSubject';

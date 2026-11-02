@@ -21,7 +21,7 @@ export class StatementLocator {
 	 */
 	static subjectKey(subject: NamedNode | BlankNode): string {
 		if (subject.termType !== 'NamedNode' && subject.termType !== 'BlankNode') {
-			throw new EditRejectionError('invalidTerm', 'Only an IRI or a blank node can be the subject of a statement.');
+			throw new EditRejectionError({ kind: 'invalidSubject' });
 		}
 
 		return termToString(subject);
@@ -37,7 +37,7 @@ export class StatementLocator {
 		const blocks = this._model.blocksBySubject.get(StatementLocator.subjectKey(subject));
 
 		if (!blocks || blocks.length === 0) {
-			throw new EditRejectionError('notFound', 'The resource is no longer described in the document.');
+			throw new EditRejectionError({ kind: 'resourceGone' });
 		}
 
 		return blocks;

@@ -1,4 +1,5 @@
 import { DocumentProblem, ReadOnlyReason } from '../form-editor-model';
+import { getReadOnlyMessage } from './read-only-message';
 
 /**
  * Properties of the {@link LoadingState} component.
@@ -88,8 +89,8 @@ export function ProblemState({ readOnly, problems, onRevealProblem, onOpenTextEd
 
 	return (
 		<div className="form-editor-state">
-			<vscode-icon name={readOnly.reason === 'template' ? 'file-code' : 'error'} size={32}></vscode-icon>
-			<div className="form-editor-state-message">{readOnly.message}</div>
+			<vscode-icon name={readOnly === 'template' ? 'file-code' : 'error'} size={32}></vscode-icon>
+			<div className="form-editor-state-message">{getReadOnlyMessage(readOnly)}</div>
 			{first && (
 				<div className="form-editor-state-message">
 					<code>{first.message}</code>
@@ -127,7 +128,7 @@ export function ReadOnlyBanner({ readOnly, onOpenTextEditor }: ReadOnlyBannerPro
 	return (
 		<div className="form-editor-banner">
 			<vscode-icon name="warning"></vscode-icon>
-			<div className="form-editor-banner-text">{readOnly.message}</div>
+			<div className="form-editor-banner-text">{getReadOnlyMessage(readOnly)}</div>
 			<vscode-button secondary onClick={onOpenTextEditor}>Open in Text Editor</vscode-button>
 		</div>
 	);

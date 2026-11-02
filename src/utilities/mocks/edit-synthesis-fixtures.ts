@@ -91,14 +91,14 @@ export function createSynthesisInput(body: string, options: SynthesisFixtureOpti
  * @param body The statements of the document.
  * @param operations The operations.
  * @param options How the document is written.
- * @returns The edited body, or `rejected:<reason>` or `unverified:<message>`.
+ * @returns The edited body, or `rejected:<problem kind>` or `unverified:<message>`.
  */
 export function synthesizeEdit(body: string, operations: EditOperation[], options: SynthesisFixtureOptions = {}): string {
 	const input = createSynthesisInput(body, options);
 	const plan = new EditSynthesizer(input).synthesize(operations);
 
 	if (isEditRejection(plan)) {
-		return `rejected:${plan.reason}`;
+		return `rejected:${plan.problem.kind}`;
 	}
 
 	const verification = new EditVerifier(input).verify(plan);
@@ -122,7 +122,7 @@ export function synthesizePlan(body: string, operations: EditOperation[], option
 	const plan = new EditSynthesizer(createSynthesisInput(body, options)).synthesize(operations);
 
 	if (isEditRejection(plan)) {
-		throw new Error(`Rejected: ${plan.reason}`);
+		throw new Error(`Rejected: ${plan.problem.kind}`);
 	}
 
 	return plan;

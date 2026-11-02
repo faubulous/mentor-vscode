@@ -6,7 +6,7 @@ import { renderWebview } from '@src/utilities/mocks/webview-test-utils';
 import { FormErrorBoundary } from './form-error-boundary';
 import { EmptyState, ProblemState, ReadOnlyBanner } from './resource-list-states';
 
-const READ_ONLY = { reason: 'syntaxErrors' as const, message: 'The document has syntax errors.' };
+const READ_ONLY = 'syntaxErrors' as const;
 
 describe('resource list states', () => {
 	it('shows the first problem of a document that cannot be shown and leads to it', async () => {
@@ -15,7 +15,7 @@ describe('resource list states', () => {
 
 		renderWebview(<ProblemState readOnly={READ_ONLY} problems={[problem]} onRevealProblem={onRevealProblem} onOpenTextEditor={() => undefined} />);
 
-		expect(screen.getByText('The document has syntax errors.')).toBeTruthy();
+		expect(screen.getByText('This document has syntax errors. Fix them in the text editor to continue editing here.')).toBeTruthy();
 		expect(screen.getByText('Unexpected token')).toBeTruthy();
 
 		await userEvent.click(screen.getByText('Go to Problem'));

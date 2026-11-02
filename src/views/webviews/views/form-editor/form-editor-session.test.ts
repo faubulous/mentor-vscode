@@ -142,7 +142,7 @@ describe('FormEditorSession', () => {
 
 		const [message] = postedOf(posted, 'DocumentSnapshot');
 
-		expect(message.snapshot.readOnly?.reason).toBe('unsupportedSyntax');
+		expect(message.snapshot.readOnly).toBe('unsupportedSyntax');
 		expect(message.snapshot.resources).toEqual([]);
 	});
 
@@ -192,7 +192,7 @@ describe('FormEditorSession', () => {
 
 		const { snapshot } = postedOf(posted, 'DocumentSnapshot')[0];
 
-		expect(snapshot.readOnly?.reason).toBe('syntaxErrors');
+		expect(snapshot.readOnly).toBe('syntaxErrors');
 		expect(snapshot.problems.length).toBeGreaterThan(0);
 		expect(snapshot.problems[0].line).toBeGreaterThanOrEqual(2);
 	});
@@ -213,7 +213,7 @@ describe('FormEditorSession', () => {
 
 		const [rejected] = postedOf(posted, 'EditRejected');
 
-		expect(rejected).toMatchObject({ editId: 'e1', reason: 'staleVersion', version: 1 });
+		expect(rejected).toMatchObject({ editId: 'e1', problem: { kind: 'staleVersion' }, version: 1 });
 	});
 
 	it('revives the terms of an edit it receives, which arrive as plain data', async () => {

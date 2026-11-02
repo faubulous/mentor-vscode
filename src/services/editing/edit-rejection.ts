@@ -1,18 +1,13 @@
-import { EditRejectionReason } from './edit-operation';
+import { EditProblem } from './edit-problem';
 
 /**
  * Why an edit was not applied, in a form the webview can show.
  */
 export interface EditRejection {
 	/**
-	 * Why the edit was not applied.
+	 * What went wrong.
 	 */
-	reason: EditRejectionReason;
-
-	/**
-	 * The explanation shown to the user.
-	 */
-	message: string;
+	problem: EditProblem;
 }
 
 /**
@@ -20,18 +15,22 @@ export interface EditRejection {
  * into an {@link EditRejection}; anything else that is thrown is a programming error.
  */
 export class EditRejectionError extends Error {
-	constructor(readonly reason: EditRejectionReason, message: string) {
-		super(message);
+	/**
+	 * Create the error.
+	 * @param problem What went wrong.
+	 */
+	constructor(readonly problem: EditProblem) {
+		super(`The edit was rejected: ${problem.kind}`);
 
 		this.name = 'EditRejectionError';
 	}
 
 	/**
 	 * Convert the error into the plain rejection sent to the webview.
-	 * @returns The reason and message of the rejection.
+	 * @returns The problem of the rejection.
 	 */
 	toRejection(): EditRejection {
-		return { reason: this.reason, message: this.message };
+		return { problem: this.problem };
 	}
 }
 
@@ -41,5 +40,5 @@ export class EditRejectionError extends Error {
  * @returns `true` for a rejection.
  */
 export function isEditRejection(value: unknown): value is EditRejection {
-	return typeof value === 'object' && value !== null && 'reason' in value && 'message' in value && !('edits' in value);
+	return typeof value === 'object' && value !== null && 'problem' in value && !('edits' in value);
 }

@@ -72,7 +72,7 @@ export class PropertyOperations {
 		const carried = new StatementLocator(context.model).blocksOf(operation.subject).some(block => block.groups.some(group => group.predicateIri === operation.newPredicate));
 
 		if (carried) {
-			throw new EditRejectionError('ambiguous', 'The resource already carries this predicate.');
+			throw new EditRejectionError({ kind: 'predicateTaken' });
 		}
 
 		const written = context.writer.writePredicate(operation.newPredicate);
@@ -155,7 +155,7 @@ export class PropertyOperations {
 		}
 
 		if (found.length === 0) {
-			throw new EditRejectionError('notFound', 'The resource does not carry this predicate.');
+			throw new EditRejectionError({ kind: 'predicateGone' });
 		}
 
 		return found;

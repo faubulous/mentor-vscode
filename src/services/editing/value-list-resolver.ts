@@ -47,7 +47,7 @@ export class ValueListResolver {
 		_requireListedOnce(values);
 
 		if (located.length === 0) {
-			return { groups: [], added: values.map(value => _requireNew(value, 'The value is no longer at the place it was shown at.')), items };
+			return { groups: [], added: values.map(value => _requireNew(value)), items };
 		}
 
 		const entries = this._place(values, objects, located.length);
@@ -110,11 +110,11 @@ export class ValueListResolver {
 			const written = objects.get(value.anchor);
 
 			if (!written) {
-				throw new EditRejectionError('notFound', 'The value is no longer at the place it was shown at.');
+				throw new EditRejectionError({ kind: 'valueMoved' });
 			}
 
 			if (previous && written.groupIndex < previous.groupIndex) {
-				throw new EditRejectionError('unsupportedConstruct', 'Values written in separate statements keep their order.');
+				throw new EditRejectionError({ kind: 'separateStatements' });
 			}
 
 			entries[written.groupIndex].push(...(previous ? [] : leading.splice(0)), { kind: 'kept', span: written.span });
@@ -156,7 +156,7 @@ function _requireListedOnce(values: readonly StatementValue[]): void {
 			value.items.forEach(visit);
 		} else if (value.kind === 'existing') {
 			if (anchors.has(value.anchor)) {
-				throw new EditRejectionError('invalidTerm', 'A value is listed twice.');
+				throw new EditRejectionError({ kind: 'duplicateValue' });
 			}
 
 			anchors.add(value.anchor);
@@ -169,13 +169,12 @@ function _requireListedOnce(values: readonly StatementValue[]): void {
 /**
  * Require a value to be new, as every value of a predicate the subject does not carry is.
  * @param value The value.
- * @param message Why a written value is refused.
  * @returns The value.
- * @throws {EditRejectionError} If the value refers to a written one.
+ * @throws {EditRejectionError} If the value refers to a written one, which is no longer there.
  */
-function _requireNew(value: StatementValue, message: string): NewValue {
+function _requireNew(value: StatementValue): NewValue {
 	if (value.kind === 'existing') {
-		throw new EditRejectionError('notFound', message);
+		throw new EditRejectionError({ kind: 'valueMoved' });
 	}
 
 	return value;

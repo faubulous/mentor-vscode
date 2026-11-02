@@ -68,7 +68,7 @@ describe('FormEditorEditHandler', () => {
 
 		const outcome = await new FormEditorEditHandler().handle(setValueRequest(0, 'new'), { document, context });
 
-		expect(outcome).toEqual({ ok: false, reason: 'staleVersion', message: expect.any(String) });
+		expect(outcome).toEqual({ ok: false, problem: { kind: 'staleVersion' }, detail: expect.any(String) });
 		expect(document.getText()).toContain('"old"');
 	});
 
@@ -77,8 +77,8 @@ describe('FormEditorEditHandler', () => {
 		const broken = setup('ex:s ex:p "old"\n');
 		const template = setup('', `---\n---\n${PREAMBLE}ex:s ex:p "old" .\n`);
 
-		expect(await handler.handle(setValueRequest(1, 'new'), broken)).toMatchObject({ ok: false, reason: 'parseErrors' });
-		expect(await handler.handle(setValueRequest(1, 'new'), template)).toMatchObject({ ok: false, reason: 'readOnly' });
+		expect(await handler.handle(setValueRequest(1, 'new'), broken)).toMatchObject({ ok: false, problem: { kind: 'syntaxErrors' } });
+		expect(await handler.handle(setValueRequest(1, 'new'), template)).toMatchObject({ ok: false, problem: { kind: 'readOnly' } });
 	});
 
 	it('edits a document that parses, whatever error diagnostics it has', async () => {
@@ -134,8 +134,18 @@ describe('FormEditorEditHandler', () => {
 
 		const outcome = await new FormEditorEditHandler().handle(request, { document, context });
 
-		expect(outcome).toMatchObject({ ok: false, reason: 'wouldRemoveSubject' });
+		expect(outcome).toMatchObject({ ok: false, problem: { kind: 'lastStatements' } });
 		expect(spy).not.toHaveBeenCalled();
 		expect(document.version).toBe(1);
+	});
+
+	it('tells what kept VS Code from applying an edit, for the log', async () => {
+		const { document, context } = setup('ex:s ex:p "old" .\n');
+
+		vi.spyOn(vscode.workspace, 'applyEdit').mockResolvedValue(false);
+
+		const outcome = await new FormEditorEditHandler().handle(setValueRequest(1, 'new'), { document, context });
+
+		expect(outcome).toEqual({ ok: false, problem: { kind: 'notApplied' }, detail: 'VS Code did not apply the edit.' });
 	});
 });

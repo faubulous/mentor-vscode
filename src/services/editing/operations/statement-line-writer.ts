@@ -158,7 +158,7 @@ function _newValues(entries: readonly ValueListEntry[]): NewValue[] {
  */
 function _lineEnd(block: SubjectBlock): number {
 	if (!block.terminator) {
-		throw new EditRejectionError('unsupportedConstruct', 'The statement is not ended by a period.');
+		throw new EditRejectionError({ kind: 'statementNotEnded' });
 	}
 
 	return tokenEnd(block.terminator);
