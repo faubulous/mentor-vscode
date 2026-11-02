@@ -5,9 +5,9 @@ vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 import { RdfSyntax } from '@faubulous/mentor-rdf-parsers';
 import { createSynthesisInput, EX, synthesizeEdit } from '@src/utilities/mocks/edit-synthesis-fixtures';
 import { EditOperation } from './edit-operation';
-import { TermRef } from './term-ref';
 import { EditVerifier } from './edit-verifier';
 import { SynthesisInput } from './synthesis-context';
+import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 
 /**
  * Build the synthesis input of a Turtle body.
@@ -23,9 +23,9 @@ function edit(body: string, operations: EditOperation[], style?: Partial<Synthes
 	return synthesizeEdit(body, operations, { style });
 }
 
-const subject: TermRef = { kind: 'iri', iri: `${EX}s` };
+const subject = RdfDataFactory.namedNode(`${EX}s`);
 
-const iri = (name: string): TermRef => ({ kind: 'iri', iri: `${EX}${name}` });
+const iri = (name: string) => RdfDataFactory.namedNode(`${EX}${name}`);
 
 
 describe('EditSynthesizer', () => {
@@ -118,8 +118,8 @@ describe('EditVerifier', () => {
 		const edit = { start: start + 4, end: start + 4, newText: ', ex:b' };
 		const added = { subject, predicate: `${EX}p`, object: iri('b'), delta: 1 };
 
-		expect(new EditVerifier(input).verify({ edits: [edit], expectedChanges: [{ ...added, graph: { kind: 'default' } }] }).ok).toBe(false);
-		expect(new EditVerifier(input).verify({ edits: [edit], expectedChanges: [{ ...added, graph: { kind: 'iri', iri: `${EX}g` } }] }).ok).toBe(true);
+		expect(new EditVerifier(input).verify({ edits: [edit], expectedChanges: [{ ...added, graph: RdfDataFactory.defaultGraph() }] }).ok).toBe(false);
+		expect(new EditVerifier(input).verify({ edits: [edit], expectedChanges: [{ ...added, graph: RdfDataFactory.namedNode(`${EX}g`) }] }).ok).toBe(true);
 	});
 
 	it('accepts an edit that changes exactly the statements it names', () => {
@@ -127,7 +127,7 @@ describe('EditVerifier', () => {
 		const start = input.text.indexOf('ex:a');
 		const result = new EditVerifier(input).verify({
 			edits: [{ start, end: start + 4, newText: 'ex:b' }],
-			expectedChanges: [{ subject, predicate: `${EX}p`, object: iri('a'), graph: { kind: 'default' }, delta: -1 }, { subject, predicate: `${EX}p`, object: iri('b'), graph: { kind: 'default' }, delta: 1 }]
+			expectedChanges: [{ subject, predicate: `${EX}p`, object: iri('a'), graph: RdfDataFactory.defaultGraph(), delta: -1 }, { subject, predicate: `${EX}p`, object: iri('b'), graph: RdfDataFactory.defaultGraph(), delta: 1 }]
 		});
 
 		expect(result.ok).toBe(true);
@@ -137,7 +137,7 @@ describe('EditVerifier', () => {
 		const input = inputOf(`ex:s ex:p ex:a .\n`);
 		const result = new EditVerifier(input).verify({
 			edits: [{ start: input.text.length, end: input.text.length, newText: 'ex:s ex:q ex:b .\n' }],
-			expectedChanges: [{ subject, predicate: `${EX}q`, object: iri('c'), graph: { kind: 'default' }, delta: 1 }]
+			expectedChanges: [{ subject, predicate: `${EX}q`, object: iri('c'), graph: RdfDataFactory.defaultGraph(), delta: 1 }]
 		});
 
 		expect(result.ok).toBe(false);

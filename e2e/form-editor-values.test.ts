@@ -1,11 +1,17 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
+import { DataFactory } from 'rdf-data-factory';
 import { activateMentor, waitFor } from './helpers';
 
 /**
  * The namespace of the fixture documents of these tests.
  */
 const NS = 'http://example.org/values#';
+
+/**
+ * Creates the RDF/JS terms of the edits.
+ */
+const factory = new DataFactory();
 
 /**
  * The fixture documents of these tests, which no other suite opens.
@@ -47,11 +53,11 @@ async function openInFormEditor(path: string): Promise<vscode.TextDocument> {
 function keepAndAdd(document: vscode.TextDocument): Thenable<EditOutcomeView> {
 	return vscode.commands.executeCommand<EditOutcomeView>('mentor.e2e.applyFormEditorEdit', document.uri.toString(), [{
 		op: 'setValues',
-		subject: { kind: 'iri', iri: `${NS}s` },
+		subject: factory.namedNode(`${NS}s`),
 		predicate: `${NS}p`,
 		values: [
 			{ kind: 'existing', anchor: document.getText().indexOf('"a"') },
-			{ kind: 'term', term: { kind: 'literal', value: 'b' } }
+			{ kind: 'term', term: factory.literal('b') }
 		]
 	}]);
 }

@@ -58,7 +58,7 @@ export function StatementValueCell({ value, view, index, edited, ...context }: S
  * @returns The value.
  */
 function _editedValue(view: TermView, index: number, edited: EditedRow, context: StatementRowContext): React.JSX.Element {
-	if (view.term.kind === 'literal' && !view.collection) {
+	if (view.term.termType === 'Literal' && !view.collection) {
 		return <EditableLiteral view={view} index={index} edited={edited} />;
 	}
 

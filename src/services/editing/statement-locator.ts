@@ -1,7 +1,7 @@
 import { EditRejectionError } from './edit-rejection';
-import { ResourceId, getIriResourceId } from './resource-id';
+import { BlankNode, NamedNode } from '@rdfjs/types';
+import { ResourceId, getResourceId } from './resource-id';
 import { StatementModel, SubjectBlock } from './statement-model';
-import { TermRef } from './term-ref';
 
 /**
  * Finds the blocks and values of the statement model that an operation refers to.
@@ -15,16 +15,16 @@ export class StatementLocator {
 
 	/**
 	 * Get the identifier the statement model keys a subject by.
-	 * @param subject The subject in wire form.
+	 * @param subject The subject, as an edit names it.
 	 * @returns The resource identifier.
-	 * @throws {EditRejectionError} If the subject is a literal.
+	 * @throws {EditRejectionError} If the subject is neither an IRI nor a blank node.
 	 */
-	static subjectId(subject: TermRef): ResourceId {
-		if (subject.kind === 'literal') {
-			throw new EditRejectionError('invalidTerm', 'A literal cannot be the subject of a statement.');
+	static subjectId(subject: NamedNode | BlankNode): ResourceId {
+		if (subject.termType !== 'NamedNode' && subject.termType !== 'BlankNode') {
+			throw new EditRejectionError('invalidTerm', 'Only an IRI or a blank node can be the subject of a statement.');
 		}
 
-		return subject.kind === 'bnode' ? `b:${subject.id}` : getIriResourceId(subject.iri);
+		return getResourceId(subject);
 	}
 
 	/**
@@ -33,7 +33,7 @@ export class StatementLocator {
 	 * @returns The blocks of the subject.
 	 * @throws {EditRejectionError} If the subject has no block in the document.
 	 */
-	blocksOf(subject: TermRef): SubjectBlock[] {
+	blocksOf(subject: NamedNode | BlankNode): SubjectBlock[] {
 		const blocks = this._model.blocksBySubject.get(StatementLocator.subjectId(subject));
 
 		if (!blocks || blocks.length === 0) {

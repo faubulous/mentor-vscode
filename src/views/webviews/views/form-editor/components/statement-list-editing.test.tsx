@@ -10,6 +10,7 @@ import { PropertyView, ResourceDetail } from '../form-editor-model';
 import { EditingController } from '../state/editing-controller';
 import { FormEditorContext, FormEditorContextValue } from '../state/form-editor-context';
 import { StatementList } from './statement-list';
+import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 
 const NAMESPACES = Object.entries(TEST_NAMESPACES).map(([prefix, iri]) => ({ prefix, iri }));
 
@@ -26,7 +27,7 @@ function renderList(detail: ResourceDetail = SAMPLE) {
 	const editing = new EditingController(host);
 	const dataService = createResourceDataServiceStub([detail]);
 	const ui = (current: ResourceDetail, stale = false) => (
-		<FormEditorContext.Provider value={{ readOnly: false, editing, namespaces: NAMESPACES, resources: [] } satisfies FormEditorContextValue}>
+		<FormEditorContext.Provider value={{ readOnly: false, editing, namespaces: NAMESPACES, languageTags: {}, resources: [] } satisfies FormEditorContextValue}>
 			<StatementList detail={current} stale={stale} dataService={dataService} depth={0} visited={[current.id]} />
 		</FormEditorContext.Provider>
 	);
@@ -118,7 +119,7 @@ describe('StatementList, edited', () => {
 		await leave(rows()[1]);
 
 		expect(host.submitted).toEqual([{
-			operations: [{ op: 'setValues', subject: TEST_SUBJECT, predicate: RDFS.label, values: [{ kind: 'term', term: { kind: 'literal', value: 'Oak', language: 'en' } }] }],
+			operations: [{ op: 'setValues', subject: TEST_SUBJECT, predicate: RDFS.label, values: [{ kind: 'term', term: RdfDataFactory.literal('Oak', 'en') }] }],
 			baseVersion: 1
 		}]);
 	});
@@ -143,7 +144,7 @@ describe('StatementList, edited', () => {
 		fireEvent.click(within(row).getByLabelText('Remove Thing'));
 		await leave(row);
 
-		expect(host.submitted[0].operations).toEqual([{ op: 'setValues', subject: TEST_SUBJECT, predicate: RDFS.subClassOf, values: [{ kind: 'term', term: { kind: 'iri', iri: `${EXAMPLE_NAMESPACE}Plant` } }] }]);
+		expect(host.submitted[0].operations).toEqual([{ op: 'setValues', subject: TEST_SUBJECT, predicate: RDFS.subClassOf, values: [{ kind: 'term', term: RdfDataFactory.namedNode(`${EXAMPLE_NAMESPACE}Plant`) }] }]);
 	});
 
 	it('shows why a typed value is no term and keeps it', async () => {
@@ -163,7 +164,7 @@ describe('StatementList, edited', () => {
 	});
 
 	it('shows why a number does not fit its datatype, and puts the stored value back when the row is left', async () => {
-		const detail = withAnchors(createTestResourceDetail([createProperty('ex:count', [{ term: { kind: 'literal', value: '42', datatype: XSD.integer }, editable: true }])]));
+		const detail = withAnchors(createTestResourceDetail([createProperty('ex:count', [{ term: RdfDataFactory.literal('42', RdfDataFactory.namedNode(XSD.integer)), editable: true }])]));
 		const { host } = renderList(detail);
 		const field = within(rows()[0]).getByLabelText('Value 1') as HTMLInputElement;
 
@@ -200,7 +201,7 @@ describe('StatementList, edited', () => {
 		fireEvent.focusOut(predicate, { relatedTarget: within(row).getByLabelText('New value') });
 		await settle(host);
 
-		const renamed: PropertyView = { ...SAMPLE.properties[1], predicate: { term: { kind: 'iri', iri: RDFS.comment }, prefixedName: 'rdfs:comment', editable: true } };
+		const renamed: PropertyView = { ...SAMPLE.properties[1], predicate: { term: RdfDataFactory.namedNode(RDFS.comment), prefixedName: 'rdfs:comment', editable: true } };
 
 		await deliver({ ...SAMPLE, properties: [SAMPLE.properties[0], renamed, SAMPLE.properties[2]] }, { version: 2 });
 
@@ -225,7 +226,7 @@ describe('StatementList, edited', () => {
 
 		await typeNewStatement('rdfs:comment', 'A tree');
 
-		expect(host.submitted[0].operations).toEqual([{ op: 'setValues', subject: TEST_SUBJECT, predicate: RDFS.comment, values: [{ kind: 'term', term: { kind: 'literal', value: 'A tree' } }] }]);
+		expect(host.submitted[0].operations).toEqual([{ op: 'setValues', subject: TEST_SUBJECT, predicate: RDFS.comment, values: [{ kind: 'term', term: RdfDataFactory.literal('A tree') }] }]);
 		expect(rowLabels()).toEqual(['rdf:type', 'rdfs:label', 'rdfs:subClassOf', 'New statement', 'New statement']);
 
 		const submitted = rows()[3];
@@ -233,7 +234,7 @@ describe('StatementList, edited', () => {
 		expect(submitted.classList.contains('is-editable')).toBe(true);
 
 		await settle(host);
-		await deliver({ ...SAMPLE, properties: [...SAMPLE.properties, { predicate: { term: { kind: 'iri', iri: RDFS.comment }, prefixedName: 'rdfs:comment', editable: true }, values: [{ ...createLiteralView('A tree'), anchor: 900 }] }] }, { version: 2 });
+		await deliver({ ...SAMPLE, properties: [...SAMPLE.properties, { predicate: { term: RdfDataFactory.namedNode(RDFS.comment), prefixedName: 'rdfs:comment', editable: true }, values: [{ ...createLiteralView('A tree'), anchor: 900 }] }] }, { version: 2 });
 
 		expect(rowLabels()).toEqual(['rdf:type', 'rdfs:label', 'rdfs:subClassOf', 'rdfs:comment', 'New statement']);
 		expect(rows()[3]).toBe(submitted);
@@ -248,7 +249,7 @@ describe('StatementList, edited', () => {
 			op: 'setValues',
 			subject: TEST_SUBJECT,
 			predicate: RDFS.label,
-			values: [{ kind: 'existing', anchor: SAMPLE.properties[1].values[0].anchor }, { kind: 'term', term: { kind: 'literal', value: 'Baum' } }]
+			values: [{ kind: 'existing', anchor: SAMPLE.properties[1].values[0].anchor }, { kind: 'term', term: RdfDataFactory.literal('Baum') }]
 		}]);
 		expect(rowLabels()).toEqual(['rdf:type', 'rdfs:label', 'rdfs:subClassOf', 'New statement']);
 	});
@@ -288,7 +289,7 @@ describe('StatementList, edited', () => {
 
 		expect(host.submitted).toHaveLength(2);
 		expect(host.submitted[1]).toEqual({
-			operations: [{ op: 'setValues', subject: TEST_SUBJECT, predicate: RDFS.label, values: [{ kind: 'term', term: { kind: 'literal', value: 'Elm', language: 'en' } }] }],
+			operations: [{ op: 'setValues', subject: TEST_SUBJECT, predicate: RDFS.label, values: [{ kind: 'term', term: RdfDataFactory.literal('Elm', 'en') }] }],
 			baseVersion: 2
 		});
 	});

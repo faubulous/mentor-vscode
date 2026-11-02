@@ -57,7 +57,7 @@ export class ExternalDeclarationDetector {
 	 * @returns `true` for an external declaration.
 	 */
 	isExternalDeclaration(entry: ResourceIndexEntry): boolean {
-		if (entry.term.kind !== 'iri' || this._isOwnTerm(entry.term.iri)) {
+		if (entry.term.termType !== 'NamedNode' || this._isOwnTerm(entry.term.value)) {
 			return false;
 		}
 
@@ -120,13 +120,13 @@ export class ExternalDeclarationDetector {
 		const counts = new Map<string, number>();
 
 		for (const entry of index.entries.values()) {
-			if (entry.term.kind !== 'iri') {
+			if (entry.term.termType !== 'NamedNode') {
 				continue;
 			}
 
-			const namespace = Uri.getNamespaceIri(entry.term.iri);
+			const namespace = Uri.getNamespaceIri(entry.term.value);
 
-			if (namespace !== entry.term.iri && !FOUNDATION_NAMESPACES.has(namespace)) {
+			if (namespace !== entry.term.value && !FOUNDATION_NAMESPACES.has(namespace)) {
 				counts.set(namespace, (counts.get(namespace) ?? 0) + 1);
 			}
 		}

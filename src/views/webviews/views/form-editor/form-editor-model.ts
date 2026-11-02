@@ -1,15 +1,15 @@
 /**
- * Data transfer objects shared by the form editor host and webview. These types cross the
- * `postMessage` boundary as plain JSON, so they must not reference RDF/JS terms or any
- * VS Code type. This file is bundled into the webview and must stay free of imports from
- * 'vscode'.
+ * Data transfer objects shared by the form editor host and webview. They cross the `postMessage`
+ * boundary as plain data: the RDF/JS terms in them arrive without their methods and are revived
+ * on arrival with `reviveTerms`. They must not reference any VS Code type. This file is bundled
+ * into the webview and must stay free of imports from 'vscode'.
  */
 
+import type { BlankNode, Literal, NamedNode } from '@rdfjs/types';
 import type { ValueKindHint } from '@src/utilities/value-kind';
 import type { ResourceId } from '@src/services/editing/resource-id';
-import type { TermRef } from '@src/services/editing/term-ref';
 
-export type { ResourceId, TermRef };
+export type { ResourceId };
 
 /**
  * A position in the document, used to reveal a term in the text editor.
@@ -33,7 +33,7 @@ export interface TermView {
 	/**
 	 * The term itself.
 	 */
-	term: TermRef;
+	term: NamedNode | BlankNode | Literal;
 
 	/**
 	 * Resolved human readable label, for IRIs and blank nodes.
@@ -151,7 +151,7 @@ export interface ResourceSummary {
 	/**
 	 * The term naming the resource.
 	 */
-	term: TermRef;
+	term: NamedNode | BlankNode;
 
 	/**
 	 * The human readable label, resolved from the configured label predicates.
@@ -223,7 +223,7 @@ export interface ResourceDetail {
 	/**
 	 * The term naming the resource.
 	 */
-	term: TermRef;
+	term: NamedNode | BlankNode;
 
 	/**
 	 * The properties of the resource, in document order.
@@ -327,6 +327,12 @@ export interface DocumentSnapshot {
 	 * lines of each run.
 	 */
 	trailingComments?: string[][];
+
+	/**
+	 * The spelling of each language tag the document writes, by its lower case form. Terms hold
+	 * language tags in lower case; tags are shown in the document's spelling.
+	 */
+	languageTags: Record<string, string>;
 
 	/**
 	 * Why the document cannot be edited, when it cannot.

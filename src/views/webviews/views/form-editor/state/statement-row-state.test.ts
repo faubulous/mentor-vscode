@@ -3,6 +3,7 @@ import { RDFS } from '@faubulous/mentor-rdf';
 import { createLiteralView, createProperty, createTestResourceDetail, withAnchors } from '@src/utilities/mocks/statement-fixtures';
 import { StatementDraft } from './statement-draft';
 import { StatementRowState } from './statement-row-state';
+import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 
 const stored = StatementDraft.fromProperty(withAnchors(createTestResourceDetail([createProperty('rdfs:label', [createLiteralView('Tree', 'en')])])).properties[0]);
 
@@ -25,7 +26,7 @@ describe('StatementRowState', () => {
 	});
 
 	it('adds a typed value and empties the field for a new value', () => {
-		const state = StatementRowState.of(stored, 'rdfs:label').withPendingText('x').withValueAppended({ kind: 'literal', value: 'x' });
+		const state = StatementRowState.of(stored, 'rdfs:label').withPendingText('x').withValueAppended(RdfDataFactory.literal('x'));
 
 		expect(state.pendingText).toBe('');
 		expect(state.draft.values).toHaveLength(2);

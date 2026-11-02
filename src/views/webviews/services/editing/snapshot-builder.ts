@@ -6,6 +6,7 @@ import { DocumentProblem, DocumentSnapshot, ReadOnlyReason, ResourceId, Resource
 import { ExternalDeclarationDetector } from './external-declaration-detector';
 import { ResourceIndex, ResourceIndexEntry, typeIrisOf } from './resource-index';
 import { ResourceIndexBuilder } from './resource-index-builder';
+import { getLanguageTagSpellings } from '@faubulous/mentor-rdf-serializers';
 
 /**
  * The types of the resources that describe a document as a whole.
@@ -105,6 +106,7 @@ export class SnapshotBuilder {
 				resources,
 				documentResourceId,
 				trailingComments: index.trailingComments.length > 0 ? index.trailingComments : undefined,
+				languageTags: getLanguageTagSpellings(this._input.context.tokens),
 				readOnly: this._input.readOnly,
 				problems: this._input.problems ?? [],
 				dominantTypeIri: _dominantTypeOf(resources.filter(resource => resource.id !== documentResourceId))
@@ -121,11 +123,11 @@ export class SnapshotBuilder {
 	 * @returns The count, or `undefined` when it is not known.
 	 */
 	private _countUsages(summary: ResourceSummary, index: ResourceIndex): number | undefined {
-		if (summary.term.kind === 'iri') {
-			return this._input.countUsages?.(summary.term.iri);
+		if (summary.term.termType === 'NamedNode') {
+			return this._input.countUsages?.(summary.term.value);
 		}
 
-		return summary.term.kind === 'bnode' ? index.referenceCounts.get(summary.id) ?? 0 : undefined;
+		return index.referenceCounts.get(summary.id) ?? 0;
 	}
 
 	/**
@@ -137,7 +139,7 @@ export class SnapshotBuilder {
 	 */
 	private static _findDocumentResource(index: ResourceIndex): ResourceId | undefined {
 		const candidates = Array.from(index.entries.values())
-			.filter(entry => entry.term.kind === 'iri' && typeIrisOf(entry).some(type => DOCUMENT_TYPES.has(type)));
+			.filter(entry => entry.term.termType === 'NamedNode' && typeIrisOf(entry).some(type => DOCUMENT_TYPES.has(type)));
 		const described = candidates.filter(entry => !ExternalDeclarationDetector.statesNothingOfItsOwn(entry));
 		const entry = described.find(_isOntology) ?? candidates.find(_isOntology) ?? described[0] ?? candidates[0];
 

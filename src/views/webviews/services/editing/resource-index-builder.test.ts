@@ -6,6 +6,7 @@ import { OWL, RDFS, SKOS, _OWL, _RDFS, _SH, _SKOS, _XSD } from '@faubulous/mento
 import { ResolvingDocumentContextOptions, createResolvingDocumentContext, readTurtleQuadContexts } from '@src/utilities/mocks/factories';
 import { ResourceIndex } from './resource-index';
 import { ResourceIndexBuilder } from './resource-index-builder';
+import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 
 const EX = 'http://example.org/';
 const NAMESPACES = { ex: EX, rdfs: _RDFS, owl: _OWL, sh: _SH, skos: _SKOS, xsd: _XSD };
@@ -25,9 +26,9 @@ describe('ResourceIndexBuilder', () => {
 		const index = indexOf('ex:Zebra a ex:Animal .\nex:Ant a ex:Animal .\nex:Moose a ex:Animal .\n');
 
 		expect(index.summaries.map(summary => summary.term)).toEqual([
-			{ kind: 'iri', iri: `${EX}Zebra` },
-			{ kind: 'iri', iri: `${EX}Ant` },
-			{ kind: 'iri', iri: `${EX}Moose` }
+			RdfDataFactory.namedNode(`${EX}Zebra`),
+			RdfDataFactory.namedNode(`${EX}Ant`),
+			RdfDataFactory.namedNode(`${EX}Moose`)
 		]);
 	});
 
@@ -50,18 +51,18 @@ describe('ResourceIndexBuilder', () => {
 
 		expect(nested).toHaveLength(1);
 		expect(index.summaries).toHaveLength(1);
-		expect(index.summaries[0].term).toEqual({ kind: 'iri', iri: `${EX}Shape` });
+		expect(index.summaries[0].term).toEqual(RdfDataFactory.namedNode(`${EX}Shape`));
 	});
 
 	it('treats a labelled blank node as a top level resource', () => {
 		const index = indexOf('ex:Thing ex:related _:node .\n_:node ex:label "I stand alone" .\n');
 
-		expect(index.summaries.map(summary => summary.term.kind)).toContain('bnode');
+		expect(index.summaries.map(summary => summary.term.termType)).toContain('BlankNode');
 	});
 
 	it('counts how often a blank node is referred to', () => {
 		const index = indexOf('_:shared a owl:Class .\nex:A rdfs:subClassOf _:shared .\nex:B rdfs:subClassOf _:shared .\n');
-		const shared = index.summaries.find(summary => summary.term.kind === 'bnode')!;
+		const shared = index.summaries.find(summary => summary.term.termType === 'BlankNode')!;
 
 		expect(index.referenceCounts.get(shared.id)).toBe(2);
 	});

@@ -1,7 +1,8 @@
 import * as vscode from 'vscode';
 import { AsyncIterator } from 'asynciterator';
 import { Uri } from '@faubulous/mentor-rdf';
-import { getTripleKey, RdfDataFactory } from '@src/utilities/rdf';
+import { getTripleKey } from '@src/utilities/rdf';
+import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { copyTerm } from '@src/utilities/rdf-terms';
 import { RdfSyntax, SparqlVariableParser } from '@faubulous/mentor-rdf-parsers';
 import { ParserFactory } from '@src/languages/parser-factory';

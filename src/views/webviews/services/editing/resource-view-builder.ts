@@ -1,8 +1,9 @@
 import { QuadContext } from '@faubulous/mentor-rdf-parsers';
-import { Quad_Object, Quad_Subject, Term } from '@rdfjs/types';
+import { BlankNode, Literal, NamedNode, Quad_Object, Quad_Subject, Term } from '@rdfjs/types';
 import { OWL, RDF, RDFS, SH, Uri } from '@faubulous/mentor-rdf';
 import { IDocumentContext } from '@src/services/document/document-context.interface';
-import { getIriResourceId, toTermRef } from '@src/services/editing/resource-id';
+import { getIriResourceId } from '@src/services/editing/resource-id';
+import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { DEFAULT_ICON, getSubjectIconName } from '@src/utilities/subject-icon';
 import { hasSourcePosition } from '@src/utilities/tokens';
 import { ValueKind, ValueKindHint } from '@src/utilities/value-kind';
@@ -12,7 +13,6 @@ import {
 	ResourceDetail,
 	ResourceId,
 	ResourceSummary,
-	TermRef,
 	TermView
 } from '@src/views/webviews/views/form-editor/form-editor-model';
 import { AnnotationResolver } from './annotation-resolver';
@@ -159,7 +159,7 @@ export class ResourceViewBuilder {
 	 * @returns The view of the predicate.
 	 */
 	buildPredicateView(iri: string): TermView {
-		const term: TermRef = { kind: 'iri', iri };
+		const term = RdfDataFactory.namedNode(iri);
 		const label = this._resolveLabel(term);
 
 		return { term, label: label.text, prefixedName: this._toPrefixedName(term), editable: true };
@@ -172,14 +172,14 @@ export class ResourceViewBuilder {
 	 * @returns The view.
 	 */
 	private _toTermView(term: Quad_Subject | Quad_Object, token: QuadContext['objectToken']): TermView {
-		const termRef = toTermRef(term);
-		const label = this._resolveLabel(termRef);
+		const value = term as NamedNode | BlankNode | Literal;
+		const label = this._resolveLabel(value);
 		const written = hasSourcePosition(token);
 
 		return {
-			term: termRef,
+			term: value,
 			label: label.text,
-			prefixedName: this._toPrefixedName(termRef),
+			prefixedName: this._toPrefixedName(value),
 			anchor: written ? token.startOffset : undefined,
 			editable: written
 		};
@@ -254,7 +254,7 @@ export class ResourceViewBuilder {
 			id,
 			propertyCount: _countProperties(nested),
 			label: this._resolveLabel(nested.term).text || undefined,
-			typeLabel: typeIris.length > 0 ? this._resolveLabel({ kind: 'iri', iri: typeIris[0] }).text : undefined
+			typeLabel: typeIris.length > 0 ? this._resolveLabel(RdfDataFactory.namedNode(typeIris[0])).text : undefined
 		};
 	}
 
@@ -282,28 +282,28 @@ export class ResourceViewBuilder {
 	 * @param term The term.
 	 * @returns The text and its language.
 	 */
-	private _resolveLabel(term: TermRef): ResolvedLabel {
-		if (term.kind === 'literal') {
-			return { text: term.value, language: term.language };
+	private _resolveLabel(term: NamedNode | BlankNode | Literal): ResolvedLabel {
+		if (term.termType === 'Literal') {
+			return { text: term.value, language: term.language || undefined };
 		}
 
-		if (term.kind === 'bnode') {
+		if (term.termType === 'BlankNode') {
 			// A blank node has no name of its own, but the label predicates include `sh:path`, so a
 			// property shape is named by the path it constrains, exactly as in the definition tree.
 			// The resolver falls back to the identifier when it finds nothing. That identifier is
 			// assigned by the parser and means nothing to a reader, so it is treated as no label.
-			const label = this._context.getResourceLabel(term.id);
+			const label = this._context.getResourceLabel(term.value);
 
-			return { text: label?.value === term.id ? '' : (label?.value ?? ''), language: label?.language };
+			return { text: label?.value === term.value ? '' : (label?.value ?? ''), language: label?.language };
 		}
 
-		const label = this._context.getResourceLabel(term.iri);
+		const label = this._context.getResourceLabel(term.value);
 
 		if (label?.value) {
 			return { text: label.value, language: label.language };
 		}
 
-		return { text: this._toPrefixedName(term) ?? Uri.getLocalPart(term.iri) ?? term.iri };
+		return { text: this._toPrefixedName(term) ?? Uri.getLocalPart(term.value) ?? term.value };
 	}
 
 
@@ -317,7 +317,7 @@ export class ResourceViewBuilder {
 			return undefined;
 		}
 
-		return typeIris.map(iri => this._resolveLabel({ kind: 'iri', iri }).text);
+		return typeIris.map(iri => this._resolveLabel(RdfDataFactory.namedNode(iri)).text);
 	}
 
 	/**
@@ -340,15 +340,15 @@ export class ResourceViewBuilder {
 	 * @param term The term.
 	 * @returns The prefixed name, or `undefined` for a blank node, a literal or an undeclared namespace.
 	 */
-	private _toPrefixedName(term: TermRef): string | undefined {
-		if (term.kind !== 'iri') {
+	private _toPrefixedName(term: NamedNode | BlankNode | Literal): string | undefined {
+		if (term.termType !== 'NamedNode') {
 			return undefined;
 		}
 
-		const namespaceIri = Uri.getNamespaceIri(term.iri);
+		const namespaceIri = Uri.getNamespaceIri(term.value);
 		const prefix = this._context.getPrefixForNamespaceIri(namespaceIri);
 
-		return prefix === undefined ? undefined : `${prefix}:${term.iri.slice(namespaceIri.length)}`;
+		return prefix === undefined ? undefined : `${prefix}:${term.value.slice(namespaceIri.length)}`;
 	}
 }
 
@@ -390,7 +390,7 @@ function _objectIriOf(entry: ResourceIndexEntry, predicateIri: string): string |
  * @returns The hint, or `undefined` when the predicate has no value.
  */
 function _valueKindOf(values: readonly TermView[]): ValueKindHint | undefined {
-	const kinds = new Set<ValueKind>(values.map(value => value.term.kind === 'literal' ? 'literal' : 'resource'));
+	const kinds = new Set<ValueKind>(values.map(value => value.term.termType === 'Literal' ? 'literal' : 'resource'));
 
 	if (kinds.size === 0) {
 		return undefined;

@@ -191,6 +191,7 @@ function FormEditor(): React.JSX.Element {
 		readOnly: !editable,
 		editing: editable ? controller : undefined,
 		namespaces: snapshot?.namespaces ?? [],
+		languageTags: snapshot?.languageTags ?? {},
 		resources: snapshot?.resources,
 		onRevealResource: handleRevealResource,
 		onOpenExternal: handleOpenExternal,

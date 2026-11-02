@@ -1,7 +1,8 @@
 import { KeyboardEvent, MouseEvent, useMemo, useRef } from 'react';
 import { VscodeTextfield } from '@vscode-elements/elements';
 import { ValueKind } from '@src/utilities/value-kind';
-import { ResourceSummary, TermRef, TermView } from '../form-editor-model';
+import { BlankNode, NamedNode } from '@rdfjs/types';
+import { ResourceSummary, TermView } from '../form-editor-model';
 import { StatementServices } from '../hooks/use-statement-services';
 import { Combobox, ComboboxOption } from './combobox';
 import { ValuePill } from './value-pill';
@@ -63,7 +64,7 @@ export interface ResourceValuesProps {
 	/**
 	 * Called with a resource picked from the list.
 	 */
-	onPick: (term: TermRef) => void;
+	onPick: (term: NamedNode | BlankNode) => void;
 
 	/**
 	 * Called when Enter takes the typed text.
@@ -185,16 +186,16 @@ export function ResourceValues(props: ResourceValuesProps): React.JSX.Element {
  * @param services Names the resources by their prefixed names.
  * @returns The options.
  */
-function _optionsOf(documentResources: readonly ResourceSummary[], resources: readonly ResourceValueEntry[], services: StatementServices): ComboboxOption<TermRef>[] {
-	const present = new Set(resources.flatMap(({ view }) => view.term.kind === 'iri' ? [view.term.iri] : []));
+function _optionsOf(documentResources: readonly ResourceSummary[], resources: readonly ResourceValueEntry[], services: StatementServices): ComboboxOption<NamedNode | BlankNode>[] {
+	const present = new Set(resources.flatMap(({ view }) => view.term.termType === 'NamedNode' ? [view.term.value] : []));
 
 	return documentResources.flatMap(resource => {
-		if (resource.term.kind !== 'iri' || present.has(resource.term.iri)) {
+		if (resource.term.termType !== 'NamedNode' || present.has(resource.term.value)) {
 			return [];
 		}
 
 		const prefixedName = resource.prefixedName ?? services.resolver.viewOf(resource.term).prefixedName;
 
-		return [{ label: resource.label, detail: prefixedName ? `${prefixedName}\n${resource.term.iri}` : resource.term.iri, keywords: prefixedName, value: resource.term }];
+		return [{ label: resource.label, detail: prefixedName ? `${prefixedName}\n${resource.term.value}` : resource.term.value, keywords: prefixedName, value: resource.term }];
 	});
 }

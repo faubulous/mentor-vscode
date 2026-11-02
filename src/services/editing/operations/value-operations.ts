@@ -1,8 +1,8 @@
-import { ExpectedStatementChange, TermPattern } from '../edit-plan';
+import { Term } from '@rdfjs/types';
+import { ExpectedStatementChange } from '../edit-plan';
 import { EditRejectionError } from '../edit-rejection';
 import { ObjectSpan, PredicateGroup, SubjectBlock } from '../statement-model';
 import { SynthesisContext } from '../synthesis-context';
-import { toGraphPattern, toTermPattern } from '../term-patterns';
 import { statementsWithin } from '@src/utilities/quad-contexts';
 import { TextEditSpec, absorbBlankLine, deleteRange, expandToWholeLines, mergeRanges } from '@src/utilities/text-edits';
 import { isCommentToken, tokenEnd } from '@src/utilities/tokens';
@@ -40,16 +40,16 @@ export class ValueOperations {
 	 * @param span The value.
 	 * @returns The expected changes.
 	 */
-	removalChanges(subject: TermPattern, predicate: string, span: ObjectSpan): ExpectedStatementChange[] {
+	removalChanges(subject: Term, predicate: string, span: ObjectSpan): ExpectedStatementChange[] {
 		const nested = statementsWithin(this._context.model.quadContexts, span.start, span.end).map(inner => ({
-			subject: toTermPattern(inner.subject),
+			subject: inner.subject,
 			predicate: inner.predicate.value,
-			object: toTermPattern(inner.object),
-			graph: toGraphPattern(inner.graph),
+			object: inner.object,
+			graph: inner.graph,
 			delta: -1
 		}));
 
-		return [{ subject, predicate, object: toTermPattern(span.quad.object), graph: toGraphPattern(span.quad.graph), delta: -1 }, ...nested];
+		return [{ subject, predicate, object: span.quad.object, graph: span.quad.graph, delta: -1 }, ...nested];
 	}
 
 	/**

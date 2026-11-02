@@ -16,7 +16,7 @@ describe('ResourceCard statements', () => {
 		const empty = createResourceDataServiceStub();
 
 		renderWebview(
-			<FormEditorContext.Provider value={{ readOnly: true, namespaces: [] }}>
+			<FormEditorContext.Provider value={{ readOnly: true, namespaces: [], languageTags: {} }}>
 				<ResourceCard summary={TREE} dataService={loaded} expanded onToggle={() => undefined} />
 				<ResourceCard summary={TREE} dataService={empty} expanded onToggle={() => undefined} />
 				<ResourceCard summary={TREE} dataService={loaded} expanded={false} onToggle={() => undefined} />

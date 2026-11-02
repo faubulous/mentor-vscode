@@ -1,4 +1,5 @@
-import { PropertyView, TermRef } from '../form-editor-model';
+import { BlankNode, NamedNode } from '@rdfjs/types';
+import { PropertyView } from '../form-editor-model';
 import { TypedTermReader } from '../services/statement/typed-term-reader';
 import { IEditingController } from './editing-controller.interface';
 import { StatementDraft } from './statement-draft';
@@ -39,7 +40,7 @@ export interface StatementRowsData {
 	/**
 	 * The resource of the card.
 	 */
-	subject: TermRef;
+	subject: NamedNode | BlankNode;
 
 	/**
 	 * The properties of the resource, in document order.
@@ -125,7 +126,7 @@ export class StatementRows implements StatementRowOwner {
 		this._notEditable = new Set();
 
 		for (const property of data.properties) {
-			const predicate = property.predicate.term.kind === 'iri' ? property.predicate.term.iri : '';
+			const predicate = property.predicate.term.termType === 'NamedNode' ? property.predicate.term.value : '';
 
 			if (!StatementDraft.canEdit(property)) {
 				this._notEditable.add(predicate);

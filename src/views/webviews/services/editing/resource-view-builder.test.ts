@@ -8,6 +8,7 @@ import { ResourceDetail } from '@src/views/webviews/views/form-editor/form-edito
 import { ResourceIndexOptions } from './resource-index';
 import { ResourceIndexBuilder } from './resource-index-builder';
 import { ResourceViewBuilder } from './resource-view-builder';
+import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 
 const EX = 'http://example.org/';
 const NAMESPACES = { ex: EX, rdfs: _RDFS, owl: _OWL, sh: _SH, xsd: _XSD };
@@ -42,21 +43,21 @@ describe('ResourceViewBuilder.buildDetail', () => {
 
 		expect(detail.properties).toHaveLength(2);
 		expect(detail.properties[1].values.map(value => value.term)).toEqual([
-			{ kind: 'literal', value: 'First', language: undefined, datatype: `${_XSD}string` },
-			{ kind: 'literal', value: 'Second', language: undefined, datatype: `${_XSD}string` }
+			RdfDataFactory.literal('First'),
+			RdfDataFactory.literal('Second')
 		]);
 	});
 
 	it('preserves language tags on literal values', () => {
 		const detail = detailOf('ex:Thing rdfs:label "Ding"@de , "Thing"@en .\n');
 
-		expect(detail.properties[0].values.map(value => value.term.kind === 'literal' ? value.term.language : undefined)).toEqual(['de', 'en']);
+		expect(detail.properties[0].values.map(value => value.term.termType === 'Literal' ? value.term.language : undefined)).toEqual(['de', 'en']);
 	});
 
 	it('names the predicates the way the document writes them', () => {
 		const detail = detailOf('ex:Thing rdfs:label "x" .\n', { labels: { [RDFS.label]: 'label' } });
 
-		expect(detail.properties[0].predicate).toMatchObject({ term: { kind: 'iri', iri: RDFS.label }, label: 'label', prefixedName: 'rdfs:label', editable: true });
+		expect(detail.properties[0].predicate).toMatchObject({ term: RdfDataFactory.namedNode(RDFS.label), label: 'label', prefixedName: 'rdfs:label', editable: true });
 	});
 
 	it('links a nested blank node object to its own resource', () => {
@@ -117,7 +118,7 @@ describe('ResourceViewBuilder.buildDetail', () => {
 	it('hides the statements that chain a collection', () => {
 		const detail = detailOf('ex:Thing ex:steps ( ex:first ex:second ) .\n');
 
-		expect(detail.properties.map(property => property.predicate.term)).toEqual([{ kind: 'iri', iri: `${EX}steps` }]);
+		expect(detail.properties.map(property => property.predicate.term)).toEqual([RdfDataFactory.namedNode(`${EX}steps`)]);
 	});
 
 	it('reads an empty collection as a list with no items', () => {
@@ -186,7 +187,7 @@ describe('ResourceViewBuilder.buildPredicateView', () => {
 		const index = new ResourceIndexBuilder([], documentContext).build();
 
 		expect(new ResourceViewBuilder(index, documentContext).buildPredicateView(RDFS.comment)).toEqual({
-			term: { kind: 'iri', iri: RDFS.comment },
+			term: RdfDataFactory.namedNode(RDFS.comment),
 			label: 'comment',
 			labelLanguage: undefined,
 			prefixedName: 'rdfs:comment',

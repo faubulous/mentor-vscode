@@ -1,10 +1,11 @@
 /**
  * The mutations the form editor can request. Consumed by the edit synthesis layer, which
- * turns them into minimal text edits. Plain JSON, free of imports from 'vscode'.
+ * turns them into minimal text edits. Free of imports from 'vscode'; the RDF/JS terms in them
+ * cross from the webview as plain data and are revived on arrival.
  */
 
+import { BlankNode, NamedNode } from '@rdfjs/types';
 import { StatementValue } from './statement-value';
-import { TermRef } from './term-ref';
 
 /**
  * A single mutation of the document.
@@ -19,12 +20,12 @@ export type EditOperation =
 	 * block or graph; within one statement they take the order given. No values removes the
 	 * predicate.
 	 */
-	| { op: 'setValues'; subject: TermRef; predicate: string; values: StatementValue[] }
+	| { op: 'setValues'; subject: NamedNode | BlankNode; predicate: string; values: StatementValue[] }
 	/**
 	 * Write the values of a predicate of the subject under another predicate, which the subject
 	 * must not carry yet.
 	 */
-	| { op: 'setPredicate'; subject: TermRef; predicate: string; newPredicate: string };
+	| { op: 'setPredicate'; subject: NamedNode | BlankNode; predicate: string; newPredicate: string };
 
 /**
  * Why an edit was not applied.

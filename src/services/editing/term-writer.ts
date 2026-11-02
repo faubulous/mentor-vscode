@@ -1,14 +1,9 @@
-import { dataFactory } from '@faubulous/mentor-rdf';
+import { Literal, Term } from '@rdfjs/types';
 import { RdfSyntax } from '@faubulous/mentor-rdf-parsers';
 import { TermSerializer } from '@faubulous/mentor-rdf-serializers';
+import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { EditRejectionError } from './edit-rejection';
-import { TermRef } from './term-ref';
 import { validateIri, validateLanguageTag } from './term-validation';
-
-/**
- * A literal in wire form.
- */
-export type LiteralRef = Extract<TermRef, { kind: 'literal' }>;
 
 /**
  * What the writer needs to know about the document.
@@ -33,12 +28,19 @@ export interface TermWriterOptions {
 	 * Blank node identifier to the label written in the document, for labelled blank nodes.
 	 */
 	blankNodeLabels: ReadonlyMap<string, string>;
+
+	/**
+	 * The spelling of each language tag the document writes, by its lower case form.
+	 */
+	languageTags: Record<string, string>;
 }
 
 /**
  * Writes the terms of an edit into a document the way the document writes them. The serialization
- * itself is the term serializer's; this class validates the terms of the wire contract, converts
- * them and refuses what the document cannot hold, such as a reference to an anonymous blank node.
+ * itself is the term serializer's; this class validates the terms of an edit and refuses what the
+ * document cannot hold, such as a reference to an anonymous blank node. RDF/JS terms hold language
+ * tags in lower case: a tag the document writes is written in the document's spelling, any other
+ * in lower case.
  */
 export class TermWriter {
 	private readonly _serializer: TermSerializer;
@@ -51,7 +53,8 @@ export class TermWriter {
 		this._serializer = TermSerializer.forSyntax(_options.syntax, {
 			prefixes: _options.namespaces,
 			useRdfTypeShorthand: _options.useTypeKeyword,
-			blankNodeLabels: Object.fromEntries(_options.blankNodeLabels)
+			blankNodeLabels: Object.fromEntries(_options.blankNodeLabels),
+			languageTags: _options.languageTags
 		});
 	}
 
@@ -67,11 +70,11 @@ export class TermWriter {
 	 * Write a subject term.
 	 * @param term The term to write.
 	 * @returns The written term.
-	 * @throws {EditRejectionError} If the term is a literal.
+	 * @throws {EditRejectionError} If the term is neither an IRI nor a blank node.
 	 */
-	writeSubject(term: TermRef): string {
-		if (term.kind === 'literal') {
-			throw new EditRejectionError('invalidTerm', 'A literal cannot be the subject of a statement.');
+	writeSubject(term: Term): string {
+		if (term.termType !== 'NamedNode' && term.termType !== 'BlankNode') {
+			throw new EditRejectionError('invalidTerm', 'Only an IRI or a blank node can be the subject of a statement.');
 		}
 
 		return this.writeObject(term);
@@ -86,7 +89,7 @@ export class TermWriter {
 	writePredicate(iri: string): string {
 		validateIri(iri);
 
-		return this._serializer.serializePredicate(dataFactory.namedNode(iri));
+		return this._serializer.serializePredicate(RdfDataFactory.namedNode(iri));
 	}
 
 	/**
@@ -95,14 +98,16 @@ export class TermWriter {
 	 * @returns The written term.
 	 * @throws {EditRejectionError} If the term cannot be written.
 	 */
-	writeObject(term: TermRef): string {
-		switch (term.kind) {
-			case 'iri':
-				return this.writeIri(term.iri);
-			case 'bnode':
-				return this._writeBlankNode(term.id);
-			default:
+	writeObject(term: Term): string {
+		switch (term.termType) {
+			case 'NamedNode':
+				return this.writeIri(term.value);
+			case 'BlankNode':
+				return this._writeBlankNode(term.value);
+			case 'Literal':
 				return this.writeLiteral(term);
+			default:
+				throw new EditRejectionError('invalidTerm', 'Only an IRI, a blank node or a literal can be the object of a statement.');
 		}
 	}
 
@@ -115,23 +120,23 @@ export class TermWriter {
 	writeIri(iri: string): string {
 		validateIri(iri);
 
-		return this._serializer.serializeNamedNode(dataFactory.namedNode(iri));
+		return this._serializer.serializeNamedNode(RdfDataFactory.namedNode(iri));
 	}
 
 	/**
 	 * Write a literal.
 	 * @param literal The literal to write.
 	 * @returns The written literal.
-	 * @throws {EditRejectionError} If the language tag is not valid.
+	 * @throws {EditRejectionError} If the language tag or the datatype is not valid.
 	 */
-	writeLiteral(literal: LiteralRef): string {
+	writeLiteral(literal: Literal): string {
 		if (literal.language) {
 			validateLanguageTag(literal.language);
+		} else {
+			validateIri(literal.datatype.value);
 		}
 
-		const languageOrDatatype = literal.language ?? (literal.datatype ? dataFactory.namedNode(literal.datatype) : undefined);
-
-		return this._serializer.serializeLiteral(dataFactory.literal(literal.value, languageOrDatatype));
+		return this._serializer.serializeLiteral(literal);
 	}
 
 	/**
@@ -145,6 +150,6 @@ export class TermWriter {
 			throw new EditRejectionError('invalidTerm', 'An anonymous blank node cannot be referred to by name.');
 		}
 
-		return this._serializer.serializeBlankNode(dataFactory.blankNode(id));
+		return this._serializer.serializeBlankNode(RdfDataFactory.blankNode(id));
 	}
 }

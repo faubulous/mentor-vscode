@@ -1,10 +1,13 @@
 import { XSD } from '@faubulous/mentor-rdf/ontologies';
+import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { TermView } from '../form-editor-model';
 import { StatementServices } from '../hooks/use-statement-services';
 import { LiteralDatatypes } from '../services/statement/literal-datatypes';
 import { getDatatypeHint, getDatatypeLabel } from './datatype-labels';
 import { EditedRow } from './edited-row';
 import { LiteralField } from './literal-field';
+import { useFormEditorContext } from '../state/form-editor-context';
+import { getLanguageTagLabel } from './term-labels';
 
 /**
  * Properties of the {@link EditableLiteral} component.
@@ -33,20 +36,23 @@ export interface EditableLiteralProps {
  */
 export function EditableLiteral({ view, index, edited }: EditableLiteralProps): React.JSX.Element | null {
 	const { editor, services } = edited;
+	const { languageTags } = useFormEditorContext();
 	const term = view.term;
 
-	if (term.kind !== 'literal') {
+	if (term.termType !== 'Literal') {
 		return null;
 	}
+
+	const datatype = term.datatype.value;
 
 	return (
 		<LiteralField
 			index={index}
 			text={term.value}
-			tag={term.language ?? _datatypeLabel(term.datatype, services)}
-			problem={editor.unfittingLiterals.has(index) && term.datatype ? getDatatypeHint(term.datatype) : undefined}
-			numeric={term.datatype !== undefined && LiteralDatatypes.isNumeric(term.datatype)}
-			integer={term.datatype === XSD.integer}
+			tag={getLanguageTagLabel(term, languageTags) ?? _datatypeLabel(datatype, services)}
+			problem={editor.unfittingLiterals.has(index) ? getDatatypeHint(datatype) : undefined}
+			numeric={LiteralDatatypes.isNumeric(datatype)}
+			integer={datatype === XSD.integer}
 			languages={services.languages}
 			services={services}
 			onInput={text => editor.inputLiteral(index, text)}
@@ -62,6 +68,6 @@ export function EditableLiteral({ view, index, edited }: EditableLiteralProps): 
  * @param services Gives the datatype its prefixed name.
  * @returns The label.
  */
-function _datatypeLabel(datatype: string | undefined, services: StatementServices): string {
-	return getDatatypeLabel(datatype ?? XSD.string) ?? services.resolver.viewOf({ kind: 'iri', iri: datatype ?? XSD.string }).prefixedName ?? datatype ?? '';
+function _datatypeLabel(datatype: string, services: StatementServices): string {
+	return getDatatypeLabel(datatype) ?? services.resolver.viewOf(RdfDataFactory.namedNode(datatype)).prefixedName ?? datatype;
 }

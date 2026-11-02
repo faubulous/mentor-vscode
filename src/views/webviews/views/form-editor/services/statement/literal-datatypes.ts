@@ -1,5 +1,5 @@
 import { XSD } from '@faubulous/mentor-rdf/ontologies';
-import { TermRef } from '../../form-editor-model';
+import { Term } from '@rdfjs/types';
 
 /**
  * A datatype the literal fields know: its IRI and the text it takes.
@@ -87,7 +87,7 @@ export class LiteralDatatypes {
 	 * @param term The term.
 	 * @returns `true` when the term fits.
 	 */
-	static fitsTerm(term: TermRef): boolean {
-		return term.kind !== 'literal' || !term.datatype || LiteralDatatypes.fits(term.datatype, term.value);
+	static fitsTerm(term: Term): boolean {
+		return term.termType !== 'Literal' || LiteralDatatypes.fits(term.datatype.value, term.value);
 	}
 }

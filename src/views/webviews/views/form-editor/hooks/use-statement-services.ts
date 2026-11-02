@@ -19,7 +19,8 @@ export interface StatementServices {
 	resolver: TermViewResolver;
 
 	/**
-	 * The languages the literals of the card are tagged with, in the order met.
+	 * The languages the literals of the card are tagged with, in the order met, as the document
+	 * spells them.
 	 */
 	languages: readonly string[];
 
@@ -38,7 +39,7 @@ export interface StatementServices {
  * @returns The services, or `undefined` when the rows are not edited.
  */
 export function useStatementServices(detail: ResourceDetail, enabled: boolean): StatementServices | undefined {
-	const { namespaces, resources } = useFormEditorContext();
+	const { namespaces, resources, languageTags } = useFormEditorContext();
 
 	return useMemo(() => {
 		if (!enabled) {
@@ -50,10 +51,10 @@ export function useStatementServices(detail: ResourceDetail, enabled: boolean): 
 		return {
 			reader: new TypedTermReader(prefixes),
 			resolver: new TermViewResolver(prefixes, resources ?? [], _viewsOf(detail)),
-			languages: _languagesOf(detail),
+			languages: _languagesOf(detail).map(language => languageTags[language] ?? language),
 			resources: resources ?? []
 		};
-	}, [enabled, namespaces, resources, detail]);
+	}, [enabled, namespaces, resources, languageTags, detail]);
 }
 
 /**
@@ -66,7 +67,7 @@ function _languagesOf(detail: ResourceDetail): string[] {
 
 	for (const property of detail.properties) {
 		for (const value of property.values) {
-			if (value.term.kind === 'literal' && value.term.language) {
+			if (value.term.termType === 'Literal' && value.term.language) {
 				languages.add(value.term.language);
 			}
 		}

@@ -7,11 +7,11 @@ describe('useFormEditorContext', () => {
 	it('is read only with no namespaces outside a provider', () => {
 		const { result } = renderHook(() => useFormEditorContext());
 
-		expect(result.current).toEqual({ readOnly: true, namespaces: [] });
+		expect(result.current).toEqual({ readOnly: true, namespaces: [], languageTags: {} });
 	});
 
 	it('reads the value of the nearest provider', () => {
-		const value: FormEditorContextValue = { readOnly: false, namespaces: [{ prefix: 'ex', iri: 'http://example.org/' }] };
+		const value: FormEditorContextValue = { readOnly: false, namespaces: [{ prefix: 'ex', iri: 'http://example.org/' }], languageTags: {} };
 		const { result } = renderHook(() => useFormEditorContext(), {
 			wrapper: ({ children }) => <FormEditorContext.Provider value={value}>{children}</FormEditorContext.Provider>
 		});

@@ -1,4 +1,4 @@
-import { RdfDataFactory } from '@src/utilities/rdf';
+import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import type { Term } from '@rdfjs/types';
 import type { SparqlQueryExecutionState } from '@src/languages/sparql/services/sparql-query-state';
 

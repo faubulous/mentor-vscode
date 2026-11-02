@@ -1,4 +1,5 @@
-import { TermRef, TermView } from '../form-editor-model';
+import { Literal, Term } from '@rdfjs/types';
+import { TermView } from '../form-editor-model';
 
 /**
  * The text a term is told by when the pointer rests on it: the IRI of a resource, `_:` and the
@@ -6,12 +7,12 @@ import { TermRef, TermView } from '../form-editor-model';
  * @param term The term.
  * @returns The text, or `undefined` for a literal.
  */
-export function getTermTitle(term: TermRef): string | undefined {
-	if (term.kind === 'iri') {
-		return term.iri;
+export function getTermTitle(term: Term): string | undefined {
+	if (term.termType === 'NamedNode') {
+		return term.value;
 	}
 
-	return term.kind === 'bnode' ? `_:${term.id}` : undefined;
+	return term.termType === 'BlankNode' ? `_:${term.value}` : undefined;
 }
 
 /**
@@ -21,4 +22,20 @@ export function getTermTitle(term: TermRef): string | undefined {
  */
 export function getTermLabel(view: TermView): string {
 	return view.label || view.prefixedName || getTermTitle(view.term) || '';
+}
+
+/**
+ * The language tag of a literal as the document spells it, with its base direction.
+ * @param literal The literal.
+ * @param languageTags The spelling of each language tag the document writes, by its lower case form.
+ * @returns The tag, or `undefined` for a literal without a language.
+ */
+export function getLanguageTagLabel(literal: Literal, languageTags: Readonly<Record<string, string>>): string | undefined {
+	if (!literal.language) {
+		return undefined;
+	}
+
+	const spelling = languageTags[literal.language] ?? literal.language;
+
+	return literal.direction ? `${spelling}--${literal.direction}` : spelling;
 }

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Validator } from 'shacl-engine';
 import { Store } from '@faubulous/mentor-rdf';
-import { RdfDataFactory } from '@src/utilities/rdf';
+import { ShaclEnvironment } from '@src/services/validation/shacl-environment';
 import { ONTOLOGY_SHAPES_URI } from '../preset-definitions';
 import { loadPresetShapeGraphs } from './index';
 
@@ -27,7 +27,7 @@ async function validate(shapesUri: string, dataTurtle: string) {
 	loadPresetShapeGraphs(store);
 	store.loadTurtle(dataTurtle, DATA_GRAPH_URI, false);
 
-	const validator = new Validator(store.getDataset([shapesUri], false), { factory: RdfDataFactory });
+	const validator = new Validator(store.getDataset([shapesUri], false), { factory: ShaclEnvironment });
 
 	return validator.validate({ dataset: store.getDataset([DATA_GRAPH_URI], false) });
 }

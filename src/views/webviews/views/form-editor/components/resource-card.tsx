@@ -117,12 +117,5 @@ function _identifierOf(summary: ResourceSummary): string {
 		return summary.prefixedName;
 	}
 
-	switch (summary.term.kind) {
-		case 'iri':
-			return summary.term.iri;
-		case 'bnode':
-			return `_:${summary.term.id}`;
-		default:
-			return summary.term.value;
-	}
+	return summary.term.termType === 'NamedNode' ? summary.term.value : `_:${summary.term.value}`;
 }

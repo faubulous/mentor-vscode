@@ -24,6 +24,12 @@ export interface FormEditorContextValue {
 	namespaces: NamespaceInfo[];
 
 	/**
+	 * The spelling of each language tag the document writes, by its lower case form, which
+	 * language tags are shown in.
+	 */
+	languageTags: Record<string, string>;
+
+	/**
 	 * The resources of the document, which the lines complete and label local terms from.
 	 */
 	resources?: ResourceSummary[];
@@ -57,7 +63,8 @@ export interface FormEditorContextValue {
 
 const DEFAULT_VALUE: FormEditorContextValue = {
 	readOnly: true,
-	namespaces: []
+	namespaces: [],
+	languageTags: {}
 };
 
 /**

@@ -1,7 +1,9 @@
 import { XSD } from '@faubulous/mentor-rdf/ontologies';
 import { getLocalPartAndQuery } from '@src/utilities/uri';
-import { NamespaceInfo, TermRef } from '../form-editor-model';
+import { Literal } from '@rdfjs/types';
+import { NamespaceInfo } from '../form-editor-model';
 import { useFormEditorContext } from '../state/form-editor-context';
+import { getLanguageTagLabel } from './term-labels';
 
 /**
  * Properties of the {@link LiteralValue} component.
@@ -10,7 +12,7 @@ export interface LiteralValueProps {
 	/**
 	 * The literal.
 	 */
-	term: Extract<TermRef, { kind: 'literal' }>;
+	term: Literal;
 }
 
 /**
@@ -20,8 +22,8 @@ export interface LiteralValueProps {
  * @returns The text.
  */
 export function LiteralValue({ term }: LiteralValueProps): React.JSX.Element {
-	const { namespaces } = useFormEditorContext();
-	const tag = term.language ?? _datatypeTagOf(term.datatype, namespaces);
+	const { namespaces, languageTags } = useFormEditorContext();
+	const tag = getLanguageTagLabel(term, languageTags) ?? _datatypeTagOf(term.datatype.value, namespaces);
 
 	return (
 		<span className="literal-value">
@@ -38,8 +40,8 @@ export function LiteralValue({ term }: LiteralValueProps): React.JSX.Element {
  * @param namespaces The namespace declarations of the document.
  * @returns The tag, or `undefined` for a plain string.
  */
-function _datatypeTagOf(datatype: string | undefined, namespaces: readonly NamespaceInfo[]): string | undefined {
-	if (!datatype || datatype === XSD.string) {
+function _datatypeTagOf(datatype: string, namespaces: readonly NamespaceInfo[]): string | undefined {
+	if (datatype === XSD.string) {
 		return undefined;
 	}
 

@@ -7,13 +7,14 @@ import { EditWriter } from './edit-writer';
 import { StatementRowData } from './statement-row-data';
 import { StatementRowEditor } from './statement-row-editor';
 import { StatementRowOwner } from './statement-row-owner';
+import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 
 const reader = new TypedTermReader(TEST_NAMESPACES);
 
 /**
  * The label property of the tests, anchored.
  */
-const LABEL: PropertyView = withAnchors(createTestResourceDetail([{ ...createProperty('rdfs:label', [createLiteralView('Tree', 'en')]), predicate: { term: { kind: 'iri', iri: RDFS.label }, prefixedName: 'rdfs:label', editable: true } }])).properties[0];
+const LABEL: PropertyView = withAnchors(createTestResourceDetail([{ ...createProperty('rdfs:label', [createLiteralView('Tree', 'en')]), predicate: { term: RdfDataFactory.namedNode(RDFS.label), prefixedName: 'rdfs:label', editable: true } }])).properties[0];
 
 /**
  * Make the data of a row.
@@ -47,7 +48,7 @@ describe('StatementRowEditor', () => {
 		editor.leave();
 
 		expect(requested).toEqual([editor]);
-		expect(editor.takeEdit()).toEqual([{ op: 'setValues', subject: TEST_SUBJECT, predicate: RDFS.label, values: [{ kind: 'term', term: { kind: 'literal', value: 'Oak', language: 'en' } }] }]);
+		expect(editor.takeEdit()).toEqual([{ op: 'setValues', subject: TEST_SUBJECT, predicate: RDFS.label, values: [{ kind: 'term', term: RdfDataFactory.literal('Oak', 'en') }] }]);
 		expect(editor.ready).toBe(false);
 	});
 
@@ -68,7 +69,7 @@ describe('StatementRowEditor', () => {
 
 		expect(editor.ready).toBe(true);
 		expect(editor.state.stored.values).toEqual([{ kind: 'written', view: delivered.values[0] }]);
-		expect(editor.state.draft.values).toEqual([{ kind: 'term', term: { kind: 'literal', value: 'Elm', language: 'en' } }]);
+		expect(editor.state.draft.values).toEqual([{ kind: 'term', term: RdfDataFactory.literal('Elm', 'en') }]);
 	});
 
 	it('starts over from a delivered property when nothing typed is pending', () => {
@@ -108,7 +109,7 @@ describe('StatementRowEditor', () => {
 	});
 
 	it('puts a literal its datatype does not take back to the stored value when the row is left', () => {
-		const count: PropertyView = { ...createProperty('ex:count', [{ term: { kind: 'literal', value: '42', datatype: XSD.integer }, editable: true, anchor: 10 }]) };
+		const count: PropertyView = { ...createProperty('ex:count', [{ term: RdfDataFactory.literal('42', RdfDataFactory.namedNode(XSD.integer)), editable: true, anchor: 10 }]) };
 		const { editor, requested } = createEditor(count);
 
 		editor.inputLiteral(0, '4.5');

@@ -1,5 +1,5 @@
 import { getPrefixedName } from '@src/utilities/prefixed-name';
-import { ResourceSummary, TermRef, TermView } from '../../form-editor-model';
+import { ResourceSummary, TermView } from '../../form-editor-model';
 
 /**
  * Gives every term a row shows the view the components render it with: the view the host sent
@@ -18,14 +18,14 @@ export class TermViewResolver {
 	 */
 	constructor(private readonly _namespaces: Readonly<Record<string, string>>, resources: readonly ResourceSummary[], known: readonly TermView[]) {
 		for (const resource of resources) {
-			if (resource.term.kind === 'iri') {
-				this._views.set(resource.term.iri, { term: resource.term, label: resource.hasLabel ? resource.label : undefined, prefixedName: resource.prefixedName, iconName: resource.iconName, editable: false });
+			if (resource.term.termType === 'NamedNode') {
+				this._views.set(resource.term.value, { term: resource.term, label: resource.hasLabel ? resource.label : undefined, prefixedName: resource.prefixedName, iconName: resource.iconName, editable: false });
 			}
 		}
 
 		for (const view of known) {
-			if (view.term.kind === 'iri') {
-				this._views.set(view.term.iri, view);
+			if (view.term.termType === 'NamedNode') {
+				this._views.set(view.term.value, view);
 			}
 		}
 	}
@@ -35,17 +35,17 @@ export class TermViewResolver {
 	 * @param term The term.
 	 * @returns The view, which carries no position: it stands for the term, not for where it is written.
 	 */
-	viewOf(term: TermRef): TermView {
-		if (term.kind !== 'iri') {
+	viewOf(term: TermView['term']): TermView {
+		if (term.termType !== 'NamedNode') {
 			return { term, editable: false };
 		}
 
-		const known = this._views.get(term.iri);
+		const known = this._views.get(term.value);
 
 		return {
 			term,
 			label: known?.label,
-			prefixedName: known?.prefixedName ?? getPrefixedName(this._namespaces, term.iri),
+			prefixedName: known?.prefixedName ?? getPrefixedName(this._namespaces, term.value),
 			iconName: known?.iconName,
 			editable: false
 		};

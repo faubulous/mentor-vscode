@@ -1,3 +1,4 @@
+import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { ResourceSummary } from '@src/views/webviews/views/form-editor/form-editor-model';
 import { EXAMPLE_NAMESPACE } from './statement-fixtures';
 
@@ -12,7 +13,7 @@ export function createResourceSummary(localName: string, extra: Partial<Resource
 
 	return {
 		id: `i:${iri}`,
-		term: { kind: 'iri', iri },
+		term: RdfDataFactory.namedNode(iri),
 		label: localName,
 		prefixedName: `ex:${localName}`,
 		iconName: 'mentor-rdf-class',

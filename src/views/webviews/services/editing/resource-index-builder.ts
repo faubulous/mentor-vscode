@@ -1,8 +1,7 @@
 import { QuadContext, RdfToken } from '@faubulous/mentor-rdf-parsers';
-import { Term } from '@rdfjs/types';
+import { BlankNode, NamedNode, Term } from '@rdfjs/types';
 import { RDF } from '@faubulous/mentor-rdf';
 import { IDocumentContext } from '@src/services/document/document-context.interface';
-import { toTermRef } from '@src/services/editing/resource-id';
 import { isTokenOfType } from '@src/utilities/tokens';
 import { NamespaceInfo, ResourceId } from '@src/views/webviews/views/form-editor/form-editor-model';
 import { CollectionItem, ResourceIndex, ResourceIndexEntry } from './resource-index';
@@ -46,7 +45,7 @@ export class ResourceIndexBuilder {
 		}
 
 		for (const entry of this._entries.values()) {
-			entry.nested = entry.term.kind === 'bnode'
+			entry.nested = entry.term.termType === 'BlankNode'
 				&& !this._labelledSubjects.has(entry.id)
 				&& this._referenceCounts.get(entry.id) === 1;
 		}
@@ -108,7 +107,7 @@ export class ResourceIndexBuilder {
 
 		const entry: ResourceIndexEntry = {
 			id,
-			term: toTermRef(quad.subject),
+			term: quad.subject as NamedNode | BlankNode,
 			quads: [],
 			nested: false
 		};

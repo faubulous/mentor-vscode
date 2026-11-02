@@ -2,14 +2,15 @@ import { describe, expect, it } from 'vitest';
 import { EditOperation } from '@src/services/editing/edit-operation';
 import { FormEditorWebviewMessage } from '../form-editor-messages';
 import { EditingHostService } from './editing-host-service';
+import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 
-const subject = { kind: 'iri' as const, iri: 'http://example.org/s' };
+const subject = RdfDataFactory.namedNode('http://example.org/s');
 
 /**
  * Build an operation making a literal the one value of a predicate.
  */
 function operation(value: string): EditOperation {
-	return { op: 'setValues', subject, predicate: 'http://example.org/p', values: [{ kind: 'term', term: { kind: 'literal', value } }] };
+	return { op: 'setValues', subject, predicate: 'http://example.org/p', values: [{ kind: 'term', term: RdfDataFactory.literal(value) }] };
 }
 
 /**

@@ -264,7 +264,7 @@ function _sizeClassOf(block: FormBlock, cardStates: ResourceCardStates): BlockSi
 		return 'comment';
 	}
 
-	if (block.resource.term.kind === 'bnode' || cardStates.stateOf(block.id).open !== 'collapsed') {
+	if (block.resource.term.termType === 'BlankNode' || cardStates.stateOf(block.id).open !== 'collapsed') {
 		return 'open';
 	}
 

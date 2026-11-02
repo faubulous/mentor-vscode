@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { RdfDataFactory } from '@src/utilities/rdf';
+import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { copyTerm, reviveTerms } from '@src/utilities/rdf-terms';
 
 /**

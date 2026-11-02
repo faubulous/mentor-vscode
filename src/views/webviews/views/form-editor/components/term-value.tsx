@@ -40,11 +40,11 @@ export function TermValue({ view, dataService, depth, visited }: TermValueProps)
 		return <NestedResourceCard nested={view.nested} dataService={dataService} depth={depth + 1} visited={visited} />;
 	}
 
-	switch (view.term.kind) {
-		case 'literal':
+	switch (view.term.termType) {
+		case 'Literal':
 			return <LiteralValue term={view.term} />;
-		case 'iri': {
-			const iri = view.term.iri;
+		case 'NamedNode': {
+			const iri = view.term.value;
 
 			return <ValuePill view={view} onNavigate={() => navigate(iri)} />;
 		}

@@ -1,5 +1,4 @@
 import { Term } from '@rdfjs/types';
-import { TermRef } from './term-ref';
 
 /**
  * Identifier of a resource. Built from a blank node identifier of the parser, which numbers
@@ -26,28 +25,4 @@ export function getIriResourceId(iri: string): ResourceId {
  */
 export function getResourceId(term: Term): ResourceId {
 	return term.termType === 'BlankNode' ? `b:${term.value}` : getIriResourceId(term.value);
-}
-
-/**
- * Convert an RDF/JS term to its wire representation.
- * @param term The term to convert.
- * @returns The term in wire form.
- */
-export function toTermRef(term: Term): TermRef {
-	switch (term.termType) {
-		case 'BlankNode':
-			return { kind: 'bnode', id: term.value };
-		case 'Literal': {
-			const literal = term as { value: string; language?: string; datatype?: { value: string } };
-
-			return {
-				kind: 'literal',
-				value: literal.value,
-				language: literal.language || undefined,
-				datatype: literal.datatype?.value
-			};
-		}
-		default:
-			return { kind: 'iri', iri: term.value };
-	}
 }

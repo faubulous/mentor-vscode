@@ -1,12 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ResourceDetail } from '../form-editor-model';
 import { ResourceDataService } from './resource-data-service';
+import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 
 /**
  * Create a resource detail with no properties.
  */
 function detail(id: string): ResourceDetail {
-	return { id, term: { kind: 'iri', iri: `http://example.org/${id}` }, properties: [] };
+	return { id, term: RdfDataFactory.namedNode(`http://example.org/${id}`), properties: [] };
 }
 
 /**

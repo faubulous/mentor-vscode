@@ -14,6 +14,7 @@ import { createMockWebviewPanel } from '@src/utilities/mocks/vscode';
 import { EditableTextDocument, applyWorkspaceEditTo, createEditableTextDocument, createMockDocumentContext, createMockDocumentContextService, createTurtleDocument } from '@src/utilities/mocks/factories';
 import { FormEditorHostMessage, FormEditorWebviewMessage } from './form-editor-messages';
 import { FormEditorSession } from './form-editor-session';
+import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 
 const EX = 'http://example.org/';
 const PREAMBLE = `@prefix ex: <${EX}> .\n\n`;
@@ -118,7 +119,7 @@ describe('FormEditorSession', () => {
 		const [message] = postedOf(posted, 'ResourcesLoaded');
 
 		expect(message.resources).toHaveLength(1);
-		expect(message.resources[0].properties.map(property => property.predicate.term)).toEqual([{ kind: 'iri', iri: RDF.type }, { kind: 'iri', iri: `${EX}p` }]);
+		expect(message.resources[0].properties.map(property => property.predicate.term)).toEqual([RdfDataFactory.namedNode(RDF.type), RdfDataFactory.namedNode(`${EX}p`)]);
 		expect(message.missing).toEqual([`i:${EX}missing`]);
 	});
 
@@ -138,7 +139,7 @@ describe('FormEditorSession', () => {
 
 		await receive({ id: 'Ready' });
 
-		const outcome = await session.applyEdit('e1', 1, [{ op: 'setValues', subject: { kind: 'iri', iri: `${EX}s` }, predicate: `${EX}p`, values: [{ kind: 'term', term: { kind: 'literal', value: 'new' } }] }]);
+		const outcome = await session.applyEdit('e1', 1, [{ op: 'setValues', subject: RdfDataFactory.namedNode(`${EX}s`), predicate: `${EX}p`, values: [{ kind: 'term', term: RdfDataFactory.literal('new') }] }]);
 
 		expect(outcome).toMatchObject({ ok: true, version: 2 });
 		expect(document.getText()).toBe(`${PREAMBLE}ex:s ex:p "new" .\n`);
@@ -199,6 +200,20 @@ describe('FormEditorSession', () => {
 		const [rejected] = postedOf(posted, 'EditRejected');
 
 		expect(rejected).toMatchObject({ editId: 'e1', reason: 'staleVersion', version: 1 });
+	});
+
+	it('revives the terms of an edit it receives, which arrive as plain data', async () => {
+		const { session, receive } = await createSession('ex:s ex:p "old" .\n');
+		const applyEdit = vi.spyOn(session, 'applyEdit');
+		const subject = RdfDataFactory.namedNode(`${EX}s`);
+		const operations = JSON.parse(JSON.stringify([{ op: 'setValues', subject, predicate: `${EX}p`, values: [{ kind: 'term', term: RdfDataFactory.literal('new') }] }]));
+
+		await receive({ id: 'Ready' });
+		await receive({ id: 'ApplyEdit', editId: 'e1', baseVersion: 1, operations });
+
+		const [operation] = applyEdit.mock.calls[0][2] as { subject: typeof subject }[];
+
+		expect(operation.subject.equals(subject)).toBe(true);
 	});
 
 	it('forwards reveal and filter requests to the webview', async () => {

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import * as vscode from 'vscode';
-import { RdfDataFactory } from '@src/utilities/rdf';
+import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import type { Literal, Quad } from '@rdfjs/types';
 import { SparqlResultSerializer } from '@src/languages/sparql/services/sparql-result-serializer';
 import { getLog } from '@src/utilities/vscode/log';

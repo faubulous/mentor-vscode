@@ -74,5 +74,5 @@ export function useStatementRows({ detail, version, stale, editing, services }: 
 function _predicateText(property: PropertyView, services: StatementServices): string {
 	const term = property.predicate.term;
 
-	return property.predicate.prefixedName ?? services.resolver.viewOf(term).prefixedName ?? (term.kind === 'iri' ? `<${term.iri}>` : '');
+	return property.predicate.prefixedName ?? services.resolver.viewOf(term).prefixedName ?? (term.termType === 'NamedNode' ? `<${term.value}>` : '');
 }

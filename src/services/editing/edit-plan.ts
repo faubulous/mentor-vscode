@@ -1,30 +1,20 @@
+import { Quad_Graph, Term } from '@rdfjs/types';
 import { TextEditSpec } from '@src/utilities/text-edits';
-import { TermRef } from './term-ref';
-
-/**
- * A term to look for when verifying an edit. Blank node identifiers are assigned per parse and
- * cannot be compared across the edit, so a blank node matches any blank node.
- */
-export type TermPattern = TermRef | { kind: 'anyBlankNode' };
-
-/**
- * The graph of a statement to look for: the default graph, or a named one as a term pattern.
- */
-export type GraphPattern = { kind: 'default' } | TermPattern;
+import { getMatchKey } from './term-match-key';
 
 /**
  * A change an edit is expected to make to the statements of the document, which the verifier
  * checks before the edit is applied: the number of statements matching a pattern of graph,
  * subject, predicate and object changes by `delta` between the text before and the text after the
  * edit.
- * Terms are matched exactly, except blank nodes, whose identifiers change when the edited text is
- * read again, so any blank node matches.
+ * Terms are matched by {@link getMatchKey}: exactly, except that a blank node matches any blank
+ * node, as a blank node in a graph pattern does.
  */
 export interface ExpectedStatementChange {
 	/**
 	 * The subject of the matching statements.
 	 */
-	subject: TermPattern;
+	subject: Term;
 
 	/**
 	 * The IRI of the predicate of the matching statements.
@@ -34,13 +24,13 @@ export interface ExpectedStatementChange {
 	/**
 	 * The object of the matching statements.
 	 */
-	object: TermPattern;
+	object: Term;
 
 	/**
 	 * The graph of the matching statements: where a removed statement was written, and where the
 	 * edit writes a new one.
 	 */
-	graph: GraphPattern;
+	graph: Quad_Graph;
 
 	/**
 	 * By how many the number of matching statements changes: `1` for a statement the edit
@@ -104,7 +94,7 @@ export function netExpectedChanges(expectedChanges: readonly ExpectedStatementCh
 	const net = new Map<string, ExpectedStatementChange>();
 
 	for (const change of expectedChanges) {
-		const key = JSON.stringify([change.graph, change.subject, change.predicate, change.object]);
+		const key = JSON.stringify([getMatchKey(change.graph), getMatchKey(change.subject), change.predicate, getMatchKey(change.object)]);
 		const existing = net.get(key);
 
 		net.set(key, existing ? { ...existing, delta: existing.delta + change.delta } : change);

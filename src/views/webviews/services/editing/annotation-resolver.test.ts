@@ -3,6 +3,7 @@ import { RDFS, SKOS } from '@faubulous/mentor-rdf';
 import { QuadContext } from '@faubulous/mentor-rdf-parsers';
 import { AnnotationResolver } from './annotation-resolver';
 import { ResourceIndexEntry } from './resource-index';
+import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 
 /**
  * Build an index entry stating the given literals.
@@ -13,7 +14,7 @@ function entryOf(name: string, statements: [string, string, string?][]): Resourc
 		object: { termType: 'Literal', value, language: language ?? '' }
 	})) as unknown as QuadContext[];
 
-	return { id: `i:${name}`, term: { kind: 'iri', iri: name }, quads, nested: false };
+	return { id: `i:${name}`, term: RdfDataFactory.namedNode(name), quads, nested: false };
 }
 
 describe('AnnotationResolver.findLabel', () => {

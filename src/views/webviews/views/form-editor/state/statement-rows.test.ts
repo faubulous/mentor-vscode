@@ -61,6 +61,6 @@ describe('StatementRows', () => {
 
 		expect(entries[0].editor).toBeUndefined();
 		expect(rows.rowOf('http://example.org/p')).toBe('notEditable');
-		expect(rows.rowOf(SAMPLE[1].predicate.term.kind === 'iri' ? SAMPLE[1].predicate.term.iri : '')).toBe(entries[1].editor);
+		expect(rows.rowOf(SAMPLE[1].predicate.term.termType === 'NamedNode' ? SAMPLE[1].predicate.term.value : '')).toBe(entries[1].editor);
 	});
 });

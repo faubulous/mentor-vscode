@@ -1,4 +1,5 @@
-import { PropertyView, TermRef } from '../form-editor-model';
+import { BlankNode, NamedNode } from '@rdfjs/types';
+import { PropertyView } from '../form-editor-model';
 import { TypedTermReader } from '../services/statement/typed-term-reader';
 
 /**
@@ -14,7 +15,7 @@ export interface StatementRowData {
 	/**
 	 * The resource the statement is about.
 	 */
-	subject: TermRef;
+	subject: NamedNode | BlankNode;
 
 	/**
 	 * The property, or none for a row a new statement is typed into.
