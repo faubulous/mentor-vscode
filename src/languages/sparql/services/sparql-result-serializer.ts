@@ -1,10 +1,11 @@
 import * as vscode from 'vscode';
 import { AsyncIterator } from 'asynciterator';
 import { Uri } from '@faubulous/mentor-rdf';
-import { RdfDataFactory } from '@src/utilities/rdf';
+import { getTripleKey, RdfDataFactory } from '@src/utilities/rdf';
+import { copyTerm } from '@src/utilities/rdf-terms';
 import { RdfSyntax, SparqlVariableParser } from '@faubulous/mentor-rdf-parsers';
 import { ParserFactory } from '@src/languages/parser-factory';
-import { SerializationOptions, termToString, TurtleSerializer } from '@faubulous/mentor-rdf-serializers';
+import { SerializationOptions, TurtleSerializer } from '@faubulous/mentor-rdf-serializers';
 import { Bindings, Quad, Term } from "@rdfjs/types";
 import { IPrefixLookupService } from '@src/services/document';
 import { BindingsResult, SparqlQueryExecutionState } from "./sparql-query-state";
@@ -27,7 +28,7 @@ export class SparqlResultSerializer {
 		const unique = new Map<string, Quad>();
 
 		for (const q of quads) {
-			const key = `${termToString(q.subject)} ${termToString(q.predicate)} ${termToString(q.object)}`;
+			const key = getTripleKey(q);
 
 			if (!unique.has(key)) {
 				unique.set(key, q.graph.termType === 'DefaultGraph'
@@ -88,24 +89,23 @@ export class SparqlResultSerializer {
 		const namespaces = new Set<string>();
 		const rows: Record<string, any>[] = [];
 
-		const serializeTerm = (value: Term): Record<string, any> => {
-			const term: Record<string, any> = {
-				termType: value.termType,
-				value: value.value,
-			};
-
+		const collectNamespaces = (value: Term): void => {
 			if (value.termType === 'NamedNode') {
 				namespaces.add(Uri.getNamespaceIri(value.value));
-			} else if (value.termType === 'Literal') {
-				term.datatype = { termType: 'NamedNode', value: value.datatype.value };
-				term.language = value.language;
 			} else if (value.termType === 'Quad') {
-				term.subject = serializeTerm(value.subject);
-				term.predicate = serializeTerm(value.predicate);
-				term.object = serializeTerm(value.object);
+				collectNamespaces(value.subject);
+				collectNamespaces(value.predicate);
+				collectNamespaces(value.object);
 			}
+		};
 
-			return term;
+		// The terms are copied into terms of the data factory, which hold the term's data only, so
+		// that they cross to the webview with all of it, the direction of a literal and the graph of
+		// a quad included; the webview revives them (see reviveTerms).
+		const serializeTerm = (value: Term): Term => {
+			collectNamespaces(value);
+
+			return copyTerm(value);
 		};
 
 		for (const binding of bindings) {
@@ -181,7 +181,7 @@ export class SparqlResultSerializer {
 				namespaceMap[namespace] = prefix;
 			}
 
-			rows.push({ [column]: { termType: 'NamedNode', value: iri } });
+			rows.push({ [column]: RdfDataFactory.namedNode(iri) });
 		}
 
 		return {

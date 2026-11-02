@@ -3,13 +3,16 @@ import * as vscode from 'vscode';
 import * as mockVscode from '@src/utilities/mocks/vscode';
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 
+const serializedOptions = vi.hoisted(() => [] as any[]);
+
 vi.mock('@faubulous/mentor-rdf-serializers', () => ({
+	getLanguageTagSpellings: () => ({ 'en-us': 'en-US' }),
 	QuadContextSerializer: class {
 		constructor(public serializer: any) {}
 		serialize(_quads: any, _opts: any) { return 'result turtle'; }
 	},
 	TurtleSerializer: class {
-		serialize(_quads: any, _opts: any) { return 'result turtle'; }
+		serialize(_quads: any, opts: any) { serializedOptions.push(opts); return 'result turtle'; }
 	},
 	TurtleFormatter: class {
 		format(_text: string, _opts?: any) { return _text; }
@@ -119,5 +122,6 @@ describe('inlineBlankNodes command', () => {
 		const applyEditSpy = vi.spyOn(mockVscode.workspace, 'applyEdit');
 		await inlineBlankNodes.handler(uri);
 		expect(applyEditSpy).toHaveBeenCalled();
+		expect(serializedOptions[serializedOptions.length - 1].languageTags).toEqual({ 'en-us': 'en-US' });
 	});
 });
