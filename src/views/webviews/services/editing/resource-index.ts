@@ -2,7 +2,7 @@ import { QuadContext } from '@faubulous/mentor-rdf-parsers';
 import { RDF } from '@faubulous/mentor-rdf';
 import { Term } from '@rdfjs/types';
 import { NamespaceInfo, ResourceId, ResourceSummary, TermRef } from '@src/views/webviews/views/form-editor/form-editor-model';
-import { ResourceIdentities } from './resource-identities';
+import { BlankNodeIdentityRegister } from './blank-node-identity-register';
 
 /**
  * A resource collected from the document, together with the statements that describe it.
@@ -60,10 +60,10 @@ export interface ResourceIndex {
 	entries: Map<ResourceId, ResourceIndexEntry>;
 
 	/**
-	 * Names the resources, blank nodes by where they are written, so they keep their identifiers
-	 * across versions of the document.
+	 * Identifies the blank nodes by where they are written, so they keep their identifiers across
+	 * versions of the document.
 	 */
-	identities: ResourceIdentities;
+	blankNodeIds: BlankNodeIdentityRegister;
 
 	/**
 	 * The namespace declarations of the document, ordered by prefix.

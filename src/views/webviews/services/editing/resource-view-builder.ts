@@ -223,7 +223,7 @@ export class ResourceViewBuilder {
 			return view;
 		}
 
-		const id = this._index.identities.idOf(term);
+		const id = this._index.blankNodeIds.idOf(term);
 		const items = this._index.collections.get(id);
 
 		if (items) {

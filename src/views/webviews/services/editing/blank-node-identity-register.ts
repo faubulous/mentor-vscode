@@ -1,5 +1,5 @@
 import { QuadContext, RdfToken } from '@faubulous/mentor-rdf-parsers';
-import { Term } from '@rdfjs/types';
+import { BlankNode, Term } from '@rdfjs/types';
 import { getResourceId } from '@src/services/editing/resource-id';
 import { isTokenOfType } from '@src/utilities/tokens';
 import { ResourceId } from '@src/views/webviews/views/form-editor/form-editor-model';
@@ -26,17 +26,17 @@ interface Referrer {
 }
 
 /**
- * Names the resources of a document as the form editor knows them across versions. The parser
- * numbers anonymous blank nodes, written `[ … ]` or `( … )`, in the order of the file, so every
- * such node after one that is added or removed would change its identifier, and a card, its open
- * state and the rows being typed into would pass to another node. An anonymous node is therefore
- * named by where it is written in the graph: the resource holding it, the predicate and its place
- * among the anonymous values of that predicate. An edit elsewhere in the file leaves it its name.
- * An anonymous node that is no value, written as the subject of a block of its own, is named by
- * its place among those. A labelled blank node keeps the identifier of its label, and a resource
- * named by an IRI its IRI.
+ * Registers the blank nodes of a document under identifiers that stay as they are across versions
+ * of the document. The parser numbers anonymous blank nodes, written `[ … ]` or `( … )`, in the
+ * order of the file, so every such node after one that is added or removed would change its
+ * identifier, and a card, its open state and the rows being typed into would pass to another node.
+ * An anonymous node is therefore registered by where it is written in the graph: the resource
+ * holding it, the predicate and its place among the anonymous values of that predicate. An edit
+ * elsewhere in the file leaves it its identifier. An anonymous node that is no value, written as
+ * the subject of a block of its own, is registered by its place among those, and a labelled blank
+ * node by its label, as {@link getResourceId} does.
  */
-export class ResourceIdentities {
+export class BlankNodeIdentityRegister {
 	private readonly _labelled = new Set<string>();
 
 	private readonly _referrers = new Map<string, Referrer>();
@@ -82,16 +82,16 @@ export class ResourceIdentities {
 	}
 
 	/**
-	 * Get the identifier of a resource.
-	 * @param term The subject or object naming the resource.
+	 * Get the identifier of a blank node.
+	 * @param node The blank node, as a subject or an object.
 	 * @returns The identifier.
 	 */
-	idOf(term: Term): ResourceId {
-		if (term.termType !== 'BlankNode' || this._labelled.has(term.value)) {
-			return getResourceId(term);
+	idOf(node: BlankNode): ResourceId {
+		if (this._labelled.has(node.value)) {
+			return getResourceId(node);
 		}
 
-		const known = this._ids.get(term.value);
+		const known = this._ids.get(node.value);
 
 		if (known !== undefined) {
 			return known;
@@ -99,29 +99,31 @@ export class ResourceIdentities {
 
 		// Resolved before it is remembered, so a malformed chain that loops falls back to the
 		// identifier of the parser rather than recursing for ever.
-		this._ids.set(term.value, getResourceId(term));
+		this._ids.set(node.value, getResourceId(node));
 
-		const id = this._anonymousIdOf(term);
+		const id = this._anonymousIdOf(node);
 
-		this._ids.set(term.value, id);
+		this._ids.set(node.value, id);
 
 		return id;
 	}
 
 	/**
-	 * Name an anonymous blank node by where it is written.
-	 * @param term The blank node.
+	 * Identify an anonymous blank node by where it is written.
+	 * @param node The blank node.
 	 * @returns The identifier.
 	 */
-	private _anonymousIdOf(term: Term): ResourceId {
-		const referrer = this._referrers.get(term.value);
+	private _anonymousIdOf(node: BlankNode): ResourceId {
+		const referrer = this._referrers.get(node.value);
 
 		if (referrer) {
-			return `b:${this.idOf(referrer.parent)}>${referrer.predicate}#${referrer.position}`;
+			const parent = referrer.parent.termType === 'BlankNode' ? this.idOf(referrer.parent) : getResourceId(referrer.parent);
+
+			return `b:${parent}>${referrer.predicate}#${referrer.position}`;
 		}
 
-		const position = this._unreferenced.get(term.value);
+		const position = this._unreferenced.get(node.value);
 
-		return position !== undefined ? `b:[${position}]` : getResourceId(term);
+		return position !== undefined ? `b:[${position}]` : getResourceId(node);
 	}
 }
