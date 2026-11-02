@@ -1,4 +1,5 @@
-import { EditOperation, EditRejectionReason } from '@src/services/editing/edit-operation';
+import { EditOperation } from '@src/services/editing/edit-operation';
+import { EditProblem } from '@src/services/editing/edit-problem';
 
 /**
  * How an edit ended, with the document version after it: the version the edit produced, or the
@@ -6,7 +7,7 @@ import { EditOperation, EditRejectionReason } from '@src/services/editing/edit-o
  */
 export type EditOutcome =
 	| { ok: true; version: number }
-	| { ok: false; reason: EditRejectionReason; message: string; version: number };
+	| { ok: false; problem: EditProblem; version: number };
 
 /**
  * An edit that has been handed to the host.

@@ -34,7 +34,7 @@ export class EditSynthesizer {
 			const plan = mergePlans(operations.map(operation => this._synthesizeOperation(context, operation)));
 
 			if (findOverlappingEdits(plan.edits)) {
-				throw new EditRejectionError('ambiguous', 'The operations change overlapping parts of the document.');
+				throw new EditRejectionError({ kind: 'overlappingEdits' });
 			}
 
 			return plan;
@@ -83,7 +83,7 @@ export class EditSynthesizer {
 			case 'setPredicate':
 				return new PropertyOperations(context).setPredicate(operation);
 			default:
-				throw new EditRejectionError('unsupportedConstruct', `The operation '${(operation as { op: string }).op}' is not supported.`);
+				throw new EditRejectionError({ kind: 'unsupportedOperation', op: (operation as { op: string }).op });
 		}
 	}
 

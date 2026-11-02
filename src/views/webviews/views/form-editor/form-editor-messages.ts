@@ -4,7 +4,8 @@
  * discard anything it receives out of order. Free of imports from 'vscode'.
  */
 
-import type { EditOperation, EditRejectionReason } from '@src/services/editing/edit-operation';
+import type { EditOperation } from '@src/services/editing/edit-operation';
+import type { EditProblem } from '@src/services/editing/edit-problem';
 import type { ExecuteCommandMessage } from '../../webview-messaging';
 import type { BlankNode, NamedNode } from '@rdfjs/types';
 import type { DocumentPosition, DocumentSnapshot, ResourceDetail } from './form-editor-model';
@@ -29,7 +30,7 @@ export type FormEditorHostMessage =
 	/**
 	 * An edit of the form was not applied.
 	 */
-	| { id: 'EditRejected'; editId: string; reason: EditRejectionReason; message: string; version: number }
+	| { id: 'EditRejected'; editId: string; problem: EditProblem; version: number }
 	/**
 	 * Scroll the card of a resource into view.
 	 */

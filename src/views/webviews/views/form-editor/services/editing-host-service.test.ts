@@ -43,9 +43,9 @@ describe('EditingHostService', () => {
 		const edit = service.applyEdit([operation('a')], 3);
 		const next = service.applyEdit([operation('b')], 3);
 
-		service.accept({ id: 'EditRejected', editId: edit.editId, reason: 'notFound', message: 'gone', version: 3 });
+		service.accept({ id: 'EditRejected', editId: edit.editId, problem: { kind: 'valueMoved' }, version: 3 });
 
-		await expect(edit.outcome).resolves.toEqual({ ok: false, reason: 'notFound', message: 'gone', version: 3 });
+		await expect(edit.outcome).resolves.toEqual({ ok: false, problem: { kind: 'valueMoved' }, version: 3 });
 		expect(posted[1]).toMatchObject({ id: 'ApplyEdit', editId: next.editId });
 	});
 

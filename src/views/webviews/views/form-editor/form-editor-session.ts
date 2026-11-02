@@ -10,7 +10,8 @@ import { ISettingsService } from '@src/services/core';
 import { IDocumentContextService } from '@src/services/document/document-context-service.interface';
 import { IDocumentTokenSource } from '@src/services/document/document-token-source.interface';
 import { TurtleDocument } from '@src/languages/turtle/turtle-document';
-import { EditOperation, EditRejectionReason } from '@src/services/editing/edit-operation';
+import { EditOperation } from '@src/services/editing/edit-operation';
+import { getLog } from '@src/utilities/vscode/log';
 import { ResourceReferenceProvider } from '@src/providers/resource-reference-provider';
 import { Debouncer } from '@src/utilities/debounce';
 import { getSubjectIconName } from '@src/utilities/subject-icon';
@@ -229,7 +230,7 @@ export class FormEditorSession implements vscode.Disposable {
 		const context = this._getTokenizedContext();
 
 		if (!context) {
-			return this._rejectEdit(editId, 'unsupportedSyntax', 'This document cannot be edited in the form editor.');
+			return this._rejectEdit(editId, { ok: false, problem: { kind: 'readOnly' }, detail: 'The document has no tokenized context.' });
 		}
 
 		const outcome = await this._editHandler.handle({ editId, baseVersion, operations }, {
@@ -239,7 +240,7 @@ export class FormEditorSession implements vscode.Disposable {
 		});
 
 		if (!outcome.ok) {
-			return this._rejectEdit(editId, outcome.reason, outcome.message);
+			return this._rejectEdit(editId, outcome);
 		}
 
 		this._refreshDebouncer.cancel();
@@ -381,9 +382,7 @@ export class FormEditorSession implements vscode.Disposable {
 		const context = this._getTokenizedContext();
 
 		if (!context) {
-			const readOnly: ReadOnlyReason = { reason: 'unsupportedSyntax', message: 'This document cannot be shown in the form editor.' };
-
-			this._postMessage({ id: 'DocumentSnapshot', snapshot: this._buildEmptySnapshot(readOnly) });
+			this._postMessage({ id: 'DocumentSnapshot', snapshot: this._buildEmptySnapshot('unsupportedSyntax') });
 
 			return;
 		}
@@ -402,7 +401,7 @@ export class FormEditorSession implements vscode.Disposable {
 		const syntaxErrors = context.getSyntaxErrors(text);
 		const readOnly = getFormReadOnlyReason(text, syntaxErrors);
 		const problems = this._toProblems(syntaxErrors);
-		const key = `${this._document.version}|${readOnly?.reason ?? ''}|${JSON.stringify(problems)}`;
+		const key = `${this._document.version}|${readOnly ?? ''}|${JSON.stringify(problems)}`;
 
 		if (!this._reuseSnapshot(cause, key)) {
 			this._rebuildSnapshot(context, readOnly, problems, key);
@@ -423,7 +422,7 @@ export class FormEditorSession implements vscode.Disposable {
 		const result = new SnapshotBuilder({
 			version: this._document.version,
 			uri: this._documentUri,
-			quadContexts: readOnly?.reason === 'template' ? [] : context.getQuadContexts(),
+			quadContexts: readOnly === 'template' ? [] : context.getQuadContexts(),
 			context,
 			readOnly,
 			problems,
@@ -551,19 +550,23 @@ export class FormEditorSession implements vscode.Disposable {
 	/**
 	 * Tell the webview that an edit was not applied. A stale edit gets a fresh snapshot along
 	 * with the rejection, so the form catches up with the document.
+	 * What the host knows beyond the problem is logged, as it helps to tell why an edit failed.
 	 * @param editId The identifier of the edit.
-	 * @param reason Why the edit was not applied.
-	 * @param message The explanation shown to the user.
+	 * @param outcome The rejection.
 	 * @returns The outcome.
 	 */
-	private _rejectEdit(editId: string, reason: EditRejectionReason, message: string): EditOutcome {
-		this._postMessage({ id: 'EditRejected', editId, reason, message, version: this._document.version });
+	private _rejectEdit(editId: string, outcome: Extract<EditOutcome, { ok: false }>): EditOutcome {
+		const { problem, detail } = outcome;
 
-		if (reason === 'staleVersion') {
+		getLog().info(`Form editor edit rejected (${problem.kind}) in ${this._document.uri.toString()}${detail ? `: ${detail}` : ''}`);
+
+		this._postMessage({ id: 'EditRejected', editId, problem, version: this._document.version });
+
+		if (problem.kind === 'staleVersion') {
 			this._publishSnapshot('external');
 		}
 
-		return { ok: false, reason, message };
+		return outcome;
 	}
 
 	/**

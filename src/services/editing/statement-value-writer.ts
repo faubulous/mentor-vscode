@@ -59,7 +59,7 @@ export class StatementValueWriter {
 	 */
 	private _writeList(items: readonly StatementValue[]): string {
 		if (!this._context.writer.abbreviates) {
-			throw new EditRejectionError('unsupportedSyntax', 'Lists cannot be written in this syntax.');
+			throw new EditRejectionError({ kind: 'listsNotSupported' });
 		}
 
 		return items.length === 0 ? '( )' : `( ${items.map(item => this.write(item)).join(' ')} )`;
@@ -136,7 +136,7 @@ export class StatementValueWriter {
 		const item = this._items.get(anchor);
 
 		if (!item) {
-			throw new EditRejectionError('notFound', 'The list item is no longer at the place it was shown at.');
+			throw new EditRejectionError({ kind: 'valueMoved' });
 		}
 
 		return item;

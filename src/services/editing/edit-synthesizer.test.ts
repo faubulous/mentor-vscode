@@ -47,7 +47,7 @@ describe('EditSynthesizer', () => {
 		});
 
 		it('refuses to remove the only predicate of a resource', () => {
-			expect(edit(`ex:s ex:p ex:a, ex:b .\n`, [{ op: 'setValues', subject, predicate: `${EX}p`, values: [] }])).toBe('rejected:wouldRemoveSubject');
+			expect(edit(`ex:s ex:p ex:a, ex:b .\n`, [{ op: 'setValues', subject, predicate: `${EX}p`, values: [] }])).toBe('rejected:lastStatements');
 		});
 	});
 
@@ -65,7 +65,7 @@ describe('EditSynthesizer', () => {
 			expect(edit(`ex:s ex:p ex:a .\n`, [
 				{ op: 'setValues', subject, predicate: `${EX}p`, values: [{ kind: 'term', term: iri('x') }] },
 				{ op: 'setValues', subject, predicate: `${EX}p`, values: [{ kind: 'term', term: iri('y') }] }
-			])).toBe('rejected:ambiguous');
+			])).toBe('rejected:overlappingEdits');
 		});
 
 	});

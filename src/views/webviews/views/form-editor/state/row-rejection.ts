@@ -1,4 +1,4 @@
-import { EditRejectionReason } from '@src/services/editing/edit-operation';
+import { EditProblem } from '@src/services/editing/edit-problem';
 
 /**
  * Why a row was not written: the host refused its edit, or the statement typed into a new row
@@ -6,5 +6,5 @@ import { EditRejectionReason } from '@src/services/editing/edit-operation';
  * The components put it into words.
  */
 export type RowRejection =
-	| { kind: 'refused'; reason: EditRejectionReason; message: string }
+	| { kind: 'refused'; problem: EditProblem }
 	| { kind: 'predicateNotEditable'; predicate: string };

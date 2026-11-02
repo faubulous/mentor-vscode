@@ -74,7 +74,7 @@ export class TermWriter {
 	 */
 	writeSubject(term: Term): string {
 		if (term.termType !== 'NamedNode' && term.termType !== 'BlankNode') {
-			throw new EditRejectionError('invalidTerm', 'Only an IRI or a blank node can be the subject of a statement.');
+			throw new EditRejectionError({ kind: 'invalidSubject' });
 		}
 
 		return this.writeObject(term);
@@ -107,7 +107,7 @@ export class TermWriter {
 			case 'Literal':
 				return this.writeLiteral(term);
 			default:
-				throw new EditRejectionError('invalidTerm', 'Only an IRI, a blank node or a literal can be the object of a statement.');
+				throw new EditRejectionError({ kind: 'invalidObject' });
 		}
 	}
 
@@ -147,7 +147,7 @@ export class TermWriter {
 	 */
 	private _writeBlankNode(id: string): string {
 		if (!this._options.blankNodeLabels.has(id)) {
-			throw new EditRejectionError('invalidTerm', 'An anonymous blank node cannot be referred to by name.');
+			throw new EditRejectionError({ kind: 'anonymousBlankNode' });
 		}
 
 		return this._serializer.serializeBlankNode(RdfDataFactory.blankNode(id));

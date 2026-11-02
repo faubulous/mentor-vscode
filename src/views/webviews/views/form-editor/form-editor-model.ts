@@ -262,19 +262,11 @@ export interface DocumentProblem {
 }
 
 /**
- * Why a document cannot be edited in the form editor.
+ * Why a document cannot be edited in the form editor: its text does not parse, it is a template
+ * whose structure is generated, or the form editor does not edit its syntax. The webview puts it
+ * into words.
  */
-export interface ReadOnlyReason {
-	/**
-	 * Why the document cannot be edited.
-	 */
-	reason: 'syntaxErrors' | 'template' | 'unsupportedSyntax';
-
-	/**
-	 * The explanation shown to the user.
-	 */
-	message: string;
-}
+export type ReadOnlyReason = 'syntaxErrors' | 'template' | 'unsupportedSyntax';
 
 /**
  * Everything the webview needs to render a document except the per-resource properties.

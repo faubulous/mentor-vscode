@@ -152,11 +152,11 @@ describe('SnapshotBuilder', () => {
 			uri: 'file:///workspace/vocab.ttl',
 			quadContexts: [],
 			context,
-			readOnly: { reason: 'syntaxErrors', message: 'The document has syntax errors.' },
+			readOnly: 'syntaxErrors',
 			problems: [{ message: 'Unexpected token', line: 3, character: 4 }]
 		}).build();
 
-		expect(snapshot.readOnly?.reason).toBe('syntaxErrors');
+		expect(snapshot.readOnly).toBe('syntaxErrors');
 		expect(snapshot.problems).toHaveLength(1);
 	});
 

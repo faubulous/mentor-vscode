@@ -1,7 +1,8 @@
 import * as vscode from 'vscode';
 import { TurtleDocument } from '@src/languages/turtle/turtle-document';
 import { IDocumentTokenSource } from '@src/services/document/document-token-source.interface';
-import { EditOperation, EditRejectionReason } from '@src/services/editing/edit-operation';
+import { EditOperation } from '@src/services/editing/edit-operation';
+import { EditProblem } from '@src/services/editing/edit-problem';
 import { isEditRejection } from '@src/services/editing/edit-rejection';
 import { EditSynthesizer } from '@src/services/editing/edit-synthesizer';
 import { EditVerifier } from '@src/services/editing/edit-verifier';
@@ -57,7 +58,7 @@ export interface EditHandlerContext {
  */
 export type EditOutcome =
 	| { ok: true; version: number }
-	| { ok: false; reason: EditRejectionReason; message: string };
+	| { ok: false; problem: EditProblem; detail?: string };
 
 /**
  * Carries an edit request from the webview through synthesis, verification and application, and
@@ -75,7 +76,7 @@ export class FormEditorEditHandler {
 		const { document, context } = handlerContext;
 
 		if (request.baseVersion !== document.version) {
-			return _reject('staleVersion', 'The document changed before the edit was applied.');
+			return _reject({ kind: 'staleVersion' }, 'The document changed before the edit was applied.');
 		}
 
 		const text = document.getText();
@@ -87,7 +88,7 @@ export class FormEditorEditHandler {
 		const readOnly = getFormReadOnlyReason(text, context.getSyntaxErrors(text));
 
 		if (readOnly) {
-			return _reject(readOnly.reason === 'syntaxErrors' ? 'parseErrors' : 'readOnly', readOnly.message);
+			return _reject({ kind: readOnly === 'syntaxErrors' ? 'syntaxErrors' : 'readOnly' });
 		}
 
 		const input: SynthesisInput = {
@@ -101,27 +102,27 @@ export class FormEditorEditHandler {
 		const plan = new EditSynthesizer(input).synthesize(request.operations);
 
 		if (isEditRejection(plan)) {
-			return _reject(plan.reason, plan.message);
+			return _reject(plan.problem);
 		}
 
 		const verification = new EditVerifier(input).verify(plan);
 
 		if (!verification.ok) {
-			return _reject('verificationFailed', verification.message);
+			return _reject({ kind: 'verificationFailed' }, verification.message);
 		}
 
 		if (document.version !== request.baseVersion) {
-			return _reject('staleVersion', 'The document changed while the edit was prepared.');
+			return _reject({ kind: 'staleVersion' }, 'The document changed while the edit was prepared.');
 		}
 
 		const applied = await vscode.workspace.applyEdit(toWorkspaceEdit(document, plan.edits));
 
 		if (!applied) {
-			return _reject('applyFailed', 'VS Code did not apply the edit.');
+			return _reject({ kind: 'notApplied' }, 'VS Code did not apply the edit.');
 		}
 
 		if (document.getText() !== verification.text) {
-			return _reject('applyFailed', 'The document changed while the edit was applied.');
+			return _reject({ kind: 'notApplied' }, 'The document changed while the edit was applied.');
 		}
 
 		this._refreshTokens(handlerContext, verification.text);
@@ -158,12 +159,12 @@ export class FormEditorEditHandler {
 
 /**
  * Build a rejection outcome.
- * @param reason Why the edit was not applied.
- * @param message The explanation shown to the user.
+ * @param problem What went wrong, which the webview puts into words.
+ * @param detail What the host knows beyond the problem, for the log.
  * @returns The outcome.
  */
-function _reject(reason: EditRejectionReason, message: string): EditOutcome {
-	return { ok: false, reason, message };
+function _reject(problem: EditProblem, detail?: string): EditOutcome {
+	return { ok: false, problem, detail };
 }
 
 /**

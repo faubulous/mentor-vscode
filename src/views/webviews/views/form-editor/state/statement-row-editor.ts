@@ -371,7 +371,7 @@ export class StatementRowEditor implements EditWriter {
 		this._writes = { predicate: false, values: false };
 		this._claimedPredicate = undefined;
 		this._submitted = false;
-		this._update(this._state.withRejection({ kind: 'refused', reason: outcome.reason, message: outcome.message }));
+		this._update(this._state.withRejection({ kind: 'refused', problem: outcome.problem }));
 	}
 
 	/**

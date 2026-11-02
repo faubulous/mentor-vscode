@@ -13,17 +13,11 @@ import { ReadOnlyReason } from './form-editor-model';
  */
 export function getFormReadOnlyReason(text: string, syntaxErrors: readonly DocumentSyntaxError[]): ReadOnlyReason | undefined {
 	if (isTemplate(text)) {
-		return {
-			reason: 'template',
-			message: 'Triplate templates cannot be shown in the form editor because their structure is generated.'
-		};
+		return 'template';
 	}
 
 	if (syntaxErrors.length > 0) {
-		return {
-			reason: 'syntaxErrors',
-			message: 'This document has syntax errors. Fix them in the text editor to continue editing here.'
-		};
+		return 'syntaxErrors';
 	}
 
 	return undefined;

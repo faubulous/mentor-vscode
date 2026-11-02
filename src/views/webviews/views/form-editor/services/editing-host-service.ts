@@ -66,7 +66,7 @@ export class EditingHostService implements IEditingHostService {
 				this._settle(message.editId, { ok: true, version: message.version });
 				return true;
 			case 'EditRejected':
-				this._settle(message.editId, { ok: false, reason: message.reason, message: message.message, version: message.version });
+				this._settle(message.editId, { ok: false, problem: message.problem, version: message.version });
 				return true;
 			default:
 				return false;

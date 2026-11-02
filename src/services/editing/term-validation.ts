@@ -12,11 +12,11 @@ const LANGUAGE_TAG = /^[a-zA-Z]{1,8}(-[a-zA-Z0-9]{1,8})*(--(ltr|rtl))?$/;
  */
 export function validateIri(iri: string): void {
 	if (iri.trim().length === 0) {
-		throw new EditRejectionError('invalidTerm', 'An IRI must not be empty.');
+		throw new EditRejectionError({ kind: 'emptyIri' });
 	}
 
 	if (/[\s<>"{}|^`\\]/.test(iri)) {
-		throw new EditRejectionError('invalidTerm', `'${iri}' is not a valid IRI.`);
+		throw new EditRejectionError({ kind: 'invalidIri', iri });
 	}
 }
 
@@ -27,6 +27,6 @@ export function validateIri(iri: string): void {
  */
 export function validateLanguageTag(tag: string): void {
 	if (!LANGUAGE_TAG.test(tag)) {
-		throw new EditRejectionError('invalidTerm', `'${tag}' is not a valid language tag.`);
+		throw new EditRejectionError({ kind: 'invalidLanguageTag', tag });
 	}
 }

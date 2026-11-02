@@ -102,7 +102,7 @@ describe('ValueListOperations.setValues in Turtle', () => {
 	it('refuses to change the order of values with comments between them', () => {
 		const body = `ex:s ex:p ex:a, # first\n    ex:b .\n`;
 
-		expect(setValues(body, [kept(body, 'ex:b'), kept(body, 'ex:a')])).toBe('rejected:unsupportedConstruct');
+		expect(setValues(body, [kept(body, 'ex:b'), kept(body, 'ex:a')])).toBe('rejected:commentsBetweenValues');
 	});
 
 	it('keeps a comment between values when one of them goes', () => {
@@ -141,7 +141,7 @@ describe('ValueListOperations.setValues in Turtle', () => {
 
 		expect(setValues(body, [kept(body, 'ex:a'), kept(body, 'ex:b'), iri('c')])).toBe(`ex:s ex:p ex:a .\nex:s ex:q ex:x ;\n    ex:p ex:b, ex:c .\n`);
 		expect(setValues(body, [kept(body, 'ex:b')])).toBe(`ex:s ex:q ex:x ;\n    ex:p ex:b .\n`);
-		expect(setValues(body, [kept(body, 'ex:b'), kept(body, 'ex:a')])).toBe('rejected:unsupportedConstruct');
+		expect(setValues(body, [kept(body, 'ex:b'), kept(body, 'ex:a')])).toBe('rejected:separateStatements');
 	});
 
 	it('removes a statement of the predicate that is left without values', () => {
@@ -152,16 +152,16 @@ describe('ValueListOperations.setValues in Turtle', () => {
 
 	it('writes the values of a predicate the subject does not carry after its last one', () => {
 		expect(setValues(`ex:s ex:q ex:a .\n`, [literal('x'), iri('b')])).toBe(`ex:s ex:q ex:a ;\n    ex:p "x", ex:b .\n`);
-		expect(setValues(`ex:s ex:q ex:a .\n`, [{ kind: 'existing', anchor: 0 }])).toBe('rejected:notFound');
+		expect(setValues(`ex:s ex:q ex:a .\n`, [{ kind: 'existing', anchor: 0 }])).toBe('rejected:valueMoved');
 	});
 
 	it('removes the predicate when no values are given, as deleteProperty does', () => {
 		expect(setValues(`ex:s ex:p ex:a ;\n    ex:q ex:b .\n`, [])).toBe(`ex:s ex:q ex:b .\n`);
-		expect(setValues(`ex:s ex:p ex:a .\n`, [])).toBe('rejected:wouldRemoveSubject');
+		expect(setValues(`ex:s ex:p ex:a .\n`, [])).toBe('rejected:lastStatements');
 	});
 
 	it('keeps a subject whose statements are all of the removed predicate, however many blocks write them', () => {
-		expect(setValues(`ex:s ex:p ex:a .\n\nex:s ex:p ex:b .\n`, [])).toBe('rejected:wouldRemoveSubject');
+		expect(setValues(`ex:s ex:p ex:a .\n\nex:s ex:p ex:b .\n`, [])).toBe('rejected:lastStatements');
 		expect(setValues(`ex:s ex:p ex:a .\n\nex:s ex:q ex:b .\n`, [])).toBe(`ex:s ex:q ex:b .\n`);
 	});
 
@@ -188,11 +188,11 @@ describe('ValueListOperations.setValues in Turtle', () => {
 	it('refuses values that refer to nothing written, are listed twice, or cannot be written', () => {
 		const body = `ex:s ex:p ex:a .\n`;
 
-		expect(setValues(body, [{ kind: 'existing', anchor: 3 }])).toBe('rejected:notFound');
-		expect(setValues(body, [kept(body, 'ex:a'), kept(body, 'ex:a')])).toBe('rejected:invalidTerm');
-		expect(setValues(body, [{ kind: 'term', term: RdfDataFactory.namedNode('not an iri') }])).toBe('rejected:invalidTerm');
-		expect(setValues(body, [literal('x', { language: 'not a tag' })])).toBe('rejected:invalidTerm');
-		expect(setValues(body, [{ kind: 'list', items: [{ kind: 'existing', anchor: anchorOf(body, 'ex:a') }] }])).toBe('rejected:notFound');
+		expect(setValues(body, [{ kind: 'existing', anchor: 3 }])).toBe('rejected:valueMoved');
+		expect(setValues(body, [kept(body, 'ex:a'), kept(body, 'ex:a')])).toBe('rejected:duplicateValue');
+		expect(setValues(body, [{ kind: 'term', term: RdfDataFactory.namedNode('not an iri') }])).toBe('rejected:invalidIri');
+		expect(setValues(body, [literal('x', { language: 'not a tag' })])).toBe('rejected:invalidLanguageTag');
+		expect(setValues(body, [{ kind: 'list', items: [{ kind: 'existing', anchor: anchorOf(body, 'ex:a') }] }])).toBe('rejected:valueMoved');
 	});
 });
 
@@ -223,7 +223,7 @@ describe('ValueListOperations.setValues in N-Triples and N-Quads', () => {
 	const line = (object: string, graph = ''): string => `<${NT}s> <${NT}p> ${object}${graph} .`;
 
 	it('keeps a subject whose lines all state the removed predicate', () => {
-		expect(setValues(`${line('"a"')}\n${line('"b"')}\n`, [], NTRIPLES)).toBe('rejected:wouldRemoveSubject');
+		expect(setValues(`${line('"a"')}\n${line('"b"')}\n`, [], NTRIPLES)).toBe('rejected:lastStatements');
 	});
 
 	it('writes one line per value, in full form', () => {
@@ -264,7 +264,7 @@ describe('ValueListOperations.setValues in N-Triples and N-Quads', () => {
 	it('refuses lists and a new order of lines', () => {
 		const body = `${line('"a"')}\n${line('"b"')}\n`;
 
-		expect(setValues(body, [{ kind: 'list', items: [literal('x')] }], NTRIPLES)).toBe('rejected:unsupportedSyntax');
-		expect(setValues(body, [kept(body, '"b"', NTRIPLES), kept(body, '"a"', NTRIPLES)], NTRIPLES)).toBe('rejected:unsupportedConstruct');
+		expect(setValues(body, [{ kind: 'list', items: [literal('x')] }], NTRIPLES)).toBe('rejected:listsNotSupported');
+		expect(setValues(body, [kept(body, '"b"', NTRIPLES), kept(body, '"a"', NTRIPLES)], NTRIPLES)).toBe('rejected:separateStatements');
 	});
 });

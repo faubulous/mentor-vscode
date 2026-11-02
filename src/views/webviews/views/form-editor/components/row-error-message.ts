@@ -1,5 +1,6 @@
 import { RowRejection } from '../state/row-rejection';
 import { StatementRowState } from '../state/statement-row-state';
+import { getEditProblemMessage } from './edit-problem-message';
 import { getTermProblemMessage } from './term-problem-message';
 
 /**
@@ -23,7 +24,7 @@ export function getRowErrorMessage(state: StatementRowState): string | undefined
 function _rejectionMessage(rejection: RowRejection): string {
 	switch (rejection.kind) {
 		case 'refused':
-			return rejection.message;
+			return getEditProblemMessage(rejection.problem);
 		case 'predicateNotEditable':
 			return 'The resource already states this predicate in a way the form cannot edit. Add the value in the text editor.';
 	}

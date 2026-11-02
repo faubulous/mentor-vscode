@@ -96,11 +96,11 @@ describe('StatementRowEditor', () => {
 		editor.inputLiteral(0, 'Oak');
 		editor.leave();
 		editor.takeEdit();
-		editor.settle({ ok: false, reason: 'notFound', message: 'Gone', version: 1 });
+		editor.settle({ ok: false, problem: { kind: 'valueMoved' }, version: 1 });
 
 		expect(editor.ready).toBe(true);
 		expect(editor.wantsToWrite).toBe(false);
-		expect(editor.state.rejection).toEqual({ kind: 'refused', reason: 'notFound', message: 'Gone' });
+		expect(editor.state.rejection).toEqual({ kind: 'refused', problem: { kind: 'valueMoved' } });
 		expect(editor.state.draft.values[0]).toMatchObject({ kind: 'term' });
 
 		editor.dismissRejection();
