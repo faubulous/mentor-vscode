@@ -1,13 +1,12 @@
 import { RDF } from '@faubulous/mentor-rdf';
 import { statementsWithin } from '@src/utilities/quad-contexts';
-import { ExpectedStatementChange, GraphPattern, TermPattern } from './edit-plan';
+import { Quad_Graph, Term } from '@rdfjs/types';
+import { ExpectedStatementChange } from './edit-plan';
 import { EditRejectionError } from './edit-rejection';
 import { CollectionItemSpan } from './statement-model';
 import { StatementValue } from './statement-value';
 import { SynthesisContext } from './synthesis-context';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
-import { ANY_BLANK_NODE } from './any-blank-node';
-import { toTermPattern } from './term-patterns';
 
 /**
  * Writes the new values of an edit in the syntax of the document and tells which statements
@@ -48,8 +47,8 @@ export class StatementValueWriter {
 	 * @param value The value.
 	 * @returns The expected changes.
 	 */
-	expectedChangesOf(graph: GraphPattern, subject: TermPattern, predicate: string, value: StatementValue): ExpectedStatementChange[] {
-		return [{ subject, predicate, object: this._patternOf(value), graph, delta: 1 }, ...this._nestedChangesOf(graph, value)];
+	expectedChangesOf(graph: Quad_Graph, subject: Term, predicate: string, value: StatementValue): ExpectedStatementChange[] {
+		return [{ subject, predicate, object: this._objectOf(value), graph, delta: 1 }, ...this._nestedChangesOf(graph, value)];
 	}
 
 	/**
@@ -79,18 +78,19 @@ export class StatementValueWriter {
 	}
 
 	/**
-	 * The pattern of the object a value is written as.
+	 * The object a value is written as. A list is written as a new blank node, whose identifier
+	 * is only known once the text is read again; the verifier matches it as any blank node.
 	 * @param value The value.
-	 * @returns The pattern.
+	 * @returns The object.
 	 */
-	private _patternOf(value: StatementValue): TermPattern {
+	private _objectOf(value: StatementValue): Term {
 		switch (value.kind) {
 			case 'term':
-				return toTermPattern(value.term);
+				return value.term;
 			case 'list':
-				return value.items.length === 0 ? RdfDataFactory.namedNode(RDF.nil) : ANY_BLANK_NODE;
+				return value.items.length === 0 ? RdfDataFactory.namedNode(RDF.nil) : RdfDataFactory.blankNode();
 			default:
-				return toTermPattern(this._item(value.anchor).term);
+				return this._item(value.anchor).term;
 		}
 	}
 
@@ -100,7 +100,7 @@ export class StatementValueWriter {
 	 * @param value The value.
 	 * @returns The expected changes.
 	 */
-	private _nestedChangesOf(graph: GraphPattern, value: StatementValue): ExpectedStatementChange[] {
+	private _nestedChangesOf(graph: Quad_Graph, value: StatementValue): ExpectedStatementChange[] {
 		if (value.kind === 'term') {
 			return [];
 		}
@@ -109,18 +109,18 @@ export class StatementValueWriter {
 			const item = this._item(value.anchor);
 
 			return statementsWithin(this._context.model.quadContexts, item.start, item.end).map(quad => ({
-				subject: toTermPattern(quad.subject),
+				subject: quad.subject,
 				predicate: quad.predicate.value,
-				object: toTermPattern(quad.object),
+				object: quad.object,
 				graph,
 				delta: 1
 			}));
 		}
 
-		const node: TermPattern = ANY_BLANK_NODE;
+		const node = RdfDataFactory.blankNode();
 
 		return value.items.flatMap((item, index) => [
-			{ subject: node, predicate: RDF.first, object: this._patternOf(item), graph, delta: 1 },
+			{ subject: node, predicate: RDF.first, object: this._objectOf(item), graph, delta: 1 },
 			{ subject: node, predicate: RDF.rest, object: index < value.items.length - 1 ? node : RdfDataFactory.namedNode(RDF.nil), graph, delta: 1 },
 			...this._nestedChangesOf(graph, item)
 		]);

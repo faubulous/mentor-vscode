@@ -3,9 +3,9 @@ import { EditPlan, createPlan, netExpectedChanges } from '../edit-plan';
 import { SubjectBlock } from '../statement-model';
 import { StatementValueWriter } from '../statement-value-writer';
 import { SynthesisContext } from '../synthesis-context';
-import { toGraphPattern, toTermPattern } from '../term-patterns';
 import { NewValue, ValueList } from '../value-list';
 import { TextEditSpec } from '@src/utilities/text-edits';
+import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { ValueListResolver } from '../value-list-resolver';
 import { ObjectListWriter } from './object-list-writer';
 import { PropertyOperations } from './property-operations';
@@ -47,14 +47,13 @@ export class ValueListOperations {
 		const writer = new StatementValueWriter(context, list.items);
 		const target = list.groups.length === 0 ? new PropertyOperations(context).newPropertyBlock(operation.subject) : undefined;
 		const written = target ? this._writeNewPredicate(operation, list, writer, target) : this._writeValues(operation, list, writer);
-		const subject = toTermPattern(operation.subject);
 		const removed = list.groups.flatMap(group => group.removed);
 		const added = target
 			? list.added.map(value => ({ value, block: target }))
 			: list.groups.flatMap(group => group.entries.flatMap(entry => entry.kind === 'new' ? [{ value: entry.value, block: group.block }] : []));
 		const expectedChanges = [
-			...removed.flatMap(span => new ValueOperations(context).removalChanges(subject, operation.predicate, span)),
-			...added.flatMap(({ value, block }) => writer.expectedChangesOf(toGraphPattern(block.graph), subject, operation.predicate, value))
+			...removed.flatMap(span => new ValueOperations(context).removalChanges(operation.subject, operation.predicate, span)),
+			...added.flatMap(({ value, block }) => writer.expectedChangesOf(block.graph ?? RdfDataFactory.defaultGraph(), operation.subject, operation.predicate, value))
 		];
 
 		return createPlan({ edits: written, expectedChanges: netExpectedChanges(expectedChanges) });

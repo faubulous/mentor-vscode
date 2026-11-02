@@ -3,7 +3,7 @@ import { applyTextEdits } from '@src/utilities/text-edits';
 import { DocumentReader } from './document-reader';
 import { EditPlan, ExpectedStatementChange } from './edit-plan';
 import { SynthesisInput } from './synthesis-context';
-import { getMatchKey, getPatternMatchKey } from './term-patterns';
+import { getMatchKey } from './term-match-key';
 
 /**
  * The outcome of verifying a plan: the parsed result of the edited text, or why it is wrong.
@@ -63,7 +63,7 @@ function _changeProblem(before: readonly QuadContext[], after: readonly QuadCont
 	_count(actual, after, 1);
 
 	for (const change of expectedChanges) {
-		const key = _keyOf(getPatternMatchKey(change.graph), getPatternMatchKey(change.subject), change.predicate, getPatternMatchKey(change.object));
+		const key = _keyOf(getMatchKey(change.graph), getMatchKey(change.subject), change.predicate, getMatchKey(change.object));
 
 		expected.set(key, (expected.get(key) ?? 0) + change.delta);
 	}

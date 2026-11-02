@@ -6,7 +6,6 @@ import { PredicateGroup, SubjectBlock } from '../statement-model';
 import { ValueOperations } from './value-operations';
 import { StatementLocator } from '../statement-locator';
 import { SynthesisContext } from '../synthesis-context';
-import { toGraphPattern, toTermPattern } from '../term-patterns';
 import { TextEditSpec } from '@src/utilities/text-edits';
 import { tokenEnd } from '@src/utilities/tokens';
 
@@ -78,14 +77,14 @@ export class PropertyOperations {
 
 		const written = context.writer.writePredicate(operation.newPredicate);
 		const edits = groups.map(group => ({ start: group.predicateToken.startOffset, end: tokenEnd(group.predicateToken), newText: written }));
-		const subject = toTermPattern(operation.subject);
+		const subject = operation.subject;
 		const objects = groups.flatMap(group => group.objects);
 
 		return createPlan({
 			edits,
 			expectedChanges: netExpectedChanges(objects.flatMap(object => [
-				{ subject, predicate: operation.predicate, object: toTermPattern(object.quad.object), graph: toGraphPattern(object.quad.graph), delta: -1 },
-				{ subject, predicate: operation.newPredicate, object: toTermPattern(object.quad.object), graph: toGraphPattern(object.quad.graph), delta: 1 }
+				{ subject, predicate: operation.predicate, object: object.quad.object, graph: object.quad.graph, delta: -1 },
+				{ subject, predicate: operation.newPredicate, object: object.quad.object, graph: object.quad.graph, delta: 1 }
 			]))
 		});
 	}
@@ -109,16 +108,15 @@ export class PropertyOperations {
 	 * Remove a predicate with all its values from every block of the subject, as
 	 * {@link ValueOperations.groupDeletions} removes groups: a block that loses all its groups goes
 	 * with its comments, unless no block of the subject would keep a statement.
-	 * @param subjectRef The subject.
+	 * @param subject The subject.
 	 * @param predicate The IRI of the predicate to remove.
 	 * @returns The plan removing the groups.
 	 * @throws {EditRejectionError} If the subject does not carry the predicate, or the predicate holds the last statements about the subject.
 	 */
-	deleteProperty(subjectRef: NamedNode | BlankNode, predicate: string): EditPlan {
+	deleteProperty(subject: NamedNode | BlankNode, predicate: string): EditPlan {
 		const context = this._context;
 
-		const groups = this.findPredicateGroups(subjectRef, predicate);
-		const subject = toTermPattern(subjectRef);
+		const groups = this.findPredicateGroups(subject, predicate);
 		const plan = createPlan({});
 		const values = new ValueOperations(context);
 		const byBlock = new Map<SubjectBlock, PredicateGroup[]>();
