@@ -1,4 +1,5 @@
 import { BaseQuad, DatasetCore, Literal, Quad, Quad_Graph, Term } from '@rdfjs/types';
+import { termToString } from 'rdf-string';
 import { DataFactory } from 'rdf-data-factory';
 import { RdfStore } from 'rdf-stores';
 import { GraphUriGenerator, LanguageTagUsageStats, Store, XSD, RDF, RDFS } from '@faubulous/mentor-rdf';
@@ -180,40 +181,12 @@ export function replaceGraphQuads(store: Store, graph: Quad_Graph, quads: Quad[]
 }
 
 /**
- * Returns a key that identifies the subject, predicate and object of a quad. The terms are
- * separated by U+0000, which cannot occur in the keys of subjects and predicates; the object,
- * whose literal value may contain it, comes last.
+ * Returns a key that identifies the subject, predicate and object of a quad: the keys of the terms
+ * by `termToString` of `rdf-string`, which the store keys its terms with, separated by U+0000,
+ * which occurs in none of the keys of subjects and predicates; the object comes last.
  * @param quad A quad.
  * @returns A key that is equal for two quads if and only if their triples are equal.
  */
-function getTripleKey(quad: BaseQuad): string {
-	return getTermKey(quad.subject) + '\u0000' + getTermKey(quad.predicate) + '\u0000' + getTermKey(quad.object);
-}
-
-/**
- * Returns a key that identifies a term.
- * @param term A term.
- * @returns A key that is equal for two terms if and only if the terms are equal.
- */
-function getTermKey(term: Term): string {
-	switch (term.termType) {
-		case 'NamedNode': {
-			// IRIs contain neither spaces nor `"`, so they cannot be mistaken for the keys below.
-			return term.value;
-		}
-		case 'BlankNode': {
-			return ' ' + term.value;
-		}
-		case 'Literal': {
-			const literal = term as Literal;
-
-			// The language tag and the datatype IRI contain neither `^` nor U+0000, so the
-			// value, which may contain any character, can follow them unambiguously.
-			return '"' + literal.language + '^' + literal.datatype.value + '\u0000' + literal.value;
-		}
-		default: {
-			// Triple terms and other terms are rare; JSON escapes U+0000 in their values.
-			return term.termType + JSON.stringify(term.termType === 'Quad' ? getTripleKey(term as BaseQuad) : term.value);
-		}
-	}
+export function getTripleKey(quad: BaseQuad): string {
+	return termToString(quad.subject) + '\u0000' + termToString(quad.predicate) + '\u0000' + termToString(quad.object);
 }

@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
-import { TurtleSerializer } from '@faubulous/mentor-rdf-serializers';
+import { getLanguageTagSpellings, TurtleSerializer } from '@faubulous/mentor-rdf-serializers';
 import { ServiceToken } from '@src/services/tokens';
 import { IDocumentContextService } from '@src/services/document';
 import { WorkspaceUri } from '@src/providers/workspace-uri';
@@ -54,6 +54,7 @@ export const inlineBlankNodes = {
 				prefixes: context.namespaces,
 				baseIri: context.baseIri,
 				inlineSingleUseBlankNodes: true,
+				languageTags: getLanguageTagSpellings(context.tokens),
 			});
 
 			const fullRange = new vscode.Range(
