@@ -43,16 +43,17 @@ export class ValueListResolver {
 		const located = this._locate(subject, predicate);
 		const items = this._itemsOf(located);
 		const objects = new Map(located.flatMap(({ group }, groupIndex) => group.objects.map(span => [span.start, { span, groupIndex }] as const)));
+		const written = new Map<number, CollectionItemSpan | ObjectSpan>([...items, ...Array.from(objects.values(), ({ span }) => [span.start, span] as const)]);
 
 		_requireListedOnce(values);
 
 		if (located.length === 0) {
-			return { groups: [], added: values.map(value => _requireNew(value)), items };
+			return { groups: [], added: values.map(value => _requireNew(value)), items, written };
 		}
 
 		const entries = this._place(values, objects, located.length);
 
-		return { groups: located.map(({ block, group }, index) => _toValueListGroup(block, group, entries[index])), added: [], items };
+		return { groups: located.map(({ block, group }, index) => _toValueListGroup(block, group, entries[index])), added: [], items, written };
 	}
 
 	/**
@@ -154,6 +155,8 @@ function _requireListedOnce(values: readonly StatementValue[]): void {
 	const visit = (value: StatementValue): void => {
 		if (value.kind === 'list') {
 			value.items.forEach(visit);
+		} else if (value.kind === 'node') {
+			value.statements.forEach(statement => statement.values.forEach(visit));
 		} else if (value.kind === 'existing') {
 			if (anchors.has(value.anchor)) {
 				throw new EditRejectionError({ kind: 'duplicateValue' });

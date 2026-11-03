@@ -18,4 +18,13 @@ export type StatementValue =
 	/**
 	 * A new list of values.
 	 */
-	| { kind: 'list'; items: StatementValue[] };
+	| { kind: 'list'; items: StatementValue[] }
+	/**
+	 * A new anonymous blank node with its statements, written in place as `[ … ]`.
+	 */
+	| { kind: 'node'; statements: { predicate: string; values: StatementValue[] }[] }
+	/**
+	 * A copy of a value written under the predicate, or of an item of a list written there, as it
+	 * is written; the value itself stays. `anchor` is the offset the value starts at.
+	 */
+	| { kind: 'copy'; anchor: number };

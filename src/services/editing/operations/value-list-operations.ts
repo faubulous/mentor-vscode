@@ -44,7 +44,7 @@ export class ValueListOperations {
 		}
 
 		const list = new ValueListResolver(context.model).resolve(operation.subject, operation.predicate, operation.values);
-		const writer = new StatementValueWriter(context, list.items);
+		const writer = new StatementValueWriter(context, list.items, list.written);
 		const target = list.groups.length === 0 ? new PropertyOperations(context).newPropertyBlock(operation.subject) : undefined;
 		const written = target ? this._writeNewPredicate(operation, list, writer, target) : this._writeValues(operation, list, writer);
 		const removed = list.groups.flatMap(group => group.removed);

@@ -57,6 +57,10 @@ export type EditProblem =
 	 */
 	| { kind: 'listsNotSupported' }
 	/**
+	 * The syntax of the document has no anonymous blank nodes written in place.
+	 */
+	| { kind: 'nodesNotSupported' }
+	/**
 	 * An IRI is empty.
 	 */
 	| { kind: 'emptyIri' }

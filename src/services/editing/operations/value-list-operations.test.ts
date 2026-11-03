@@ -30,6 +30,13 @@ function literal(value: string, extra: { language?: string; datatype?: string } 
 }
 
 /**
+ * A new anonymous blank node with statements.
+ */
+function node(...statements: [string, ...StatementValue[]][]): StatementValue {
+	return { kind: 'node', statements: statements.map(([predicate, ...values]) => ({ predicate, values })) };
+}
+
+/**
  * The value written at a text of the body, kept as it is.
  */
 function kept(body: string, needle: string, options: SynthesisFixtureOptions = {}, occurrence = 1): StatementValue {
@@ -126,6 +133,42 @@ describe('ValueListOperations.setValues in Turtle', () => {
 
 		expect(synthesizeEdit(body, [{ op: 'setValues', subject: RdfDataFactory.blankNode(node.value), predicate: `${EX}q`, values: [literal('y'), literal('2', { datatype: XSD.integer })] }]))
 			.toBe(`ex:s ex:p [ ex:q "y", 2 ] .\n`);
+	});
+
+	it('writes a new nested node with its statements after the values before it', () => {
+		const body = `ex:s ex:p ex:a .\n`;
+
+		expect(setValues(body, [kept(body, 'ex:a'), node([RDF.type, iri('T')], [`${EX}q`, literal('x'), literal('y', { language: 'en' })])]))
+			.toBe(`ex:s ex:p ex:a, [ a ex:T ; ex:q "x", "y"@en ] .\n`);
+		expect(setValues(body, [node()])).toBe(`ex:s ex:p [ ] .\n`);
+	});
+
+	it('writes nodes and lists within a new node, and a new node as the value of a predicate the subject does not carry', () => {
+		const body = `ex:s ex:q ex:a .\n`;
+
+		expect(setValues(body, [node([`${EX}r`, node([`${EX}t`, literal('1', { datatype: XSD.integer })]), { kind: 'list', items: [iri('b')] }])]))
+			.toBe(`ex:s ex:q ex:a ;\n    ex:p [ ex:r [ ex:t 1 ], ( ex:b ) ] .\n`);
+	});
+
+	it('writes a new node into a nested node', () => {
+		const body = `ex:s ex:p [ ex:q "x" ] .\n`;
+		const nested = RdfDataFactory.blankNode(createSynthesisInput(body).quadContexts.find(quad => quad.predicate.value === `${EX}q`)!.subject.value);
+
+		expect(synthesizeEdit(body, [{ op: 'setValues', subject: nested, predicate: `${EX}r`, values: [node([RDF.type, iri('T')])] }]))
+			.toBe(`ex:s ex:p [ ex:q "x" ; ex:r [ a ex:T ] ] .\n`);
+	});
+
+	it('writes a copy of a nested node after it, keeping the node', () => {
+		const body = `ex:s ex:p [ ex:q "x" ;\n        ex:r ( 1 2 ) ], ex:a .\n`;
+
+		expect(setValues(body, [kept(body, '['), { kind: 'copy', anchor: anchorOf(body, '[') }, kept(body, 'ex:a')]))
+			.toBe(`ex:s ex:p [ ex:q "x" ;\n        ex:r ( 1 2 ) ], [ ex:q "x" ;\n        ex:r ( 1 2 ) ], ex:a .\n`);
+	});
+
+	it('refuses a copy of a value not written under the predicate', () => {
+		const body = `ex:s ex:p ex:a ;\n    ex:q [ ex:r 1 ] .\n`;
+
+		expect(setValues(body, [kept(body, 'ex:a'), { kind: 'copy', anchor: anchorOf(body, '[') }])).toBe('rejected:valueMoved');
 	});
 
 	it('writes new lists, and keeps the items of a written list by their anchor', () => {
@@ -259,6 +302,10 @@ describe('ValueListOperations.setValues in N-Triples and N-Quads', () => {
 		const body = `${line('"a"', ' _:g1')}\n`;
 
 		expect(setValues(body, [kept(body, '"a"', NQUADS), literal('b')], NQUADS)).toBe(`${line('"a"', ' _:g1')}\n${line('"b"', ' _:g1')}\n`);
+	});
+
+	it('refuses new nested nodes', () => {
+		expect(setValues(`<${NT}s> <${NT}p> <${NT}a> .\n`, [node([RDF.type, iri('T')])], NTRIPLES)).toBe('rejected:nodesNotSupported');
 	});
 
 	it('refuses lists and a new order of lines', () => {
