@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
+vi.mock('@src/services/document/language-quick-pick', () => ({ pickLanguage: vi.fn() }));
 
 import 'reflect-metadata';
 
@@ -9,6 +10,7 @@ import { container } from 'tsyringe';
 import { RDF } from '@faubulous/mentor-rdf';
 import { RdfSyntax } from '@faubulous/mentor-rdf-parsers';
 import { ServiceToken } from '@src/services/tokens';
+import { pickLanguage } from '@src/services/document/language-quick-pick';
 import { IDocumentContext } from '@src/services/document/document-context.interface';
 import { IDocumentContextService } from '@src/services/document/document-context-service.interface';
 import { TokenDelivery } from '@src/services/document/document-token-source.interface';
@@ -400,16 +402,46 @@ describe('FormEditorSession', () => {
 		expect(postedOf(posted, 'ResourcesLoaded')[0].revision).toBe(second.revision);
 	});
 
-	it('reads the document in the language the webview chooses, built once', async () => {
+	it('reads the document in the language picked from the switch, built once', async () => {
 		const loading = registerLoadingServices();
-		const { posted, receive } = await createSession('ex:A ex:p "x"@en, "y"@de .\n', undefined, loading.services);
+		const { posted, receive, context } = await createSession('ex:A ex:p "x"@en, "y"@de .\n', undefined, loading.services);
+
+		vi.mocked(pickLanguage).mockResolvedValueOnce({ kind: 'language', language: 'de' });
 
 		await receive({ id: 'Ready' });
-		await receive({ id: 'SetActiveLanguage', language: 'de' });
+		await receive({ id: 'PickLanguage', allLanguages: true });
 
 		const snapshots = postedOf(posted, 'DocumentSnapshot').map(message => message.snapshot);
 
+		expect(pickLanguage).toHaveBeenCalledWith(context, { offerAllLanguages: true, allLanguagesShown: true });
+		expect(postedOf(posted, 'LanguagePicked')).toEqual([{ id: 'LanguagePicked', allLanguages: false }]);
 		expect(snapshots.map(snapshot => snapshot.activeLanguage)).toEqual([undefined, 'de']);
+	});
+
+	it('tells the webview to show every language when that is picked, leaving the language of the document', async () => {
+		const loading = registerLoadingServices();
+		const { posted, receive, context } = await createSession('ex:A ex:p "x"@en, "y"@de .\n', undefined, loading.services);
+
+		vi.mocked(pickLanguage).mockResolvedValueOnce({ kind: 'allLanguages' });
+
+		await receive({ id: 'Ready' });
+		await receive({ id: 'PickLanguage', allLanguages: false });
+
+		expect(postedOf(posted, 'LanguagePicked')).toEqual([{ id: 'LanguagePicked', allLanguages: true }]);
+		expect(postedOf(posted, 'DocumentSnapshot')).toHaveLength(1);
+		expect(context.activeLanguageTag).toBeUndefined();
+	});
+
+	it('changes nothing when the language quick pick is dismissed', async () => {
+		const { posted, receive } = await createSession('ex:A ex:p "x"@en .\n');
+
+		vi.mocked(pickLanguage).mockResolvedValueOnce(undefined);
+
+		await receive({ id: 'Ready' });
+		await receive({ id: 'PickLanguage', allLanguages: false });
+
+		expect(postedOf(posted, 'LanguagePicked')).toHaveLength(0);
+		expect(postedOf(posted, 'DocumentSnapshot')).toHaveLength(1);
 	});
 
 	it('posts nothing once disposed', async () => {

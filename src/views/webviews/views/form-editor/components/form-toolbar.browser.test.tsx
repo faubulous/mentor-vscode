@@ -12,7 +12,7 @@ function renderToolbar(width: number) {
 		<div className="form-editor" style={{ width }}>
 			<FormToolbar
 				filter={{ text: '', onChange: vi.fn(), shortcut: 'Ctrl+F' }}
-				languages={{ languageTags: { en: 'en', 'en-us': 'en-US', de: 'de' }, activeLanguage: 'en', allLanguages: false, onSelectLanguage: vi.fn(), onSelectAll: vi.fn() }}
+				languages={{ languageTags: { en: 'en', 'en-us': 'en-US', de: 'de' }, activeLanguage: 'en', allLanguages: false, onPick: vi.fn() }}
 				externalDeclarationsHidden={false}
 				onToggleExternalDeclarations={vi.fn()}
 			/>

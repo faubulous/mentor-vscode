@@ -8,6 +8,7 @@ import { VocabularyRepository, rdf } from '@faubulous/mentor-rdf';
 import { ServiceToken } from '@src/services/tokens';
 import { ISettingsService } from '@src/services/core';
 import { setActiveLanguage } from '@src/services/document/active-language';
+import { pickLanguage } from '@src/services/document/language-quick-pick';
 import { IDocumentContextService } from '@src/services/document/document-context-service.interface';
 import { IDocumentTokenSource } from '@src/services/document/document-token-source.interface';
 import { TurtleDocument } from '@src/languages/turtle/turtle-document';
@@ -330,8 +331,8 @@ export class FormEditorSession implements vscode.Disposable {
 			case 'RevealInTextEditor':
 				await this._revealInTextEditor(message.position.line, message.position.character);
 				break;
-			case 'SetActiveLanguage':
-				this._setActiveLanguage(message.language);
+			case 'PickLanguage':
+				await this._pickLanguage(message.allLanguages);
 				break;
 			case 'ExecuteCommand': {
 				const command = message as ExecuteCommandMessage;
@@ -365,16 +366,29 @@ export class FormEditorSession implements vscode.Disposable {
 	}
 
 	/**
-	 * Read the document in another language. The snapshot is built again when the language of the
-	 * document changed, which the setting announcing it does not tell when another document chose
-	 * the same language before.
-	 * @param language The language tag.
+	 * Let the user choose the language the document is read in, or the values of every language,
+	 * and tell the webview which. The snapshot is built again when the language of the document
+	 * changed, which the setting announcing it does not tell when another document chose the same
+	 * language before.
+	 * @param allLanguages Whether the values of every language are shown now.
 	 */
-	private _setActiveLanguage(language: string): void {
+	private async _pickLanguage(allLanguages: boolean): Promise<void> {
 		const context = this._contextService.contexts[this._documentUri];
 
-		if (context) {
-			setActiveLanguage(context, language);
+		if (!context) {
+			return;
+		}
+
+		const choice = await pickLanguage(context, { offerAllLanguages: true, allLanguagesShown: allLanguages });
+
+		if (!choice) {
+			return;
+		}
+
+		this._postMessage({ id: 'LanguagePicked', allLanguages: choice.kind === 'allLanguages' });
+
+		if (choice.kind === 'language') {
+			setActiveLanguage(context, choice.language);
 
 			void this._refreshWhenLoaded();
 		}

@@ -3,7 +3,7 @@ import { LanguageSwitchProps } from '../components/language-switch';
 import { DocumentSnapshot } from '../form-editor-model';
 import { FormEditorWebviewMessage } from '../form-editor-messages';
 import { LanguageFilter } from '../state/language-filter';
-import { PersistedViewState, ViewStateChanges } from '../state/persisted-view-state';
+import { PersistedViewState } from '../state/persisted-view-state';
 
 /**
  * The language the form shows and the switch that chooses it.
@@ -21,19 +21,17 @@ export interface LanguageSwitchState {
 }
 
 /**
- * Show the literal values of the language the document is read in, or of every language. Choosing a
- * language asks the host to read the document in it, which the next snapshot tells; showing every
- * language is a preference of the view.
+ * Show the literal values of the language the document is read in, or of every language. The
+ * switch asks the host to let the user choose in Mentor's language quick pick; the choice comes
+ * back as the language of the next snapshot, or as a change of the view state.
  * @param snapshot The snapshot of the document.
  * @param viewState The view state.
- * @param updateViewState Changes the view state.
  * @param post Posts a message to the host.
  * @returns The filter of the rows and the switch.
  */
 export function useLanguageSwitch(
 	snapshot: DocumentSnapshot | undefined,
 	viewState: PersistedViewState,
-	updateViewState: (changes: ViewStateChanges) => void,
 	post: (message: FormEditorWebviewMessage) => void
 ): LanguageSwitchState {
 	const languageTags = snapshot?.languageTags;
@@ -41,15 +39,10 @@ export function useLanguageSwitch(
 	const allLanguages = viewState.allLanguages === true;
 	const hasLanguages = languageTags !== undefined && Object.keys(languageTags).length > 0;
 
-	const onSelectLanguage = useCallback((language: string) => {
-		updateViewState({ allLanguages: undefined });
-		post({ id: 'SetActiveLanguage', language });
-	}, [updateViewState, post]);
-
-	const onSelectAll = useCallback(() => updateViewState({ allLanguages: true }), [updateViewState]);
+	const onPick = useCallback(() => post({ id: 'PickLanguage', allLanguages }), [post, allLanguages]);
 
 	return useMemo(() => ({
 		languageFilter: hasLanguages && !allLanguages && activeLanguage ? new LanguageFilter(activeLanguage) : LanguageFilter.ALL,
-		switchProps: hasLanguages ? { languageTags, activeLanguage, allLanguages, onSelectLanguage, onSelectAll } : undefined
-	}), [hasLanguages, allLanguages, activeLanguage, languageTags, onSelectLanguage, onSelectAll]);
+		switchProps: hasLanguages ? { languageTags, activeLanguage, allLanguages, onPick } : undefined
+	}), [hasLanguages, allLanguages, activeLanguage, languageTags, onPick]);
 }

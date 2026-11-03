@@ -75,37 +75,36 @@ describe('FormToolbar', () => {
 
 		expect(screen.getByText('Show External Declarations')).toBeTruthy();
 	});
-	it('offers the languages of the document and all of them, and tells which was chosen', () => {
-		const onSelectLanguage = vi.fn();
-		const onSelectAll = vi.fn();
+	it('names the language the document is read in, and asks for the language quick pick', async () => {
+		const onPick = vi.fn();
 
-		renderToolbar({ languages: { languageTags: { en: 'en', 'en-us': 'en-US', de: 'de' }, activeLanguage: 'de', allLanguages: false, onSelectLanguage, onSelectAll } });
+		renderToolbar({ languages: { languageTags: { en: 'en', de: 'de' }, activeLanguage: 'de', allLanguages: false, onPick } });
 
-		const select = screen.getByLabelText('Language') as HTMLElement & { value: string };
-		const options = Array.from(select.querySelectorAll('vscode-option')).map(option => option.getAttribute('value'));
+		await userEvent.click(screen.getByRole('button', { name: 'Language: German' }));
 
-		expect(options).toEqual(['*', 'en-us', 'en', 'de']);
-		expect(select.querySelector('vscode-option[value="de"]')?.textContent).toBe('German');
-		expect(select.getAttribute('value') ?? select.value).toBe('de');
-
-		select.value = 'en-us';
-		fireEvent(select, new Event('change'));
-		select.value = '*';
-		fireEvent(select, new Event('change'));
-
-		expect(onSelectLanguage).toHaveBeenCalledWith('en-us');
-		expect(onSelectAll).toHaveBeenCalledOnce();
+		expect(onPick).toHaveBeenCalledOnce();
 	});
 
-	it('names a language by its tag where its name is not known', () => {
-		renderToolbar({ languages: { languageTags: { 'x-mentor': 'x-Mentor' }, allLanguages: true, onSelectLanguage: vi.fn(), onSelectAll: vi.fn() } });
+	it('names all languages while every language is shown, or no language is chosen', () => {
+		const { unmount } = renderToolbar({ languages: { languageTags: { en: 'en' }, activeLanguage: 'en', allLanguages: true, onPick: vi.fn() } });
 
-		expect(screen.getByLabelText('Language').querySelector('vscode-option[value="x-mentor"]')?.textContent).toBe('x-Mentor');
+		expect(screen.getByRole('button', { name: 'Language: All languages' })).toBeTruthy();
+
+		unmount();
+		renderToolbar({ languages: { languageTags: { en: 'en' }, allLanguages: false, onPick: vi.fn() } });
+
+		expect(screen.getByRole('button', { name: 'Language: All languages' })).toBeTruthy();
+	});
+
+	it('names a language by its tag as the document spells it, where its name is not known', () => {
+		renderToolbar({ languages: { languageTags: { 'x-mentor': 'x-Mentor' }, activeLanguage: 'x-mentor', allLanguages: false, onPick: vi.fn() } });
+
+		expect(screen.getByRole('button', { name: 'Language: x-Mentor' })).toBeTruthy();
 	});
 
 	it('shows no language switch for a document without language tags', () => {
 		renderToolbar();
 
-		expect(screen.queryByLabelText('Language')).toBeNull();
+		expect(screen.queryByRole('button', { name: /^Language/ })).toBeNull();
 	});
 });

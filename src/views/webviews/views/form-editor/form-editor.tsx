@@ -86,10 +86,13 @@ function FormEditor(): React.JSX.Element {
 			case 'FilterResources':
 				setTypeFilter({ label: message.label, resourceKeys: new Set(message.resources.map(resource => termToString(resource))) });
 				break;
+			case 'LanguagePicked':
+				updateViewState({ allLanguages: message.allLanguages || undefined });
+				break;
 			default:
 				break;
 		}
-	}, [dataService, hostService]);
+	}, [dataService, hostService, updateViewState]);
 
 	const messaging = useWebviewMessaging<FormEditorMessages>(onMessage);
 
@@ -185,7 +188,7 @@ function FormEditor(): React.JSX.Element {
 		}
 	}, [routeUndo]);
 
-	const { languageFilter, switchProps } = useLanguageSwitch(snapshot, viewState, updateViewState, post);
+	const { languageFilter, switchProps } = useLanguageSwitch(snapshot, viewState, post);
 
 	// Nothing is edited in a document that cannot be written back.
 	const editable = snapshot !== undefined && snapshot.readOnly === undefined;
