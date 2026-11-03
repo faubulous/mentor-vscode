@@ -34,6 +34,8 @@ export function getEditProblemMessage(problem: EditProblem): string {
 			return 'The statement is not ended by a period.';
 		case 'listsNotSupported':
 			return 'Lists cannot be written in the syntax of this document.';
+		case 'nodesNotSupported':
+			return 'Nested blank nodes cannot be written in the syntax of this document.';
 		case 'emptyIri':
 			return 'An IRI must not be empty.';
 		case 'invalidIri':

@@ -65,4 +65,10 @@ export interface ValueList {
 	 * The items of the lists written under the predicate, by the offset they start at.
 	 */
 	items: ReadonlyMap<number, CollectionItemSpan>;
+
+	/**
+	 * The values written under the predicate and the items of their lists, which a copy refers to,
+	 * by the offset they start at.
+	 */
+	written: ReadonlyMap<number, CollectionItemSpan | ObjectSpan>;
 }

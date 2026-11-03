@@ -45,27 +45,50 @@ async function openInFormEditor(path: string): Promise<vscode.TextDocument> {
 }
 
 /**
+ * Wait until the form editor of a document shows its current version, as an edit is built from it.
+ * @param document The document.
+ */
+async function waitForFormEditorVersion(document: vscode.TextDocument): Promise<void> {
+	await waitFor(async () => {
+		const snapshot = await vscode.commands.executeCommand<{ version: number } | undefined>('mentor.e2e.getFormEditorSnapshot', document.uri.toString());
+
+		return snapshot?.version === document.version;
+	}, { label: `the form editor snapshot of version ${document.version}` });
+}
+
+/**
  * Set the values of `ex:p` of `ex:s` through the form editor of a document: the value written
  * as `"a"` stays, and the literal `"b"` is added after it.
  * @param document The document.
  * @returns How the edit ended.
  */
 function keepAndAdd(document: vscode.TextDocument): Thenable<EditOutcomeView> {
+	return setValues(document, [
+		{ kind: 'existing', anchor: document.getText().indexOf('"a"') },
+		{ kind: 'term', term: factory.literal('b') }
+	]);
+}
+
+/**
+ * Set the values of `ex:p` of `ex:s` through the form editor of a document.
+ * @param document The document.
+ * @param values The values.
+ * @returns How the edit ended.
+ */
+function setValues(document: vscode.TextDocument, values: unknown[]): Thenable<EditOutcomeView> {
 	return vscode.commands.executeCommand<EditOutcomeView>('mentor.e2e.applyFormEditorEdit', document.uri.toString(), [{
 		op: 'setValues',
 		subject: factory.namedNode(`${NS}s`),
 		predicate: `${NS}p`,
-		values: [
-			{ kind: 'existing', anchor: document.getText().indexOf('"a"') },
-			{ kind: 'term', term: factory.literal('b') }
-		]
+		values
 	}]);
 }
 
 /**
  * Verifies that the values of a statement edited in the form are written in the syntax of the
  * document by a real extension host: as a list of objects in Turtle, and as one line per value
- * with the subject and the graph of its neighbour in N-Triples and N-Quads.
+ * with the subject and the graph of its neighbour in N-Triples and N-Quads; a new nested node and
+ * a copy of one in Turtle.
  */
 suite('form editor values', () => {
 	suiteSetup(async () => {
@@ -117,5 +140,28 @@ suite('form editor values', () => {
 			`<${NS}s> <${NS}p> "b" <${NS}g> .`,
 			''
 		].join('\n'));
+	});
+
+	test('writes a new nested node, and a copy of it after it, in Turtle', async () => {
+		const document = await openInFormEditor('data/form-values.ttl');
+		const added = await setValues(document, [
+			{ kind: 'existing', anchor: document.getText().indexOf('"a"') },
+			{ kind: 'node', statements: [{ predicate: 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type', values: [{ kind: 'term', term: factory.namedNode(`${NS}T`) }] }] }
+		]);
+
+		assert.ok(added.ok, `the node must be written, got ${JSON.stringify(added)}`);
+		assert.strictEqual(document.getText(), '@prefix ex: <http://example.org/values#> .\n\nex:s ex:p "a", [ a ex:T ] .\n');
+
+		await waitForFormEditorVersion(document);
+
+		const node = document.getText().indexOf('[');
+		const copied = await setValues(document, [
+			{ kind: 'existing', anchor: document.getText().indexOf('"a"') },
+			{ kind: 'existing', anchor: node },
+			{ kind: 'copy', anchor: node }
+		]);
+
+		assert.ok(copied.ok, `the copy must be written, got ${JSON.stringify(copied)}`);
+		assert.strictEqual(document.getText(), '@prefix ex: <http://example.org/values#> .\n\nex:s ex:p "a", [ a ex:T ], [ a ex:T ] .\n');
 	});
 });
