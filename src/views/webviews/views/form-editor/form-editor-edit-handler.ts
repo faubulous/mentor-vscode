@@ -11,6 +11,7 @@ import { SynthesisInput } from '@src/services/editing/synthesis-context';
 import { getConfig } from '@src/utilities/vscode/config';
 import { toWorkspaceEdit } from '@src/utilities/vscode/edit';
 import { getFormReadOnlyReason } from './form-editor-read-only';
+import { QuadContextCache } from './quad-context-cache';
 
 /**
  * An edit request as received from the webview.
@@ -51,6 +52,11 @@ export interface EditHandlerContext {
 	 * absent.
 	 */
 	tokenSource?: IDocumentTokenSource;
+
+	/**
+	 * The quad contexts the snapshot was built from, shared with the edit; read anew when absent.
+	 */
+	quadContexts?: QuadContextCache;
 }
 
 /**
@@ -73,7 +79,7 @@ export class FormEditorEditHandler {
 	 * @returns The outcome of the request.
 	 */
 	async handle(request: EditRequest, handlerContext: EditHandlerContext): Promise<EditOutcome> {
-		const { document, context } = handlerContext;
+		const { document, context, quadContexts } = handlerContext;
 
 		if (request.baseVersion !== document.version) {
 			return _reject({ kind: 'staleVersion' }, 'The document changed before the edit was applied.');
@@ -94,7 +100,7 @@ export class FormEditorEditHandler {
 		const input: SynthesisInput = {
 			text,
 			tokens: context.tokens,
-			quadContexts: context.getQuadContexts(),
+			quadContexts: quadContexts ? quadContexts.get(context) : context.getQuadContexts(),
 			namespaces: context.namespaces,
 			syntax: context.syntax,
 			style: _styleFallback(document)

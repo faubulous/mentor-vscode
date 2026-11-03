@@ -164,7 +164,7 @@ export interface StatementModel {
 	/**
 	 * The quad contexts read from the tokens.
 	 */
-	quadContexts: QuadContext[];
+	quadContexts: readonly QuadContext[];
 
 	/**
 	 * The subject blocks, in document order.

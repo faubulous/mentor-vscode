@@ -32,7 +32,7 @@ export interface SnapshotInput {
 	/**
 	 * The quad contexts of the document.
 	 */
-	quadContexts: QuadContext[];
+	quadContexts: readonly QuadContext[];
 
 	/**
 	 * The document context, used to resolve labels and prefixes.

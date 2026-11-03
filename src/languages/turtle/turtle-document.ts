@@ -44,12 +44,6 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 	private _lastParse: DocumentParseResult | undefined;
 
 	/**
-	 * The quad contexts read from the current tokens, kept until the tokens are replaced: reading
-	 * them parses the whole document, which takes a noticeable time for a large one.
-	 */
-	private _quadContexts: { tokens: IToken[]; quadContexts: QuadContext[] } | undefined;
-
-	/**
 	 * The tokens of the last {@link tokenizeDocument} call and the document version they
 	 * were produced from, shared by the providers that run on the same keystroke.
 	 */
@@ -245,7 +239,6 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 		this._tokens = [];
 		this._lastParse = undefined;
 		this._tokenizeResult = undefined;
-		this._quadContexts = undefined;
 	}
 
 	/**
@@ -465,17 +458,11 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 
 	/**
 	 * Parse the current tokens and return quad contexts with source token positions.
-	 * Computed on demand and kept until the tokens are replaced; callers should not store the
-	 * result long-term.
+	 * Computed on-demand; callers should not store the result long-term.
 	 * @return An array of quad contexts, which include the RDF quads and their associated token positions for subjects, predicates, objects and graph names.
 	 */
 	getQuadContexts(): QuadContext[] {
-		if (this._quadContexts?.tokens !== this._tokens) {
-			this._quadContexts = { tokens: this._tokens, quadContexts: this._readQuadContexts(this._tokens) };
-		}
-
-		// A copy, so a caller rearranging the list cannot change what the next caller reads.
-		return [...this._quadContexts.quadContexts];
+		return this._readQuadContexts(this._tokens);
 	}
 
 	/**

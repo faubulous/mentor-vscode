@@ -8,6 +8,7 @@ import { TurtleDocument } from '@src/languages/turtle/turtle-document';
 import { IDocumentTokenSource } from '@src/services/document/document-token-source.interface';
 import { EditableTextDocument, applyWorkspaceEditTo, createEditableTextDocument, createTurtleDocument } from '@src/utilities/mocks/factories';
 import { EditRequest, FormEditorEditHandler } from './form-editor-edit-handler';
+import { QuadContextCache } from './quad-context-cache';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 
 const EX = 'http://example.org/';
@@ -61,6 +62,19 @@ describe('FormEditorEditHandler', () => {
 		expect(outcome).toEqual({ ok: true, version: 2 });
 		expect(document.getText()).toBe(`${PREAMBLE}ex:s ex:p "new" .\n`);
 		expect(context.getParseResult(document.getText())).toBeDefined();
+	});
+
+	it('reads the statements from the quad contexts the snapshot was built from', async () => {
+		const { document, context } = setup('ex:s ex:p "old" .\n');
+		const quadContexts = new QuadContextCache();
+
+		applyEditsTo(document);
+		quadContexts.get(context);
+
+		const getQuadContexts = vi.spyOn(context, 'getQuadContexts');
+
+		expect(await new FormEditorEditHandler().handle(setValueRequest(1, 'new'), { document, context, quadContexts })).toEqual({ ok: true, version: 2 });
+		expect(getQuadContexts).not.toHaveBeenCalled();
 	});
 
 	it('rejects a request built against an older version of the document', async () => {
