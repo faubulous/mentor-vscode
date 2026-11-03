@@ -2,6 +2,7 @@ import { createContext, useContext } from 'react';
 import { BlankNode, NamedNode } from '@rdfjs/types';
 import { NamespaceInfo, ResourceSummary } from '../form-editor-model';
 import { IEditingController } from './editing-controller.interface';
+import { LanguageFilter } from './language-filter';
 
 /**
  * Everything the resource components need that is not part of the data itself. Held in a context
@@ -29,6 +30,12 @@ export interface FormEditorContextValue {
 	 * language tags are shown in.
 	 */
 	languageTags: Record<string, string>;
+
+	/**
+	 * Which literal values the rows show: those of the language the document is read in, or all of
+	 * them. All when absent.
+	 */
+	languageFilter?: LanguageFilter;
 
 	/**
 	 * The resources of the document, which the lines complete and label local terms from.

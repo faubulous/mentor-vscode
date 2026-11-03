@@ -115,6 +115,7 @@ export class SnapshotBuilder {
 				documentResource,
 				trailingComments: index.trailingComments.length > 0 ? index.trailingComments : undefined,
 				languageTags: getLanguageTagSpellings(this._input.context.tokens),
+				activeLanguage: this._input.context.activeLanguageTag?.toLowerCase() || undefined,
 				readOnly: this._input.readOnly,
 				problems: this._input.problems ?? [],
 				dominantTypeIri: _dominantTypeOf(resources.filter(resource => !documentResource?.equals(resource.term)))

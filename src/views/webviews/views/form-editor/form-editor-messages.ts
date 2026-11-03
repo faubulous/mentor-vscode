@@ -39,7 +39,11 @@ export type FormEditorHostMessage =
 	 * Narrow the list to the cards of what the definition tree lists under a node; `label` names
 	 * the node.
 	 */
-	| { id: 'FilterResources'; label: string; resources: (NamedNode | BlankNode)[] };
+	| { id: 'FilterResources'; label: string; resources: (NamedNode | BlankNode)[] }
+	/**
+	 * A language was chosen in the language quick pick, or the values of every language.
+	 */
+	| { id: 'LanguagePicked'; allLanguages: boolean };
 
 /**
  * Messages sent from the webview to the extension host.
@@ -61,6 +65,11 @@ export type FormEditorWebviewMessage =
 	 * Show a position of the document in a text editor beside the form.
 	 */
 	| { id: 'RevealInTextEditor'; position: DocumentPosition }
+	/**
+	 * Let the user choose the language the document is read in, as Mentor's language selection
+	 * does, or the values of every language; `allLanguages` tells whether those are shown now.
+	 */
+	| { id: 'PickLanguage'; allLanguages: boolean }
 	| ExecuteCommandMessage;
 
 /**

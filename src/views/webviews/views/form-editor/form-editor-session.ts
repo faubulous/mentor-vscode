@@ -7,6 +7,7 @@ import { RdfSyntax } from '@faubulous/mentor-rdf-parsers';
 import { VocabularyRepository, rdf } from '@faubulous/mentor-rdf';
 import { ServiceToken } from '@src/services/tokens';
 import { ISettingsService } from '@src/services/core';
+import { LanguageSelection, SelectActiveLanguageOptions, selectActiveLanguage } from '@src/commands/document/select-active-language';
 import { IDocumentContextService } from '@src/services/document/document-context-service.interface';
 import { IDocumentTokenSource } from '@src/services/document/document-token-source.interface';
 import { TurtleDocument } from '@src/languages/turtle/turtle-document';
@@ -88,9 +89,9 @@ export class FormEditorSession implements vscode.Disposable {
 	private _snapshot?: DocumentSnapshot;
 
 	/**
-	 * What the published snapshot was built from: the document version, its problems and the
-	 * version of the store its labels and glyphs were read from. A snapshot built from the same
-	 * inputs again would be the same; a change of the settings clears it.
+	 * What the published snapshot was built from: the document version, its problems, the language
+	 * it is read in and the version of the store its labels and glyphs were read from. A snapshot
+	 * built from the same inputs again would be the same; a change of the settings clears it.
 	 */
 	private _snapshotKey?: string;
 
@@ -305,7 +306,7 @@ export class FormEditorSession implements vscode.Disposable {
 
 		const settings = container.resolve<ISettingsService>(ServiceToken.SettingsService);
 
-		this._subscriptions.push(settings.onDidChange('view.activeLanguage', () => this._rebuildWhenLoaded()));
+		this._subscriptions.push(settings.onDidChange('view.activeLanguage', () => void this._refreshWhenLoaded()));
 	}
 
 	/**
@@ -328,6 +329,9 @@ export class FormEditorSession implements vscode.Disposable {
 				break;
 			case 'RevealInTextEditor':
 				await this._revealInTextEditor(message.position.line, message.position.character);
+				break;
+			case 'PickLanguage':
+				await this._pickLanguage(message.allLanguages);
 				break;
 			case 'ExecuteCommand': {
 				const command = message as ExecuteCommandMessage;
@@ -361,8 +365,30 @@ export class FormEditorSession implements vscode.Disposable {
 	}
 
 	/**
-	 * Rebuild the snapshot even from the same inputs, as a change of the settings or the language
-	 * changes how the same document is shown.
+	 * Let the user choose the language the document is read in, with Mentor's language selection,
+	 * or the values of every language, and tell the webview which. The snapshot is built again when
+	 * a language was chosen, which the setting announcing it does not tell when another document
+	 * chose the same language before.
+	 * @param allLanguages Whether the values of every language are shown now.
+	 */
+	private async _pickLanguage(allLanguages: boolean): Promise<void> {
+		const options: SelectActiveLanguageOptions = { offerAllLanguages: true, allLanguagesShown: allLanguages };
+		const selection = await vscode.commands.executeCommand<LanguageSelection | undefined>(selectActiveLanguage.id, options);
+
+		if (!selection) {
+			return;
+		}
+
+		this._postMessage({ id: 'LanguagePicked', allLanguages: selection.kind === 'allLanguages' });
+
+		if (selection.kind === 'language') {
+			void this._refreshWhenLoaded();
+		}
+	}
+
+	/**
+	 * Rebuild the snapshot even from the same inputs, as a change of the settings changes how the
+	 * same document is shown.
 	 */
 	private _rebuildWhenLoaded(): void {
 		this._snapshotKey = undefined;
@@ -425,7 +451,7 @@ export class FormEditorSession implements vscode.Disposable {
 		const syntaxErrors = context.getSyntaxErrors(text);
 		const readOnly = getFormReadOnlyReason(text, syntaxErrors);
 		const problems = this._toProblems(syntaxErrors);
-		const key = `${this._document.version}|${this._getVocabulary()?.store.version ?? ''}|${readOnly ?? ''}|${JSON.stringify(problems)}`;
+		const key = `${this._document.version}|${this._getVocabulary()?.store.version ?? ''}|${context.activeLanguageTag ?? ''}|${readOnly ?? ''}|${JSON.stringify(problems)}`;
 
 		if (!this._snapshot || key !== this._snapshotKey) {
 			this._rebuildSnapshot(context, readOnly, problems, key);

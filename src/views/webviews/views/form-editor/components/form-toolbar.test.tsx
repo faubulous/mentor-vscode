@@ -75,4 +75,36 @@ describe('FormToolbar', () => {
 
 		expect(screen.getByText('Show External Declarations')).toBeTruthy();
 	});
+	it('names the language the document is read in, and asks for the language quick pick', async () => {
+		const onPick = vi.fn();
+
+		renderToolbar({ languages: { languageTags: { en: 'en', de: 'de' }, activeLanguage: 'de', allLanguages: false, onPick } });
+
+		await userEvent.click(screen.getByRole('button', { name: 'Language: German' }));
+
+		expect(onPick).toHaveBeenCalledOnce();
+	});
+
+	it('names all languages while every language is shown, or no language is chosen', () => {
+		const { unmount } = renderToolbar({ languages: { languageTags: { en: 'en' }, activeLanguage: 'en', allLanguages: true, onPick: vi.fn() } });
+
+		expect(screen.getByRole('button', { name: 'Language: All languages' })).toBeTruthy();
+
+		unmount();
+		renderToolbar({ languages: { languageTags: { en: 'en' }, allLanguages: false, onPick: vi.fn() } });
+
+		expect(screen.getByRole('button', { name: 'Language: All languages' })).toBeTruthy();
+	});
+
+	it('names a language by its tag as the document spells it, where its name is not known', () => {
+		renderToolbar({ languages: { languageTags: { 'x-mentor': 'x-Mentor' }, activeLanguage: 'x-mentor', allLanguages: false, onPick: vi.fn() } });
+
+		expect(screen.getByRole('button', { name: 'Language: x-Mentor' })).toBeTruthy();
+	});
+
+	it('shows no language picker for a document without language tags', () => {
+		renderToolbar();
+
+		expect(screen.queryByRole('button', { name: /^Language/ })).toBeNull();
+	});
 });

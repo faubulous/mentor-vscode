@@ -37,6 +37,11 @@ describe('SnapshotBuilder', () => {
 		expect(snapshotOf('ex:A a owl:Class .').version).toBe(7);
 	});
 
+	it('names the language the document is read in, in lower case', () => {
+		expect(snapshotOf('ex:A a owl:Class .', 'en-US').activeLanguage).toBe('en-us');
+		expect(snapshotOf('ex:A a owl:Class .').activeLanguage).toBeUndefined();
+	});
+
 	it('reports the file name of the document', () => {
 		const snapshot = snapshotOf('ex:A a owl:Class .');
 

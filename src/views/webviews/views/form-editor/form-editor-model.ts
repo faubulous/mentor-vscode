@@ -322,6 +322,12 @@ export interface DocumentSnapshot {
 	languageTags: Record<string, string>;
 
 	/**
+	 * The language the document is read in, in lower case: the labels are read in it, and the form
+	 * shows the literal values of this language. Absent when no language is chosen.
+	 */
+	activeLanguage?: string;
+
+	/**
 	 * Why the document cannot be edited, when it cannot.
 	 */
 	readOnly?: ReadOnlyReason;
