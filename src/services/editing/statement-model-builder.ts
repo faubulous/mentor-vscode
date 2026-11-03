@@ -50,7 +50,7 @@ export class StatementModelBuilder {
 	constructor(
 		private readonly _text: string,
 		private readonly _tokens: IToken[],
-		private readonly _quadContexts: QuadContext[]
+		private readonly _quadContexts: readonly QuadContext[]
 	) {
 		this._indexTokens();
 		this._matchBrackets();

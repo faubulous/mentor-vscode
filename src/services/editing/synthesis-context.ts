@@ -22,7 +22,7 @@ export interface SynthesisInput {
 	/**
 	 * The quad contexts read from the tokens.
 	 */
-	quadContexts: QuadContext[];
+	quadContexts: readonly QuadContext[];
 
 	/**
 	 * Prefix to namespace IRI, as declared in the document.
