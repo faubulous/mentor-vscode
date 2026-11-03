@@ -15,6 +15,8 @@ const subject = RdfDataFactory.namedNode('http://example.org/s');
 class TestWriter implements EditWriter {
 	readonly subject: NamedNode;
 
+	card: NamedNode;
+
 	version = 1;
 
 	awaiting = false;
@@ -34,6 +36,7 @@ class TestWriter implements EditWriter {
 	 */
 	constructor(private readonly predicate: string, private readonly onTake?: () => void) {
 		this.subject = RdfDataFactory.namedNode(predicate);
+		this.card = this.subject;
 	}
 
 	get wantsToWrite(): boolean {
@@ -189,6 +192,16 @@ describe('EditingController', () => {
 
 		expect([...controller.busyResourceKeys]).toEqual([]);
 		expect(changes).toEqual([['p1'], []]);
+	});
+
+	it('names the card a writer is shown in as busy, which for a nested blank node is the card holding it', () => {
+		const controller = new EditingController(createEditingHostStub());
+		const writer = new TestWriter('p1');
+
+		writer.card = RdfDataFactory.namedNode('card');
+		controller.requestWrite(writer.wanting());
+
+		expect([...controller.busyResourceKeys]).toEqual(['card']);
 	});
 });
 

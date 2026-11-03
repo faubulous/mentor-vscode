@@ -61,6 +61,11 @@ export interface WebviewTestHost<M extends WebviewMessage = WebviewMessage> {
  */
 class VscodeElementStub extends HTMLElement {
 	/**
+	 * Resolves once the element rendered, as it does for a Lit element; the stub renders nothing.
+	 */
+	readonly updateComplete: Promise<boolean> = Promise.resolve(true);
+
+	/**
 	 * Create the element and give a checkbox its click behaviour.
 	 */
 	constructor() {

@@ -33,9 +33,15 @@ export interface StatementRowEntry {
  */
 export interface StatementRowsData {
 	/**
-	 * The resource of the card.
+	 * The resource of the rows.
 	 */
 	subject: NamedNode | BlankNode;
+
+	/**
+	 * The resource of the card of the list that shows the rows: the subject itself, or the card a
+	 * nested blank node is shown in.
+	 */
+	card: NamedNode | BlankNode;
 
 	/**
 	 * The properties of the resource, in document order.
@@ -64,11 +70,23 @@ export interface StatementRowsData {
 }
 
 /**
+ * How the rows of a card offer new statements.
+ */
+export interface StatementRowsOptions {
+	/**
+	 * Whether a row for a new statement is always open after the others, as in a card of the list;
+	 * otherwise one is opened on request, as by Add property in the box of a blank node, and closes
+	 * when it is left with nothing typed.
+	 */
+	keepNewRowOpen: boolean;
+}
+
+/**
  * The statement rows of a card that can be written: a row per property, in document order, and
  * after them the rows for new statements. A row keeps its editor, and with it what was typed and
  * the focus, for as long as the card shows its predicate, found by the IRI of the predicate rather
  * than by its place; a row that wrote a new predicate or a new statement moves on to the property
- * of that predicate. A row for a new statement is always open after the others.
+ * of that predicate.
  */
 export class StatementRows implements StatementRowOwner {
 	private readonly _listeners = new Set<() => void>();
@@ -81,11 +99,14 @@ export class StatementRows implements StatementRowOwner {
 
 	private _revision = 0;
 
+	private _data?: StatementRowsData;
+
 	/**
 	 * Create the rows of a card.
 	 * @param _editing Writes the rows.
+	 * @param _options How the rows offer new statements.
 	 */
-	constructor(private readonly _editing: IEditingController) { }
+	constructor(private readonly _editing: IEditingController, private readonly _options: StatementRowsOptions = { keepNewRowOpen: true }) { }
 
 	/**
 	 * How many times the rows changed outside of a render of the card.
@@ -110,13 +131,15 @@ export class StatementRows implements StatementRowOwner {
 	 * Match the properties of the card with the rows, as the card renders: each editable property
 	 * goes to the row that claims its predicate, else to the row that holds it, else to a new row.
 	 * A row whose property went goes too, rows for new statements stay, and one is opened when none
-	 * is waiting for a statement.
+	 * is waiting for a statement where one is always open.
 	 * @param data The data of the card.
 	 * @returns The rows in the order they are shown.
 	 */
 	reconcile(data: StatementRowsData): readonly StatementRowEntry[] {
 		const unmatched = new Set(this._editors);
 		const entries: StatementRowEntry[] = [];
+
+		this._data = data;
 
 		this._notEditable = new Set();
 
@@ -149,7 +172,7 @@ export class StatementRows implements StatementRowOwner {
 			entries.push({ key: `row-${editor.id}`, editor });
 		}
 
-		if (!this._editors.some(editor => editor.isOpen)) {
+		if (this._options.keepNewRowOpen && !this._editors.some(editor => editor.isOpen)) {
 			const editor = this._create({ ...data, property: undefined, predicateText: '' });
 
 			entries.push({ key: `row-${editor.id}`, editor });
@@ -173,6 +196,31 @@ export class StatementRows implements StatementRowOwner {
 	merged(row: StatementRowEditor): void {
 		this._editors = this._editors.filter(editor => editor !== row);
 		this._notify();
+	}
+
+	abandoned(row: StatementRowEditor): void {
+		if (!this._options.keepNewRowOpen) {
+			this.merged(row);
+		}
+	}
+
+	/**
+	 * Open a row for a new statement after the others, or find the one that is open, as Add
+	 * property does.
+	 * @returns The row, or `undefined` before the card rendered its rows.
+	 */
+	addRow(): StatementRowEditor | undefined {
+		const open = this._editors.find(editor => editor.isOpen);
+
+		if (open || !this._data) {
+			return open;
+		}
+
+		const editor = this._create({ ...this._data, property: undefined, predicateText: '' });
+
+		this._notify();
+
+		return editor;
 	}
 
 	/**

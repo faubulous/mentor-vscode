@@ -13,6 +13,12 @@ export interface StatementRowData {
 	subject: NamedNode | BlankNode;
 
 	/**
+	 * The resource of the card of the list that shows the row: the subject itself, or the card a
+	 * nested blank node is shown in.
+	 */
+	card: NamedNode | BlankNode;
+
+	/**
 	 * The property, or none for a row a new statement is typed into.
 	 */
 	property?: PropertyView;

@@ -122,6 +122,10 @@ export class StatementRowEditor implements EditWriter {
 		return this._data.subject;
 	}
 
+	get card(): NamedNode | BlankNode {
+		return this._data.card;
+	}
+
 	get version(): number {
 		return this._data.version;
 	}
@@ -313,6 +317,14 @@ export class StatementRowEditor implements EditWriter {
 	}
 
 	/**
+	 * Remove the property with all its values and write that, as the remove button of a row does.
+	 */
+	removeProperty(): void {
+		this._update(this._state.withDraft(new StatementDraft(this._state.draft.predicate, [])));
+		this._requestValues();
+	}
+
+	/**
 	 * Give up what was typed, as Escape does.
 	 */
 	revert(): void {
@@ -331,9 +343,16 @@ export class StatementRowEditor implements EditWriter {
 	/**
 	 * Write the row as the focus leaves it: text typed for a new value is taken as one, literals
 	 * whose text their datatype does not take go back to what is stored, and text that reads as no
-	 * term stays with its problem shown rather than being lost.
+	 * term stays with its problem shown rather than being lost. A row for a new statement left with
+	 * nothing typed is handed back to the card.
 	 */
 	leave(): void {
+		if (this.isOpen && this._state.predicateText === '' && this._state.pendingText === '' && this._state.draft.values.length === 0) {
+			this._owner.abandoned(this);
+
+			return;
+		}
+
 		const reading = this._data.reader.readValue(this._state.pendingText, this._range);
 		const withPending = reading?.term ? this._state.draft.withValueAppended(reading.term) : this._state.draft;
 		const next = this._state.withDraft(_withUnfittingLiteralsReverted(withPending));

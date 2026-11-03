@@ -36,6 +36,18 @@ export interface StatementRowProps extends StatementRowContext {
 	 * Reads what is typed and names the terms; present wherever the row is edited.
 	 */
 	services?: StatementServices;
+
+	/**
+	 * Whether the predicate field takes the focus when the row appears, as for a row opened by Add
+	 * property.
+	 */
+	autoFocus?: boolean;
+
+	/**
+	 * Whether an edited row offers a button that removes its property, as the rows of a nested
+	 * blank node do.
+	 */
+	removable?: boolean;
 }
 
 /**
@@ -65,13 +77,14 @@ interface ShownValue {
  * they are read. An edited row shows the same layout as fields that are plain at rest and draw
  * their box on intent: the predicate field, a field per literal with the label of its language tag
  * or datatype after the text, the input of the next value after the last pill, and a button that
- * removes each value. It is written when the focus leaves it or Enter is pressed in a literal;
- * Escape gives up what was typed. While the form shows one language, the literals of the others are
+ * removes each value, and in the box of a blank node one that removes the property. It is written
+ * when the focus leaves it or Enter is pressed in a literal; Escape gives up what was typed. Keys
+ * pressed in the rows of a blank node shown in the row are theirs. While the form shows one language, the literals of the others are
  * left out, and an edited row whose literals lack the language has an empty field for it.
  * @param props The statement, its editor and where the row stands.
  * @returns The row.
  */
-export function StatementRow({ property, editor, services, ...context }: StatementRowProps): React.JSX.Element {
+export function StatementRow({ property, editor, services, autoFocus, removable, ...context }: StatementRowProps): React.JSX.Element {
 	const state = useRowEditorState(editor);
 	const edited: EditedRow | undefined = editor && state && services ? { editor, state, services } : undefined;
 	const { languageFilter = LanguageFilter.ALL } = useFormEditorContext();
@@ -84,6 +97,10 @@ export function StatementRow({ property, editor, services, ...context }: Stateme
 	const error = state ? getRowErrorMessage(state) : undefined;
 
 	const handleKeyDown = (event: KeyboardEvent<HTMLElement>): void => {
+		if (!_isOwnEvent(event)) {
+			return;
+		}
+
 		if (event.key === 'Escape') {
 			event.preventDefault();
 			editor?.revert();
@@ -111,22 +128,39 @@ export function StatementRow({ property, editor, services, ...context }: Stateme
 		>
 			<span className="statement-gutter"></span>
 			<span className="statement-predicate" title={edited ? undefined : predicateView && getTermTitle(predicateView.term)}>
-				{edited ? <PredicateField editor={edited.editor} state={edited.state} label={label} /> : label}
+				{edited ? <PredicateField editor={edited.editor} state={edited.state} label={label} autoFocus={autoFocus} /> : label}
 			</span>
 			<span className="statement-values">
 				{literals.map(entry => <StatementValueCell key={entry.index} {...entry} edited={edited} {...context} />)}
 				{edited ? _resourceBox(edited, resources, property) : _resourcePills(resources, context)}
 				{wholes.map(entry => <StatementValueCell key={entry.index} {...entry} edited={edited} {...context} />)}
 			</span>
-			<span className="statement-actions"></span>
+			<span className="statement-actions">
+				{removable && edited && !edited.editor.isNew && (
+					<button type="button" className="statement-row-remove" aria-label={`Remove ${label}`} title="Remove property" onClick={() => edited.editor.removeProperty()}>
+						<vscode-icon name="close" size={12}></vscode-icon>
+					</button>
+				)}
+			</span>
 			{error && <RowError message={error} onDismiss={state?.rejection ? () => editor?.dismissRejection() : undefined} />}
 		</div>
 	);
 }
 
 /**
+ * Indicate whether an event comes from the fields of a row itself rather than from the rows of a
+ * blank node shown in it.
+ * @param event The event.
+ * @returns `true` when the closest row of its target is the row handling it.
+ */
+function _isOwnEvent(event: KeyboardEvent<HTMLElement>): boolean {
+	return event.target instanceof Element && event.target.closest('.statement-line') === event.currentTarget;
+}
+
+/**
  * The box of the resources of an edited row, with the input of the next value after the pills. In
- * a row of literals only, the input shows while the focus is in the row.
+ * a row without pills it stands after the boxes of blank nodes, and in a row with values it shows
+ * while the focus is in the row.
  * @param edited The row.
  * @param resources The resources of the row.
  * @param property The property of the row, whose values tell what the predicate takes.
@@ -135,9 +169,10 @@ export function StatementRow({ property, editor, services, ...context }: Stateme
 function _resourceBox(edited: EditedRow, resources: readonly ShownValue[], property: PropertyView | undefined): React.JSX.Element {
 	const { editor, state, services } = edited;
 	const onIntent = resources.length === 0 && state.draft.values.length > 0 && state.pendingText === '';
+	const classes = ['statement-value', 'is-adder', ...(resources.length === 0 ? ['is-after-values'] : []), ...(onIntent ? ['is-on-intent'] : [])];
 
 	return (
-		<span className={`statement-value is-adder${onIntent ? ' is-on-intent' : ''}`}>
+		<span className={classes.join(' ')}>
 			<ResourceValues
 				resources={resources.map(({ view, index }) => ({ view, index }))}
 				documentResources={services.resources}
