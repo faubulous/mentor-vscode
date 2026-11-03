@@ -8,6 +8,16 @@ import { useVscodeElementRef } from '@src/views/webviews/hooks';
 const ALL_LANGUAGES = '*';
 
 /**
+ * The label of the option that shows the values of every language.
+ */
+const ALL_LANGUAGES_LABEL = 'All languages';
+
+/**
+ * The room the select takes beside its text: its padding, its border and its chevron.
+ */
+const SELECT_CHROME_WIDTH = '30px';
+
+/**
  * Properties of the {@link LanguageSwitch} component.
  */
 export interface LanguageSwitchProps {
@@ -46,6 +56,7 @@ export interface LanguageSwitchProps {
  */
 export function LanguageSwitch({ languageTags, activeLanguage, allLanguages, onSelectLanguage, onSelectAll }: LanguageSwitchProps): React.JSX.Element {
 	const options = useMemo(() => _optionsOf(languageTags), [languageTags]);
+	const width = useMemo(() => _widthOf([ALL_LANGUAGES_LABEL, ...options.map(option => option.label)]), [options]);
 	const selectRef = useVscodeElementRef<VscodeSingleSelect>('change', element => {
 		if (element.value === ALL_LANGUAGES) {
 			onSelectAll();
@@ -54,30 +65,41 @@ export function LanguageSwitch({ languageTags, activeLanguage, allLanguages, onS
 		}
 	});
 
+	// The width is set on a wrapper, as React passes a style object to a custom element as a
+	// property, which the element does not take.
 	return (
-		<vscode-single-select ref={selectRef} className="language-switch" aria-label="Language" title="The language the values are shown in" value={allLanguages || !activeLanguage ? ALL_LANGUAGES : activeLanguage}>
-			<vscode-option value={ALL_LANGUAGES}>All languages</vscode-option>
-			{options.map(option => <vscode-option key={option.value} value={option.value}>{option.label}</vscode-option>)}
-		</vscode-single-select>
+		<span className="language-switch" style={{ width }}>
+			<vscode-single-select ref={selectRef} aria-label="Language" title="The language the values are shown in" value={allLanguages || !activeLanguage ? ALL_LANGUAGES : activeLanguage}>
+				<vscode-option value={ALL_LANGUAGES}>{ALL_LANGUAGES_LABEL}</vscode-option>
+				{options.map(option => <vscode-option key={option.value} value={option.value}>{option.label}</vscode-option>)}
+			</vscode-single-select>
+		</span>
 	);
 }
 
 /**
- * The options of the languages, by their tags as the document spells them, each followed by the
- * name of the language where the browser knows it.
+ * The options of the languages, each labelled with the name of its language where the browser
+ * knows it, and with its tag as the document spells it otherwise; sorted by their labels.
  * @param languageTags The spelling of each language tag, by its lower case form.
- * @returns The options, in the order of the tags.
+ * @returns The options.
  */
 function _optionsOf(languageTags: Record<string, string>): { value: string; label: string }[] {
 	const names = _languageNames();
 
 	return Object.entries(languageTags)
-		.sort(([, first], [, second]) => first.localeCompare(second))
-		.map(([value, spelling]) => {
-			const name = _nameOf(names, spelling);
+		.map(([value, spelling]) => ({ value, label: _nameOf(names, spelling) ?? spelling }))
+		.sort((first, second) => first.label.localeCompare(second.label));
+}
 
-			return { value, label: name ? `${spelling} — ${name}` : spelling };
-		});
+/**
+ * The width of the select that fits the longest of its labels.
+ * @param labels The labels of the options.
+ * @returns The width, as a CSS length.
+ */
+function _widthOf(labels: string[]): string {
+	const length = Math.max(...labels.map(label => label.length));
+
+	return `calc(${length}ch + ${SELECT_CHROME_WIDTH})`;
 }
 
 /**

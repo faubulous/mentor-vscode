@@ -84,8 +84,8 @@ describe('FormToolbar', () => {
 		const select = screen.getByLabelText('Language') as HTMLElement & { value: string };
 		const options = Array.from(select.querySelectorAll('vscode-option')).map(option => option.getAttribute('value'));
 
-		expect(options).toEqual(['*', 'de', 'en', 'en-us']);
-		expect(select.querySelector('vscode-option[value="de"]')?.textContent).toMatch(/^de( — .+)?$/);
+		expect(options).toEqual(['*', 'en-us', 'en', 'de']);
+		expect(select.querySelector('vscode-option[value="de"]')?.textContent).toBe('German');
 		expect(select.getAttribute('value') ?? select.value).toBe('de');
 
 		select.value = 'en-us';
@@ -95,6 +95,12 @@ describe('FormToolbar', () => {
 
 		expect(onSelectLanguage).toHaveBeenCalledWith('en-us');
 		expect(onSelectAll).toHaveBeenCalledOnce();
+	});
+
+	it('names a language by its tag where its name is not known', () => {
+		renderToolbar({ languages: { languageTags: { 'x-mentor': 'x-Mentor' }, allLanguages: true, onSelectLanguage: vi.fn(), onSelectAll: vi.fn() } });
+
+		expect(screen.getByLabelText('Language').querySelector('vscode-option[value="x-mentor"]')?.textContent).toBe('x-Mentor');
 	});
 
 	it('shows no language switch for a document without language tags', () => {

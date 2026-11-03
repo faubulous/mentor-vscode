@@ -58,7 +58,8 @@ body {
 .form-toolbar-content {
 	box-sizing: content-box;
 	display: grid;
-	grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+	/* The end keeps the width of its controls; the filter gives way before them. */
+	grid-template-columns: minmax(0, 1fr) minmax(0, auto) minmax(max-content, 1fr);
 	align-items: center;
 	gap: 12px;
 	max-width: var(--form-column);
@@ -81,9 +82,23 @@ body {
 	margin-right: -6px;
 }
 
-/* The language switch takes the width of a language name, not that of a settings field. */
+/* The language switch is as wide as its longest name, and plain at rest like the fields of the
+   form: muted text, with the box of a dropdown on hover, on focus and while it is open. */
 .language-switch {
-	width: 13em;
+	flex: none;
+	max-width: 100%;
+}
+
+.language-switch vscode-single-select {
+	display: block;
+	width: 100%;
+}
+
+.language-switch vscode-single-select:not(:hover, [focused], [open]) {
+	--vscode-settings-dropdownBackground: transparent;
+	--vscode-settings-dropdownBorder: transparent;
+	--vscode-settings-dropdownForeground: var(--vscode-descriptionForeground);
+	--vscode-foreground: var(--vscode-descriptionForeground);
 }
 
 /* The filter: a text field with its search icon, token, count and clear button inside. */

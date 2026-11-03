@@ -1,6 +1,24 @@
-import { defineConfig } from 'vitest/config';
+import { defineConfig, type Plugin } from 'vitest/config';
 import { playwright } from '@vitest/browser-playwright';
 import * as path from 'path';
+
+/**
+ * Mirrors the esbuild `.css: 'text'` loader (build.js): a component imports its stylesheet as a
+ * string and injects it. The stylesheets the test setup imports for their effect stay styles.
+ */
+const cssTextPlugin = (): Plugin => ({
+  name: 'css-text-loader',
+  enforce: 'pre',
+  async resolveId(source, importer) {
+    if (!source.endsWith('.css') || !importer?.endsWith('.tsx')) {
+      return null;
+    }
+
+    const resolved = await this.resolve(source, importer, { skipSelf: true });
+
+    return resolved ? `${resolved.id}?inline` : null;
+  },
+});
 
 /**
  * Configuration for the component tests that run in a real browser (`npm run test:browser`):
@@ -9,6 +27,7 @@ import * as path from 'path';
  * only tested here. A browser component test is named `*.browser.test.tsx`.
  */
 export default defineConfig({
+  plugins: [cssTextPlugin()],
   test: {
     include: ['src/**/*.browser.test.tsx'],
     // The testing library unmounts what a test rendered after it, through the global hooks.
