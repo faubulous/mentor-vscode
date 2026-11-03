@@ -19,10 +19,10 @@ export type FormEditorHostMessage =
 	 */
 	| { id: 'DocumentSnapshot'; snapshot: DocumentSnapshot }
 	/**
-	 * The properties of the resources the webview asked for; `missing` names those the document
-	 * no longer describes.
+	 * The properties of the resources the webview asked for, built for the snapshot of `revision`;
+	 * `missing` names those the document no longer describes.
 	 */
-	| { id: 'ResourcesLoaded'; version: number; resources: ResourceDetail[]; missing: (NamedNode | BlankNode)[] }
+	| { id: 'ResourcesLoaded'; revision: number; resources: ResourceDetail[]; missing: (NamedNode | BlankNode)[] }
 	/**
 	 * An edit of the form was applied, producing the given document version.
 	 */
@@ -39,7 +39,11 @@ export type FormEditorHostMessage =
 	 * Narrow the list to the cards of what the definition tree lists under a node; `label` names
 	 * the node.
 	 */
-	| { id: 'FilterResources'; label: string; resources: (NamedNode | BlankNode)[] };
+	| { id: 'FilterResources'; label: string; resources: (NamedNode | BlankNode)[] }
+	/**
+	 * A language was chosen in the language quick pick, or the values of every language.
+	 */
+	| { id: 'LanguagePicked'; allLanguages: boolean };
 
 /**
  * Messages sent from the webview to the extension host.
@@ -61,6 +65,11 @@ export type FormEditorWebviewMessage =
 	 * Show a position of the document in a text editor beside the form.
 	 */
 	| { id: 'RevealInTextEditor'; position: DocumentPosition }
+	/**
+	 * Let the user choose the language the document is read in, as Mentor's language selection
+	 * does, or the values of every language; `allLanguages` tells whether those are shown now.
+	 */
+	| { id: 'PickLanguage'; allLanguages: boolean }
 	| ExecuteCommandMessage;
 
 /**

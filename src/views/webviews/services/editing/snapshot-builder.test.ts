@@ -24,6 +24,7 @@ function snapshotOf(body: string, activeLanguage?: string): DocumentSnapshot {
 
 	return new SnapshotBuilder({
 		version: 7,
+		revision: 1,
 		uri: 'file:///workspace/vocab.ttl',
 		quadContexts: readTurtleQuadContexts(PREAMBLE + body),
 		context,
@@ -34,6 +35,11 @@ function snapshotOf(body: string, activeLanguage?: string): DocumentSnapshot {
 describe('SnapshotBuilder', () => {
 	it('stamps the document version so stale messages can be discarded', () => {
 		expect(snapshotOf('ex:A a owl:Class .').version).toBe(7);
+	});
+
+	it('names the language the document is read in, in lower case', () => {
+		expect(snapshotOf('ex:A a owl:Class .', 'en-US').activeLanguage).toBe('en-us');
+		expect(snapshotOf('ex:A a owl:Class .').activeLanguage).toBeUndefined();
 	});
 
 	it('reports the file name of the document', () => {
@@ -149,6 +155,7 @@ describe('SnapshotBuilder', () => {
 		const context = createResolvingDocumentContext({ namespaces: NAMESPACES });
 		const { snapshot } = new SnapshotBuilder({
 			version: 1,
+			revision: 1,
 			uri: 'file:///workspace/vocab.ttl',
 			quadContexts: [],
 			context,

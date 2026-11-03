@@ -11,8 +11,8 @@ const MAX_BATCH_SIZE = 100;
 /**
  * Serves resource detail over the webview message channel. Requests are coalesced into one
  * message per frame so that scrolling does not produce a message per row. The detail is cached by
- * the `termToString` key of the resource, and is kept as stale when a new document version arrives
- * until the detail of that version is loaded.
+ * the `termToString` key of the resource, and is kept as stale when a new snapshot arrives until
+ * the detail of that snapshot is loaded.
  */
 export class ResourceDataService implements IResourceDataService {
 	private readonly _loaded = new Map<string, ResourceDetail>();
@@ -26,6 +26,8 @@ export class ResourceDataService implements IResourceDataService {
 	private readonly _requested = new Set<string>();
 
 	private _version = -1;
+
+	private _revision = -1;
 
 	private _flushHandle: number | undefined;
 
@@ -75,14 +77,14 @@ export class ResourceDataService implements IResourceDataService {
 	}
 
 	/**
-	 * Accept the detail delivered for a document version, ignoring anything that belongs to a
-	 * version that has since been superseded.
-	 * @param version The document version the detail was built from.
+	 * Accept the detail delivered for a snapshot, ignoring anything that belongs to a snapshot that
+	 * has since been superseded.
+	 * @param revision The revision of the snapshot the detail was built for.
 	 * @param resources The delivered detail.
 	 * @param missing Resources the host could not resolve.
 	 */
-	accept(version: number, resources: ResourceDetail[], missing: (NamedNode | BlankNode)[] = []): void {
-		if (version !== this._version) {
+	accept(revision: number, resources: ResourceDetail[], missing: (NamedNode | BlankNode)[] = []): void {
+		if (revision !== this._revision) {
 			return;
 		}
 
@@ -104,17 +106,20 @@ export class ResourceDataService implements IResourceDataService {
 	}
 
 	/**
-	 * Move to a new document version. What was loaded for the previous one is kept as stale
-	 * detail until the new detail arrives, so the rows of an open card do not vanish during the
-	 * reload that follows every edit.
-	 * @param version The new document version.
+	 * Move to a new snapshot: a new document version, or the same version built again because its
+	 * labels, the settings or the language changed. What was loaded for the previous snapshot is
+	 * kept as stale detail until the new detail arrives, so the rows of an open card do not vanish
+	 * during the reload that follows every edit.
+	 * @param version The document version of the snapshot.
+	 * @param revision The revision of the snapshot.
 	 */
-	setVersion(version: number): void {
-		if (version === this._version) {
+	setSnapshot(version: number, revision: number): void {
+		if (revision === this._revision) {
 			return;
 		}
 
 		this._version = version;
+		this._revision = revision;
 
 		for (const [key, detail] of this._loaded) {
 			this._stale.set(key, detail);

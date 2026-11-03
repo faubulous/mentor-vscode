@@ -17,7 +17,7 @@ describe('useResourceDetail', () => {
 	it('re-renders when the detail arrives and marks the previous version as stale while the next loads', () => {
 		const service = new ResourceDataService(() => { });
 
-		service.setVersion(1);
+		service.setSnapshot(1, 1);
 
 		const { result } = renderHook(() => useResourceDetail(service, detail('a').term));
 
@@ -27,7 +27,7 @@ describe('useResourceDetail', () => {
 
 		expect(result.current).toEqual({ detail: detail('a'), stale: false });
 
-		act(() => service.setVersion(2));
+		act(() => service.setSnapshot(2, 2));
 
 		expect(result.current).toEqual({ detail: detail('a'), stale: true });
 	});

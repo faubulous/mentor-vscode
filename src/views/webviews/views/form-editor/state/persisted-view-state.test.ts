@@ -24,7 +24,16 @@ describe('PersistedViewState', () => {
 	it('round trips through the stored form', () => {
 		const state = new PersistedViewState(['x'], 'u', true);
 
-		expect(state.toJSON()).toEqual({ documentUri: 'u', openCards: ['x'], hideExternalDeclarations: true });
+		expect(state.toJSON()).toEqual({ documentUri: 'u', openCards: ['x'], hideExternalDeclarations: true, allLanguages: undefined });
+		expect(PersistedViewState.read(JSON.parse(JSON.stringify(state)))).toEqual(state);
+	});
+
+	it('reads and changes whether the values of every language are shown', () => {
+		const state = PersistedViewState.read({ openCards: [], allLanguages: true });
+
+		expect(state.allLanguages).toBe(true);
+		expect(PersistedViewState.read({ allLanguages: 'yes' }).allLanguages).toBeUndefined();
+		expect(state.with({ allLanguages: undefined }).allLanguages).toBeUndefined();
 		expect(PersistedViewState.read(JSON.parse(JSON.stringify(state)))).toEqual(state);
 	});
 

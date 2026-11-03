@@ -18,6 +18,12 @@ export interface ViewStateChanges {
 	 * preference, kept across documents.
 	 */
 	hideExternalDeclarations?: boolean;
+
+	/**
+	 * Whether the literal values of every language are shown, rather than those of the language
+	 * the document is read in. A preference, kept across documents.
+	 */
+	allLanguages?: boolean;
 }
 
 /**
@@ -38,11 +44,13 @@ export class PersistedViewState {
 	 * @param openCards The keys of the cards opened persistently.
 	 * @param documentUri The document the state belongs to.
 	 * @param hideExternalDeclarations Whether external declarations are hidden.
+	 * @param allLanguages Whether the values of every language are shown.
 	 */
 	constructor(
 		readonly openCards: readonly string[] = [],
 		readonly documentUri?: string,
-		readonly hideExternalDeclarations?: boolean
+		readonly hideExternalDeclarations?: boolean,
+		readonly allLanguages?: boolean
 	) { }
 
 	/**
@@ -60,7 +68,8 @@ export class PersistedViewState {
 		return new PersistedViewState(
 			_stringArray(state.openCards) ?? [],
 			typeof state.documentUri === 'string' ? state.documentUri : undefined,
-			state.hideExternalDeclarations === true ? true : undefined
+			state.hideExternalDeclarations === true ? true : undefined,
+			state.allLanguages === true ? true : undefined
 		);
 	}
 
@@ -73,7 +82,8 @@ export class PersistedViewState {
 		return new PersistedViewState(
 			changes.openCards ?? this.openCards,
 			'documentUri' in changes ? changes.documentUri : this.documentUri,
-			'hideExternalDeclarations' in changes ? changes.hideExternalDeclarations : this.hideExternalDeclarations
+			'hideExternalDeclarations' in changes ? changes.hideExternalDeclarations : this.hideExternalDeclarations,
+			'allLanguages' in changes ? changes.allLanguages : this.allLanguages
 		);
 	}
 
@@ -85,7 +95,8 @@ export class PersistedViewState {
 		return {
 			documentUri: this.documentUri,
 			openCards: [...this.openCards],
-			hideExternalDeclarations: this.hideExternalDeclarations
+			hideExternalDeclarations: this.hideExternalDeclarations,
+			allLanguages: this.allLanguages
 		};
 	}
 }

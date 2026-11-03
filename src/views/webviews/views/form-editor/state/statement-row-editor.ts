@@ -4,6 +4,7 @@ import { ValueKind } from '@src/utilities/value-kind';
 import { PropertyView, TermView } from '../form-editor-model';
 import { EditOutcome } from '../services/editing-host-service.interface';
 import { LiteralDatatypes } from '../services/statement/literal-datatypes';
+import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { EditWriter } from './edit-writer';
 import { IEditingController } from './editing-controller.interface';
 import { LiteralTag } from './literal-tag';
@@ -248,6 +249,18 @@ export class StatementRowEditor implements EditWriter {
 	 */
 	inputLiteralTag(index: number, tag: LiteralTag): void {
 		this._update(this._state.withLiteralTag(index, tag));
+	}
+
+	/**
+	 * Take the first text typed into the empty field of a language the row lacks: it becomes a
+	 * literal of the language after the other values. Nothing typed adds nothing.
+	 * @param language The language tag.
+	 * @param text The text.
+	 */
+	inputMissingLiteral(language: string, text: string): void {
+		if (text !== '') {
+			this._update(this._state.withDraft(this._state.draft.withValueAppended(RdfDataFactory.literal(text, language))));
+		}
 	}
 
 	/**

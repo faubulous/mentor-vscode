@@ -1,6 +1,6 @@
 import { TermView } from '../form-editor-model';
 import { RowValue } from '../state/row-value';
-import { EditableLiteral } from './editable-literal';
+import { LiteralValueField } from './literal-value-field';
 import { EditedRow } from './edited-row';
 import { StatementRowContext } from './statement-row-context';
 import { TermValue } from './term-value';
@@ -59,7 +59,7 @@ export function StatementValueCell({ value, view, index, edited, ...context }: S
  */
 function _editedValue(view: TermView, index: number, edited: EditedRow, context: StatementRowContext): React.JSX.Element {
 	if (view.term.termType === 'Literal' && !view.collection) {
-		return <EditableLiteral view={view} index={index} edited={edited} />;
+		return <LiteralValueField view={view} index={index} edited={edited} />;
 	}
 
 	return (

@@ -33,26 +33,90 @@ vi.mock('tsyringe', () => ({
 import { selectActiveLanguage } from '@src/commands/document/select-active-language';
 import { ServiceToken } from '@src/services/tokens';
 
+/**
+ * A quick pick stub whose selection and hiding the tests drive.
+ */
+interface QuickPickStub {
+	items: any[];
+	activeItems: any[];
+	shown: boolean;
+	disposed: boolean;
+	select(item: any): void;
+	hide(): void;
+}
+
+let quickPick: QuickPickStub;
+
+/**
+ * The context of a document, as the active text editor shows it.
+ * @param languageTagStats The number of values by language tag.
+ * @param activeLanguageTag The language the document is read in.
+ * @returns The context.
+ */
+function openDocument(languageTagStats: Record<string, number>, activeLanguageTag?: string): { languageTagStats: Record<string, number>; activeLanguageTag: string | undefined } {
+	const context = { languageTagStats, activeLanguageTag };
+
+	(vscode.window as any).activeTextEditor = { document: { uri: vscode.Uri.parse('file:///test.ttl') } };
+	mockContextService.contexts = { 'file:///test.ttl': context };
+
+	return context;
+}
+
+/**
+ * Run the command and wait until its quick pick is shown.
+ * @param options The options of the command.
+ * @returns The selection the command resolves with, once the pick is closed.
+ */
+async function showPick(options?: Parameters<typeof selectActiveLanguage.handler>[0]): Promise<{ result: ReturnType<typeof selectActiveLanguage.handler> }> {
+	const result = selectActiveLanguage.handler(options);
+
+	await vi.waitFor(() => expect(quickPick.shown).toBe(true));
+
+	return { result };
+}
+
+/**
+ * The item of the quick pick that chooses a language.
+ * @param language The language tag, or `undefined` for the values without a language.
+ */
+function itemOf(language: string | undefined): any {
+	return quickPick.items.find(item => item.selection?.kind === 'language' && item.selection.language === language);
+}
+
 describe('selectActiveLanguage', () => {
-	let mockQuickPick: any;
-	let changeSelectionHandlers: Array<(s: any[]) => void>;
-
 	beforeEach(() => {
-		vi.clearAllMocks();
-		changeSelectionHandlers = [];
+		const selectionHandlers: ((selection: any[]) => void)[] = [];
+		const hideHandlers: (() => void)[] = [];
 
-		mockQuickPick = {
-			title: '',
-			items: [] as any[],
-			onDidChangeSelection: vi.fn((handler: any) => {
-				changeSelectionHandlers.push(handler);
-				return { dispose: () => {} };
-			}),
-			show: vi.fn(),
-			dispose: vi.fn(),
+		vi.clearAllMocks();
+
+		quickPick = {
+			items: [],
+			activeItems: [],
+			shown: false,
+			disposed: false,
+			select: item => selectionHandlers.forEach(handler => handler([item])),
+			hide: () => hideHandlers.forEach(handler => handler())
 		};
 
-		(vscode.window as any).createQuickPick = vi.fn(() => mockQuickPick);
+		(vscode.window as any).createQuickPick = vi.fn(() => Object.assign(quickPick, {
+			onDidChangeSelection: (handler: any) => {
+				selectionHandlers.push(handler);
+
+				return { dispose: () => { } };
+			},
+			onDidHide: (handler: any) => {
+				hideHandlers.push(handler);
+
+				return { dispose: () => { } };
+			},
+			show: () => {
+				quickPick.shown = true;
+			},
+			dispose: () => {
+				quickPick.disposed = true;
+			}
+		}));
 	});
 
 	it('has the correct id', () => {
@@ -61,79 +125,109 @@ describe('selectActiveLanguage', () => {
 
 	it('returns early when no active editor', async () => {
 		(vscode.window as any).activeTextEditor = undefined;
-		await selectActiveLanguage.handler();
-		expect(mockQuickPick.show).not.toHaveBeenCalled();
+
+		expect(await selectActiveLanguage.handler()).toBeUndefined();
+		expect(vscode.window.createQuickPick).not.toHaveBeenCalled();
 	});
 
 	it('returns early when no document context', async () => {
 		(vscode.window as any).activeTextEditor = { document: { uri: vscode.Uri.parse('file:///test.ttl') } };
 		mockContextService.contexts = {};
-		await selectActiveLanguage.handler();
-		expect(mockQuickPick.show).not.toHaveBeenCalled();
+
+		expect(await selectActiveLanguage.handler()).toBeUndefined();
+		expect(vscode.window.createQuickPick).not.toHaveBeenCalled();
 	});
 
-	it('shows quick pick with no language msg when no language-tagged literals', async () => {
-		(vscode.window as any).activeTextEditor = { document: { uri: vscode.Uri.parse('file:///test.ttl') } };
-		mockContextService.contexts = {
-			'file:///test.ttl': {
-				languageTagStats: {},
-				activeLanguageTag: undefined,
-			}
-		};
-		await selectActiveLanguage.handler();
-		expect(mockQuickPick.show).toHaveBeenCalled();
-		expect(mockQuickPick.items[0].label).toBe('No language tagged literals found.');
-	});
+	it('reads the document of the active tab, as when a form editor holds the focus', async () => {
+		const uri = vscode.Uri.parse('file:///form.ttl');
 
-	it('shows language items when the document has language-tagged literals', async () => {
-		(vscode.window as any).activeTextEditor = { document: { uri: vscode.Uri.parse('file:///test.ttl') } };
-		mockContextService.contexts = {
-			'file:///test.ttl': {
-				languageTagStats: { 'en': 5, 'de': 3 },
-				activeLanguageTag: undefined,
-			}
-		};
-		await selectActiveLanguage.handler();
-		expect(mockQuickPick.show).toHaveBeenCalled();
-		const items: any[] = mockQuickPick.items;
-		expect(items.length).toBe(2);
-		expect(items.some((i: any) => i.language === 'en')).toBe(true);
-		expect(items.some((i: any) => i.language === 'de')).toBe(true);
-	});
+		(vscode.window as any).activeTextEditor = undefined;
+		(vscode.window as any).tabGroups.activeTabGroup.activeTab = { input: { uri } };
+		(vscode.workspace as any).textDocuments.push({ uri });
+		mockContextService.contexts = { 'file:///form.ttl': { languageTagStats: { 'en': 1 }, activeLanguageTag: undefined } };
 
-	it('sets activeLanguageTag and saves settings on selection', async () => {
-		const context = {
-			languageTagStats: { 'en': 5 },
-			activeLanguageTag: undefined as string | undefined,
-		};
-		(vscode.window as any).activeTextEditor = { document: { uri: vscode.Uri.parse('file:///test.ttl') } };
-		mockContextService.contexts = { 'file:///test.ttl': context };
+		try {
+			const { result } = await showPick();
 
-		await selectActiveLanguage.handler();
-
-		const enItem = mockQuickPick.items.find((i: any) => i.language === 'en');
-		// Simulate user selecting the English language
-		for (const handler of changeSelectionHandlers) {
-			handler([enItem]);
+			quickPick.hide();
+			await result;
+		} finally {
+			(vscode.window as any).tabGroups.activeTabGroup.activeTab = undefined;
+			(vscode.workspace as any).textDocuments.pop();
 		}
 
-		expect(context.activeLanguageTag).toBe('en');
-		expect(mockSettings.set).toHaveBeenCalledWith('view.activeLanguage', 'en');
-		expect(mockQuickPick.dispose).toHaveBeenCalled();
+		expect(quickPick.items.map(item => item.selection.language)).toEqual(['en']);
 	});
 
-	it('handles undefined language tags (unspecified)', async () => {
-		(vscode.window as any).activeTextEditor = { document: { uri: vscode.Uri.parse('file:///test.ttl') } };
-		mockContextService.contexts = {
-			'file:///test.ttl': {
-				languageTagStats: { 'undefined': 2 },
-				activeLanguageTag: undefined,
-			}
-		};
-		await selectActiveLanguage.handler();
-		const items: any[] = mockQuickPick.items;
-		// 'undefined' key should have language = undefined
-		const unspecifiedItem = items.find((i: any) => i.language === undefined);
-		expect(unspecifiedItem).toBeDefined();
+	it('lists the values without a language first, then the languages by their tags, with their counts', async () => {
+		openDocument({ 'en': 5, 'de': 1, 'undefined': 2 });
+
+		const { result } = await showPick();
+
+		expect(quickPick.items.map(item => item.selection.language)).toEqual([undefined, 'de', 'en']);
+		expect(quickPick.items.map(item => item.description)).toEqual(['2 values', '1 value', '5 values']);
+
+		quickPick.hide();
+		await result;
+	});
+
+	it('offers no selection for a document without language tags', async () => {
+		openDocument({});
+
+		const { result } = await showPick();
+
+		expect(quickPick.items).toEqual([{ label: 'No language tagged literals found.' }]);
+
+		quickPick.select(quickPick.items[0]);
+		quickPick.hide();
+
+		expect(await result).toBeUndefined();
+	});
+
+	it('starts on the language the document is read in', async () => {
+		openDocument({ 'en': 5, 'de': 3 }, 'de');
+
+		const { result } = await showPick();
+
+		expect(quickPick.activeItems).toEqual([itemOf('de')]);
+
+		quickPick.hide();
+		await result;
+	});
+
+	it('reads the document in the language picked, tells the views and closes', async () => {
+		const context = openDocument({ 'en': 5, 'de': 3 });
+		const { result } = await showPick();
+		quickPick.select(itemOf('de'));
+
+		expect(await result).toEqual({ kind: 'language', language: 'de' });
+		expect(context.activeLanguageTag).toBe('de');
+		expect(mockSettings.set).toHaveBeenCalledWith('view.activeLanguage', 'de');
+		expect(quickPick.disposed).toBe(true);
+	});
+
+	it('changes nothing when dismissed', async () => {
+		const context = openDocument({ 'en': 5 });
+		const { result } = await showPick();
+		quickPick.hide();
+
+		expect(await result).toBeUndefined();
+		expect(context.activeLanguageTag).toBeUndefined();
+		expect(mockSettings.set).not.toHaveBeenCalled();
+	});
+
+	it('offers the values of every language first where asked, starting on it while they are shown, leaving the language of the document', async () => {
+		const context = openDocument({ 'en': 5, 'de': 3 }, 'de');
+		const { result } = await showPick({ offerAllLanguages: true, allLanguagesShown: true });
+		const allLanguages = quickPick.items[0];
+
+		expect(allLanguages.label).toBe('All languages');
+		expect(quickPick.activeItems).toEqual([allLanguages]);
+
+		quickPick.select(allLanguages);
+
+		expect(await result).toEqual({ kind: 'allLanguages' });
+		expect(context.activeLanguageTag).toBe('de');
+		expect(mockSettings.set).not.toHaveBeenCalled();
 	});
 });

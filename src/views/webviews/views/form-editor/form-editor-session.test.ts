@@ -62,7 +62,7 @@ function createPanel(): TestPanel {
  * @param context The context of the document, in place of the parsed one.
  * @param services The members of the document context service a test controls.
  */
-async function createSession(body: string, context?: IDocumentContext, services: Partial<IDocumentContextService> = {}): Promise<{ session: FormEditorSession; document: EditableTextDocument } & TestPanel> {
+async function createSession(body: string, context?: IDocumentContext, services: Partial<IDocumentContextService> = {}): Promise<{ session: FormEditorSession; document: EditableTextDocument; context: IDocumentContext } & TestPanel> {
 	const document = createEditableTextDocument(PREAMBLE + body, { uri: URI });
 	const turtle = createTurtleDocument(URI, RdfSyntax.Turtle);
 
@@ -75,7 +75,7 @@ async function createSession(body: string, context?: IDocumentContext, services:
 
 	await session.initialize();
 
-	return { session, document, ...testPanel };
+	return { session, document, context: context ?? turtle, ...testPanel };
 }
 
 /**
@@ -95,7 +95,14 @@ function registerLoadingServices() {
 
 	container.registerInstance(ServiceToken.VocabularyRepository, { store } as never);
 	container.registerInstance(ServiceToken.DocumentTokenSource, { onDidDeliverTokens: deliveries.event } as never);
-	container.registerInstance(ServiceToken.SettingsService, { onDidChange: (_key: string, listener: () => void) => { settingListeners.push(listener); return { dispose: () => undefined }; } } as never);
+	container.registerInstance(ServiceToken.SettingsService, {
+		onDidChange: (_key: string, listener: () => void) => {
+			settingListeners.push(listener);
+
+			return { dispose: () => undefined };
+		},
+		set: () => settingListeners.forEach(listener => listener())
+	} as never);
 
 	return {
 		store,
@@ -354,19 +361,88 @@ describe('FormEditorSession', () => {
 		expect(postedOf(posted, 'DocumentSnapshot')).toHaveLength(1);
 	});
 
-	it('rebuilds the snapshot of the same document when the language changes', async () => {
+	it('rebuilds the snapshot of the same document when its language changes, and only then', async () => {
 		const loading = registerLoadingServices();
-		const { posted, receive } = await createSession('ex:A ex:p "x" .\n', undefined, loading.services);
+		const { posted, receive, context } = await createSession('ex:A ex:p "x" .\n', undefined, loading.services);
 
 		await receive({ id: 'Ready' });
 
 		loading.changeLanguage();
 		await settle();
 
+		expect(postedOf(posted, 'DocumentSnapshot')).toHaveLength(1);
+
+		context.activeLanguageTag = 'de';
+		loading.changeLanguage();
+		await settle();
+
 		const snapshots = postedOf(posted, 'DocumentSnapshot');
 
 		expect(snapshots).toHaveLength(2);
-		expect(snapshots[1].snapshot).not.toBe(snapshots[0].snapshot);
+		expect(snapshots[1].snapshot.activeLanguage).toBe('de');
+	});
+
+	it('numbers every snapshot it builds and delivers the details for the current one', async () => {
+		const loading = registerLoadingServices();
+		const { posted, receive, context } = await createSession('ex:A ex:p "x" .\n', undefined, loading.services);
+
+		await receive({ id: 'Ready' });
+
+		context.activeLanguageTag = 'de';
+		loading.changeLanguage();
+		await settle();
+		await receive({ id: 'RequestResources', resources: [RdfDataFactory.namedNode(`${EX}A`)] });
+
+		const [first, second] = postedOf(posted, 'DocumentSnapshot').map(message => message.snapshot);
+
+		expect(second.version).toBe(first.version);
+		expect(second.revision).toBeGreaterThan(first.revision);
+		expect(postedOf(posted, 'ResourcesLoaded')[0].revision).toBe(second.revision);
+	});
+
+	it('reads the document in the language picked, built once', async () => {
+		const loading = registerLoadingServices();
+		const { posted, receive, context } = await createSession('ex:A ex:p "x"@en, "y"@de .\n', undefined, loading.services);
+
+		const executeCommand = vi.spyOn(vscode.commands, 'executeCommand').mockImplementationOnce(async () => {
+			context.activeLanguageTag = 'de';
+
+			return { kind: 'language', language: 'de' };
+		});
+
+		await receive({ id: 'Ready' });
+		await receive({ id: 'PickLanguage', allLanguages: true });
+
+		const snapshots = postedOf(posted, 'DocumentSnapshot').map(message => message.snapshot);
+
+		expect(executeCommand).toHaveBeenCalledWith('mentor.command.selectActiveLanguage', { offerAllLanguages: true, allLanguagesShown: true });
+		expect(postedOf(posted, 'LanguagePicked')).toEqual([{ id: 'LanguagePicked', allLanguages: false }]);
+		expect(snapshots.map(snapshot => snapshot.activeLanguage)).toEqual([undefined, 'de']);
+	});
+
+	it('tells the webview to show every language when that is picked', async () => {
+		const loading = registerLoadingServices();
+		const { posted, receive } = await createSession('ex:A ex:p "x"@en, "y"@de .\n', undefined, loading.services);
+
+		vi.spyOn(vscode.commands, 'executeCommand').mockResolvedValueOnce({ kind: 'allLanguages' });
+
+		await receive({ id: 'Ready' });
+		await receive({ id: 'PickLanguage', allLanguages: false });
+
+		expect(postedOf(posted, 'LanguagePicked')).toEqual([{ id: 'LanguagePicked', allLanguages: true }]);
+		expect(postedOf(posted, 'DocumentSnapshot')).toHaveLength(1);
+	});
+
+	it('changes nothing when the language quick pick is dismissed', async () => {
+		const { posted, receive } = await createSession('ex:A ex:p "x"@en .\n');
+
+		vi.spyOn(vscode.commands, 'executeCommand').mockResolvedValueOnce(undefined);
+
+		await receive({ id: 'Ready' });
+		await receive({ id: 'PickLanguage', allLanguages: false });
+
+		expect(postedOf(posted, 'LanguagePicked')).toHaveLength(0);
+		expect(postedOf(posted, 'DocumentSnapshot')).toHaveLength(1);
 	});
 
 	it('posts nothing once disposed', async () => {
