@@ -13,7 +13,6 @@ import { TurtleDocument } from '@src/languages/turtle/turtle-document';
 import { EditOperation } from '@src/services/editing/edit-operation';
 import { getLog } from '@src/utilities/vscode/log';
 import { ResourceReferenceProvider } from '@src/providers/resource-reference-provider';
-import { Debouncer } from '@src/utilities/debounce';
 import { getSubjectIconName } from '@src/utilities/subject-icon';
 import { tokensMatchText } from '@src/utilities/tokens';
 import { DocumentSyntaxError } from '@src/services/document/document-syntax-error';
@@ -29,17 +28,6 @@ import { DocumentProblem, DocumentSnapshot, ReadOnlyReason, ResourceDetail } fro
 import { QuadContextCache } from './quad-context-cache';
 import { reviveTerms } from '@src/utilities/rdf-terms';
 
-
-/**
- * Why a snapshot is built, which decides whether the snapshot of the same document version can be
- * kept.
- */
-type SnapshotCause = 'initial' | 'external' | 'formEdit' | 'settings' | 'language';
-/**
- * The delay before a snapshot is rebuilt after the document changed. The token source already
- * absorbs keystroke bursts, so this only coalesces the events that follow one delivery.
- */
-const REFRESH_DELAY_MS = 120;
 
 /**
  * How many problems of a document a snapshot points at.
@@ -85,8 +73,6 @@ interface ObjectIconCache {
 export class FormEditorSession implements vscode.Disposable {
 	private readonly _subscriptions: vscode.Disposable[] = [];
 
-	private readonly _refreshDebouncer = new Debouncer(REFRESH_DELAY_MS);
-
 	private readonly _contextService: IDocumentContextService;
 
 	private readonly _referenceProvider: ResourceReferenceProvider;
@@ -102,11 +88,17 @@ export class FormEditorSession implements vscode.Disposable {
 	private _snapshot?: DocumentSnapshot;
 
 	/**
-	 * What the published snapshot was built from: the document version and its problems. The
-	 * document context and the diagnostics announce changes without a new version, and a snapshot
-	 * built from the same inputs again would be the same.
+	 * What the published snapshot was built from: the document version, its problems and the
+	 * version of the store its labels and glyphs were read from. A snapshot built from the same
+	 * inputs again would be the same; a change of the settings clears it.
 	 */
 	private _snapshotKey?: string;
+
+	/**
+	 * Whether a refresh waits for the document to load, which answers the refreshes asked for
+	 * meanwhile.
+	 */
+	private _refreshPending = false;
 
 	/**
 	 * Whether the webview said it is ready, so a snapshot posted to it is received. A snapshot
@@ -153,8 +145,9 @@ export class FormEditorSession implements vscode.Disposable {
 	async initialize(): Promise<void> {
 		new WebviewComponentFactory(this._context, 'form-editor.js').configureWebview(this._panel.webview);
 
-		// Let the page reach the webview before the document is loaded: loading a large one keeps
-		// the extension host busy, and the webview would only start loading after it.
+		// Let the page reach the webview before the document is loaded. The extension host sends its
+		// messages to the workbench from a timer of its own, which runs before this one; loading a
+		// large document keeps the host busy, and the webview would only start loading after it.
 		await new Promise(resolve => setTimeout(resolve, 0));
 
 		this._subscriptions.push(
@@ -164,7 +157,7 @@ export class FormEditorSession implements vscode.Disposable {
 			vscode.workspace.onDidChangeConfiguration(event => this._onDidChangeConfiguration(event)),
 			this._contextService.onDidChangeDocumentContext(context => {
 				if (context?.uri.toString() === this._documentUri) {
-					this._scheduleRefresh('external');
+					void this._refreshWhenLoaded();
 				}
 			})
 		);
@@ -174,7 +167,7 @@ export class FormEditorSession implements vscode.Disposable {
 
 		await this._contextService.activateContextForDocument(this._document);
 
-		this._publishSnapshot('initial');
+		this._publishSnapshot();
 	}
 
 	/**
@@ -247,8 +240,7 @@ export class FormEditorSession implements vscode.Disposable {
 			return this._rejectEdit(editId, outcome);
 		}
 
-		this._refreshDebouncer.cancel();
-		this._publishSnapshot('formEdit');
+		this._publishSnapshot();
 
 		this._postMessage({ id: 'EditApplied', editId, version: outcome.version });
 
@@ -261,7 +253,6 @@ export class FormEditorSession implements vscode.Disposable {
 		}
 
 		this._disposed = true;
-		this._refreshDebouncer.dispose();
 
 		for (const subscription of this._subscriptions) {
 			subscription.dispose();
@@ -279,9 +270,9 @@ export class FormEditorSession implements vscode.Disposable {
 	}
 
 	/**
-	 * Rebuild the snapshot when the token source delivers a parse of the document. An edit made
-	 * through the form is published right away; the debounced delivery that follows it carries
-	 * nothing new.
+	 * Rebuild the snapshot when the token source delivers a parse of the document, once its
+	 * triples are loaded. The parse of an edit made through the form is published right away; the
+	 * delivery that follows it brings the labels read from the reloaded store.
 	 */
 	private _subscribeToTokenSource(): void {
 		if (!container.isRegistered(ServiceToken.DocumentTokenSource)) {
@@ -292,8 +283,8 @@ export class FormEditorSession implements vscode.Disposable {
 
 		this._subscriptions.push(
 			this._tokenSource.onDidDeliverTokens(delivery => {
-				if (delivery.uri === this._documentUri && this._snapshot?.version !== this._document.version) {
-					this._scheduleRefresh('external');
+				if (delivery.uri === this._documentUri) {
+					void this._refreshWhenLoaded();
 				}
 			})
 		);
@@ -309,7 +300,7 @@ export class FormEditorSession implements vscode.Disposable {
 
 		const settings = container.resolve<ISettingsService>(ServiceToken.SettingsService);
 
-		this._subscriptions.push(settings.onDidChange('view.activeLanguage', () => this._scheduleRefresh('language')));
+		this._subscriptions.push(settings.onDidChange('view.activeLanguage', () => this._rebuildWhenLoaded()));
 	}
 
 	/**
@@ -322,7 +313,7 @@ export class FormEditorSession implements vscode.Disposable {
 				// A webview loaded anew, after it was hidden, has none of the snapshots sent before.
 				this._webviewReady = true;
 				this._sentSnapshot = undefined;
-				this._publishSnapshot('initial');
+				this._publishSnapshot();
 				break;
 			case 'RequestResources':
 				this._publishResources(message.resources);
@@ -360,25 +351,49 @@ export class FormEditorSession implements vscode.Disposable {
 	 */
 	private _onDidChangeConfiguration(event: vscode.ConfigurationChangeEvent): void {
 		if (RENDERING_SETTINGS.some(section => event.affectsConfiguration(section))) {
-			this._scheduleRefresh('settings');
+			this._rebuildWhenLoaded();
 		}
 	}
 
 	/**
-	 * Schedule a snapshot, coalescing the events that follow one document change.
-	 * @param cause Why the snapshot is rebuilt.
+	 * Rebuild the snapshot even from the same inputs, as a change of the settings or the language
+	 * changes how the same document is shown.
 	 */
-	private _scheduleRefresh(cause: SnapshotCause): void {
-		if (!this._disposed) {
-			this._refreshDebouncer.schedule(() => this._publishSnapshot(cause));
-		}
+	private _rebuildWhenLoaded(): void {
+		this._snapshotKey = undefined;
+
+		void this._refreshWhenLoaded();
 	}
 
 	/**
-	 * Build and post a snapshot of the document.
-	 * @param cause Why the snapshot is built.
+	 * Publish a snapshot once the document is loaded. The triples of a parse are loaded into the
+	 * store after the parse is delivered, and the labels and glyphs of a snapshot are read from the
+	 * store, so a snapshot built before would show those of the text before. A refresh asked for
+	 * while one waits is answered by it.
 	 */
-	private _publishSnapshot(cause: SnapshotCause): void {
+	private async _refreshWhenLoaded(): Promise<void> {
+		if (this._refreshPending || this._disposed) {
+			return;
+		}
+
+		this._refreshPending = true;
+
+		try {
+			while (this._contextService.isLoading(this._documentUri)) {
+				await this._contextService.waitUntilLoaded(this._documentUri);
+			}
+		} finally {
+			this._refreshPending = false;
+		}
+
+		this._publishSnapshot();
+	}
+
+	/**
+	 * Build and post a snapshot of the document, unless the one built last was built from the
+	 * same inputs.
+	 */
+	private _publishSnapshot(): void {
 		if (this._disposed) {
 			return;
 		}
@@ -405,9 +420,9 @@ export class FormEditorSession implements vscode.Disposable {
 		const syntaxErrors = context.getSyntaxErrors(text);
 		const readOnly = getFormReadOnlyReason(text, syntaxErrors);
 		const problems = this._toProblems(syntaxErrors);
-		const key = `${this._document.version}|${readOnly ?? ''}|${JSON.stringify(problems)}`;
+		const key = `${this._document.version}|${this._getVocabulary()?.store.version ?? ''}|${readOnly ?? ''}|${JSON.stringify(problems)}`;
 
-		if (!this._reuseSnapshot(cause, key)) {
+		if (!this._snapshot || key !== this._snapshotKey) {
 			this._rebuildSnapshot(context, readOnly, problems, key);
 		}
 
@@ -450,19 +465,6 @@ export class FormEditorSession implements vscode.Disposable {
 
 		this._sentSnapshot = snapshot;
 		this._postMessage({ id: 'DocumentSnapshot', snapshot });
-	}
-
-	/**
-	 * Keep the snapshot when it was built from the same document version and problems: a change
-	 * of the document context or of the diagnostics without a new version is no reason to rebuild
-	 * it, and a webview that asks again is sent the one already built. A change of the settings or
-	 * the language always rebuilds, as it changes how the same document is shown.
-	 * @param cause Why the snapshot is sent.
-	 * @param key What the snapshot would be built from.
-	 * @returns Whether the snapshot was kept.
-	 */
-	private _reuseSnapshot(cause: SnapshotCause, key: string): boolean {
-		return this._snapshot !== undefined && key === this._snapshotKey && (cause === 'external' || cause === 'initial');
 	}
 
 	/**
@@ -509,11 +511,19 @@ export class FormEditorSession implements vscode.Disposable {
 	 * @returns The options.
 	 */
 	private _getIndexOptions(): ResourceIndexOptions {
-		const vocabulary = container.isRegistered(ServiceToken.VocabularyRepository)
-			? container.resolve<VocabularyRepository>(ServiceToken.VocabularyRepository)
-			: undefined;
+		const vocabulary = this._getVocabulary();
 
 		return { resolveObjectIcon: vocabulary ? iri => this._resolveObjectIcon(vocabulary, iri) : undefined };
+	}
+
+	/**
+	 * The vocabulary repository over the store, when there is one.
+	 * @returns The repository.
+	 */
+	private _getVocabulary(): VocabularyRepository | undefined {
+		return container.isRegistered(ServiceToken.VocabularyRepository)
+			? container.resolve<VocabularyRepository>(ServiceToken.VocabularyRepository)
+			: undefined;
 	}
 
 	/**
@@ -567,7 +577,7 @@ export class FormEditorSession implements vscode.Disposable {
 		this._postMessage({ id: 'EditRejected', editId, problem, version: this._document.version });
 
 		if (problem.kind === 'staleVersion') {
-			this._publishSnapshot('external');
+			this._publishSnapshot();
 		}
 
 		return outcome;
