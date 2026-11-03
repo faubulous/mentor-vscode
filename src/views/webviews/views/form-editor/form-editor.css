@@ -1,6 +1,6 @@
 /*
  * The form editor: the toolbar, the document header, the context bar, the entries, the comments
- * and the position rail. Every colour comes from a theme variable; entries are set apart by
+ * and the overview ruler. Every colour comes from a theme variable; entries are set apart by
  * hairlines and type, not by boxes. Imported as a string and injected at runtime, so this file
  * must not rely on any bundler CSS features.
  */
@@ -19,7 +19,7 @@ body {
 	--form-hairline: var(--vscode-widget-border, var(--vscode-panel-border, #2b2b2b));
 	/* The column of the glyph of an entry, as wide as the glyph and the even space on either side of it. */
 	--form-glyph-column: 40px;
-	/* The tint of chips and the rail, and the hover of entries. */
+	/* The tint of chips and the hover of entries. */
 	--form-tint: var(--vscode-toolbar-hoverBackground, color-mix(in oklab, var(--vscode-foreground) 10%, transparent));
 	--form-hover: var(--vscode-list-hoverBackground, color-mix(in oklab, var(--vscode-foreground) 5%, transparent));
 	--form-mono: var(--vscode-editor-font-family, monospace);
@@ -151,10 +151,11 @@ body {
 	text-overflow: ellipsis;
 }
 
-/* ---------- Body: the scroll area and the rail ---------- */
+/* ---------- Body: the scroll area and the overview ruler ---------- */
 
 .form-editor-body {
 	flex: 1 1 auto;
+	position: relative;
 	display: flex;
 	min-height: 0;
 }
@@ -162,16 +163,35 @@ body {
 .form-editor-scroll {
 	flex: 1 1 auto;
 	position: relative;
+	z-index: 1;
 	min-width: 0;
 	overflow-y: auto;
 	overflow-x: hidden;
 	outline: none;
-	/* The position rail beside it is the scrollbar of the form. */
-	scrollbar-width: none;
+	/*
+	 * The scrollbar is drawn as VS Code draws the scrollbars of webviews, with the rules below
+	 * rather than the inherited standard colours, which would add arrow buttons that shorten the
+	 * track. Its track is transparent, so the overview ruler under it shows through and maps the
+	 * whole height of the scroll area.
+	 */
+	scrollbar-color: auto;
 }
 
 .form-editor-scroll::-webkit-scrollbar {
-	display: none;
+	width: 10px;
+	background: transparent;
+}
+
+.form-editor-scroll::-webkit-scrollbar-thumb {
+	background-color: var(--vscode-scrollbarSlider-background);
+}
+
+.form-editor-scroll::-webkit-scrollbar-thumb:hover {
+	background-color: var(--vscode-scrollbarSlider-hoverBackground);
+}
+
+.form-editor-scroll::-webkit-scrollbar-thumb:active {
+	background-color: var(--vscode-scrollbarSlider-activeBackground);
 }
 
 /*
@@ -192,41 +212,24 @@ body {
 	padding-bottom: var(--mentor-space-6);
 }
 
-.form-editor-rail {
-	flex: 0 0 20px;
-	position: relative;
-	border-left: 1px solid var(--form-hairline);
-	background: var(--vscode-editorWidget-background, var(--form-tint));
-}
-
-.position-rail {
-	--rail-resource: var(--vscode-foreground);
-	--rail-comment: var(--vscode-symbolIcon-fieldForeground, #75beff);
-	--rail-match: var(--vscode-minimap-findMatchHighlight, var(--vscode-symbolIcon-classForeground, #ee9d28));
+/* The overview ruler lies under the scrollbar, at the right edge of the scroll area. */
+.form-editor-ruler {
 	position: absolute;
-	inset: 0;
-	cursor: pointer;
-}
-
-.position-rail-marks {
-	position: absolute;
-	inset: 0;
-}
-
-.position-rail-viewport {
-	position: absolute;
-	left: 0;
+	top: 0;
 	right: 0;
-	box-sizing: border-box;
-	border-top: 1px solid var(--vscode-focusBorder);
-	border-bottom: 1px solid var(--vscode-focusBorder);
-	background: var(--vscode-scrollbarSlider-background);
-	cursor: grab;
+	pointer-events: none;
 }
 
-.position-rail-viewport:active {
-	cursor: grabbing;
-	background: var(--vscode-scrollbarSlider-activeBackground, var(--vscode-scrollbarSlider-background));
+.overview-ruler {
+	--ruler-resource: var(--vscode-foreground);
+	--ruler-comment: var(--vscode-symbolIcon-fieldForeground, #75beff);
+	--ruler-match: var(--vscode-minimap-findMatchHighlight, var(--vscode-symbolIcon-classForeground, #ee9d28));
+	position: relative;
+}
+
+.overview-ruler-marks {
+	position: absolute;
+	inset: 0;
 }
 
 /* ---------- Context bar ---------- */

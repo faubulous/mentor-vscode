@@ -17,7 +17,9 @@ export default defineConfig({
     browser: {
       enabled: true,
       headless: true,
-      provider: playwright(),
+      // Chromium keeps its scrollbars, which headless Playwright hides, as VS Code shows them on
+      // Linux and Windows.
+      provider: playwright({ launchOptions: { ignoreDefaultArgs: ['--hide-scrollbars'] } }),
       instances: [{ browser: 'chromium', viewport: { width: 1200, height: 900 } }],
     },
   },

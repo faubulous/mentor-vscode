@@ -5,6 +5,26 @@
 export type BlockSizeClass = 'comment' | 'collapsed' | 'collapsedDescribed' | 'open';
 
 /**
+ * A block of the list, as far as its height is concerned.
+ */
+export interface SizedBlock {
+	/**
+	 * The identifier of the block.
+	 */
+	id: string;
+
+	/**
+	 * The kind of the block.
+	 */
+	sizeClass: BlockSizeClass;
+
+	/**
+	 * What its height grows with: its statements for an open entry, one otherwise.
+	 */
+	units: number;
+}
+
+/**
  * The heights assumed for a kind of block before any of its blocks was measured.
  */
 const DEFAULT_SIZES: Record<BlockSizeClass, number> = {
@@ -44,6 +64,10 @@ interface MeasuredBlock {
  * measured yet are estimated: the average height of the blocks of the same kind, per statement
  * for open entries. Good estimates keep the total height, and with it the scrollbar, steady while
  * the list is scrolled and its blocks are measured one by one.
+ *
+ * The blocks are laid out from the same heights the virtualizer takes, the measured one where
+ * there is one and the estimate otherwise, so that the offsets of all blocks are known, those
+ * never rendered too.
  */
 export class BlockSizeStats {
 	private readonly _measured = new Map<string, MeasuredBlock>();
@@ -69,6 +93,32 @@ export class BlockSizeStats {
 	 */
 	estimate(sizeClass: BlockSizeClass, units = 1): number {
 		return Math.round(this._published[sizeClass] * (sizeClass === 'open' ? Math.max(1, units) : 1));
+	}
+
+	/**
+	 * The height of a block: as measured, or as estimated while it was not measured.
+	 * @param block The block.
+	 * @returns The height.
+	 */
+	sizeOf(block: SizedBlock): number {
+		return this._measured.get(block.id)?.size ?? this.estimate(block.sizeClass, block.units);
+	}
+
+	/**
+	 * Lay the blocks out one below the other.
+	 * @param blocks The blocks, in order.
+	 * @returns The offset of each block from the top of the list.
+	 */
+	offsetsOf(blocks: readonly SizedBlock[]): number[] {
+		const offsets: number[] = [];
+		let offset = 0;
+
+		for (const block of blocks) {
+			offsets.push(offset);
+			offset += this.sizeOf(block);
+		}
+
+		return offsets;
 	}
 
 	/**

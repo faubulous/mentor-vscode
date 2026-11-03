@@ -23,6 +23,7 @@ const THEME = `
 	--vscode-editorWidget-background: #252526;
 	--vscode-widget-border: #454545;
 	--vscode-errorForeground: #f85149;
+	--vscode-scrollbarSlider-background: rgba(121, 121, 121, 0.4);
 }
 
 body {
