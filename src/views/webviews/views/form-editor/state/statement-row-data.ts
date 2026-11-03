@@ -29,6 +29,12 @@ export interface StatementRowData {
 	predicateText: string;
 
 	/**
+	 * The predicate of a row for a new statement whose predicate is given rather than typed, as the
+	 * row that stands in for the type of a blank node.
+	 */
+	predicate?: string;
+
+	/**
 	 * The document version the property belongs to.
 	 */
 	version: number;

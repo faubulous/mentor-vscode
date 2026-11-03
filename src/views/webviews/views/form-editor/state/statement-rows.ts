@@ -1,4 +1,5 @@
 import { BlankNode, NamedNode } from '@rdfjs/types';
+import { RDF } from '@faubulous/mentor-rdf/ontologies';
 import { PropertyView } from '../form-editor-model';
 import { TypedTermReader } from '../services/statement/typed-term-reader';
 import { IEditingController } from './editing-controller.interface';
@@ -26,6 +27,11 @@ export interface StatementRowEntry {
 	 * Edits the row; absent for a property the row only reads.
 	 */
 	editor?: StatementRowEditor;
+
+	/**
+	 * Whether the row is the type of a blank node, which leads its box.
+	 */
+	isType?: boolean;
 }
 
 /**
@@ -79,6 +85,12 @@ export interface StatementRowsOptions {
 	 * when it is left with nothing typed.
 	 */
 	keepNewRowOpen: boolean;
+
+	/**
+	 * Whether the type leads the rows, as in the box of a blank node: the row of `rdf:type` comes
+	 * first, and while the resource has no type a row stands in for it whose value writes it.
+	 */
+	typeRow?: boolean;
 }
 
 /**
@@ -100,6 +112,8 @@ export class StatementRows implements StatementRowOwner {
 	private _revision = 0;
 
 	private _data?: StatementRowsData;
+
+	private _typePlaceholder?: StatementRowEditor;
 
 	/**
 	 * Create the rows of a card.
@@ -141,6 +155,8 @@ export class StatementRows implements StatementRowOwner {
 
 		this._data = data;
 
+		let typeEntry: StatementRowEntry | undefined;
+
 		this._notEditable = new Set();
 
 		for (const property of data.properties) {
@@ -156,7 +172,12 @@ export class StatementRows implements StatementRowOwner {
 
 			unmatched.delete(editor);
 			editor.deliver({ ...data, property, predicateText: data.predicateTextOf(property) });
-			entries.push({ key: `row-${editor.id}`, property, editor });
+
+			if (this._options.typeRow && predicate === RDF.type) {
+				typeEntry = { key: `row-${editor.id}`, property, editor, isType: true };
+			} else {
+				entries.push({ key: `row-${editor.id}`, property, editor });
+			}
 		}
 
 		for (const editor of unmatched) {
@@ -167,9 +188,13 @@ export class StatementRows implements StatementRowOwner {
 
 		this._editors = this._editors.filter(editor => !unmatched.has(editor) || editor.isNew);
 
-		for (const editor of this._editors.filter(current => current.isNew)) {
+		for (const editor of this._editors.filter(current => current.isNew && current !== this._typePlaceholder)) {
 			editor.deliver({ ...data, property: undefined, predicateText: editor.state.predicateText });
 			entries.push({ key: `row-${editor.id}`, editor });
+		}
+
+		if (this._options.typeRow) {
+			entries.unshift(typeEntry ?? this._typePlaceholderEntry(data));
 		}
 
 		if (this._options.keepNewRowOpen && !this._editors.some(editor => editor.isOpen)) {
@@ -195,11 +220,16 @@ export class StatementRows implements StatementRowOwner {
 
 	merged(row: StatementRowEditor): void {
 		this._editors = this._editors.filter(editor => editor !== row);
+
+		if (row === this._typePlaceholder) {
+			this._typePlaceholder = undefined;
+		}
+
 		this._notify();
 	}
 
 	abandoned(row: StatementRowEditor): void {
-		if (!this._options.keepNewRowOpen) {
+		if (!this._options.keepNewRowOpen && row !== this._typePlaceholder) {
 			this.merged(row);
 		}
 	}
@@ -210,7 +240,7 @@ export class StatementRows implements StatementRowOwner {
 	 * @returns The row, or `undefined` before the card rendered its rows.
 	 */
 	addRow(): StatementRowEditor | undefined {
-		const open = this._editors.find(editor => editor.isOpen);
+		const open = this._editors.find(editor => editor.isOpen && editor !== this._typePlaceholder);
 
 		if (open || !this._data) {
 			return open;
@@ -221,6 +251,23 @@ export class StatementRows implements StatementRowOwner {
 		this._notify();
 
 		return editor;
+	}
+
+	/**
+	 * The row that stands in for the type while the resource has none: a row for a new statement of
+	 * `rdf:type`, kept across renders. Once its value is written it claims the type, and the type
+	 * property it then holds replaces it; a placeholder the type arrived without goes.
+	 * @param data The data of the card.
+	 * @returns The row.
+	 */
+	private _typePlaceholderEntry(data: StatementRowsData): StatementRowEntry {
+		const placeholderData = { ...data, property: undefined, predicateText: 'a', predicate: RDF.type };
+		const placeholder = this._typePlaceholder?.isNew ? this._typePlaceholder : this._create(placeholderData);
+
+		this._typePlaceholder = placeholder;
+		placeholder.deliver(placeholderData);
+
+		return { key: `row-${placeholder.id}`, editor: placeholder, isType: true };
 	}
 
 	/**

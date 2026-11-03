@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { OWL, RDF } from '@faubulous/mentor-rdf';
+import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { TEST_NAMESPACES, TEST_SUBJECT, createIriView, createProperty, createSampleResourceDetail, withAnchors } from '@src/utilities/mocks/statement-fixtures';
 import { PropertyView } from '../form-editor-model';
 import { TypedTermReader } from '../services/statement/typed-term-reader';
@@ -27,6 +29,13 @@ function lastOf(entries: readonly StatementRowEntry[]): StatementRowEntry | unde
  */
 function createRows(keepNewRowOpen = true): StatementRows {
 	return new StatementRows({ requestWrite: () => undefined, flush: () => undefined }, { keepNewRowOpen });
+}
+
+/**
+ * Make the rows of the box of a blank node, which the type leads.
+ */
+function createBoxRows(): StatementRows {
+	return new StatementRows({ requestWrite: () => undefined, flush: () => undefined }, { keepNewRowOpen: false, typeRow: true });
 }
 
 describe('StatementRows', () => {
@@ -110,5 +119,43 @@ describe('StatementRows', () => {
 		added.leave();
 
 		expect(lastOf(rows.reconcile(dataOf(SAMPLE)))?.editor).toBe(added);
+	});
+
+	it('leads the rows of a box with the type, wherever the type is written', () => {
+		const entries = createBoxRows().reconcile(dataOf([SAMPLE[1], SAMPLE[2], SAMPLE[0]]));
+
+		expect(entries.map(entry => [entry.property?.predicate.prefixedName, entry.isType === true])).toEqual([['rdf:type', true], ['rdfs:label', false], ['rdfs:subClassOf', false]]);
+	});
+
+	it('stands in for the type of an untyped node with a row of rdf:type that Add property and leaving it leave alone', () => {
+		const rows = createBoxRows();
+		const placeholder = rows.reconcile(dataOf([SAMPLE[1]]))[0];
+
+		expect(placeholder.isType).toBe(true);
+		expect(placeholder.property).toBeUndefined();
+		expect(placeholder.editor?.state.stored.predicate).toBe(RDF.type);
+
+		placeholder.editor!.leave();
+
+		const added = rows.addRow();
+
+		expect(added).not.toBe(placeholder.editor);
+		expect(rows.reconcile(dataOf([SAMPLE[1]]))[0].editor).toBe(placeholder.editor);
+	});
+
+	it('writes the type picked in the row that stands in for it, which then holds the type that arrives', () => {
+		const rows = createBoxRows();
+		const editor = rows.reconcile(dataOf([SAMPLE[1]]))[0].editor!;
+
+		editor.addValue(RdfDataFactory.namedNode(OWL.Class));
+		editor.leave();
+
+		expect(editor.takeEdit()).toEqual([{ op: 'setValues', subject: TEST_SUBJECT, predicate: RDF.type, values: [{ kind: 'term', term: RdfDataFactory.namedNode(OWL.Class) }] }]);
+
+		const entries = rows.reconcile(dataOf([SAMPLE[0], SAMPLE[1]], 2));
+
+		expect(entries[0].editor).toBe(editor);
+		expect(entries[0].property).toBe(SAMPLE[0]);
+		expect(entries).toHaveLength(2);
 	});
 });

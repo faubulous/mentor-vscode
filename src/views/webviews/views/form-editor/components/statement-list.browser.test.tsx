@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { userEvent } from 'vitest/browser';
 import { act, render, within } from '@testing-library/react';
-import { RDFS, XSD } from '@faubulous/mentor-rdf';
+import { OWL, RDFS, XSD } from '@faubulous/mentor-rdf';
 import { createEditingHostStub } from '@src/utilities/mocks/editing-host-fixtures';
 import { createResourceDataServiceStub } from '@src/utilities/mocks/resource-data-service-fixtures';
 import { createResourceSummary } from '@src/utilities/mocks/resource-summary-fixtures';
@@ -21,14 +21,15 @@ const RESOURCES = [createResourceSummary('Plant', { label: 'Plant' }), createRes
  * a recording host.
  * @param detail The detail.
  * @param others The details of the blank nodes it shows.
+ * @param resources The resources of the document.
  */
-async function renderList(detail: ResourceDetail = SAMPLE, others: ResourceDetail[] = []) {
+async function renderList(detail: ResourceDetail = SAMPLE, others: ResourceDetail[] = [], resources = RESOURCES) {
 	const host = createEditingHostStub();
 	const editing = new EditingController(host);
 	const dataService = createResourceDataServiceStub([detail, ...others]);
 	const ui = (current: ResourceDetail) => (
 		<div className="form-editor">
-			<FormEditorContext.Provider value={{ readOnly: false, editing, namespaces: NAMESPACES, languageTags: {}, resources: RESOURCES }}>
+			<FormEditorContext.Provider value={{ readOnly: false, editing, namespaces: NAMESPACES, languageTags: {}, resources }}>
 				<StatementList detail={current} dataService={dataService} depth={0} visited={[current.term]} />
 			</FormEditorContext.Provider>
 			<button type="button" className="outside">Outside</button>
@@ -224,5 +225,25 @@ describe('StatementList, edited in a browser', () => {
 		await leaveList();
 
 		expect(within(box).queryByRole('group', { name: 'New statement' })).toBeNull();
+	});
+
+	it('offers the classes of the document as the type of an untyped blank node', async () => {
+		const node = RdfDataFactory.blankNode('b1');
+		const detail = withAnchors(createTestResourceDetail([createProperty('rdfs:comment', [{ term: node, editable: true, nested: { term: node, propertyCount: 1 } }])]));
+		const nodeDetail = withAnchors({ term: node, properties: [createProperty('rdfs:label', [createLiteralView('Leaf')])] });
+		const resources = [
+			createResourceSummary('Plant', { label: 'Plant', typeIri: OWL.Class }),
+			createResourceSummary('Plank', { label: 'Plank' }),
+			createResourceSummary('Planter', { label: 'Planter', typeIri: RDFS.Class })
+		];
+
+		await renderList(detail, [nodeDetail], resources);
+
+		const header = within(document.querySelector<HTMLElement>('.resource-card.is-nested')!).getByRole('group', { name: 'Type' });
+
+		await userEvent.click(within(header).getByLabelText('New value'));
+		await userEvent.keyboard('plan');
+
+		expect(Array.from(header.querySelectorAll('.combobox-option-label')).map(option => option.textContent)).toEqual(['Plant', 'Planter']);
 	});
 });

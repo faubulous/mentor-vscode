@@ -2,10 +2,10 @@
 import { describe, expect, it } from 'vitest';
 import { act, fireEvent, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { RDFS } from '@faubulous/mentor-rdf';
+import { RDF, RDFS } from '@faubulous/mentor-rdf';
 import { createEditingHostStub } from '@src/utilities/mocks/editing-host-fixtures';
 import { createResourceDataServiceStub } from '@src/utilities/mocks/resource-data-service-fixtures';
-import { TEST_NAMESPACES, createLiteralView, createProperty, createTestResourceDetail, withAnchors } from '@src/utilities/mocks/statement-fixtures';
+import { TEST_NAMESPACES, createIriView, createLiteralView, createProperty, createTestResourceDetail, withAnchors } from '@src/utilities/mocks/statement-fixtures';
 import { renderWebview } from '@src/utilities/mocks/webview-test-utils';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { ResourceDetail, TermView } from '../form-editor-model';
@@ -43,11 +43,12 @@ const NODE_DETAIL: ResourceDetail = withAnchors({
 
 /**
  * Render the card, edited, with the details of its blank node at hand.
+ * @param nodeDetail The details of the blank node.
  */
-function renderCard() {
+function renderCard(nodeDetail: ResourceDetail = NODE_DETAIL) {
 	const host = createEditingHostStub();
 	const editing = new EditingController(host);
-	const dataService = createResourceDataServiceStub([DETAIL, NODE_DETAIL]);
+	const dataService = createResourceDataServiceStub([DETAIL, nodeDetail]);
 	const context: FormEditorContextValue = { readOnly: false, editing, namespaces: NAMESPACES, languageTags: {}, resources: [] };
 
 	renderWebview(
@@ -169,6 +170,46 @@ describe('StatementList, with a blank node', () => {
 			op: 'setValues',
 			subject: NODE,
 			predicate: RDFS.seeAlso,
+			values: [{ kind: 'term', term: RdfDataFactory.namedNode(`${TEST_NAMESPACES.ex}Leaf`) }]
+		}]]);
+	});
+
+	it('leads the box with its type, after a chevron that collapses the box to the type and names the other properties', async () => {
+		const typed: ResourceDetail = withAnchors({ term: NODE, properties: [...NODE_DETAIL.properties, createProperty('rdf:type', [createIriView('owl:Restriction', 'Restriction')])] });
+
+		renderCard(typed);
+
+		const header = within(box()).getByRole('group', { name: 'Type' });
+
+		expect(box().querySelector('.statement-line')).toBe(header);
+		expect(header.querySelector('.statement-predicate')?.textContent).toBe('type');
+		expect(within(header).getByText('Restriction')).toBeTruthy();
+
+		await userEvent.click(within(header).getByRole('button', { name: 'Collapse' }));
+
+		expect(within(box()).queryByRole('group', { name: 'rdfs:label' })).toBeNull();
+		expect(within(box()).queryByRole('button', { name: 'Add property' })).toBeNull();
+		expect(header.querySelector('.box-summary')?.textContent).toBe('rdfs:label, rdfs:comment');
+
+		await userEvent.click(within(header).getByRole('button', { name: 'Expand' }));
+
+		expect(within(box()).getByRole('group', { name: 'rdfs:label' })).toBeTruthy();
+	});
+
+	it('asks to choose the type of an untyped node, and writes the type typed into it', async () => {
+		const { host } = renderCard();
+		const header = within(box()).getByRole('group', { name: 'Type' });
+		const input = within(header).getByLabelText('New value');
+
+		expect(input.getAttribute('placeholder')).toBe('Choose type');
+
+		type(input, 'ex:Leaf');
+		await leave(input);
+
+		expect(host.submitted.map(record => record.operations)).toEqual([[{
+			op: 'setValues',
+			subject: NODE,
+			predicate: RDF.type,
 			values: [{ kind: 'term', term: RdfDataFactory.namedNode(`${TEST_NAMESPACES.ex}Leaf`) }]
 		}]]);
 	});
