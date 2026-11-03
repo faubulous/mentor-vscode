@@ -854,6 +854,81 @@ describe('DocumentContextService', () => {
 		});
 	});
 
+	describe('activateContextForDocument', () => {
+		/**
+		 * A loaded context of a document, and the document.
+		 */
+		function loadedDocument(service: DocumentContextService, path: string) {
+			const uri = vscode.Uri.parse(`file:///${path}`);
+			const context = createMockContext({ uri, isLoaded: true });
+
+			service.contexts[uri.toString()] = context;
+
+			return { context, document: { languageId: 'turtle', uri, getText: () => '' } as unknown as vscode.TextDocument };
+		}
+
+		it('makes the context of a document active and publishes the change', async () => {
+			const { service } = createService();
+			const { context, document } = loadedDocument(service, 'a.ttl');
+			const fired: unknown[] = [];
+
+			service.onDidChangeDocumentContext(changed => fired.push(changed));
+
+			expect(await service.activateContextForDocument(document)).toBe(context);
+			expect(service.activeContext).toBe(context);
+			expect(fired).toEqual([context]);
+		});
+
+		it('publishes nothing for a document that is active already', async () => {
+			const { service } = createService();
+			const { context, document } = loadedDocument(service, 'a.ttl');
+			const fired: unknown[] = [];
+
+			service.activeContext = context;
+			service.onDidChangeDocumentContext(changed => fired.push(changed));
+
+			expect(await service.activateContextForDocument(document)).toBe(context);
+			expect(fired).toEqual([]);
+		});
+
+		it('leaves a document asked for later active when an earlier one finishes loading after it', async () => {
+			const { service } = createService();
+			const first = loadedDocument(service, 'a.ttl');
+			const second = loadedDocument(service, 'b.ttl');
+			let finishFirst: (context: IDocumentContext) => void = () => undefined;
+
+			vi.spyOn(service, 'loadDocument').mockImplementation(document => document === first.document
+				? new Promise(resolve => finishFirst = resolve)
+				: Promise.resolve(second.context));
+
+			const firstActivation = service.activateContextForDocument(first.document);
+
+			await service.activateContextForDocument(second.document);
+			finishFirst(first.context);
+
+			expect(await firstActivation).toBeUndefined();
+			expect(service.activeContext).toBe(second.context);
+		});
+
+		it('keeps the active document when it is asked for again while another one loads', async () => {
+			const { service } = createService();
+			const active = loadedDocument(service, 'a.ttl');
+			const other = loadedDocument(service, 'b.ttl');
+			let finishOther: (context: IDocumentContext) => void = () => undefined;
+
+			service.activeContext = active.context;
+			vi.spyOn(service, 'loadDocument').mockImplementation(() => new Promise(resolve => finishOther = resolve));
+
+			const otherActivation = service.activateContextForDocument(other.document);
+
+			await service.activateContextForDocument(active.document);
+			finishOther(other.context);
+
+			expect(await otherActivation).toBeUndefined();
+			expect(service.activeContext).toBe(active.context);
+		});
+	});
+
 	describe('handleActiveNotebookEditorChanged', () => {
 		it('does nothing when editor is undefined', async () => {
 			const { service, mockDocumentFactory } = createService();
