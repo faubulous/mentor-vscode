@@ -1,4 +1,5 @@
 import { FocusEvent, KeyboardEvent } from 'react';
+import { OWL, RDF, RDFS } from '@faubulous/mentor-rdf/ontologies';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { PropertyView, TermView } from '../form-editor-model';
 import { useRowEditorState } from '../hooks/use-row-editor-state';
@@ -17,6 +18,26 @@ import { StatementRowContext } from './statement-row-context';
 import { StatementValueCell } from './statement-value-cell';
 import { getTermLabel, getTermTitle } from './term-labels';
 import { TermValue } from './term-value';
+
+/**
+ * The header of the box of a blank node, which the row of its type leads.
+ */
+export interface BoxHeader {
+	/**
+	 * Whether the box shows only its header.
+	 */
+	collapsed: boolean;
+
+	/**
+	 * The other properties of the node, named in the header while the box is collapsed.
+	 */
+	summary: string;
+
+	/**
+	 * Collapse or expand the box.
+	 */
+	onToggle: () => void;
+}
 
 /**
  * Properties of the {@link StatementRow} component.
@@ -48,6 +69,11 @@ export interface StatementRowProps extends StatementRowContext {
 	 * blank node do.
 	 */
 	removable?: boolean;
+
+	/**
+	 * The header of the box of a blank node, where the row is the type that leads it.
+	 */
+	header?: BoxHeader;
 }
 
 /**
@@ -84,7 +110,7 @@ interface ShownValue {
  * @param props The statement, its editor and where the row stands.
  * @returns The row.
  */
-export function StatementRow({ property, editor, services, autoFocus, removable, ...context }: StatementRowProps): React.JSX.Element {
+export function StatementRow({ property, editor, services, autoFocus, removable, header, ...context }: StatementRowProps): React.JSX.Element {
 	const state = useRowEditorState(editor);
 	const edited: EditedRow | undefined = editor && state && services ? { editor, state, services } : undefined;
 	const { languageFilter = LanguageFilter.ALL } = useFormEditorContext();
@@ -119,24 +145,25 @@ export function StatementRow({ property, editor, services, autoFocus, removable,
 
 	return (
 		<div
-			className={`statement-line${edited ? ' is-editable' : ''}${editor?.isNew ? ' is-draft' : ''}`}
+			className={`statement-line${edited ? ' is-editable' : ''}${editor?.isNew && !header ? ' is-draft' : ''}${header ? ' is-box-header' : ''}`}
 			role="group"
-			aria-label={editor?.isNew ? 'New statement' : label}
+			aria-label={header ? 'Type' : editor?.isNew ? 'New statement' : label}
 			tabIndex={edited ? -1 : undefined}
 			onKeyDown={edited ? handleKeyDown : undefined}
 			onBlur={edited ? handleBlur : undefined}
 		>
-			<span className="statement-gutter"></span>
-			<span className="statement-predicate" title={edited ? undefined : predicateView && getTermTitle(predicateView.term)}>
-				{edited ? <PredicateField editor={edited.editor} state={edited.state} label={label} autoFocus={autoFocus} /> : label}
+			<span className="statement-gutter">{header && _chevron(header)}</span>
+			<span className="statement-predicate" title={header ? RDF.type : edited ? undefined : predicateView && getTermTitle(predicateView.term)}>
+				{header ? 'type' : edited ? <PredicateField editor={edited.editor} state={edited.state} label={label} autoFocus={autoFocus} /> : label}
 			</span>
 			<span className="statement-values">
 				{literals.map(entry => <StatementValueCell key={entry.index} {...entry} edited={edited} {...context} />)}
-				{edited ? _resourceBox(edited, resources, property) : _resourcePills(resources, context)}
+				{edited ? _resourceBox(edited, resources, property, header !== undefined) : _resourcePills(resources, context)}
 				{wholes.map(entry => <StatementValueCell key={entry.index} {...entry} edited={edited} {...context} />)}
+				{header?.collapsed && header.summary && <span className="box-summary">{header.summary}</span>}
 			</span>
 			<span className="statement-actions">
-				{removable && edited && !edited.editor.isNew && (
+				{removable && !header && edited && !edited.editor.isNew && (
 					<button type="button" className="statement-row-remove" aria-label={`Remove ${label}`} title="Remove property" onClick={() => edited.editor.removeProperty()}>
 						<vscode-icon name="close" size={12}></vscode-icon>
 					</button>
@@ -158,15 +185,30 @@ function _isOwnEvent(event: KeyboardEvent<HTMLElement>): boolean {
 }
 
 /**
+ * The button that collapses and expands the box of a blank node.
+ * @param header The header of the box.
+ * @returns The button.
+ */
+function _chevron(header: BoxHeader): React.JSX.Element {
+	return (
+		<button type="button" className="box-chevron" aria-expanded={!header.collapsed} aria-label={header.collapsed ? 'Expand' : 'Collapse'} title={header.collapsed ? 'Expand' : 'Collapse'} onClick={header.onToggle}>
+			<vscode-icon name={header.collapsed ? 'chevron-right' : 'chevron-down'} size={14}></vscode-icon>
+		</button>
+	);
+}
+
+/**
  * The box of the resources of an edited row, with the input of the next value after the pills. In
  * a row without pills it stands after the boxes of blank nodes, and in a row with values it shows
- * while the focus is in the row.
+ * while the focus is in the row. The type of a blank node offers the classes of the document and
+ * asks to choose one while there is none.
  * @param edited The row.
  * @param resources The resources of the row.
  * @param property The property of the row, whose values tell what the predicate takes.
+ * @param isType Whether the row is the type of a blank node.
  * @returns The box.
  */
-function _resourceBox(edited: EditedRow, resources: readonly ShownValue[], property: PropertyView | undefined): React.JSX.Element {
+function _resourceBox(edited: EditedRow, resources: readonly ShownValue[], property: PropertyView | undefined, isType: boolean): React.JSX.Element {
 	const { editor, state, services } = edited;
 	const onIntent = resources.length === 0 && state.draft.values.length > 0 && state.pendingText === '';
 	const classes = ['statement-value', 'is-adder', ...(resources.length === 0 ? ['is-after-values'] : []), ...(onIntent ? ['is-on-intent'] : [])];
@@ -175,11 +217,11 @@ function _resourceBox(edited: EditedRow, resources: readonly ShownValue[], prope
 		<span className={classes.join(' ')}>
 			<ResourceValues
 				resources={resources.map(({ view, index }) => ({ view, index }))}
-				documentResources={services.resources}
-				range={property?.valueKind?.kind ?? 'any'}
+				documentResources={isType ? services.resources.filter(_isClass) : services.resources}
+				range={isType ? 'resource' : property?.valueKind?.kind ?? 'any'}
 				pendingText={state.pendingText}
 				services={services}
-				placeholder={state.draft.values.length === 0 ? 'value' : 'add a value'}
+				placeholder={_placeholderOf(state.draft.values.length, isType)}
 				onPendingInput={text => editor.inputPending(text)}
 				onPick={term => editor.addValue(term)}
 				onCreate={() => editor.commitPending()}
@@ -187,6 +229,29 @@ function _resourceBox(edited: EditedRow, resources: readonly ShownValue[], prope
 			/>
 		</span>
 	);
+}
+
+/**
+ * The placeholder of the input of the next value.
+ * @param valueCount The number of values of the row.
+ * @param isType Whether the row is the type of a blank node.
+ * @returns The placeholder.
+ */
+function _placeholderOf(valueCount: number, isType: boolean): string {
+	if (valueCount > 0) {
+		return 'add a value';
+	}
+
+	return isType ? 'Choose type' : 'value';
+}
+
+/**
+ * Indicate whether a resource of the document is a class it declares.
+ * @param resource The resource.
+ * @returns `true` for a resource typed as an OWL or RDFS class.
+ */
+function _isClass(resource: { typeIri?: string }): boolean {
+	return resource.typeIri === OWL.Class || resource.typeIri === RDFS.Class;
 }
 
 /**

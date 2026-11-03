@@ -22,7 +22,8 @@ export interface StatementRowsOptions {
 	card: NamedNode | BlankNode;
 
 	/**
-	 * Whether a row for a new statement is always open after the others, as in a card of the list.
+	 * Whether a row for a new statement is always open after the others, as in a card of the list;
+	 * otherwise the type leads the rows, as in the box of a blank node.
 	 */
 	keepNewRowOpen: boolean;
 
@@ -74,7 +75,7 @@ export function useStatementRows({ detail, card, keepNewRowOpen, version, stale,
 	const edited = services !== undefined;
 
 	// A list shows one resource throughout: the cards are keyed by it.
-	const rows = useMemo(() => editing && edited ? new StatementRows(editing, { keepNewRowOpen }) : undefined, [editing, edited, keepNewRowOpen]);
+	const rows = useMemo(() => editing && edited ? new StatementRows(editing, { keepNewRowOpen, typeRow: !keepNewRowOpen }) : undefined, [editing, edited, keepNewRowOpen]);
 	const subscribe = useCallback((listener: () => void) => rows?.subscribe(listener) ?? (() => undefined), [rows]);
 	const revision = useSyncExternalStore(subscribe, () => rows?.revision ?? 0);
 

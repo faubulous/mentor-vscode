@@ -80,7 +80,7 @@ export class StatementRowEditor implements EditWriter {
 		data: StatementRowData
 	) {
 		this._data = data;
-		this._state = StatementRowState.of(_storedOf(data.property), data.predicateText);
+		this._state = StatementRowState.of(_storedOf(data), data.predicateText);
 	}
 
 	/**
@@ -185,7 +185,7 @@ export class StatementRowEditor implements EditWriter {
 			return;
 		}
 
-		const stored = _storedOf(data.property);
+		const stored = _storedOf(data);
 
 		if (data.property && stored.predicate === this._claimedPredicate) {
 			this._claimedPredicate = undefined;
@@ -516,12 +516,16 @@ export class StatementRowEditor implements EditWriter {
 }
 
 /**
- * The statement a property is stored as.
- * @param property The property, or none for a row a new statement is typed into.
+ * The statement a row starts from: its property, else the predicate it is given, else nothing.
+ * @param data The data of the row.
  * @returns The statement.
  */
-function _storedOf(property: PropertyView | undefined): StatementDraft {
-	return property ? StatementDraft.fromProperty(property) : StatementDraft.EMPTY;
+function _storedOf(data: StatementRowData): StatementDraft {
+	if (data.property) {
+		return StatementDraft.fromProperty(data.property);
+	}
+
+	return data.predicate ? new StatementDraft(data.predicate, []) : StatementDraft.EMPTY;
 }
 
 /**
