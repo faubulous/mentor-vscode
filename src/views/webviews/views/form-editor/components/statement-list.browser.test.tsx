@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { userEvent } from 'vitest/browser';
 import { act, render, within } from '@testing-library/react';
-import { OWL, RDFS, XSD } from '@faubulous/mentor-rdf';
+import { OWL, RDF, RDFS, XSD } from '@faubulous/mentor-rdf';
 import { createEditingHostStub } from '@src/utilities/mocks/editing-host-fixtures';
 import { createResourceDataServiceStub } from '@src/utilities/mocks/resource-data-service-fixtures';
 import { createResourceSummary } from '@src/utilities/mocks/resource-summary-fixtures';
@@ -245,5 +245,30 @@ describe('StatementList, edited in a browser', () => {
 		await userEvent.keyboard('plan');
 
 		expect(Array.from(header.querySelectorAll('.combobox-option-label')).map(option => option.textContent)).toEqual(['Plant', 'Planter']);
+	});
+
+	it('starts a new blank node with [, puts the focus into the input of its type, and writes it with the type', async () => {
+		const { host } = await renderList();
+		const row = rows()[2];
+
+		await userEvent.click(within(row).getByLabelText('New value'));
+		await userEvent.keyboard('[[');
+
+		const box = within(row).getByRole('group', { name: 'New blank node' });
+
+		await expect.poll(() => document.activeElement).toBe(within(box).getByLabelText('New value'));
+
+		await userEvent.keyboard('ex:Leaf{Enter}');
+		await leaveList();
+
+		expect(host.submitted.map(edit => edit.operations[0])).toEqual([{
+			op: 'setValues',
+			subject: TEST_SUBJECT,
+			predicate: RDFS.subClassOf,
+			values: [
+				{ kind: 'existing', anchor: 130 },
+				{ kind: 'node', statements: [{ predicate: RDF.type, values: [{ kind: 'term', term: RdfDataFactory.namedNode(`${EXAMPLE_NAMESPACE}Leaf`) }] }] }
+			]
+		}]);
 	});
 });

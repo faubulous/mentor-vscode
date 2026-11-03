@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import { RDFS, XSD } from '@faubulous/mentor-rdf';
-import { TEST_NAMESPACES, TEST_SUBJECT, createLiteralView, createProperty, withAnchors, createTestResourceDetail } from '@src/utilities/mocks/statement-fixtures';
+import { RDF, RDFS, XSD } from '@faubulous/mentor-rdf';
+import { EXAMPLE_NAMESPACE as EX, TEST_NAMESPACES, TEST_SUBJECT, createLiteralView, createProperty, withAnchors, createTestResourceDetail } from '@src/utilities/mocks/statement-fixtures';
 import { PropertyView } from '../form-editor-model';
 import { TypedTermReader } from '../services/statement/typed-term-reader';
 import { EditWriter } from './edit-writer';
@@ -70,6 +70,45 @@ describe('StatementRowEditor', () => {
 
 		expect(abandoned).toHaveBeenCalledWith(editor);
 		expect(requested).toEqual([]);
+	});
+
+	it('writes a new blank node once its type is chosen, and drops one without a type when the row is left', () => {
+		const typed = createEditor();
+		const type = RdfDataFactory.namedNode(`${EX}Leaf`);
+
+		typed.editor.addNode();
+		typed.editor.setNodeType(1, type);
+		typed.editor.leave();
+
+		expect(typed.editor.takeEdit()).toEqual([{
+			op: 'setValues',
+			subject: TEST_SUBJECT,
+			predicate: RDFS.label,
+			values: [{ kind: 'existing', anchor: 110 }, { kind: 'node', statements: [{ predicate: RDF.type, values: [{ kind: 'term', term: type }] }] }]
+		}]);
+
+		const untyped = createEditor();
+
+		untyped.editor.addNode();
+		untyped.editor.leave();
+
+		expect(untyped.requested).toEqual([]);
+		expect(untyped.editor.state.draft.values).toHaveLength(1);
+	});
+
+	it('takes the sent mark off a new blank node when the edit writing it is refused', () => {
+		const { editor } = createEditor();
+
+		editor.addNode();
+		editor.setNodeType(1, RdfDataFactory.namedNode(`${EX}Leaf`));
+		editor.leave();
+		editor.takeEdit();
+
+		expect(editor.state.draft.values[1]).toMatchObject({ node: { sent: true } });
+
+		editor.settle({ ok: false, problem: { kind: 'valueMoved' }, version: 1 });
+
+		expect(editor.state.draft.values[1]).toMatchObject({ node: { sent: false } });
 	});
 
 	it('waits for the version an applied edit produced, then carries what was typed meanwhile over to it', () => {

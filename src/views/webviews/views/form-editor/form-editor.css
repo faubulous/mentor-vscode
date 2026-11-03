@@ -746,9 +746,19 @@ body {
 	outline: 1px solid var(--vscode-focusBorder);
 }
 
+/* The header of the box of a new blank node, on the grid of the box like a row of it. */
+.box-header-line {
+	grid-column: 1 / -1;
+	display: grid;
+	grid-template-columns: subgrid;
+	align-items: start;
+	line-height: var(--statement-line-height);
+}
+
 /* The type label of an edited box lines up with the text of the predicate fields under it, which
    a text field sets in by its border and padding. */
-.statement-list.is-editable > .statement-line.is-box-header > .statement-predicate {
+.statement-list.is-editable > .statement-line.is-box-header > .statement-predicate,
+.statement-list.is-editable > .box-header-line > .statement-predicate {
 	padding-left: 5px;
 	line-height: var(--form-field-height);
 }
@@ -776,7 +786,9 @@ body {
 }
 
 .statement-line:hover > .statement-actions > .statement-row-remove,
-.statement-line:focus-within > .statement-actions > .statement-row-remove {
+.statement-line:focus-within > .statement-actions > .statement-row-remove,
+.box-header-line:hover > .statement-actions > .statement-row-remove,
+.box-header-line:focus-within > .statement-actions > .statement-row-remove {
 	visibility: visible;
 }
 
@@ -788,13 +800,14 @@ body {
 	outline: 1px solid var(--vscode-focusBorder);
 }
 
-/* Add property: a text link under the rows of a blank node, its text lined up with the text of the
-   predicate fields above it. */
+/*
+ * Add value and Add property: text links. Add value stands under the boxes of a row of blank nodes
+ * only and brings back the input of a new value; Add property stands under the rows of a blank node,
+ * its text lined up with the text of the predicate fields above it.
+ */
+.statement-value-add,
 .statement-list-add {
-	grid-column: 2 / -1;
-	justify-self: start;
-	margin-top: 4px;
-	padding: 0 0 0 5px;
+	padding: 0;
 	border: 0;
 	background: none;
 	color: var(--vscode-textLink-foreground);
@@ -803,13 +816,26 @@ body {
 	cursor: pointer;
 }
 
+.statement-value-add:hover,
 .statement-list-add:hover {
 	color: var(--vscode-textLink-activeForeground, var(--vscode-textLink-foreground));
 }
 
+.statement-value-add:focus-visible,
 .statement-list-add:focus-visible {
 	outline: 1px solid var(--vscode-focusBorder);
 	outline-offset: 1px;
+}
+
+.statement-value-add {
+	align-self: flex-start;
+}
+
+.statement-list-add {
+	grid-column: 2 / -1;
+	justify-self: start;
+	margin-top: 4px;
+	padding-left: 5px;
 }
 
 .nested-placeholder {

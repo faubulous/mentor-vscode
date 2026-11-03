@@ -1,4 +1,4 @@
-import { KeyboardEvent, MouseEvent, useMemo, useRef } from 'react';
+import { KeyboardEvent, MouseEvent, useEffect, useMemo, useRef } from 'react';
 import { VscodeTextfield } from '@vscode-elements/elements';
 import { ValueKind } from '@src/utilities/value-kind';
 import { BlankNode, NamedNode } from '@rdfjs/types';
@@ -75,6 +75,17 @@ export interface ResourceValuesProps {
 	 * Called to remove a value.
 	 */
 	onRemove: (index: number) => void;
+
+	/**
+	 * Called when `[` is typed into the empty input, to start a new blank node; absent where the
+	 * input takes no blank node.
+	 */
+	onStartNode?: () => void;
+
+	/**
+	 * Whether the input takes the focus when it appears.
+	 */
+	autoFocus?: boolean;
 }
 
 /**
@@ -87,10 +98,19 @@ export interface ResourceValuesProps {
  * @returns The box.
  */
 export function ResourceValues(props: ResourceValuesProps): React.JSX.Element {
-	const { resources, documentResources, range, pendingText, services, placeholder, onPendingInput, onPick, onCreate, onRemove } = props;
+	const { resources, documentResources, range, pendingText, services, placeholder, onPendingInput, onPick, onCreate, onRemove, onStartNode, autoFocus = false } = props;
 	const pills = useRef<(HTMLElement | null)[]>([]);
 	const fieldRef = useRef<VscodeTextfield>(null);
 	const options = useMemo(() => range === 'literal' ? [] : _optionsOf(documentResources, resources, services), [range, documentResources, resources, services]);
+
+	// The input takes the focus once it has rendered the field it hands the focus to.
+	useEffect(() => {
+		const field = fieldRef.current;
+
+		if (autoFocus && field) {
+			void field.updateComplete.then(() => field.focus());
+		}
+	}, [autoFocus]);
 
 	const focusPill = (position: number): void => {
 		if (position >= resources.length) {
@@ -134,6 +154,13 @@ export function ResourceValues(props: ResourceValuesProps): React.JSX.Element {
 	};
 
 	const handleFieldKeyDown = (event: KeyboardEvent<VscodeTextfield>): void => {
+		if (onStartNode && event.key === '[' && pendingText === '') {
+			event.preventDefault();
+			onStartNode();
+
+			return;
+		}
+
 		const input = event.currentTarget.wrappedElement;
 		const atStart = input ? input.selectionStart === 0 && input.selectionEnd === 0 : pendingText === '';
 

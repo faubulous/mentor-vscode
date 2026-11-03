@@ -1,5 +1,6 @@
 import { TermView } from '../form-editor-model';
 import { RowValue } from '../state/row-value';
+import { DraftNodeBox } from './draft-node-box';
 import { LiteralValueField } from './literal-value-field';
 import { EditedRow } from './edited-row';
 import { StatementRowContext } from './statement-row-context';
@@ -43,21 +44,26 @@ export function StatementValueCell({ value, view, index, edited, ...context }: S
 	return (
 		<span className={`statement-value${value.kind === 'written' && value.view.nested ? ' is-node' : ''}`}>
 			{comments && <span className="statement-value-comment">{comments.join('\n')}</span>}
-			{edited ? _editedValue(view, index, edited, context) : <TermValue view={view} {...context} />}
+			{edited ? _editedValue(value, view, index, edited, context) : <TermValue view={view} {...context} />}
 		</span>
 	);
 }
 
 /**
- * A value of an edited row: a literal as its field, anything else as it is read with a button that
- * removes it.
+ * A value of an edited row: a literal as its field, a new blank node as the box that asks for its
+ * type, anything else as it is read with a button that removes it.
+ * @param value The value.
  * @param view The view of the value.
  * @param index The index of the value.
  * @param edited The row.
  * @param context Where the row stands.
  * @returns The value.
  */
-function _editedValue(view: TermView, index: number, edited: EditedRow, context: StatementRowContext): React.JSX.Element {
+function _editedValue(value: RowValue, view: TermView, index: number, edited: EditedRow, context: StatementRowContext): React.JSX.Element {
+	if (value.kind === 'term' && value.node) {
+		return <DraftNodeBox type={value.node.type} index={index} edited={edited} />;
+	}
+
 	if (view.term.termType === 'Literal' && !view.collection) {
 		return <LiteralValueField view={view} index={index} edited={edited} />;
 	}

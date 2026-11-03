@@ -310,10 +310,25 @@ export class StatementRowEditor implements EditWriter {
 	 * @param values The values.
 	 */
 	appendValues(values: readonly RowValue[]): void {
-		const draft = values.reduce((current, value) => value.kind === 'term' ? current.withValueAppended(value.term) : current, this._state.draft);
-
-		this._update(this._state.withDraft(draft));
+		this._update(this._state.withDraft(this._state.draft.withValuesAppended(values.filter(value => value.kind === 'term'))));
 		this._requestValues();
+	}
+
+	/**
+	 * Start a new blank node after the values, as `[` in the empty input of a new value does. It is
+	 * written once its type is chosen.
+	 */
+	addNode(): void {
+		this._update(this._state.withDraft(this._state.draft.withNodeAppended()));
+	}
+
+	/**
+	 * Choose the type of a new blank node, or take it back.
+	 * @param index The index of the node among the values.
+	 * @param type The type, or `undefined` for none.
+	 */
+	setNodeType(index: number, type: NamedNode | undefined): void {
+		this._update(this._state.withDraft(this._state.draft.withNodeType(index, type)));
 	}
 
 	/**
@@ -343,18 +358,20 @@ export class StatementRowEditor implements EditWriter {
 	/**
 	 * Write the row as the focus leaves it: text typed for a new value is taken as one, literals
 	 * whose text their datatype does not take go back to what is stored, and text that reads as no
-	 * term stays with its problem shown rather than being lost. A row for a new statement left with
-	 * nothing typed is handed back to the card.
+	 * term stays with its problem shown rather than being lost. New blank nodes no type was chosen
+	 * for go. A row for a new statement left with nothing typed is handed back to the card.
 	 */
 	leave(): void {
-		if (this.isOpen && this._state.predicateText === '' && this._state.pendingText === '' && this._state.draft.values.length === 0) {
+		const draft = this._state.draft.withoutUntypedNodes();
+
+		if (this.isOpen && this._state.predicateText === '' && this._state.pendingText === '' && draft.values.length === 0) {
 			this._owner.abandoned(this);
 
 			return;
 		}
 
 		const reading = this._data.reader.readValue(this._state.pendingText, this._range);
-		const withPending = reading?.term ? this._state.draft.withValueAppended(reading.term) : this._state.draft;
+		const withPending = reading?.term ? draft.withValueAppended(reading.term) : draft;
 		const next = this._state.withDraft(_withUnfittingLiteralsReverted(withPending));
 
 		this._update(reading?.term ? next.withPendingText('') : reading ? next.withProblem(reading.problem) : next);
@@ -403,7 +420,7 @@ export class StatementRowEditor implements EditWriter {
 		this._writes = { predicate: false, values: false };
 		this._claimedPredicate = undefined;
 		this._submitted = false;
-		this._update(this._state.withRejection({ kind: 'refused', problem: outcome.problem }));
+		this._update(this._state.withDraft(this._state.draft.withNodesSent(false)).withRejection({ kind: 'refused', problem: outcome.problem }));
 	}
 
 	/**
@@ -471,7 +488,7 @@ export class StatementRowEditor implements EditWriter {
 			const predicate = this._state.stored.predicate;
 
 			return predicate && !draft.hasSameValues(this._state.stored)
-				? { op: 'setValues', subject: this._data.subject, predicate, values: draft.toStatementValues() }
+				? this._setValues(predicate, draft)
 				: undefined;
 		}
 
@@ -499,7 +516,20 @@ export class StatementRowEditor implements EditWriter {
 
 		this._claimedPredicate = draft.predicate;
 
-		return { op: 'setValues', subject: this._data.subject, predicate: draft.predicate, values: draft.toStatementValues() };
+		return this._setValues(draft.predicate, draft);
+	}
+
+	/**
+	 * Build the edit that writes the values of a draft, and mark its new blank nodes as sent, so
+	 * they are found among the blank nodes the edit writes.
+	 * @param predicate The IRI of the predicate.
+	 * @param draft The draft.
+	 * @returns The edit.
+	 */
+	private _setValues(predicate: string, draft: StatementDraft): EditOperation {
+		this._state = this._state.withDraft(draft.withNodesSent(true));
+
+		return { op: 'setValues', subject: this._data.subject, predicate, values: draft.toStatementValues() };
 	}
 
 	/**

@@ -1,5 +1,5 @@
-import { FocusEvent, KeyboardEvent } from 'react';
-import { OWL, RDF, RDFS } from '@faubulous/mentor-rdf/ontologies';
+import { FocusEvent, KeyboardEvent, useState } from 'react';
+import { RDF } from '@faubulous/mentor-rdf/ontologies';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { PropertyView, TermView } from '../form-editor-model';
 import { useRowEditorState } from '../hooks/use-row-editor-state';
@@ -9,6 +9,7 @@ import { RowValue } from '../state/row-value';
 import { useFormEditorContext } from '../state/form-editor-context';
 import { StatementRowEditor } from '../state/statement-row-editor';
 import { StatementRowState } from '../state/statement-row-state';
+import { getClassResources } from './class-resources';
 import { EditedRow } from './edited-row';
 import { PredicateField } from './predicate-field';
 import { ResourceValues } from './resource-values';
@@ -121,6 +122,9 @@ export function StatementRow({ property, editor, services, autoFocus, removable,
 	const predicateView = edited ? _editedPredicateView(edited.state, edited.services) : property?.predicate;
 	const label = predicateView ? getTermLabel(predicateView) : state?.predicateText ?? '';
 	const error = state ? getRowErrorMessage(state) : undefined;
+	const [addingValue, setAddingValue] = useState(false);
+	// A row of blank nodes only offers Add value under them instead of the input of a new value.
+	const asksToAdd = edited !== undefined && !header && literals.length === 0 && resources.length === 0 && wholes.length > 0 && edited.state.pendingText === '' && !addingValue;
 
 	const handleKeyDown = (event: KeyboardEvent<HTMLElement>): void => {
 		if (!_isOwnEvent(event)) {
@@ -139,6 +143,7 @@ export function StatementRow({ property, editor, services, autoFocus, removable,
 		const next = event.relatedTarget;
 
 		if (!(next instanceof Node) || !event.currentTarget.contains(next)) {
+			setAddingValue(false);
 			editor?.leave();
 		}
 	};
@@ -158,8 +163,9 @@ export function StatementRow({ property, editor, services, autoFocus, removable,
 			</span>
 			<span className="statement-values">
 				{literals.map(entry => <StatementValueCell key={entry.index} {...entry} edited={edited} {...context} />)}
-				{edited ? _resourceBox(edited, resources, property, header !== undefined) : _resourcePills(resources, context)}
+				{edited ? !asksToAdd && _resourceBox(edited, resources, property, { isType: header !== undefined, autoFocus: addingValue }) : _resourcePills(resources, context)}
 				{wholes.map(entry => <StatementValueCell key={entry.index} {...entry} edited={edited} {...context} />)}
+				{asksToAdd && <button type="button" className="statement-value-add" onClick={() => setAddingValue(true)}>Add value</button>}
 				{header?.collapsed && header.summary && <span className="box-summary">{header.summary}</span>}
 			</span>
 			<span className="statement-actions">
@@ -201,15 +207,18 @@ function _chevron(header: BoxHeader): React.JSX.Element {
  * The box of the resources of an edited row, with the input of the next value after the pills. In
  * a row without pills it stands after the boxes of blank nodes, and in a row with values it shows
  * while the focus is in the row. The type of a blank node offers the classes of the document and
- * asks to choose one while there is none.
+ * asks to choose one while there is none. `[` typed into the empty input starts a new blank node
+ * where the predicate takes resources.
  * @param edited The row.
  * @param resources The resources of the row.
  * @param property The property of the row, whose values tell what the predicate takes.
- * @param isType Whether the row is the type of a blank node.
+ * @param options Whether the row is the type of a blank node, and whether the input takes the focus.
  * @returns The box.
  */
-function _resourceBox(edited: EditedRow, resources: readonly ShownValue[], property: PropertyView | undefined, isType: boolean): React.JSX.Element {
+function _resourceBox(edited: EditedRow, resources: readonly ShownValue[], property: PropertyView | undefined, options: { isType: boolean; autoFocus: boolean }): React.JSX.Element {
+	const { isType, autoFocus } = options;
 	const { editor, state, services } = edited;
+	const range = isType ? 'resource' : property?.valueKind?.kind ?? 'any';
 	const onIntent = resources.length === 0 && state.draft.values.length > 0 && state.pendingText === '';
 	const classes = ['statement-value', 'is-adder', ...(resources.length === 0 ? ['is-after-values'] : []), ...(onIntent ? ['is-on-intent'] : [])];
 
@@ -217,8 +226,8 @@ function _resourceBox(edited: EditedRow, resources: readonly ShownValue[], prope
 		<span className={classes.join(' ')}>
 			<ResourceValues
 				resources={resources.map(({ view, index }) => ({ view, index }))}
-				documentResources={isType ? services.resources.filter(_isClass) : services.resources}
-				range={isType ? 'resource' : property?.valueKind?.kind ?? 'any'}
+				documentResources={isType ? getClassResources(services.resources) : services.resources}
+				range={range}
 				pendingText={state.pendingText}
 				services={services}
 				placeholder={_placeholderOf(state.draft.values.length, isType)}
@@ -226,6 +235,8 @@ function _resourceBox(edited: EditedRow, resources: readonly ShownValue[], prope
 				onPick={term => editor.addValue(term)}
 				onCreate={() => editor.commitPending()}
 				onRemove={index => editor.removeValue(index)}
+				onStartNode={!isType && range !== 'literal' ? () => editor.addNode() : undefined}
+				autoFocus={autoFocus}
 			/>
 		</span>
 	);
@@ -243,15 +254,6 @@ function _placeholderOf(valueCount: number, isType: boolean): string {
 	}
 
 	return isType ? 'Choose type' : 'value';
-}
-
-/**
- * Indicate whether a resource of the document is a class it declares.
- * @param resource The resource.
- * @returns `true` for a resource typed as an OWL or RDFS class.
- */
-function _isClass(resource: { typeIri?: string }): boolean {
-	return resource.typeIri === OWL.Class || resource.typeIri === RDFS.Class;
 }
 
 /**
