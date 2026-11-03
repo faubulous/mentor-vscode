@@ -25,7 +25,7 @@ function createService(): { service: ResourceDataService; send: ReturnType<typeo
 	const send = vi.fn();
 	const service = new ResourceDataService(send);
 
-	service.setVersion(1);
+	service.setSnapshot(1, 1);
 
 	return { service, send };
 }
@@ -78,7 +78,22 @@ describe('ResourceDataService', () => {
 	it('ignores detail delivered for a superseded version', () => {
 		const { service } = createService();
 
-		service.setVersion(2);
+		service.setSnapshot(2, 2);
+		service.accept(1, [detail('a')]);
+
+		expect(service.get(resource('a'))).toBeUndefined();
+	});
+
+	it('loads the detail again for the same document version built anew, keeping it as stale meanwhile', () => {
+		const { service } = createService();
+
+		service.accept(1, [detail('a')]);
+		service.setSnapshot(1, 2);
+
+		expect(service.version).toBe(1);
+		expect(service.get(resource('a'))).toBeUndefined();
+		expect(service.getStale(resource('a'))).toEqual(detail('a'));
+
 		service.accept(1, [detail('a')]);
 
 		expect(service.get(resource('a'))).toBeUndefined();
@@ -88,7 +103,7 @@ describe('ResourceDataService', () => {
 		const { service } = createService();
 
 		service.accept(1, [detail('a')]);
-		service.setVersion(2);
+		service.setSnapshot(2, 2);
 
 		expect(service.get(resource('a'))).toBeUndefined();
 		expect(service.getStale(resource('a'))).toEqual(detail('a'));
@@ -104,7 +119,7 @@ describe('ResourceDataService', () => {
 
 		service.request([resource('a')]);
 		vi.runAllTimers();
-		service.setVersion(2);
+		service.setSnapshot(2, 2);
 		service.request([resource('a')]);
 		vi.runAllTimers();
 

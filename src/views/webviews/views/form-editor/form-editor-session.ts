@@ -95,6 +95,11 @@ export class FormEditorSession implements vscode.Disposable {
 	private _snapshotKey?: string;
 
 	/**
+	 * How many snapshots were built, which numbers their revisions.
+	 */
+	private _revision = 0;
+
+	/**
 	 * Whether a refresh waits for the document to load, which answers the refreshes asked for
 	 * meanwhile.
 	 */
@@ -440,6 +445,7 @@ export class FormEditorSession implements vscode.Disposable {
 	private _rebuildSnapshot(context: TurtleDocument, readOnly: ReadOnlyReason | undefined, problems: DocumentProblem[], key: string): void {
 		const result = new SnapshotBuilder({
 			version: this._document.version,
+			revision: ++this._revision,
 			uri: this._documentUri,
 			quadContexts: readOnly === 'template' ? [] : this._quadContexts.get(context),
 			context,
@@ -492,7 +498,7 @@ export class FormEditorSession implements vscode.Disposable {
 			}
 		}
 
-		this._postMessage({ id: 'ResourcesLoaded', version: this._snapshot.version, resources, missing });
+		this._postMessage({ id: 'ResourcesLoaded', revision: this._snapshot.revision, resources, missing });
 	}
 
 	/**
@@ -632,6 +638,7 @@ export class FormEditorSession implements vscode.Disposable {
 	private _buildEmptySnapshot(readOnly: ReadOnlyReason): DocumentSnapshot {
 		return {
 			version: this._document.version,
+			revision: ++this._revision,
 			uri: this._documentUri,
 			fileName: this._document.uri.path.split('/').pop() ?? '',
 			namespaces: [],

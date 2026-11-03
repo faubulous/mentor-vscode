@@ -69,11 +69,11 @@ function FormEditor(): React.JSX.Element {
 	const onMessage = useCallback((message: FormEditorMessages) => {
 		switch (message.id) {
 			case 'DocumentSnapshot':
-				dataService.setVersion(message.snapshot.version);
+				dataService.setSnapshot(message.snapshot.version, message.snapshot.revision);
 				setSnapshot(message.snapshot);
 				break;
 			case 'ResourcesLoaded':
-				dataService.accept(message.version, message.resources, message.missing);
+				dataService.accept(message.revision, message.resources, message.missing);
 				break;
 			case 'EditApplied':
 			case 'EditRejected':

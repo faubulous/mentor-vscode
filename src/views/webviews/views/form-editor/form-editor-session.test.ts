@@ -369,6 +369,23 @@ describe('FormEditorSession', () => {
 		expect(snapshots[1].snapshot).not.toBe(snapshots[0].snapshot);
 	});
 
+	it('numbers every snapshot it builds and delivers the details for the current one', async () => {
+		const loading = registerLoadingServices();
+		const { posted, receive } = await createSession('ex:A ex:p "x" .\n', undefined, loading.services);
+
+		await receive({ id: 'Ready' });
+
+		loading.changeLanguage();
+		await settle();
+		await receive({ id: 'RequestResources', resources: [RdfDataFactory.namedNode(`${EX}A`)] });
+
+		const [first, second] = postedOf(posted, 'DocumentSnapshot').map(message => message.snapshot);
+
+		expect(second.version).toBe(first.version);
+		expect(second.revision).toBeGreaterThan(first.revision);
+		expect(postedOf(posted, 'ResourcesLoaded')[0].revision).toBe(second.revision);
+	});
+
 	it('posts nothing once disposed', async () => {
 		const { session, posted } = await createSession('ex:A a ex:Class .\n');
 

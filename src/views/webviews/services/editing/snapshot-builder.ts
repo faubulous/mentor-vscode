@@ -25,6 +25,11 @@ export interface SnapshotInput {
 	version: number;
 
 	/**
+	 * Which build of the snapshots of the document this one is.
+	 */
+	revision: number;
+
+	/**
 	 * The URI of the document.
 	 */
 	uri: string;
@@ -102,6 +107,7 @@ export class SnapshotBuilder {
 			index,
 			snapshot: {
 				version: this._input.version,
+				revision: this._input.revision,
 				uri: this._input.uri,
 				fileName: getFileName(this._input.uri),
 				namespaces: index.namespaces,

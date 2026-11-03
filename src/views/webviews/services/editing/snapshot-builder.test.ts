@@ -24,6 +24,7 @@ function snapshotOf(body: string, activeLanguage?: string): DocumentSnapshot {
 
 	return new SnapshotBuilder({
 		version: 7,
+		revision: 1,
 		uri: 'file:///workspace/vocab.ttl',
 		quadContexts: readTurtleQuadContexts(PREAMBLE + body),
 		context,
@@ -149,6 +150,7 @@ describe('SnapshotBuilder', () => {
 		const context = createResolvingDocumentContext({ namespaces: NAMESPACES });
 		const { snapshot } = new SnapshotBuilder({
 			version: 1,
+			revision: 1,
 			uri: 'file:///workspace/vocab.ttl',
 			quadContexts: [],
 			context,

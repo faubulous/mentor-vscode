@@ -19,10 +19,10 @@ export type FormEditorHostMessage =
 	 */
 	| { id: 'DocumentSnapshot'; snapshot: DocumentSnapshot }
 	/**
-	 * The properties of the resources the webview asked for; `missing` names those the document
-	 * no longer describes.
+	 * The properties of the resources the webview asked for, built for the snapshot of `revision`;
+	 * `missing` names those the document no longer describes.
 	 */
-	| { id: 'ResourcesLoaded'; version: number; resources: ResourceDetail[]; missing: (NamedNode | BlankNode)[] }
+	| { id: 'ResourcesLoaded'; revision: number; resources: ResourceDetail[]; missing: (NamedNode | BlankNode)[] }
 	/**
 	 * An edit of the form was applied, producing the given document version.
 	 */

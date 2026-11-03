@@ -278,6 +278,13 @@ export interface DocumentSnapshot {
 	version: number;
 
 	/**
+	 * Which build of the snapshots of the document this one is. A snapshot is built again for the
+	 * same version when what it reads besides the text changes, such as the labels in the store,
+	 * the settings or the language, so the details of resources belong to a revision.
+	 */
+	revision: number;
+
+	/**
 	 * The URI of the document.
 	 */
 	uri: string;
