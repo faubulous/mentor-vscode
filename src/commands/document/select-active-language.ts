@@ -1,8 +1,9 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
-import { ISettingsService } from '@src/services/core';
 import { IDocumentContextService } from '@src/services/document';
+import { setActiveLanguage } from '@src/services/document/active-language';
+import { resolveActiveRdfDocument } from '@src/utilities/vscode/active-rdf-document';
 
 interface LanguageQuckPickItem extends vscode.QuickPickItem {
 	/**
@@ -14,7 +15,8 @@ interface LanguageQuckPickItem extends vscode.QuickPickItem {
 export const selectActiveLanguage = {
 	id: 'mentor.command.selectActiveLanguage',
 	handler: async () => {
-		const document = vscode.window.activeTextEditor?.document;
+		// The document of the active tab, which may be shown in the form editor.
+		const document = await resolveActiveRdfDocument();
 
 		if (!document) {
 			return;
@@ -78,12 +80,7 @@ export const selectActiveLanguage = {
 
 			quickPick.onDidChangeSelection((selection) => {
 				if (selection.length > 0) {
-					const language = selection[0].language;
-					context.activeLanguageTag = language;
-
-					// Refresh the tree views..
-					const settings = container.resolve<ISettingsService>(ServiceToken.SettingsService);
-					settings.set('view.activeLanguage', language);
+					setActiveLanguage(context, selection[0].language);
 
 					quickPick.dispose();
 				}

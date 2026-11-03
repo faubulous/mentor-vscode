@@ -61,6 +61,10 @@ export type FormEditorWebviewMessage =
 	 * Show a position of the document in a text editor beside the form.
 	 */
 	| { id: 'RevealInTextEditor'; position: DocumentPosition }
+	/**
+	 * Read the document in a language, as Mentor's language selection does.
+	 */
+	| { id: 'SetActiveLanguage'; language: string }
 	| ExecuteCommandMessage;
 
 /**

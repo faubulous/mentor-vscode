@@ -3,7 +3,10 @@ import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { PropertyView, TermView } from '../form-editor-model';
 import { useRowEditorState } from '../hooks/use-row-editor-state';
 import { StatementServices } from '../hooks/use-statement-services';
+import { LanguageFilter } from '../state/language-filter';
+import { LiteralSlot } from '../state/literal-slot';
 import { RowValue } from '../state/row-value';
+import { useFormEditorContext } from '../state/form-editor-context';
 import { StatementRowEditor } from '../state/statement-row-editor';
 import { StatementRowState } from '../state/statement-row-state';
 import { EditedRow } from './edited-row';
@@ -54,6 +57,12 @@ interface ShownValue {
 	 * The index of the value among the values of the statement.
 	 */
 	index: number;
+
+	/**
+	 * The part the value plays for the language shown: the empty field of the language the row
+	 * lacks, or the value typed into it.
+	 */
+	slot?: LiteralSlot;
 }
 
 /**
@@ -64,15 +73,17 @@ interface ShownValue {
  * their box on intent: the predicate field, a field per literal with the label of its language tag
  * or datatype after the text, the input of the next value after the last pill, and a button that
  * removes each value. It is written when the focus leaves it or Enter is pressed in a literal;
- * Escape gives up what was typed.
+ * Escape gives up what was typed. While the form shows one language, the literals of the others are
+ * left out, and an edited row whose literals lack the language has an empty field for it.
  * @param props The statement, its editor and where the row stands.
  * @returns The row.
  */
 export function StatementRow({ property, editor, services, ...context }: StatementRowProps): React.JSX.Element {
 	const state = useRowEditorState(editor);
 	const edited: EditedRow | undefined = editor && state && services ? { editor, state, services } : undefined;
-	const values = _shownValues(state?.draft.values ?? property?.values.map(view => ({ kind: 'written' as const, view })) ?? [], services);
-	const literals = values.filter(entry => _kindOf(entry.view) === 'literal');
+	const { languageFilter = LanguageFilter.ALL } = useFormEditorContext();
+	const values = _shownValues(state?.draft.values ?? property?.values.map(view => ({ kind: 'written' as const, view })) ?? [], services, languageFilter);
+	const literals = [...values.filter(entry => _kindOf(entry.view) === 'literal'), ..._emptySlot(edited, languageFilter)];
 	const resources = values.filter(entry => _kindOf(entry.view) === 'resource');
 	const wholes = values.filter(entry => _kindOf(entry.view) === 'whole');
 	const predicateView = edited ? _editedPredicateView(edited.state, edited.services) : property?.predicate;
@@ -171,17 +182,39 @@ function _resourcePills(resources: readonly ShownValue[], context: StatementRowC
 }
 
 /**
- * The values of a row with the views they are shown with.
+ * The values of a row the form shows, with the views they are shown with.
  * @param values The values.
  * @param services Gives typed terms their views, where the row is edited.
- * @returns The values in order.
+ * @param languageFilter Which literals are shown.
+ * @returns The values in order, those of other languages left out.
  */
-function _shownValues(values: readonly RowValue[], services: StatementServices | undefined): ShownValue[] {
-	return values.map((value, index) => ({
-		value,
-		view: value.kind === 'written' ? value.view : services?.resolver.viewOf(value.term) ?? { term: value.term, editable: false },
-		index
-	}));
+function _shownValues(values: readonly RowValue[], services: StatementServices | undefined, languageFilter: LanguageFilter): ShownValue[] {
+	const filled = languageFilter.filledIndex(values);
+
+	return values.flatMap((value, index): ShownValue[] => {
+		const view = value.kind === 'written' ? value.view : services?.resolver.viewOf(value.term) ?? { term: value.term, editable: false };
+
+		return languageFilter.shows(view.term) ? [{ value, view, index, slot: index === filled ? 'filled' : undefined }] : [];
+	});
+}
+
+/**
+ * The empty field of the language an edited row lacks. It takes the index the value typed into it
+ * gets, so the field stays the same while it turns into that value.
+ * @param edited The row, if it is edited.
+ * @param languageFilter Which language is shown.
+ * @returns The field, or nothing when the row does not lack the language.
+ */
+function _emptySlot(edited: EditedRow | undefined, languageFilter: LanguageFilter): ShownValue[] {
+	const values = edited?.state.draft.values;
+
+	if (!edited || edited.editor.isNew || !values || languageFilter.language === undefined || !languageFilter.lacksLanguage(values)) {
+		return [];
+	}
+
+	const term = RdfDataFactory.literal('', languageFilter.language);
+
+	return [{ value: { kind: 'term', term }, view: { term, editable: true }, index: values.length, slot: 'empty' }];
 }
 
 /**

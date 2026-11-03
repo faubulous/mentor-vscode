@@ -3,6 +3,7 @@ import { RowValue } from '../state/row-value';
 import { EditableLiteral } from './editable-literal';
 import { EditedRow } from './edited-row';
 import { StatementRowContext } from './statement-row-context';
+import { LiteralSlot } from '../state/literal-slot';
 import { TermValue } from './term-value';
 
 /**
@@ -28,6 +29,11 @@ export interface StatementValueCellProps extends StatementRowContext {
 	 * The row the value belongs to, where it is edited.
 	 */
 	edited?: EditedRow;
+
+	/**
+	 * The part a literal plays for the language shown, if any.
+	 */
+	slot?: LiteralSlot;
 }
 
 /**
@@ -37,13 +43,13 @@ export interface StatementValueCellProps extends StatementRowContext {
  * @param props The value, its row and where the row stands.
  * @returns The value.
  */
-export function StatementValueCell({ value, view, index, edited, ...context }: StatementValueCellProps): React.JSX.Element {
+export function StatementValueCell({ value, view, index, edited, slot, ...context }: StatementValueCellProps): React.JSX.Element {
 	const comments = value.kind === 'written' ? value.view.comments : undefined;
 
 	return (
 		<span className={`statement-value${value.kind === 'written' && value.view.nested ? ' is-node' : ''}`}>
 			{comments && <span className="statement-value-comment">{comments.join('\n')}</span>}
-			{edited ? _editedValue(view, index, edited, context) : <TermValue view={view} {...context} />}
+			{edited ? _editedValue(view, index, edited, slot, context) : <TermValue view={view} {...context} />}
 		</span>
 	);
 }
@@ -54,12 +60,13 @@ export function StatementValueCell({ value, view, index, edited, ...context }: S
  * @param view The view of the value.
  * @param index The index of the value.
  * @param edited The row.
+ * @param slot The part a literal plays for the language shown, if any.
  * @param context Where the row stands.
  * @returns The value.
  */
-function _editedValue(view: TermView, index: number, edited: EditedRow, context: StatementRowContext): React.JSX.Element {
+function _editedValue(view: TermView, index: number, edited: EditedRow, slot: LiteralSlot | undefined, context: StatementRowContext): React.JSX.Element {
 	if (view.term.termType === 'Literal' && !view.collection) {
-		return <EditableLiteral view={view} index={index} edited={edited} />;
+		return <EditableLiteral view={view} index={index} edited={edited} slot={slot} />;
 	}
 
 	return (

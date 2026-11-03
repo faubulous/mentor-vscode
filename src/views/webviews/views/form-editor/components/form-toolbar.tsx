@@ -1,5 +1,6 @@
 import { SectionHeaderContextMenu } from '@src/views/webviews/components/section-header-context-menu';
 import { FilterField, FilterFieldProps } from './filter-field';
+import { LanguageSwitch, LanguageSwitchProps } from './language-switch';
 
 /**
  * Properties of the {@link FormToolbar} component.
@@ -9,6 +10,11 @@ export interface FormToolbarProps {
 	 * The filter field.
 	 */
 	filter: FilterFieldProps;
+
+	/**
+	 * The language switch, where the document writes language tags.
+	 */
+	languages?: LanguageSwitchProps;
 
 	/**
 	 * Whether the terms of other vocabularies the document only declares are left out of the list.
@@ -23,17 +29,18 @@ export interface FormToolbarProps {
 
 /**
  * The bar along the top of the editor, which stays while the form scrolls: the filter in its
- * middle and the menu of further actions at its end.
+ * middle, and the language switch and the menu of further actions at its end.
  * @param props The filter and the actions.
  * @returns The toolbar.
  */
-export function FormToolbar({ filter, externalDeclarationsHidden, onToggleExternalDeclarations }: FormToolbarProps): React.JSX.Element {
+export function FormToolbar({ filter, languages, externalDeclarationsHidden, onToggleExternalDeclarations }: FormToolbarProps): React.JSX.Element {
 	return (
 		<div className="form-toolbar" role="toolbar" aria-label="Form editor">
 			<div className="form-toolbar-content">
 				<div className="form-toolbar-start" />
 				<div className="form-toolbar-middle"><FilterField {...filter} /></div>
 				<div className="form-toolbar-end">
+					{languages && <LanguageSwitch {...languages} />}
 					<SectionHeaderContextMenu items={[
 						{ label: externalDeclarationsHidden ? 'Show External Declarations' : 'Hide External Declarations', onClick: onToggleExternalDeclarations }
 					]} />

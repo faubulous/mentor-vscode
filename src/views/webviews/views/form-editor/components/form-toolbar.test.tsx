@@ -75,4 +75,31 @@ describe('FormToolbar', () => {
 
 		expect(screen.getByText('Show External Declarations')).toBeTruthy();
 	});
+	it('offers the languages of the document and all of them, and tells which was chosen', () => {
+		const onSelectLanguage = vi.fn();
+		const onSelectAll = vi.fn();
+
+		renderToolbar({ languages: { languageTags: { en: 'en', 'en-us': 'en-US', de: 'de' }, activeLanguage: 'de', allLanguages: false, onSelectLanguage, onSelectAll } });
+
+		const select = screen.getByLabelText('Language') as HTMLElement & { value: string };
+		const options = Array.from(select.querySelectorAll('vscode-option')).map(option => option.getAttribute('value'));
+
+		expect(options).toEqual(['*', 'de', 'en', 'en-us']);
+		expect(select.querySelector('vscode-option[value="de"]')?.textContent).toMatch(/^de( — .+)?$/);
+		expect(select.getAttribute('value') ?? select.value).toBe('de');
+
+		select.value = 'en-us';
+		fireEvent(select, new Event('change'));
+		select.value = '*';
+		fireEvent(select, new Event('change'));
+
+		expect(onSelectLanguage).toHaveBeenCalledWith('en-us');
+		expect(onSelectAll).toHaveBeenCalledOnce();
+	});
+
+	it('shows no language switch for a document without language tags', () => {
+		renderToolbar();
+
+		expect(screen.queryByLabelText('Language')).toBeNull();
+	});
 });

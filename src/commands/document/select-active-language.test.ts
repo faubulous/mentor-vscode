@@ -65,6 +65,24 @@ describe('selectActiveLanguage', () => {
 		expect(mockQuickPick.show).not.toHaveBeenCalled();
 	});
 
+	it('reads the document of the active tab, as when a form editor holds the focus', async () => {
+		const uri = vscode.Uri.parse('file:///form.ttl');
+
+		(vscode.window as any).activeTextEditor = undefined;
+		(vscode.window as any).tabGroups.activeTabGroup.activeTab = { input: { uri } };
+		(vscode.workspace as any).textDocuments.push({ uri });
+		mockContextService.contexts = { 'file:///form.ttl': { languageTagStats: { 'en': 1 }, activeLanguageTag: undefined } };
+
+		try {
+			await selectActiveLanguage.handler();
+		} finally {
+			(vscode.window as any).tabGroups.activeTabGroup.activeTab = undefined;
+			(vscode.workspace as any).textDocuments.pop();
+		}
+
+		expect(mockQuickPick.show).toHaveBeenCalled();
+	});
+
 	it('returns early when no document context', async () => {
 		(vscode.window as any).activeTextEditor = { document: { uri: vscode.Uri.parse('file:///test.ttl') } };
 		mockContextService.contexts = {};

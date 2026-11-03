@@ -81,6 +81,11 @@ body {
 	margin-right: -6px;
 }
 
+/* The language switch takes the width of a language name, not that of a settings field. */
+.language-switch {
+	width: 13em;
+}
+
 /* The filter: a text field with its search icon, token, count and clear button inside. */
 .filter-field {
 	display: flex;
