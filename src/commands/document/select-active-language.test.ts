@@ -65,7 +65,7 @@ function openDocument(languageTagStats: Record<string, number>, activeLanguageTa
 /**
  * Run the command and wait until its quick pick is shown.
  * @param options The options of the command.
- * @returns The choice the command resolves with, once the pick is closed.
+ * @returns The selection the command resolves with, once the pick is closed.
  */
 async function showPick(options?: Parameters<typeof selectActiveLanguage.handler>[0]): Promise<{ result: ReturnType<typeof selectActiveLanguage.handler> }> {
 	const result = selectActiveLanguage.handler(options);
@@ -80,7 +80,7 @@ async function showPick(options?: Parameters<typeof selectActiveLanguage.handler
  * @param language The language tag, or `undefined` for the values without a language.
  */
 function itemOf(language: string | undefined): any {
-	return quickPick.items.find(item => item.choice?.kind === 'language' && item.choice.language === language);
+	return quickPick.items.find(item => item.selection?.kind === 'language' && item.selection.language === language);
 }
 
 describe('selectActiveLanguage', () => {
@@ -156,7 +156,7 @@ describe('selectActiveLanguage', () => {
 			(vscode.workspace as any).textDocuments.pop();
 		}
 
-		expect(quickPick.items.map(item => item.choice.language)).toEqual(['en']);
+		expect(quickPick.items.map(item => item.selection.language)).toEqual(['en']);
 	});
 
 	it('lists the values without a language first, then the languages by their tags, with their counts', async () => {
@@ -164,14 +164,14 @@ describe('selectActiveLanguage', () => {
 
 		const { result } = await showPick();
 
-		expect(quickPick.items.map(item => item.choice.language)).toEqual([undefined, 'de', 'en']);
+		expect(quickPick.items.map(item => item.selection.language)).toEqual([undefined, 'de', 'en']);
 		expect(quickPick.items.map(item => item.description)).toEqual(['2 values', '1 value', '5 values']);
 
 		quickPick.hide();
 		await result;
 	});
 
-	it('offers no choice for a document without language tags', async () => {
+	it('offers no selection for a document without language tags', async () => {
 		openDocument({});
 
 		const { result } = await showPick();

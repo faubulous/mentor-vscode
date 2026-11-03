@@ -10,7 +10,7 @@ import { resolveActiveRdfDocument } from '@src/utilities/vscode/active-rdf-docum
  * The language chosen with {@link selectActiveLanguage}: a language tag, `undefined` for the values
  * without a language, or the values of every language.
  */
-export type LanguageChoice =
+export type LanguageSelection =
 	| { kind: 'language'; language: string | undefined }
 	| { kind: 'allLanguages' };
 
@@ -30,13 +30,13 @@ export interface SelectActiveLanguageOptions {
 }
 
 /**
- * An item of the quick pick, with the choice it stands for.
+ * An item of the quick pick, with the selection it stands for.
  */
 interface LanguageQuickPickItem extends vscode.QuickPickItem {
 	/**
-	 * The choice, or `undefined` for an item that is no choice.
+	 * The selection, or `undefined` for an item that selects nothing.
 	 */
-	choice?: LanguageChoice;
+	selection?: LanguageSelection;
 }
 
 /**
@@ -52,7 +52,7 @@ const NO_LANGUAGE_KEY = '__unspecified__';
  */
 export const selectActiveLanguage = {
 	id: 'mentor.command.selectActiveLanguage',
-	handler: async (options: SelectActiveLanguageOptions = {}): Promise<LanguageChoice | undefined> => {
+	handler: async (options: SelectActiveLanguageOptions = {}): Promise<LanguageSelection | undefined> => {
 		// The document of the active tab, which may be shown in the form editor.
 		const document = await resolveActiveRdfDocument();
 
@@ -67,15 +67,15 @@ export const selectActiveLanguage = {
 			return undefined;
 		}
 
-		const choice = await _pickLanguage(context, options);
+		const selection = await _pickLanguage(context, options);
 
-		if (choice?.kind === 'language') {
-			context.activeLanguageTag = choice.language;
+		if (selection?.kind === 'language') {
+			context.activeLanguageTag = selection.language;
 
-			container.resolve<ISettingsService>(ServiceToken.SettingsService).set('view.activeLanguage', choice.language);
+			container.resolve<ISettingsService>(ServiceToken.SettingsService).set('view.activeLanguage', selection.language);
 		}
 
-		return choice;
+		return selection;
 	}
 };
 
@@ -83,20 +83,20 @@ export const selectActiveLanguage = {
  * Let the user choose a language among those a document writes, with the number of values in each.
  * @param context The context of the document.
  * @param options Whether the values of every language are offered.
- * @returns The choice, or `undefined` when the pick was dismissed.
+ * @returns The selection, or `undefined` when the pick was dismissed.
  */
-function _pickLanguage(context: IDocumentContext, options: SelectActiveLanguageOptions = {}): Promise<LanguageChoice | undefined> {
+function _pickLanguage(context: IDocumentContext, options: SelectActiveLanguageOptions = {}): Promise<LanguageSelection | undefined> {
 	const quickPick = vscode.window.createQuickPick<LanguageQuickPickItem>();
 	const items = _itemsOf(context, options);
 
 	quickPick.title = 'Select active document language';
 	quickPick.items = items;
-	quickPick.activeItems = items.filter(item => _isCurrent(item.choice, context, options));
+	quickPick.activeItems = items.filter(item => _isCurrent(item.selection, context, options));
 
 	return new Promise(resolve => {
-		quickPick.onDidChangeSelection(selection => {
-			if (selection.length > 0 && selection[0].choice) {
-				resolve(selection[0].choice);
+		quickPick.onDidChangeSelection(selectedItems => {
+			if (selectedItems.length > 0 && selectedItems[0].selection) {
+				resolve(selectedItems[0].selection);
 
 				quickPick.dispose();
 			}
@@ -134,14 +134,14 @@ function _itemsOf(context: IDocumentContext, options: SelectActiveLanguageOption
 		const displayName = language ? (languageNames.of(language) ?? language) : 'undefined';
 
 		return {
-			choice: { kind: 'language', language },
+			selection: { kind: 'language', language },
 			label: language ? `${language} - ${displayName}` : displayName,
 			description: `${count} ${values}`
 		};
 	}).sort((first, second) => _compareLanguages(_languageOf(first), _languageOf(second)));
 
 	if (options.offerAllLanguages) {
-		return [{ choice: { kind: 'allLanguages' }, label: 'All languages', description: 'Show the values of every language' }, ...languageItems];
+		return [{ selection: { kind: 'allLanguages' }, label: 'All languages', description: 'Show the values of every language' }, ...languageItems];
 	}
 
 	return languageItems;
@@ -171,7 +171,7 @@ function _languageStatsOf(context: IDocumentContext): Map<string, number> {
  * @returns The language tag, or `undefined` for the values without a language.
  */
 function _languageOf(item: LanguageQuickPickItem): string | undefined {
-	return item.choice?.kind === 'language' ? item.choice.language : undefined;
+	return item.selection?.kind === 'language' ? item.selection.language : undefined;
 }
 
 /**
@@ -189,16 +189,16 @@ function _compareLanguages(first: string | undefined, second: string | undefined
 }
 
 /**
- * Indicate whether a choice is the one in effect, which the pick starts on.
- * @param choice The choice.
+ * Indicate whether a selection is the one in effect, which the pick starts on.
+ * @param selection The selection.
  * @param context The context of the document.
  * @param options Whether the values of every language are shown.
- * @returns `true` for the choice in effect.
+ * @returns `true` for the selection in effect.
  */
-function _isCurrent(choice: LanguageChoice | undefined, context: IDocumentContext, options: SelectActiveLanguageOptions): boolean {
-	if (choice?.kind === 'allLanguages') {
+function _isCurrent(selection: LanguageSelection | undefined, context: IDocumentContext, options: SelectActiveLanguageOptions): boolean {
+	if (selection?.kind === 'allLanguages') {
 		return options.allLanguagesShown === true;
 	}
 
-	return choice?.kind === 'language' && !options.allLanguagesShown && choice.language === context.activeLanguageTag;
+	return selection?.kind === 'language' && !options.allLanguagesShown && selection.language === context.activeLanguageTag;
 }

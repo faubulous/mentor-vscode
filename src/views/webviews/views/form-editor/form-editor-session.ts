@@ -7,7 +7,7 @@ import { RdfSyntax } from '@faubulous/mentor-rdf-parsers';
 import { VocabularyRepository, rdf } from '@faubulous/mentor-rdf';
 import { ServiceToken } from '@src/services/tokens';
 import { ISettingsService } from '@src/services/core';
-import { LanguageChoice, SelectActiveLanguageOptions, selectActiveLanguage } from '@src/commands/document/select-active-language';
+import { LanguageSelection, SelectActiveLanguageOptions, selectActiveLanguage } from '@src/commands/document/select-active-language';
 import { IDocumentContextService } from '@src/services/document/document-context-service.interface';
 import { IDocumentTokenSource } from '@src/services/document/document-token-source.interface';
 import { TurtleDocument } from '@src/languages/turtle/turtle-document';
@@ -373,15 +373,15 @@ export class FormEditorSession implements vscode.Disposable {
 	 */
 	private async _pickLanguage(allLanguages: boolean): Promise<void> {
 		const options: SelectActiveLanguageOptions = { offerAllLanguages: true, allLanguagesShown: allLanguages };
-		const choice = await vscode.commands.executeCommand<LanguageChoice | undefined>(selectActiveLanguage.id, options);
+		const selection = await vscode.commands.executeCommand<LanguageSelection | undefined>(selectActiveLanguage.id, options);
 
-		if (!choice) {
+		if (!selection) {
 			return;
 		}
 
-		this._postMessage({ id: 'LanguagePicked', allLanguages: choice.kind === 'allLanguages' });
+		this._postMessage({ id: 'LanguagePicked', allLanguages: selection.kind === 'allLanguages' });
 
-		if (choice.kind === 'language') {
+		if (selection.kind === 'language') {
 			void this._refreshWhenLoaded();
 		}
 	}
