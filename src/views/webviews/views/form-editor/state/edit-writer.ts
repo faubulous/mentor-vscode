@@ -9,9 +9,15 @@ import { EditOutcome } from '../services/editing-host-service.interface';
  */
 export interface EditWriter {
 	/**
-	 * The resource the writer edits, whose card has to stay mounted while the writer is busy.
+	 * The resource the writer edits.
 	 */
 	readonly subject: NamedNode | BlankNode;
+
+	/**
+	 * The resource of the card of the list that shows the writer, which has to stay mounted while
+	 * the writer is busy: the subject itself, or the card a nested blank node is shown in.
+	 */
+	readonly card: NamedNode | BlankNode;
 
 	/**
 	 * The document version the data of the writer belongs to.

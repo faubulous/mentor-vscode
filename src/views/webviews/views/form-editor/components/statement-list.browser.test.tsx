@@ -5,7 +5,7 @@ import { RDFS, XSD } from '@faubulous/mentor-rdf';
 import { createEditingHostStub } from '@src/utilities/mocks/editing-host-fixtures';
 import { createResourceDataServiceStub } from '@src/utilities/mocks/resource-data-service-fixtures';
 import { createResourceSummary } from '@src/utilities/mocks/resource-summary-fixtures';
-import { EXAMPLE_NAMESPACE, TEST_NAMESPACES, TEST_SUBJECT, createProperty, createSampleResourceDetail, createTestResourceDetail, withAnchors } from '@src/utilities/mocks/statement-fixtures';
+import { EXAMPLE_NAMESPACE, TEST_NAMESPACES, TEST_SUBJECT, createLiteralView, createProperty, createSampleResourceDetail, createTestResourceDetail, withAnchors } from '@src/utilities/mocks/statement-fixtures';
 import { ResourceDetail } from '../form-editor-model';
 import { EditingController } from '../state/editing-controller';
 import { FormEditorContext } from '../state/form-editor-context';
@@ -19,11 +19,13 @@ const RESOURCES = [createResourceSummary('Plant', { label: 'Plant' }), createRes
 /**
  * Render the edited statements of a detail in the form editor, written through a controller over
  * a recording host.
+ * @param detail The detail.
+ * @param others The details of the blank nodes it shows.
  */
-async function renderList(detail: ResourceDetail = SAMPLE) {
+async function renderList(detail: ResourceDetail = SAMPLE, others: ResourceDetail[] = []) {
 	const host = createEditingHostStub();
 	const editing = new EditingController(host);
-	const dataService = createResourceDataServiceStub([detail]);
+	const dataService = createResourceDataServiceStub([detail, ...others]);
 	const ui = (current: ResourceDetail) => (
 		<div className="form-editor">
 			<FormEditorContext.Provider value={{ readOnly: false, editing, namespaces: NAMESPACES, languageTags: {}, resources: RESOURCES }}>
@@ -202,5 +204,25 @@ describe('StatementList, edited in a browser', () => {
 		await leaveList();
 
 		expect(host.submitted.map(edit => edit.operations[0])).toEqual([{ op: 'setValues', subject: TEST_SUBJECT, predicate: RDFS.seeAlso, values: [{ kind: 'term', term: RdfDataFactory.namedNode(`${EXAMPLE_NAMESPACE}Plant`) }] }]);
+	});
+
+	it('puts the focus into the predicate of the row Add property opens in the box of a blank node, and closes it when it is left empty', async () => {
+		const node = RdfDataFactory.blankNode('b1');
+		const detail = withAnchors(createTestResourceDetail([createProperty('rdfs:comment', [{ term: node, editable: true, nested: { term: node, propertyCount: 1 } }])]));
+		const nodeDetail = withAnchors({ term: node, properties: [createProperty('rdfs:label', [createLiteralView('Leaf')])] });
+
+		await renderList(detail, [nodeDetail]);
+
+		const box = document.querySelector<HTMLElement>('.resource-card.is-nested')!;
+
+		await userEvent.click(within(box).getByRole('button', { name: 'Add property' }));
+
+		const row = within(box).getByRole('group', { name: 'New statement' });
+
+		await expect.poll(() => document.activeElement).toBe(within(row).getByLabelText('Predicate'));
+
+		await leaveList();
+
+		expect(within(box).queryByRole('group', { name: 'New statement' })).toBeNull();
 	});
 });

@@ -693,17 +693,24 @@ body {
 	text-overflow: ellipsis;
 }
 
-/* A blank node of a value: its rows, indented behind a hairline rather than boxed. */
+/*
+ * A blank node of a value: a box of its rows, which sit on the grid of the box with the predicate
+ * indented past the column the header of the box keeps for its chevron, and a column for the
+ * button that removes a property.
+ */
 .resource-card.is-nested {
+	--form-nested-radius: 10px;
 	margin: 2px 0;
-	padding: 0 0 0 12px;
-	border-left: 1px solid var(--form-hairline);
+	padding: 6px 0;
+	border: 1px solid var(--form-hairline);
+	border-radius: var(--form-nested-radius);
+	background: color-mix(in oklab, var(--vscode-foreground) 3%, transparent);
 }
 
 .resource-card.is-nested > .statement-list {
-	--form-gutter: 0px;
+	--form-gutter: 30px;
 	--form-predicate-column: 120px;
-	--form-actions-column: 0px;
+	--form-actions-column: 32px;
 	--form-column-gap: 12px;
 	margin-top: 0;
 }
@@ -714,6 +721,56 @@ body {
 
 .resource-card.is-nested .statement-list > .statement-line:last-child {
 	padding-bottom: 0;
+}
+
+/* The button that removes a property of a blank node, shown on hover and while the row has the focus. */
+.statement-row-remove {
+	display: inline-flex;
+	align-items: center;
+	height: var(--form-field-height, var(--statement-line-height));
+	padding: 0 4px;
+	border: 0;
+	border-radius: var(--mentor-radius-md);
+	background: none;
+	color: var(--vscode-descriptionForeground);
+	cursor: pointer;
+	visibility: hidden;
+}
+
+.statement-line:hover > .statement-actions > .statement-row-remove,
+.statement-line:focus-within > .statement-actions > .statement-row-remove {
+	visibility: visible;
+}
+
+.statement-row-remove:hover {
+	color: var(--vscode-foreground);
+}
+
+.statement-row-remove:focus-visible {
+	outline: 1px solid var(--vscode-focusBorder);
+}
+
+/* Add property: a text link under the rows of a blank node, in the column of the predicates. */
+.statement-list-add {
+	grid-column: 2 / -1;
+	justify-self: start;
+	margin-top: 4px;
+	padding: 0;
+	border: 0;
+	background: none;
+	color: var(--vscode-textLink-foreground);
+	font: inherit;
+	line-height: var(--statement-line-height);
+	cursor: pointer;
+}
+
+.statement-list-add:hover {
+	color: var(--vscode-textLink-activeForeground, var(--vscode-textLink-foreground));
+}
+
+.statement-list-add:focus-visible {
+	outline: 1px solid var(--vscode-focusBorder);
+	outline-offset: 1px;
 }
 
 .nested-placeholder {
@@ -832,6 +889,12 @@ body {
 }
 
 /* A row of literals only shows the input of a further value while the focus is in the row. */
+/* Without pills the input of a new value stands after the boxes of blank nodes, so showing it on
+   intent moves nothing above a click into a box. */
+.statement-values > .statement-value.is-adder.is-after-values {
+	order: 1;
+}
+
 .statement-line:not(:focus-within) > .statement-values > .statement-value.is-adder.is-on-intent {
 	display: none;
 }

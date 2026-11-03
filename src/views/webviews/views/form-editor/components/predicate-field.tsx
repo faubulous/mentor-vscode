@@ -1,4 +1,4 @@
-import { FormEvent, KeyboardEvent, useState } from 'react';
+import { FormEvent, KeyboardEvent, useEffect, useRef, useState } from 'react';
 import { VscodeTextfield } from '@vscode-elements/elements';
 import { StatementRowEditor } from '../state/statement-row-editor';
 import { StatementRowState } from '../state/statement-row-state';
@@ -21,15 +21,31 @@ export interface PredicateFieldProps {
 	 * The label of the predicate, shown while the field does not have the focus.
 	 */
 	label: string;
+
+	/**
+	 * Whether the field takes the focus when it appears, as in a row opened by Add property.
+	 */
+	autoFocus?: boolean;
 }
 
 /**
  * The predicate of an edited row: its label at rest, and how it is written while the field has
  * the focus. The predicate it names is taken when the field is left or Enter is pressed in it.
- * @param props The row and the label of its predicate.
+ * @param props The row, the label of its predicate and whether the field takes the focus.
  * @returns The field.
  */
-export function PredicateField({ editor, state, label }: PredicateFieldProps): React.JSX.Element {
+export function PredicateField({ editor, state, label, autoFocus = false }: PredicateFieldProps): React.JSX.Element {
+	const fieldRef = useRef<VscodeTextfield>(null);
+
+	// The field takes the focus once it has rendered the input it hands the focus to.
+	useEffect(() => {
+		const field = fieldRef.current;
+
+		if (autoFocus && field) {
+			void field.updateComplete.then(() => field.focus());
+		}
+	}, [autoFocus]);
+
 	const [focused, setFocused] = useState(false);
 
 	const handleKeyDown = (event: KeyboardEvent<VscodeTextfield>): void => {
@@ -50,6 +66,7 @@ export function PredicateField({ editor, state, label }: PredicateFieldProps): R
 
 	return (
 		<vscode-textfield
+			ref={fieldRef}
 			className="input-field is-predicate"
 			value={focused || editor.isNew ? state.predicateText : label}
 			placeholder="predicate"

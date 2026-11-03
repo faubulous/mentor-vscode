@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { RDFS, XSD } from '@faubulous/mentor-rdf';
 import { TEST_NAMESPACES, TEST_SUBJECT, createLiteralView, createProperty, withAnchors, createTestResourceDetail } from '@src/utilities/mocks/statement-fixtures';
 import { PropertyView } from '../form-editor-model';
@@ -20,7 +20,7 @@ const LABEL: PropertyView = withAnchors(createTestResourceDetail([{ ...createPro
  * Make the data of a row.
  */
 function dataOf(property: PropertyView | undefined, overrides: Partial<StatementRowData> = {}): StatementRowData {
-	return { subject: TEST_SUBJECT, property, predicateText: property ? 'rdfs:label' : '', version: 1, stale: false, reader, ...overrides };
+	return { subject: TEST_SUBJECT, card: TEST_SUBJECT, property, predicateText: property ? 'rdfs:label' : '', version: 1, stale: false, reader, ...overrides };
 }
 
 /**
@@ -34,6 +34,7 @@ function createEditor(property: PropertyView | 'new' = LABEL, owner: Partial<Sta
 		rowOf: () => undefined,
 		submitted: () => undefined,
 		merged: () => undefined,
+		abandoned: () => undefined,
 		...owner
 	}, dataOf(property === 'new' ? undefined : property));
 
@@ -50,6 +51,25 @@ describe('StatementRowEditor', () => {
 		expect(requested).toEqual([editor]);
 		expect(editor.takeEdit()).toEqual([{ op: 'setValues', subject: TEST_SUBJECT, predicate: RDFS.label, values: [{ kind: 'term', term: RdfDataFactory.literal('Oak', 'en') }] }]);
 		expect(editor.ready).toBe(false);
+	});
+
+	it('removes its property with all values at once, as the remove button of a row does', () => {
+		const { editor, requested } = createEditor();
+
+		editor.removeProperty();
+
+		expect(requested).toEqual([editor]);
+		expect(editor.takeEdit()).toEqual([{ op: 'setValues', subject: TEST_SUBJECT, predicate: RDFS.label, values: [] }]);
+	});
+
+	it('hands a row for a new statement back to the card when it is left with nothing typed', () => {
+		const abandoned = vi.fn();
+		const { editor, requested } = createEditor('new', { abandoned });
+
+		editor.leave();
+
+		expect(abandoned).toHaveBeenCalledWith(editor);
+		expect(requested).toEqual([]);
 	});
 
 	it('waits for the version an applied edit produced, then carries what was typed meanwhile over to it', () => {

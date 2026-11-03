@@ -34,8 +34,8 @@ export class EditingController implements IEditingController {
 	constructor(private readonly _hostService: IEditingHostService) { }
 
 	/**
-	 * The `termToString` keys of the resources whose writes are not done yet, whose cards have to
-	 * stay mounted until they are, so their rows receive the data the writes wait for.
+	 * The `termToString` keys of the cards of the list with writes that are not done yet, which have
+	 * to stay mounted until they are, so their rows receive the data the writes wait for.
 	 */
 	get busyResourceKeys(): ReadonlySet<string> {
 		return this._busyResourceKeys;
@@ -89,7 +89,7 @@ export class EditingController implements IEditingController {
 			}
 		}
 
-		const keys = new Set(Array.from(this._busy, writer => termToString(writer.subject)));
+		const keys = new Set(Array.from(this._busy, writer => termToString(writer.card)));
 
 		if (keys.size === this._busyResourceKeys.size && Array.from(keys).every(key => this._busyResourceKeys.has(key))) {
 			return;
