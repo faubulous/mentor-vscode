@@ -102,7 +102,7 @@ describe('FormToolbar', () => {
 		expect(screen.getByRole('button', { name: 'Language: x-Mentor' })).toBeTruthy();
 	});
 
-	it('shows no language switch for a document without language tags', () => {
+	it('shows no language picker for a document without language tags', () => {
 		renderToolbar();
 
 		expect(screen.queryByRole('button', { name: /^Language/ })).toBeNull();

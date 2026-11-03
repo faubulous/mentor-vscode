@@ -7,8 +7,7 @@ import { RdfSyntax } from '@faubulous/mentor-rdf-parsers';
 import { VocabularyRepository, rdf } from '@faubulous/mentor-rdf';
 import { ServiceToken } from '@src/services/tokens';
 import { ISettingsService } from '@src/services/core';
-import { setActiveLanguage } from '@src/services/document/active-language';
-import { pickLanguage } from '@src/services/document/language-quick-pick';
+import { LanguageChoice, SelectActiveLanguageOptions, selectActiveLanguage } from '@src/commands/document/select-active-language';
 import { IDocumentContextService } from '@src/services/document/document-context-service.interface';
 import { IDocumentTokenSource } from '@src/services/document/document-token-source.interface';
 import { TurtleDocument } from '@src/languages/turtle/turtle-document';
@@ -366,20 +365,15 @@ export class FormEditorSession implements vscode.Disposable {
 	}
 
 	/**
-	 * Let the user choose the language the document is read in, or the values of every language,
-	 * and tell the webview which. The snapshot is built again when the language of the document
-	 * changed, which the setting announcing it does not tell when another document chose the same
-	 * language before.
+	 * Let the user choose the language the document is read in, with Mentor's language selection,
+	 * or the values of every language, and tell the webview which. The snapshot is built again when
+	 * a language was chosen, which the setting announcing it does not tell when another document
+	 * chose the same language before.
 	 * @param allLanguages Whether the values of every language are shown now.
 	 */
 	private async _pickLanguage(allLanguages: boolean): Promise<void> {
-		const context = this._contextService.contexts[this._documentUri];
-
-		if (!context) {
-			return;
-		}
-
-		const choice = await pickLanguage(context, { offerAllLanguages: true, allLanguagesShown: allLanguages });
+		const options: SelectActiveLanguageOptions = { offerAllLanguages: true, allLanguagesShown: allLanguages };
+		const choice = await vscode.commands.executeCommand<LanguageChoice | undefined>(selectActiveLanguage.id, options);
 
 		if (!choice) {
 			return;
@@ -388,8 +382,6 @@ export class FormEditorSession implements vscode.Disposable {
 		this._postMessage({ id: 'LanguagePicked', allLanguages: choice.kind === 'allLanguages' });
 
 		if (choice.kind === 'language') {
-			setActiveLanguage(context, choice.language);
-
 			void this._refreshWhenLoaded();
 		}
 	}

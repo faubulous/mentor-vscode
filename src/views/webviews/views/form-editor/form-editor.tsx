@@ -16,7 +16,7 @@ import { FormEditorMessages, FormEditorWebviewMessage } from './form-editor-mess
 import { useBusyResources } from './hooks/use-busy-resources';
 import { useFocusedBlock } from './hooks/use-focused-block';
 import { useFormBlocks } from './hooks/use-form-blocks';
-import { useLanguageSwitch } from './hooks/use-language-switch';
+import { useLanguagePicker } from './hooks/use-language-picker';
 import { useScrolledPast } from './hooks/use-scrolled-past';
 import { useUndoRouting } from './hooks/use-undo-routing';
 import { EditingHostService } from './services/editing-host-service';
@@ -188,7 +188,7 @@ function FormEditor(): React.JSX.Element {
 		}
 	}, [routeUndo]);
 
-	const { languageFilter, switchProps } = useLanguageSwitch(snapshot, viewState, post);
+	const { languageFilter, pickerProps } = useLanguagePicker(snapshot, viewState, post);
 
 	// Nothing is edited in a document that cannot be written back.
 	const editable = snapshot !== undefined && snapshot.readOnly === undefined;
@@ -236,7 +236,7 @@ function FormEditor(): React.JSX.Element {
 							shortcut: _isMac() ? '⌘F' : 'Ctrl+F',
 							fieldRef: filterRef
 						}}
-						languages={switchProps}
+						languages={pickerProps}
 						externalDeclarationsHidden={declarationsHidden}
 						onToggleExternalDeclarations={handleToggleExternalDeclarations}
 					/>

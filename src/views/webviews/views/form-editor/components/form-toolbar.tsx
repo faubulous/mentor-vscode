@@ -1,6 +1,6 @@
 import { SectionHeaderContextMenu } from '@src/views/webviews/components/section-header-context-menu';
 import { FilterField, FilterFieldProps } from './filter-field';
-import { LanguageSwitch, LanguageSwitchProps } from './language-switch';
+import { LanguagePicker, LanguagePickerProps } from './language-picker';
 
 /**
  * Properties of the {@link FormToolbar} component.
@@ -12,9 +12,9 @@ export interface FormToolbarProps {
 	filter: FilterFieldProps;
 
 	/**
-	 * The language switch, where the document writes language tags.
+	 * The language picker, where the document writes language tags.
 	 */
-	languages?: LanguageSwitchProps;
+	languages?: LanguagePickerProps;
 
 	/**
 	 * Whether the terms of other vocabularies the document only declares are left out of the list.
@@ -29,7 +29,7 @@ export interface FormToolbarProps {
 
 /**
  * The bar along the top of the editor, which stays while the form scrolls: the filter in its
- * middle, and the language switch and the menu of further actions at its end.
+ * middle, and the language picker and the menu of further actions at its end.
  * @param props The filter and the actions.
  * @returns The toolbar.
  */
@@ -40,7 +40,7 @@ export function FormToolbar({ filter, languages, externalDeclarationsHidden, onT
 				<div className="form-toolbar-start" />
 				<div className="form-toolbar-middle"><FilterField {...filter} /></div>
 				<div className="form-toolbar-end">
-					{languages && <LanguageSwitch {...languages} />}
+					{languages && <LanguagePicker {...languages} />}
 					<SectionHeaderContextMenu items={[
 						{ label: externalDeclarationsHidden ? 'Show External Declarations' : 'Hide External Declarations', onClick: onToggleExternalDeclarations }
 					]} />

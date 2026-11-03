@@ -1,23 +1,23 @@
 import { useCallback, useMemo } from 'react';
-import { LanguageSwitchProps } from '../components/language-switch';
+import { LanguagePickerProps } from '../components/language-picker';
 import { DocumentSnapshot } from '../form-editor-model';
 import { FormEditorWebviewMessage } from '../form-editor-messages';
 import { LanguageFilter } from '../state/language-filter';
 import { PersistedViewState } from '../state/persisted-view-state';
 
 /**
- * The language the form shows and the switch that chooses it.
+ * The language the form shows and the picker that chooses it.
  */
-export interface LanguageSwitchState {
+export interface LanguagePickerState {
 	/**
 	 * Which literal values the rows show.
 	 */
 	languageFilter: LanguageFilter;
 
 	/**
-	 * The switch, where the document writes language tags.
+	 * The picker, where the document writes language tags.
 	 */
-	switchProps?: LanguageSwitchProps;
+	pickerProps?: LanguagePickerProps;
 }
 
 /**
@@ -27,13 +27,13 @@ export interface LanguageSwitchState {
  * @param snapshot The snapshot of the document.
  * @param viewState The view state.
  * @param post Posts a message to the host.
- * @returns The filter of the rows and the switch.
+ * @returns The filter of the rows and the picker.
  */
-export function useLanguageSwitch(
+export function useLanguagePicker(
 	snapshot: DocumentSnapshot | undefined,
 	viewState: PersistedViewState,
 	post: (message: FormEditorWebviewMessage) => void
-): LanguageSwitchState {
+): LanguagePickerState {
 	const languageTags = snapshot?.languageTags;
 	const activeLanguage = snapshot?.activeLanguage;
 	const allLanguages = viewState.allLanguages === true;
@@ -43,6 +43,6 @@ export function useLanguageSwitch(
 
 	return useMemo(() => ({
 		languageFilter: hasLanguages && !allLanguages && activeLanguage ? new LanguageFilter(activeLanguage) : LanguageFilter.ALL,
-		switchProps: hasLanguages ? { languageTags, activeLanguage, allLanguages, onPick } : undefined
+		pickerProps: hasLanguages ? { languageTags, activeLanguage, allLanguages, onPick } : undefined
 	}), [hasLanguages, allLanguages, activeLanguage, languageTags, onPick]);
 }

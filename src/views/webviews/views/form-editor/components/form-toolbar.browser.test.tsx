@@ -3,9 +3,9 @@ import { render } from '@testing-library/react';
 import { FormToolbar } from './form-toolbar';
 
 /**
- * Render the toolbar with a language switch in an editor of a width, and measure its parts.
+ * Render the toolbar with a language picker in an editor of a width, and measure its parts.
  * @param width The width of the editor.
- * @returns The boxes of the toolbar, the filter, the language switch and the menu.
+ * @returns The boxes of the toolbar, the filter, the language picker and the menu.
  */
 function renderToolbar(width: number) {
 	const { container, unmount } = render(
@@ -20,7 +20,7 @@ function renderToolbar(width: number) {
 	);
 
 	const boxOf = (selector: string) => container.querySelector(selector)!.getBoundingClientRect();
-	const boxes = { toolbar: boxOf('.form-toolbar'), filter: boxOf('.filter-field'), languages: boxOf('.language-switch'), menu: boxOf('.more-vert-container') };
+	const boxes = { toolbar: boxOf('.form-toolbar'), filter: boxOf('.filter-field'), languages: boxOf('.language-picker'), menu: boxOf('.more-vert-container') };
 
 	unmount();
 
@@ -28,7 +28,7 @@ function renderToolbar(width: number) {
 }
 
 describe('FormToolbar, in a real browser', () => {
-	it('keeps the language switch and the menu at their width in a narrow editor, where the filter gives way', () => {
+	it('keeps the language picker and the menu at their width in a narrow editor, where the filter gives way', () => {
 		const wide = renderToolbar(1000);
 		const narrow = renderToolbar(450);
 

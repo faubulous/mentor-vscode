@@ -82,9 +82,9 @@ body {
 	margin-right: -6px;
 }
 
-/* The language switch names the language in muted text with a chevron right after it, and draws
+/* The language picker names the language in muted text with a chevron right after it, and draws
    a tint on hover like the other actions of the toolbar. */
-.language-switch {
+.language-picker {
 	flex: none;
 	display: inline-flex;
 	align-items: center;
@@ -101,23 +101,23 @@ body {
 	cursor: pointer;
 }
 
-.language-switch:hover {
+.language-picker:hover {
 	background: var(--form-tint);
 	color: var(--vscode-foreground);
 }
 
-.language-switch:focus-visible {
+.language-picker:focus-visible {
 	outline: 1px solid var(--vscode-focusBorder);
 	outline-offset: -1px;
 }
 
-.language-switch-label {
+.language-picker-label {
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
 }
 
-.language-switch vscode-icon {
+.language-picker vscode-icon {
 	flex: none;
 	color: inherit;
 }
