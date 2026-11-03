@@ -10,6 +10,8 @@ import { RDF } from '@faubulous/mentor-rdf';
 import { RdfSyntax } from '@faubulous/mentor-rdf-parsers';
 import { ServiceToken } from '@src/services/tokens';
 import { IDocumentContext } from '@src/services/document/document-context.interface';
+import { IDocumentContextService } from '@src/services/document/document-context-service.interface';
+import { TokenDelivery } from '@src/services/document/document-token-source.interface';
 import { createMockWebviewPanel } from '@src/utilities/mocks/vscode';
 import { EditableTextDocument, applyWorkspaceEditTo, createEditableTextDocument, createMockDocumentContext, createMockDocumentContextService, createTurtleDocument } from '@src/utilities/mocks/factories';
 import { FormEditorHostMessage, FormEditorWebviewMessage } from './form-editor-messages';
@@ -56,13 +58,16 @@ function createPanel(): TestPanel {
 
 /**
  * Create a session over a Turtle body, with its parsed context registered for the document.
+ * @param body The statements, written after the prefix declarations.
+ * @param context The context of the document, in place of the parsed one.
+ * @param services The members of the document context service a test controls.
  */
-async function createSession(body: string, context?: IDocumentContext): Promise<{ session: FormEditorSession; document: EditableTextDocument } & TestPanel> {
+async function createSession(body: string, context?: IDocumentContext, services: Partial<IDocumentContextService> = {}): Promise<{ session: FormEditorSession; document: EditableTextDocument } & TestPanel> {
 	const document = createEditableTextDocument(PREAMBLE + body, { uri: URI });
 	const turtle = createTurtleDocument(URI, RdfSyntax.Turtle);
 
 	turtle.parse(document.getText());
-	container.registerInstance(ServiceToken.DocumentContextService, createMockDocumentContextService({ contexts: { [URI]: context ?? turtle } }));
+	container.registerInstance(ServiceToken.DocumentContextService, createMockDocumentContextService({ contexts: { [URI]: context ?? turtle }, ...services }));
 
 	const testPanel = createPanel();
 	const extensionContext = { subscriptions: [], extensionUri: vscode.Uri.parse('file:///extension') } as unknown as vscode.ExtensionContext;
@@ -76,6 +81,45 @@ async function createSession(body: string, context?: IDocumentContext): Promise<
 /**
  * The messages of one kind the session posted.
  */
+/**
+ * A store whose version a test sets, the token source whose deliveries it fires, and a load of the
+ * document's triples it finishes, all registered for a session created after.
+ */
+function registerLoadingServices() {
+	const store = { version: 1 };
+	const deliveries = new vscode.EventEmitter<TokenDelivery>();
+	const settingListeners: (() => void)[] = [];
+	let loading = false;
+	let finishLoad = (): void => undefined;
+	let load = Promise.resolve();
+
+	container.registerInstance(ServiceToken.VocabularyRepository, { store } as never);
+	container.registerInstance(ServiceToken.DocumentTokenSource, { onDidDeliverTokens: deliveries.event } as never);
+	container.registerInstance(ServiceToken.SettingsService, { onDidChange: (_key: string, listener: () => void) => { settingListeners.push(listener); return { dispose: () => undefined }; } } as never);
+
+	return {
+		store,
+		services: { isLoading: () => loading, waitUntilLoaded: () => load },
+		deliver: () => deliveries.fire({ uri: URI } as TokenDelivery),
+		startLoad: () => {
+			loading = true;
+			load = new Promise(resolve => finishLoad = () => {
+				loading = false;
+				resolve();
+			});
+		},
+		finishLoad: () => finishLoad(),
+		changeLanguage: () => settingListeners.forEach(listener => listener())
+	};
+}
+
+/**
+ * Let the promises of the session settle.
+ */
+async function settle(): Promise<void> {
+	await new Promise(resolve => setTimeout(resolve, 0));
+}
+
 function postedOf<K extends FormEditorHostMessage['id']>(posted: FormEditorHostMessage[], id: K): Extract<FormEditorHostMessage, { id: K }>[] {
 	return posted.filter((message): message is Extract<FormEditorHostMessage, { id: K }> => message.id === id);
 }
@@ -261,6 +305,68 @@ describe('FormEditorSession', () => {
 
 		expect(postedOf(posted, 'ScrollToResource').map(message => message.resource)).toEqual([owner, labelled]);
 		expect(postedOf(posted, 'FilterResources')[0].resources).toEqual([owner, labelled]);
+	});
+
+	it('rebuilds the snapshot of a delivered parse once the triples of the document are loaded', async () => {
+		const loading = registerLoadingServices();
+		const { posted, receive } = await createSession('ex:A ex:p "x" .\n', undefined, loading.services);
+
+		await receive({ id: 'Ready' });
+
+		loading.startLoad();
+		loading.deliver();
+		await settle();
+
+		expect(postedOf(posted, 'DocumentSnapshot')).toHaveLength(1);
+
+		loading.store.version = 2;
+		loading.finishLoad();
+		await settle();
+
+		expect(postedOf(posted, 'DocumentSnapshot')).toHaveLength(2);
+	});
+
+	it('answers the deliveries made while it waits for the load with one snapshot', async () => {
+		const loading = registerLoadingServices();
+		const { posted, receive } = await createSession('ex:A ex:p "x" .\n', undefined, loading.services);
+
+		await receive({ id: 'Ready' });
+
+		loading.startLoad();
+		loading.deliver();
+		loading.deliver();
+		loading.store.version = 2;
+		loading.finishLoad();
+		await settle();
+
+		expect(postedOf(posted, 'DocumentSnapshot')).toHaveLength(2);
+	});
+
+	it('keeps the snapshot when neither the document nor the store changed', async () => {
+		const loading = registerLoadingServices();
+		const { posted, receive } = await createSession('ex:A ex:p "x" .\n', undefined, loading.services);
+
+		await receive({ id: 'Ready' });
+
+		loading.deliver();
+		await settle();
+
+		expect(postedOf(posted, 'DocumentSnapshot')).toHaveLength(1);
+	});
+
+	it('rebuilds the snapshot of the same document when the language changes', async () => {
+		const loading = registerLoadingServices();
+		const { posted, receive } = await createSession('ex:A ex:p "x" .\n', undefined, loading.services);
+
+		await receive({ id: 'Ready' });
+
+		loading.changeLanguage();
+		await settle();
+
+		const snapshots = postedOf(posted, 'DocumentSnapshot');
+
+		expect(snapshots).toHaveLength(2);
+		expect(snapshots[1].snapshot).not.toBe(snapshots[0].snapshot);
 	});
 
 	it('posts nothing once disposed', async () => {
