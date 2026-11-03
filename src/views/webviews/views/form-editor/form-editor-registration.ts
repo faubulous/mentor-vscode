@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
 import { getConfig } from '@src/utilities/vscode/config';
-import { FormEditorAssociations } from './form-editor-associations';
+import { DisabledFormEditorProvider } from './disabled-form-editor-provider';
 import { FormEditorProvider } from './form-editor-provider';
 
 /**
@@ -17,16 +17,15 @@ const RELOAD_ACTION = 'Reload Window';
 
 /**
  * Register the form editor when the experimental setting is on. The editor is contributed with
- * the `option` priority, so it never replaces the text editor unless the user asks for it, and
- * its provider is only registered while `mentor.formEditor.enabled` is on. A change of the
- * setting takes effect after a reload, which the user is offered. The editor associations that
- * make the form editor the default view follow the settings at all times, so turning the editor
- * off also takes it out of the associations.
+ * the `option` priority, so it never replaces the text editor unless the user asks for it: with
+ * the editor title bar, or by making it the default editor of a file type with VS Code's
+ * "Configure default editor for ...". While `mentor.formEditor.enabled` is off, a stand-in shows
+ * the documents such an association opens in the text editor. A change of the setting takes
+ * effect after a reload, which the user is offered.
  * @param context The extension context.
  */
 export function registerFormEditor(context: vscode.ExtensionContext): void {
 	context.subscriptions.push(
-		new FormEditorAssociations(),
 		vscode.workspace.onDidChangeConfiguration(event => {
 			if (event.affectsConfiguration(ENABLED_SETTING)) {
 				void _offerReload();
@@ -36,6 +35,8 @@ export function registerFormEditor(context: vscode.ExtensionContext): void {
 
 	if (getConfig('formEditor').get<boolean>('enabled', false)) {
 		container.registerInstance(ServiceToken.FormEditorProvider, new FormEditorProvider(context));
+	} else {
+		new DisabledFormEditorProvider(context);
 	}
 }
 

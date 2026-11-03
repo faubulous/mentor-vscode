@@ -7,6 +7,8 @@ import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
 import { __events } from '@src/utilities/mocks/vscode';
+import { DisabledFormEditorProvider } from './disabled-form-editor-provider';
+import { FormEditorProvider } from './form-editor-provider';
 import { registerFormEditor } from './form-editor-registration';
 
 /**
@@ -45,11 +47,23 @@ describe('registerFormEditor', () => {
 		vi.restoreAllMocks();
 	});
 
-	it('registers nothing while the flag is off', () => {
+	it('registers only the stand-in for the form editor while the flag is off', () => {
+		const register = vi.spyOn(vscode.window, 'registerCustomEditorProvider');
+
 		configureEnabled(false);
 		registerFormEditor(createContext());
 
 		expect(container.isRegistered(ServiceToken.FormEditorProvider)).toBe(false);
+		expect(register).toHaveBeenCalledWith(FormEditorProvider.viewType, expect.any(DisabledFormEditorProvider));
+	});
+
+	it('leaves the editor associations alone', () => {
+		const update = vi.fn();
+
+		vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({ get: () => false, inspect: () => undefined, update } as unknown as vscode.WorkspaceConfiguration);
+		registerFormEditor(createContext());
+
+		expect(update).not.toHaveBeenCalled();
 	});
 
 	it('registers the provider while the flag is on', () => {
