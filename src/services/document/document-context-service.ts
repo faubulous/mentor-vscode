@@ -60,6 +60,12 @@ export class DocumentContextService {
 	private readonly _pendingLoads = new Map<string, Promise<void>>();
 
 	/**
+	 * The document last asked to become active. An activation whose document is still loading
+	 * when another is asked for does not make it active.
+	 */
+	private _activationRequest?: string;
+
+	/**
 	 * An event that is fired after the active document context has changed.
 	 */
 	readonly onDidChangeDocumentContext = this._onDidChangeDocumentContext.event;
@@ -512,17 +518,27 @@ export class DocumentContextService {
 	}
 
 	/**
-	 * Make the context of a document the active one and publish the change. Editors that are
-	 * not text editors, such as the form editor, have no active text editor to drive the
-	 * context change, so they activate their document explicitly to keep the definition tree,
-	 * the language selection and context-driven refreshes on the document being looked at.
+	 * Make the context of a document the active one and publish the change. The active text
+	 * editor drives this, and so do editors that are not text editors, such as the form editor,
+	 * to keep the definition tree, the language selection and context-driven refreshes on the
+	 * document being looked at. A document that is active already stays so without a change
+	 * being published, and a document asked for after this one wins while this one loads.
 	 * @param document The document whose context should become active.
-	 * @returns A promise that resolves to the activated context or `undefined` if unsupported.
+	 * @returns A promise that resolves to the active context, or `undefined` if the document is
+	 * not supported or another document was asked for while it loaded.
 	 */
 	async activateContextForDocument(document: vscode.TextDocument): Promise<IDocumentContext | undefined> {
-		const context = await this.loadDocument(document);
+		const uri = document.uri.toString();
 
-		if (!context) {
+		this._activationRequest = uri;
+
+		if (uri === this.activeContext?.uri.toString()) {
+			return this.activeContext;
+		}
+
+		const context = await this.loadDocument(document, false, this._getNotebookCellSlug(document));
+
+		if (!context || this._activationRequest !== uri) {
 			return undefined;
 		}
 
@@ -589,22 +605,15 @@ export class DocumentContextService {
 	 * @param editor The active editor, or `undefined` when there is none.
 	 */
 	private async _loadActiveEditorDocument(editor?: vscode.TextEditor): Promise<void> {
-		const uri = editor?.document.uri;
-
-		if (!editor || !uri || uri.toString() === this.activeContext?.uri.toString()) {
+		if (!editor?.document.uri) {
 			return;
 		}
 
-		const context = await this.loadDocument(editor.document, false, this._getNotebookCellSlug(editor.document));
+		const context = await this.activateContextForDocument(editor.document);
 
-		if (context) {
-			this.activeContext = context;
-			this._onDidChangeDocumentContext.fire(context);
-		}
-
-		// For XML, isRdfDocument could not be determined from the language ID alone;
-		// update it now that loading is complete.
-		if (editor.document.languageId === 'xml') {
+		// For XML, isRdfDocument could not be determined from the language ID alone; update it now
+		// that loading is complete, unless another document was activated meanwhile.
+		if (editor.document.languageId === 'xml' && this._activationRequest === editor.document.uri.toString()) {
 			await vscode.commands.executeCommand('setContext', 'mentor.editor.isRdfDocument', context?.isLoaded === true);
 		}
 	}
