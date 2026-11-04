@@ -53,6 +53,13 @@ export interface FormEditorContextValue {
 	onOpenExternal?: (iri: string) => void;
 
 	/**
+	 * Put the text of a blank node written in place on the clipboard, as Turtle.
+	 * @param anchor The offset the node starts at.
+	 * @param version The document version the offset belongs to.
+	 */
+	onCopyAsTurtle?: (anchor: number, version: number) => void;
+
+	/**
 	 * The resource last revealed, as from the definition tree, whose entry is marked until the
 	 * form is used.
 	 */

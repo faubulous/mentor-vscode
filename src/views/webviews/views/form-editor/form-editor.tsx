@@ -174,6 +174,7 @@ function FormEditor(): React.JSX.Element {
 	const handleRevealInTextEditor = useCallback((line: number, character: number) => post({ id: 'RevealInTextEditor', position: { line, character } }), [post]);
 	const handleOpenTextEditor = useCallback(() => post({ id: 'ExecuteCommand', command: 'mentor.command.openTextEditor' }), [post]);
 	const handleOpenExternal = useCallback((iri: string) => post({ id: 'ExecuteCommand', command: 'vscode.open', args: [iri] }), [post]);
+	const handleCopyAsTurtle = useCallback((anchor: number, version: number) => post({ id: 'CopyAsTurtle', anchor, version }), [post]);
 	const handleRevealProblem = useCallback((problem: DocumentProblem) => handleRevealInTextEditor(problem.line, problem.character), [handleRevealInTextEditor]);
 
 	// Undo in a field undoes its typing, elsewhere the document; the filter is the find of the form.
@@ -206,10 +207,11 @@ function FormEditor(): React.JSX.Element {
 		resources: snapshot?.resources,
 		onRevealResource: handleRevealResource,
 		onOpenExternal: handleOpenExternal,
+		onCopyAsTurtle: handleCopyAsTurtle,
 		revealedResource: revealed,
 		dominantTypeIri: snapshot?.dominantTypeIri,
 		filterText
-	}), [snapshot, editable, controller, languageFilter, handleRevealResource, handleOpenExternal, revealed, filterText]);
+	}), [snapshot, editable, controller, languageFilter, handleRevealResource, handleOpenExternal, handleCopyAsTurtle, revealed, filterText]);
 
 	if (!snapshot) {
 		return (

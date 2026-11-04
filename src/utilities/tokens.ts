@@ -544,3 +544,39 @@ export function isTokenOfType(token: IToken | undefined, ...names: string[]): bo
 	return name !== undefined && names.includes(name);
 }
 
+
+/**
+ * Get where an anonymous blank node written in place starts and ends: from its `[` to the `]`
+ * that closes it, or the `[]` of an empty one.
+ * @param tokens The tokens of the document.
+ * @param offset The offset the node starts at.
+ * @returns The start and the exclusive end offset, or `undefined` when no node starts at the offset
+ * or it is not closed.
+ */
+export function getBlankNodeSpan(tokens: readonly IToken[], offset: number): { start: number; end: number } | undefined {
+	const first = tokens.findIndex(token => token.startOffset === offset);
+
+	if (first === -1) {
+		return undefined;
+	}
+
+	if (isTokenOfType(tokens[first], 'ANON')) {
+		return { start: offset, end: tokenEnd(tokens[first]) };
+	}
+
+	if (!isTokenOfType(tokens[first], 'LBRACKET')) {
+		return undefined;
+	}
+
+	let depth = 0;
+
+	for (let index = first; index < tokens.length; index++) {
+		if (isTokenOfType(tokens[index], 'LBRACKET')) {
+			depth++;
+		} else if (isTokenOfType(tokens[index], 'RBRACKET') && --depth === 0) {
+			return { start: offset, end: tokenEnd(tokens[index]) };
+		}
+	}
+
+	return undefined;
+}

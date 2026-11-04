@@ -271,4 +271,32 @@ describe('StatementList, edited in a browser', () => {
 			]
 		}]);
 	});
+
+	it('opens the ⋯ menu of a nested card on its button and on a right-click, and duplicates the node from it', async () => {
+		const node = RdfDataFactory.blankNode('b1');
+		const detail = withAnchors(createTestResourceDetail([createProperty('rdfs:comment', [{ term: node, editable: true, nested: { term: node, propertyCount: 1 } }])]));
+		const nodeDetail = withAnchors({ term: node, properties: [createProperty('rdfs:label', [createLiteralView('Leaf')])] });
+		const { host } = await renderList(detail, [nodeDetail]);
+		const card = document.querySelector<HTMLElement>('.resource-card.is-nested')!;
+		const menu = card.querySelector('vscode-context-menu') as HTMLElement & { show: boolean };
+
+		await userEvent.click(within(card).getByRole('button', { name: 'More actions' }));
+
+		expect(menu.show).toBe(true);
+
+		await userEvent.keyboard('{Escape}');
+
+		expect(menu.show).toBe(false);
+
+		await userEvent.click(card.querySelector<HTMLElement>('.statement-predicate')!, { button: 'right' });
+		const itemOf = (label: string) => Array.from(menu.shadowRoot?.querySelectorAll<HTMLElement>('vscode-context-menu-item') ?? []).find(item => item.getAttribute('label') === label);
+
+		await expect.poll(() => itemOf('Duplicate')).toBeDefined();
+
+		const duplicate = itemOf('Duplicate')!;
+
+		await userEvent.click(duplicate);
+
+		expect(host.submitted.map(edit => edit.operations[0])).toEqual([{ op: 'setValues', subject: TEST_SUBJECT, predicate: RDFS.comment, values: [{ kind: 'existing', anchor: 110 }, { kind: 'copy', anchor: 110 }] }]);
+	});
 });

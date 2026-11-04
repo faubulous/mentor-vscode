@@ -101,6 +101,23 @@ export class StatementDraft {
 	}
 
 	/**
+	 * Add a copy of a written value after it, as Duplicate does.
+	 * @param index The index of the value.
+	 * @returns The draft with the copy, the draft itself when the value is not written.
+	 */
+	withValueCopied(index: number): StatementDraft {
+		const value = this.values[index];
+
+		if (value?.kind !== 'written') {
+			return this;
+		}
+
+		const copy: RowValue = { kind: 'term', term: RdfDataFactory.blankNode(), node: { copyOf: value.view } };
+
+		return new StatementDraft(this.predicate, [...this.values.slice(0, index + 1), copy, ...this.values.slice(index + 1)]);
+	}
+
+	/**
 	 * Mark the new blank nodes as sent in an edit, or as not, when the edit was refused.
 	 * @param sent Whether an edit writing them is on its way.
 	 * @returns The draft with the nodes marked.
@@ -243,12 +260,17 @@ export class StatementDraft {
 
 	/**
 	 * The values as the edit contract states them: written ones by their anchor, typed ones as terms,
-	 * and new blank nodes with their type; a new blank node without a type is left out.
+	 * new blank nodes with their type, and copies by the anchor of the value they copy; a new blank
+	 * node without a type is left out.
 	 * @returns The values.
 	 * @throws {Error} If a written value has no anchor, which a row that can be edited never has.
 	 */
 	toStatementValues(): StatementValue[] {
 		return this._writtenValues.map((value): StatementValue => {
+			if (value.kind === 'term' && value.node?.copyOf?.anchor !== undefined) {
+				return { kind: 'copy', anchor: value.node.copyOf.anchor };
+			}
+
 			if (value.kind === 'term' && value.node?.type) {
 				return { kind: 'node', statements: [{ predicate: RDF.type, values: [{ kind: 'term', term: value.node.type }] }] };
 			}
@@ -267,12 +289,13 @@ export class StatementDraft {
 }
 
 /**
- * Indicate whether a value is a new blank node no type was chosen for yet.
+ * Indicate whether a value is a new blank node no type was chosen for yet, which a copy of a
+ * written value is not.
  * @param value The value.
  * @returns `true` for such a node.
  */
 function _isUntypedNode(value: RowValue): boolean {
-	return value.kind === 'term' && value.node !== undefined && value.node.type === undefined;
+	return value.kind === 'term' && value.node !== undefined && value.node.type === undefined && value.node.copyOf === undefined;
 }
 
 /**

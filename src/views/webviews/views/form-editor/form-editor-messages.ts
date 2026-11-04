@@ -70,6 +70,11 @@ export type FormEditorWebviewMessage =
 	 * does, or the values of every language; `allLanguages` tells whether those are shown now.
 	 */
 	| { id: 'PickLanguage'; allLanguages: boolean }
+	/**
+	 * Put the text of a blank node written in place on the clipboard, as Turtle; `anchor` is the
+	 * offset it starts at in the document version `version`.
+	 */
+	| { id: 'CopyAsTurtle'; anchor: number; version: number }
 	| ExecuteCommandMessage;
 
 /**
