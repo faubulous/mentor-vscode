@@ -9,7 +9,6 @@ import { RowValue } from '../state/row-value';
 import { useFormEditorContext } from '../state/form-editor-context';
 import { StatementRowEditor } from '../state/statement-row-editor';
 import { StatementRowState } from '../state/statement-row-state';
-import { getClassResources } from './class-resources';
 import { EditedRow } from './edited-row';
 import { PredicateField } from './predicate-field';
 import { ResourceValues } from './resource-values';
@@ -21,21 +20,21 @@ import { getTermLabel, getTermTitle } from './term-labels';
 import { TermValue } from './term-value';
 
 /**
- * The header of the box of a blank node, which the row of its type leads.
+ * The header of the nested card of a blank node, which the row of its type leads.
  */
-export interface BoxHeader {
+export interface NestedCardHeader {
 	/**
-	 * Whether the box shows only its header.
+	 * Whether the card shows only its header.
 	 */
 	collapsed: boolean;
 
 	/**
-	 * The other properties of the node, named in the header while the box is collapsed.
+	 * The other properties of the node, named in the header while the card is collapsed.
 	 */
 	summary: string;
 
 	/**
-	 * Collapse or expand the box.
+	 * Collapse or expand the card.
 	 */
 	onToggle: () => void;
 }
@@ -72,9 +71,9 @@ export interface StatementRowProps extends StatementRowContext {
 	removable?: boolean;
 
 	/**
-	 * The header of the box of a blank node, where the row is the type that leads it.
+	 * The header of the nested card of a blank node, where the row is the type that leads it.
 	 */
-	header?: BoxHeader;
+	header?: NestedCardHeader;
 }
 
 /**
@@ -104,10 +103,11 @@ interface ShownValue {
  * they are read. An edited row shows the same layout as fields that are plain at rest and draw
  * their box on intent: the predicate field, a field per literal with the label of its language tag
  * or datatype after the text, the input of the next value after the last pill, and a button that
- * removes each value, and in the box of a blank node one that removes the property. It is written
- * when the focus leaves it or Enter is pressed in a literal; Escape gives up what was typed. Keys
- * pressed in the rows of a blank node shown in the row are theirs. While the form shows one language, the literals of the others are
- * left out, and an edited row whose literals lack the language has an empty field for it.
+ * removes each value, and in the nested card of a blank node one that removes the property. It is
+ * written when the focus leaves it or Enter is pressed in a literal; Escape gives up what was
+ * typed. Keys pressed in the rows of a blank node shown in the row are theirs. While the form shows
+ * one language, the literals of the others are left out, and an edited row whose literals lack the
+ * language has an empty field for it.
  * @param props The statement, its editor and where the row stands.
  * @returns The row.
  */
@@ -123,7 +123,7 @@ export function StatementRow({ property, editor, services, autoFocus, removable,
 	const label = predicateView ? getTermLabel(predicateView) : state?.predicateText ?? '';
 	const error = state ? getRowErrorMessage(state) : undefined;
 	const [addingValue, setAddingValue] = useState(false);
-	// A row of blank nodes only offers Add value under them instead of the input of a new value.
+	// A row of blank nodes only offers Add value under their cards, not the input of a new value.
 	const asksToAdd = edited !== undefined && !header && literals.length === 0 && resources.length === 0 && wholes.length > 0 && edited.state.pendingText === '' && !addingValue;
 
 	const handleKeyDown = (event: KeyboardEvent<HTMLElement>): void => {
@@ -150,7 +150,7 @@ export function StatementRow({ property, editor, services, autoFocus, removable,
 
 	return (
 		<div
-			className={`statement-line${edited ? ' is-editable' : ''}${editor?.isNew && !header ? ' is-draft' : ''}${header ? ' is-box-header' : ''}`}
+			className={`statement-line${edited ? ' is-editable' : ''}${editor?.isNew && !header ? ' is-draft' : ''}${header ? ' is-card-header' : ''}`}
 			role="group"
 			aria-label={header ? 'Type' : editor?.isNew ? 'New statement' : label}
 			tabIndex={edited ? -1 : undefined}
@@ -166,7 +166,7 @@ export function StatementRow({ property, editor, services, autoFocus, removable,
 				{edited ? !asksToAdd && _resourceBox(edited, resources, property, { isType: header !== undefined, autoFocus: addingValue }) : _resourcePills(resources, context)}
 				{wholes.map(entry => <StatementValueCell key={entry.index} {...entry} edited={edited} {...context} />)}
 				{asksToAdd && <button type="button" className="statement-value-add" onClick={() => setAddingValue(true)}>Add value</button>}
-				{header?.collapsed && header.summary && <span className="box-summary">{header.summary}</span>}
+				{header?.collapsed && header.summary && <span className="nested-card-summary">{header.summary}</span>}
 			</span>
 			<span className="statement-actions">
 				{removable && !header && edited && !edited.editor.isNew && (
@@ -191,24 +191,24 @@ function _isOwnEvent(event: KeyboardEvent<HTMLElement>): boolean {
 }
 
 /**
- * The button that collapses and expands the box of a blank node.
- * @param header The header of the box.
+ * The button that collapses and expands the nested card of a blank node.
+ * @param header The header of the card.
  * @returns The button.
  */
-function _chevron(header: BoxHeader): React.JSX.Element {
+function _chevron(header: NestedCardHeader): React.JSX.Element {
 	return (
-		<button type="button" className="box-chevron" aria-expanded={!header.collapsed} aria-label={header.collapsed ? 'Expand' : 'Collapse'} title={header.collapsed ? 'Expand' : 'Collapse'} onClick={header.onToggle}>
+		<button type="button" className="nested-card-chevron" aria-expanded={!header.collapsed} aria-label={header.collapsed ? 'Expand' : 'Collapse'} title={header.collapsed ? 'Expand' : 'Collapse'} onClick={header.onToggle}>
 			<vscode-icon name={header.collapsed ? 'chevron-right' : 'chevron-down'} size={14}></vscode-icon>
 		</button>
 	);
 }
 
 /**
- * The box of the resources of an edited row, with the input of the next value after the pills. In
- * a row without pills it stands after the boxes of blank nodes, and in a row with values it shows
- * while the focus is in the row. The type of a blank node offers the classes of the document and
- * asks to choose one while there is none. `[` typed into the empty input starts a new blank node
- * where the predicate takes resources.
+ * The box of the resources of an edited row, with the input of the next value after the pills. In a
+ * row without pills it stands after the nested cards of blank nodes, and in a row with values it
+ * shows while the focus is in the row. The type of a blank node offers the classes of the document
+ * and asks to choose one while there is none. `[` typed into the empty input starts a new blank
+ * node where the predicate takes resources.
  * @param edited The row.
  * @param resources The resources of the row.
  * @param property The property of the row, whose values tell what the predicate takes.
@@ -226,7 +226,7 @@ function _resourceBox(edited: EditedRow, resources: readonly ShownValue[], prope
 		<span className={classes.join(' ')}>
 			<ResourceValues
 				resources={resources.map(({ view, index }) => ({ view, index }))}
-				documentResources={isType ? getClassResources(services.resources) : services.resources}
+				documentResources={isType ? services.classes : services.resources}
 				range={range}
 				pendingText={state.pendingText}
 				services={services}

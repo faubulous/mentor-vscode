@@ -18,7 +18,7 @@ const NAMESPACES = Object.entries(TEST_NAMESPACES).map(([prefix, iri]) => ({ pre
 const NODE = RdfDataFactory.blankNode('b1');
 
 /**
- * The blank node value of the card, which shows the node in a box.
+ * The blank node value of the card, which shows the node in a nested card.
  */
 const NODE_VIEW: TermView = { term: NODE, editable: true, nested: { term: NODE, propertyCount: 2 } };
 
@@ -61,24 +61,24 @@ function renderCard(nodeDetail: ResourceDetail = NODE_DETAIL) {
 }
 
 /**
- * The box of the blank node.
+ * The nested card of the blank node.
  */
-function box(): HTMLElement {
+function nestedCard(): HTMLElement {
 	return document.querySelector<HTMLElement>('.resource-card.is-nested')!;
 }
 
 /**
- * The row of a predicate in the box of the blank node.
+ * The row of a predicate in the nested card of the blank node.
  */
 function nestedRowOf(label: string): HTMLElement {
-	return box().querySelector<HTMLElement>(`.statement-line[aria-label="${label}"]`)!;
+	return nestedCard().querySelector<HTMLElement>(`.statement-line[aria-label="${label}"]`)!;
 }
 
 /**
  * The row of a predicate of the card itself.
  */
 function cardRowOf(label: string): HTMLElement {
-	return Array.from(document.querySelectorAll<HTMLElement>(`.statement-line[aria-label="${label}"]`)).find(row => !box().contains(row))!;
+	return Array.from(document.querySelectorAll<HTMLElement>(`.statement-line[aria-label="${label}"]`)).find(row => !nestedCard().contains(row))!;
 }
 
 /**
@@ -114,9 +114,9 @@ describe('StatementList, with a blank node', () => {
 		}]]);
 	});
 
-	it('leaves the row holding the box alone for Escape and Enter pressed in the box', async () => {
+	it('leaves the row holding the nested card alone for Escape and Enter pressed in the card', async () => {
 		const { host } = renderCard();
-		const outer = within(cardRowOf('rdfs:comment')).getAllByLabelText('Value 1').find(field => !box().contains(field))!;
+		const outer = within(cardRowOf('rdfs:comment')).getAllByLabelText('Value 1').find(field => !nestedCard().contains(field))!;
 		const inner = within(nestedRowOf('rdfs:comment')).getByLabelText('Value 1');
 
 		type(outer, 'A tree');
@@ -142,24 +142,24 @@ describe('StatementList, with a blank node', () => {
 	it('opens a row for a new property of the blank node with Add property, and closes it when it is left empty', async () => {
 		renderCard();
 
-		expect(within(box()).queryByRole('group', { name: 'New statement' })).toBeNull();
+		expect(within(nestedCard()).queryByRole('group', { name: 'New statement' })).toBeNull();
 
-		await userEvent.click(within(box()).getByRole('button', { name: 'Add property' }));
+		await userEvent.click(within(nestedCard()).getByRole('button', { name: 'Add property' }));
 
-		const row = within(box()).getByRole('group', { name: 'New statement' });
+		const row = within(nestedCard()).getByRole('group', { name: 'New statement' });
 
 		await leave(within(row).getByLabelText('Predicate'));
 
-		expect(within(box()).queryByRole('group', { name: 'New statement' })).toBeNull();
+		expect(within(nestedCard()).queryByRole('group', { name: 'New statement' })).toBeNull();
 		expect(screen.getAllByRole('group', { name: 'New statement' })).toHaveLength(1);
 	});
 
 	it('writes a new property of the blank node typed into the row Add property opened', async () => {
 		const { host } = renderCard();
 
-		await userEvent.click(within(box()).getByRole('button', { name: 'Add property' }));
+		await userEvent.click(within(nestedCard()).getByRole('button', { name: 'Add property' }));
 
-		const row = within(box()).getByRole('group', { name: 'New statement' });
+		const row = within(nestedCard()).getByRole('group', { name: 'New statement' });
 
 		type(within(row).getByLabelText('Predicate'), 'rdfs:seeAlso');
 		fireEvent.focusOut(within(row).getByLabelText('Predicate'), { relatedTarget: within(row).getByLabelText('New value') });
@@ -174,31 +174,31 @@ describe('StatementList, with a blank node', () => {
 		}]]);
 	});
 
-	it('leads the box with its type, after a chevron that collapses the box to the type and names the other properties', async () => {
+	it('leads the nested card with its type, after a chevron that collapses the card to the type and names the other properties', async () => {
 		const typed: ResourceDetail = withAnchors({ term: NODE, properties: [...NODE_DETAIL.properties, createProperty('rdf:type', [createIriView('owl:Restriction', 'Restriction')])] });
 
 		renderCard(typed);
 
-		const header = within(box()).getByRole('group', { name: 'Type' });
+		const header = within(nestedCard()).getByRole('group', { name: 'Type' });
 
-		expect(box().querySelector('.statement-line')).toBe(header);
+		expect(nestedCard().querySelector('.statement-line')).toBe(header);
 		expect(header.querySelector('.statement-predicate')?.textContent).toBe('type');
 		expect(within(header).getByText('Restriction')).toBeTruthy();
 
 		await userEvent.click(within(header).getByRole('button', { name: 'Collapse' }));
 
-		expect(within(box()).queryByRole('group', { name: 'rdfs:label' })).toBeNull();
-		expect(within(box()).queryByRole('button', { name: 'Add property' })).toBeNull();
-		expect(header.querySelector('.box-summary')?.textContent).toBe('rdfs:label, rdfs:comment');
+		expect(within(nestedCard()).queryByRole('group', { name: 'rdfs:label' })).toBeNull();
+		expect(within(nestedCard()).queryByRole('button', { name: 'Add property' })).toBeNull();
+		expect(header.querySelector('.nested-card-summary')?.textContent).toBe('rdfs:label, rdfs:comment');
 
 		await userEvent.click(within(header).getByRole('button', { name: 'Expand' }));
 
-		expect(within(box()).getByRole('group', { name: 'rdfs:label' })).toBeTruthy();
+		expect(within(nestedCard()).getByRole('group', { name: 'rdfs:label' })).toBeTruthy();
 	});
 
 	it('asks to choose the type of an untyped node, and writes the type typed into it', async () => {
 		const { host } = renderCard();
-		const header = within(box()).getByRole('group', { name: 'Type' });
+		const header = within(nestedCard()).getByRole('group', { name: 'Type' });
 		const input = within(header).getByLabelText('New value');
 
 		expect(input.getAttribute('placeholder')).toBe('Choose type');

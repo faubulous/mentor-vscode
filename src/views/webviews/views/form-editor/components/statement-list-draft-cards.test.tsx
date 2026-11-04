@@ -18,7 +18,7 @@ const NAMESPACES = Object.entries(TEST_NAMESPACES).map(([prefix, iri]) => ({ pre
 const NODE = RdfDataFactory.blankNode('b1');
 
 /**
- * The blank node value of the card, which shows the node in a box.
+ * The blank node value of the card, which shows the node in a nested card.
  */
 const NODE_VIEW: TermView = { term: NODE, editable: true, nested: { term: NODE, propertyCount: 1 } };
 
@@ -68,7 +68,7 @@ function newValueInputOf(row: HTMLElement): HTMLElement | undefined {
 
 /**
  * Start a new blank node in a row, as typing `[` into its empty input of a new value does.
- * @returns The box of the new node.
+ * @returns The nested card of the new node.
  */
 function startNode(row: HTMLElement): HTMLElement {
 	fireEvent.keyDown(newValueInputOf(row)!, { key: '[' });
@@ -97,8 +97,8 @@ describe('StatementList, with new blank nodes', () => {
 	it('starts a new blank node with [, asks for its type, and writes it with the type when the row is left', async () => {
 		const { host } = renderCard();
 		const row = rowOf('rdfs:seeAlso');
-		const box = startNode(row);
-		const input = within(box).getByLabelText('New value');
+		const card = startNode(row);
+		const input = within(card).getByLabelText('New value');
 
 		expect(input.getAttribute('placeholder')).toBe('Choose type');
 

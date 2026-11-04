@@ -1,14 +1,13 @@
 import { NamedNode } from '@rdfjs/types';
 import { useState } from 'react';
 import { RDF } from '@faubulous/mentor-rdf/ontologies';
-import { getClassResources } from './class-resources';
 import { EditedRow } from './edited-row';
 import { ResourceValues } from './resource-values';
 
 /**
- * Properties of the {@link DraftNodeBox} component.
+ * Properties of the {@link DraftResourceCard} component.
  */
-export interface DraftNodeBoxProps {
+export interface DraftResourceCardProps {
 	/**
 	 * The type chosen for the node, if any.
 	 */
@@ -26,13 +25,14 @@ export interface DraftNodeBoxProps {
 }
 
 /**
- * A new blank node in the row that started it: a box whose header asks for the type, with the
- * input taking the focus when the box appears and offering the classes of the document. The node
- * is written with the row once its type is chosen; leaving the row without one, or Escape, drops it.
+ * A new blank node in the row that started it: a nested card whose header asks for the type, with
+ * the input taking the focus when the card appears and offering the classes of the document. The
+ * node is written with the row once its type is chosen; leaving the row without one, or Escape,
+ * drops it.
  * @param props The node and its row.
- * @returns The box.
+ * @returns The card.
  */
-export function DraftNodeBox({ type, index, edited }: DraftNodeBoxProps): React.JSX.Element {
+export function DraftResourceCard({ type, index, edited }: DraftResourceCardProps): React.JSX.Element {
 	const { editor, services } = edited;
 	const [text, setText] = useState('');
 	const types = type ? [{ view: services.resolver.viewOf(type), index: 0 }] : [];
@@ -53,14 +53,14 @@ export function DraftNodeBox({ type, index, edited }: DraftNodeBoxProps): React.
 	return (
 		<div className="resource-card is-nested is-draft" data-value-index={index}>
 			<div className="statement-list is-editable">
-				<div className="box-header-line" role="group" aria-label="New blank node">
+				<div className="nested-card-header" role="group" aria-label="New blank node">
 					<span className="statement-gutter"></span>
 					<span className="statement-predicate" title={RDF.type}>type</span>
 					<span className="statement-values">
 						<span className="statement-value is-adder">
 							<ResourceValues
 								resources={types}
-								documentResources={getClassResources(services.resources)}
+								documentResources={services.classes}
 								range="resource"
 								pendingText={text}
 								services={services}

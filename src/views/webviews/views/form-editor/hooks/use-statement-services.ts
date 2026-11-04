@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { OWL, RDFS } from '@faubulous/mentor-rdf/ontologies';
 import { ResourceDetail, ResourceSummary, TermView } from '../form-editor-model';
 import { TermViewResolver } from '../services/statement/term-view-resolver';
 import { TypedTermReader } from '../services/statement/typed-term-reader';
@@ -28,6 +29,12 @@ export interface StatementServices {
 	 * The resources of the document, which the rows offer as values.
 	 */
 	resources: readonly ResourceSummary[];
+
+	/**
+	 * The classes the document declares, typed as an OWL or RDFS class, which the type of a blank
+	 * node is chosen from.
+	 */
+	classes: readonly ResourceSummary[];
 }
 
 /**
@@ -52,9 +59,19 @@ export function useStatementServices(detail: ResourceDetail, enabled: boolean): 
 			reader: new TypedTermReader(prefixes),
 			resolver: new TermViewResolver(prefixes, resources ?? [], _viewsOf(detail)),
 			languages: _languagesOf(detail).map(language => languageTags[language] ?? language),
-			resources: resources ?? []
+			resources: resources ?? [],
+			classes: _classesOf(resources ?? [])
 		};
 	}, [enabled, namespaces, resources, languageTags, detail]);
+}
+
+/**
+ * The classes among the resources of the document: those typed as an OWL or RDFS class.
+ * @param resources The resources of the document.
+ * @returns The classes, in the order of the resources.
+ */
+function _classesOf(resources: readonly ResourceSummary[]): ResourceSummary[] {
+	return resources.filter(resource => resource.typeIri === OWL.Class || resource.typeIri === RDFS.Class);
 }
 
 /**

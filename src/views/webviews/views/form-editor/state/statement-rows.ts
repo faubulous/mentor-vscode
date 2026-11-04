@@ -29,7 +29,7 @@ export interface StatementRowEntry {
 	editor?: StatementRowEditor;
 
 	/**
-	 * Whether the row is the type of a blank node, which leads its box.
+	 * Whether the row is the type of a blank node, which leads its nested card.
 	 */
 	isType?: boolean;
 }
@@ -81,14 +81,14 @@ export interface StatementRowsData {
 export interface StatementRowsOptions {
 	/**
 	 * Whether a row for a new statement is always open after the others, as in a card of the list;
-	 * otherwise one is opened on request, as by Add property in the box of a blank node, and closes
-	 * when it is left with nothing typed.
+	 * otherwise one is opened on request, as by Add property in the nested card of a blank node,
+	 * and closes when it is left with nothing typed.
 	 */
 	keepNewRowOpen: boolean;
 
 	/**
-	 * Whether the type leads the rows, as in the box of a blank node: the row of `rdf:type` comes
-	 * first, and while the resource has no type a row stands in for it whose value writes it.
+	 * Whether the type leads the rows, as in the nested card of a blank node: the row of `rdf:type`
+	 * comes first, and while the resource has no type a row stands in for it whose value writes it.
 	 */
 	typeRow?: boolean;
 }

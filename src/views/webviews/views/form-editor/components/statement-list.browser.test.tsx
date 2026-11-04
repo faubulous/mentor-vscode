@@ -207,24 +207,24 @@ describe('StatementList, edited in a browser', () => {
 		expect(host.submitted.map(edit => edit.operations[0])).toEqual([{ op: 'setValues', subject: TEST_SUBJECT, predicate: RDFS.seeAlso, values: [{ kind: 'term', term: RdfDataFactory.namedNode(`${EXAMPLE_NAMESPACE}Plant`) }] }]);
 	});
 
-	it('puts the focus into the predicate of the row Add property opens in the box of a blank node, and closes it when it is left empty', async () => {
+	it('puts the focus into the predicate of the row Add property opens in the nested card of a blank node, and closes it when it is left empty', async () => {
 		const node = RdfDataFactory.blankNode('b1');
 		const detail = withAnchors(createTestResourceDetail([createProperty('rdfs:comment', [{ term: node, editable: true, nested: { term: node, propertyCount: 1 } }])]));
 		const nodeDetail = withAnchors({ term: node, properties: [createProperty('rdfs:label', [createLiteralView('Leaf')])] });
 
 		await renderList(detail, [nodeDetail]);
 
-		const box = document.querySelector<HTMLElement>('.resource-card.is-nested')!;
+		const card = document.querySelector<HTMLElement>('.resource-card.is-nested')!;
 
-		await userEvent.click(within(box).getByRole('button', { name: 'Add property' }));
+		await userEvent.click(within(card).getByRole('button', { name: 'Add property' }));
 
-		const row = within(box).getByRole('group', { name: 'New statement' });
+		const row = within(card).getByRole('group', { name: 'New statement' });
 
 		await expect.poll(() => document.activeElement).toBe(within(row).getByLabelText('Predicate'));
 
 		await leaveList();
 
-		expect(within(box).queryByRole('group', { name: 'New statement' })).toBeNull();
+		expect(within(card).queryByRole('group', { name: 'New statement' })).toBeNull();
 	});
 
 	it('offers the classes of the document as the type of an untyped blank node', async () => {
@@ -254,9 +254,9 @@ describe('StatementList, edited in a browser', () => {
 		await userEvent.click(within(row).getByLabelText('New value'));
 		await userEvent.keyboard('[[');
 
-		const box = within(row).getByRole('group', { name: 'New blank node' });
+		const card = within(row).getByRole('group', { name: 'New blank node' });
 
-		await expect.poll(() => document.activeElement).toBe(within(box).getByLabelText('New value'));
+		await expect.poll(() => document.activeElement).toBe(within(card).getByLabelText('New value'));
 
 		await userEvent.keyboard('ex:Leaf{Enter}');
 		await leaveList();

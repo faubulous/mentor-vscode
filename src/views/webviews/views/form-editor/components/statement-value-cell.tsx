@@ -1,6 +1,6 @@
 import { TermView } from '../form-editor-model';
 import { RowValue } from '../state/row-value';
-import { DraftNodeBox } from './draft-node-box';
+import { DraftResourceCard } from './draft-resource-card';
 import { LiteralValueField } from './literal-value-field';
 import { EditedRow } from './edited-row';
 import { StatementRowContext } from './statement-row-context';
@@ -50,7 +50,7 @@ export function StatementValueCell({ value, view, index, edited, ...context }: S
 }
 
 /**
- * A value of an edited row: a literal as its field, a new blank node as the box that asks for its
+ * A value of an edited row: a literal as its field, a new blank node as the card that asks for its
  * type, anything else as it is read with a button that removes it.
  * @param value The value.
  * @param view The view of the value.
@@ -61,7 +61,7 @@ export function StatementValueCell({ value, view, index, edited, ...context }: S
  */
 function _editedValue(value: RowValue, view: TermView, index: number, edited: EditedRow, context: StatementRowContext): React.JSX.Element {
 	if (value.kind === 'term' && value.node) {
-		return <DraftNodeBox type={value.node.type} index={index} edited={edited} />;
+		return <DraftResourceCard type={value.node.type} index={index} edited={edited} />;
 	}
 
 	if (view.term.termType === 'Literal' && !view.collection) {

@@ -23,7 +23,7 @@ export interface StatementRowsOptions {
 
 	/**
 	 * Whether a row for a new statement is always open after the others, as in a card of the list;
-	 * otherwise the type leads the rows, as in the box of a blank node.
+	 * otherwise the type leads the rows, as in the nested card of a blank node.
 	 */
 	keepNewRowOpen: boolean;
 
