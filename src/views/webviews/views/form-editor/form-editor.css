@@ -694,9 +694,9 @@ body {
 }
 
 /*
- * A blank node of a value: a box of its rows, which sit on the grid of the box with the predicate
- * indented past the column the header of the box keeps for its chevron, and a column for the
- * button that removes a property.
+ * A blank node of a value: a nested card of its rows, which sit on the grid of the card with the
+ * predicate indented past the column the header of the card keeps for its chevron, and a column for
+ * the button that removes a property.
  */
 .resource-card.is-nested {
 	--form-nested-radius: 10px;
@@ -723,8 +723,8 @@ body {
 	padding-bottom: 0;
 }
 
-/* The header of the box of a blank node: the chevron in the gutter, then the type of the node. */
-.box-chevron {
+/* The header of the nested card of a blank node: the chevron in the gutter, then the type of the node. */
+.nested-card-chevron {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
@@ -738,23 +738,33 @@ body {
 	cursor: pointer;
 }
 
-.box-chevron:hover {
+.nested-card-chevron:hover {
 	color: var(--vscode-foreground);
 }
 
-.box-chevron:focus-visible {
+.nested-card-chevron:focus-visible {
 	outline: 1px solid var(--vscode-focusBorder);
 }
 
-/* The type label of an edited box lines up with the text of the predicate fields under it, which
+/* The header of the nested card of a new blank node, on the grid of the card like a row of it. */
+.nested-card-header {
+	grid-column: 1 / -1;
+	display: grid;
+	grid-template-columns: subgrid;
+	align-items: start;
+	line-height: var(--statement-line-height);
+}
+
+/* The type label of an edited nested card lines up with the text of the predicate fields under it, which
    a text field sets in by its border and padding. */
-.statement-list.is-editable > .statement-line.is-box-header > .statement-predicate {
+.statement-list.is-editable > .statement-line.is-card-header > .statement-predicate,
+.statement-list.is-editable > .nested-card-header > .statement-predicate {
 	padding-left: 5px;
 	line-height: var(--form-field-height);
 }
 
-/* The other properties of a collapsed box, named after its type. */
-.box-summary {
+/* The other properties of a collapsed nested card, named after its type. */
+.nested-card-summary {
 	overflow: hidden;
 	color: var(--vscode-descriptionForeground);
 	text-overflow: ellipsis;
@@ -776,7 +786,9 @@ body {
 }
 
 .statement-line:hover > .statement-actions > .statement-row-remove,
-.statement-line:focus-within > .statement-actions > .statement-row-remove {
+.statement-line:focus-within > .statement-actions > .statement-row-remove,
+.nested-card-header:hover > .statement-actions > .statement-row-remove,
+.nested-card-header:focus-within > .statement-actions > .statement-row-remove {
 	visibility: visible;
 }
 
@@ -788,13 +800,14 @@ body {
 	outline: 1px solid var(--vscode-focusBorder);
 }
 
-/* Add property: a text link under the rows of a blank node, its text lined up with the text of the
-   predicate fields above it. */
+/*
+ * Add value and Add property: text links. Add value stands under the nested cards of a row of blank
+ * nodes only and brings back the input of a new value; Add property stands under the rows of a
+ * blank node, its text lined up with the text of the predicate fields above it.
+ */
+.statement-value-add,
 .statement-list-add {
-	grid-column: 2 / -1;
-	justify-self: start;
-	margin-top: 4px;
-	padding: 0 0 0 5px;
+	padding: 0;
 	border: 0;
 	background: none;
 	color: var(--vscode-textLink-foreground);
@@ -803,13 +816,26 @@ body {
 	cursor: pointer;
 }
 
+.statement-value-add:hover,
 .statement-list-add:hover {
 	color: var(--vscode-textLink-activeForeground, var(--vscode-textLink-foreground));
 }
 
+.statement-value-add:focus-visible,
 .statement-list-add:focus-visible {
 	outline: 1px solid var(--vscode-focusBorder);
 	outline-offset: 1px;
+}
+
+.statement-value-add {
+	align-self: flex-start;
+}
+
+.statement-list-add {
+	grid-column: 2 / -1;
+	justify-self: start;
+	margin-top: 4px;
+	padding-left: 5px;
 }
 
 .nested-placeholder {
@@ -928,8 +954,8 @@ body {
 }
 
 /* A row of literals only shows the input of a further value while the focus is in the row. */
-/* Without pills the input of a new value stands after the boxes of blank nodes, so showing it on
-   intent moves nothing above a click into a box. */
+/* Without pills the input of a new value stands after the nested cards of blank nodes, so showing it on
+   intent moves nothing above a click into a nested card. */
 .statement-values > .statement-value.is-adder.is-after-values {
 	order: 1;
 }

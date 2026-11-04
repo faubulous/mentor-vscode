@@ -8,7 +8,7 @@ import { IResourceDataService } from '../services/resource-data-service.interfac
 import { useFormEditorContext } from '../state/form-editor-context';
 import { StatementRowEntry } from '../state/statement-rows';
 import { PropertyComments } from './property-comments';
-import { BoxHeader, StatementRow } from './statement-row';
+import { NestedCardHeader, StatementRow } from './statement-row';
 import { getTermLabel } from './term-labels';
 
 /**
@@ -45,10 +45,10 @@ export interface StatementListProps {
  * The statements of a card as rows, in document order, each preceded by the comment lines
  * written above it. Where the document can be written, the rows are edited in place, except those
  * whose values cannot all be kept by their place, which only read. In a card of the list a row for
- * a new statement follows them. The box of a blank node is led by a header: a chevron that
- * collapses the box to the header, which then names the other properties, and the type of the
+ * a new statement follows them. The nested card of a blank node is led by a header: a chevron that
+ * collapses the card to the header, which then names the other properties, and the type of the
  * node, which asks to choose one while there is none. Add property opens a row for a new statement
- * in the box, and each of its rows has a button that removes its property.
+ * in the nested card, and each of its rows has a button that removes its property.
  * @param props The resource and where the list stands.
  * @returns The rows.
  */
@@ -75,7 +75,7 @@ export function StatementList({ detail, stale = false, dataService, depth, visit
 		setFocusedRowId(addRow?.()?.id);
 	};
 
-	const rowOf = (entry: StatementRowEntry | undefined, header?: BoxHeader): React.JSX.Element => (
+	const rowOf = (entry: StatementRowEntry | undefined, header?: NestedCardHeader): React.JSX.Element => (
 		<StatementRow
 			property={entry?.property}
 			editor={entry?.editor}
@@ -120,8 +120,8 @@ function _isTypeEntry(entry: StatementRowEntry): boolean {
 }
 
 /**
- * Name the properties a collapsed box leaves out.
- * @param rows The rows of the box other than its type.
+ * Name the properties a collapsed nested card leaves out.
+ * @param rows The rows of the card other than its type.
  * @returns Their predicates, by their labels.
  */
 function _summaryOf(rows: readonly StatementRowEntry[]): string {

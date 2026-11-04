@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { userEvent } from 'vitest/browser';
 import { act, render, within } from '@testing-library/react';
-import { OWL, RDFS, XSD } from '@faubulous/mentor-rdf';
+import { OWL, RDF, RDFS, XSD } from '@faubulous/mentor-rdf';
 import { createEditingHostStub } from '@src/utilities/mocks/editing-host-fixtures';
 import { createResourceDataServiceStub } from '@src/utilities/mocks/resource-data-service-fixtures';
 import { createResourceSummary } from '@src/utilities/mocks/resource-summary-fixtures';
@@ -207,24 +207,24 @@ describe('StatementList, edited in a browser', () => {
 		expect(host.submitted.map(edit => edit.operations[0])).toEqual([{ op: 'setValues', subject: TEST_SUBJECT, predicate: RDFS.seeAlso, values: [{ kind: 'term', term: RdfDataFactory.namedNode(`${EXAMPLE_NAMESPACE}Plant`) }] }]);
 	});
 
-	it('puts the focus into the predicate of the row Add property opens in the box of a blank node, and closes it when it is left empty', async () => {
+	it('puts the focus into the predicate of the row Add property opens in the nested card of a blank node, and closes it when it is left empty', async () => {
 		const node = RdfDataFactory.blankNode('b1');
 		const detail = withAnchors(createTestResourceDetail([createProperty('rdfs:comment', [{ term: node, editable: true, nested: { term: node, propertyCount: 1 } }])]));
 		const nodeDetail = withAnchors({ term: node, properties: [createProperty('rdfs:label', [createLiteralView('Leaf')])] });
 
 		await renderList(detail, [nodeDetail]);
 
-		const box = document.querySelector<HTMLElement>('.resource-card.is-nested')!;
+		const card = document.querySelector<HTMLElement>('.resource-card.is-nested')!;
 
-		await userEvent.click(within(box).getByRole('button', { name: 'Add property' }));
+		await userEvent.click(within(card).getByRole('button', { name: 'Add property' }));
 
-		const row = within(box).getByRole('group', { name: 'New statement' });
+		const row = within(card).getByRole('group', { name: 'New statement' });
 
 		await expect.poll(() => document.activeElement).toBe(within(row).getByLabelText('Predicate'));
 
 		await leaveList();
 
-		expect(within(box).queryByRole('group', { name: 'New statement' })).toBeNull();
+		expect(within(card).queryByRole('group', { name: 'New statement' })).toBeNull();
 	});
 
 	it('offers the classes of the document as the type of an untyped blank node', async () => {
@@ -245,5 +245,30 @@ describe('StatementList, edited in a browser', () => {
 		await userEvent.keyboard('plan');
 
 		expect(Array.from(header.querySelectorAll('.combobox-option-label')).map(option => option.textContent)).toEqual(['Plant', 'Planter']);
+	});
+
+	it('starts a new blank node with [, puts the focus into the input of its type, and writes it with the type', async () => {
+		const { host } = await renderList();
+		const row = rows()[2];
+
+		await userEvent.click(within(row).getByLabelText('New value'));
+		await userEvent.keyboard('[[');
+
+		const card = within(row).getByRole('group', { name: 'New blank node' });
+
+		await expect.poll(() => document.activeElement).toBe(within(card).getByLabelText('New value'));
+
+		await userEvent.keyboard('ex:Leaf{Enter}');
+		await leaveList();
+
+		expect(host.submitted.map(edit => edit.operations[0])).toEqual([{
+			op: 'setValues',
+			subject: TEST_SUBJECT,
+			predicate: RDFS.subClassOf,
+			values: [
+				{ kind: 'existing', anchor: 130 },
+				{ kind: 'node', statements: [{ predicate: RDF.type, values: [{ kind: 'term', term: RdfDataFactory.namedNode(`${EXAMPLE_NAMESPACE}Leaf`) }] }] }
+			]
+		}]);
 	});
 });

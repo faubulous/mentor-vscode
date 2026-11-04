@@ -32,7 +32,7 @@ function createRows(keepNewRowOpen = true): StatementRows {
 }
 
 /**
- * Make the rows of the box of a blank node, which the type leads.
+ * Make the rows of the nested card of a blank node, which the type leads.
  */
 function createBoxRows(): StatementRows {
 	return new StatementRows({ requestWrite: () => undefined, flush: () => undefined }, { keepNewRowOpen: false, typeRow: true });
@@ -81,7 +81,7 @@ describe('StatementRows', () => {
 		expect(rows.rowOf(SAMPLE[1].predicate.term.termType === 'NamedNode' ? SAMPLE[1].predicate.term.value : '')).toBe(entries[1].editor);
 	});
 
-	it('opens a row for a new statement only on request in the box of a blank node, and closes it when it is left empty', () => {
+	it('opens a row for a new statement only on request in the nested card of a blank node, and closes it when it is left empty', () => {
 		const rows = createRows(false);
 		const entries = rows.reconcile(dataOf(SAMPLE));
 
@@ -121,7 +121,7 @@ describe('StatementRows', () => {
 		expect(lastOf(rows.reconcile(dataOf(SAMPLE)))?.editor).toBe(added);
 	});
 
-	it('leads the rows of a box with the type, wherever the type is written', () => {
+	it('leads the rows of a nested card with the type, wherever the type is written', () => {
 		const entries = createBoxRows().reconcile(dataOf([SAMPLE[1], SAMPLE[2], SAMPLE[0]]));
 
 		expect(entries.map(entry => [entry.property?.predicate.prefixedName, entry.isType === true])).toEqual([['rdf:type', true], ['rdfs:label', false], ['rdfs:subClassOf', false]]);

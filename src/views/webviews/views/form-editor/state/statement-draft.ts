@@ -1,5 +1,6 @@
 import { StatementValue } from '@src/services/editing/statement-value';
-import { Literal } from '@rdfjs/types';
+import { Literal, NamedNode } from '@rdfjs/types';
+import { RDF } from '@faubulous/mentor-rdf/ontologies';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { PropertyView, TermView } from '../form-editor-model';
 import { LiteralTag } from './literal-tag';
@@ -47,7 +48,14 @@ export class StatementDraft {
 	 * Whether the draft states a statement: it has a predicate and at least one value.
 	 */
 	get isComplete(): boolean {
-		return this.predicate !== undefined && this.values.length > 0;
+		return this.predicate !== undefined && this._writtenValues.length > 0;
+	}
+
+	/**
+	 * The values the draft writes: all but the new blank nodes no type was chosen for yet.
+	 */
+	private get _writtenValues(): readonly RowValue[] {
+		return this.values.filter(value => !_isUntypedNode(value));
 	}
 
 	/**
@@ -66,6 +74,56 @@ export class StatementDraft {
 	 */
 	withValueAppended(term: TermView['term']): StatementDraft {
 		return new StatementDraft(this.predicate, [...this.values, { kind: 'term', term }]);
+	}
+
+	/**
+	 * Add a new blank node after the others, which is written once its type is chosen.
+	 * @returns The draft with the node.
+	 */
+	withNodeAppended(): StatementDraft {
+		return new StatementDraft(this.predicate, [...this.values, { kind: 'term', term: RdfDataFactory.blankNode(), node: {} }]);
+	}
+
+	/**
+	 * Choose the type of a new blank node, or take it back.
+	 * @param index The index of the node among the values.
+	 * @param type The type, or `undefined` for none.
+	 * @returns The draft with the type, the draft itself when the value is no new blank node.
+	 */
+	withNodeType(index: number, type: NamedNode | undefined): StatementDraft {
+		const value = this.values[index];
+
+		if (value?.kind !== 'term' || !value.node) {
+			return this;
+		}
+
+		return new StatementDraft(this.predicate, this.values.map((existing, position) => position === index ? { ...value, node: { type } } : existing));
+	}
+
+	/**
+	 * Mark the new blank nodes as sent in an edit, or as not, when the edit was refused.
+	 * @param sent Whether an edit writing them is on its way.
+	 * @returns The draft with the nodes marked.
+	 */
+	withNodesSent(sent: boolean): StatementDraft {
+		return new StatementDraft(this.predicate, this.values.map(value => value.kind === 'term' && value.node ? { ...value, node: { ...value.node, sent } } : value));
+	}
+
+	/**
+	 * Drop the new blank nodes no type was chosen for, as leaving the row does.
+	 * @returns The draft without them.
+	 */
+	withoutUntypedNodes(): StatementDraft {
+		return this.values.some(_isUntypedNode) ? new StatementDraft(this.predicate, this._writtenValues) : this;
+	}
+
+	/**
+	 * Add values after the others, as they are.
+	 * @param values The values.
+	 * @returns The draft with the values.
+	 */
+	withValuesAppended(values: readonly RowValue[]): StatementDraft {
+		return new StatementDraft(this.predicate, [...this.values, ...values]);
 	}
 
 	/**
@@ -139,7 +197,8 @@ export class StatementDraft {
 	 * Carry the draft over to the statement as the document writes it now, after an edit was
 	 * applied: a value the document writes now is kept by its new anchor, found by its term, or for
 	 * a blank node, whose identifier the document gives anew, by its place among the blank nodes. A
-	 * value the document no longer writes becomes a term to be written again.
+	 * value the document no longer writes becomes a term to be written again. A new blank node stays
+	 * as it is until an edit writing it was sent, and then counts among the blank nodes.
 	 * @param stored The statement as the document writes it now.
 	 * @returns The draft against that statement.
 	 */
@@ -149,6 +208,10 @@ export class StatementDraft {
 		let blankNodes = 0;
 
 		const values = this.values.map((value): RowValue => {
+			if (value.kind === 'term' && value.node && !value.node.sent) {
+				return value;
+			}
+
 			const term = _termOf(value);
 			const match = term.termType === 'BlankNode'
 				? available.filter(view => view.term.termType === 'BlankNode')[blankNodes++]
@@ -160,7 +223,7 @@ export class StatementDraft {
 				return { kind: 'written', view: match };
 			}
 
-			return { kind: 'term', term };
+			return value.kind === 'term' && value.node ? { ...value, node: { ...value.node, sent: false } } : { kind: 'term', term };
 		});
 
 		return new StatementDraft(stored.predicate ?? this.predicate, values);
@@ -172,16 +235,24 @@ export class StatementDraft {
 	 * @returns `true` for the same values.
 	 */
 	hasSameValues(other: StatementDraft): boolean {
-		return this.values.length === other.values.length && this.values.every((value, index) => _sameValue(value, other.values[index]));
+		const values = this._writtenValues;
+		const others = other._writtenValues;
+
+		return values.length === others.length && values.every((value, index) => _sameValue(value, others[index]));
 	}
 
 	/**
-	 * The values as the edit contract states them: written ones by their anchor, typed ones as terms.
+	 * The values as the edit contract states them: written ones by their anchor, typed ones as terms,
+	 * and new blank nodes with their type; a new blank node without a type is left out.
 	 * @returns The values.
 	 * @throws {Error} If a written value has no anchor, which a row that can be edited never has.
 	 */
 	toStatementValues(): StatementValue[] {
-		return this.values.map(value => {
+		return this._writtenValues.map((value): StatementValue => {
+			if (value.kind === 'term' && value.node?.type) {
+				return { kind: 'node', statements: [{ predicate: RDF.type, values: [{ kind: 'term', term: value.node.type }] }] };
+			}
+
 			if (value.kind === 'term') {
 				return { kind: 'term', term: value.term };
 			}
@@ -193,6 +264,15 @@ export class StatementDraft {
 			return { kind: 'existing', anchor: value.view.anchor };
 		});
 	}
+}
+
+/**
+ * Indicate whether a value is a new blank node no type was chosen for yet.
+ * @param value The value.
+ * @returns `true` for such a node.
+ */
+function _isUntypedNode(value: RowValue): boolean {
+	return value.kind === 'term' && value.node !== undefined && value.node.type === undefined;
 }
 
 /**

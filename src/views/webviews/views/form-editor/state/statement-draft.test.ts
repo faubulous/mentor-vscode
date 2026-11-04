@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { RDFS, XSD } from '@faubulous/mentor-rdf';
-import { createIriView, createLiteralView, createProperty, withAnchors, createTestResourceDetail } from '@src/utilities/mocks/statement-fixtures';
+import { RDF, RDFS, XSD } from '@faubulous/mentor-rdf';
+import { EXAMPLE_NAMESPACE as EX, createIriView, createLiteralView, createProperty, withAnchors, createTestResourceDetail } from '@src/utilities/mocks/statement-fixtures';
 import { PropertyView, TermView } from '../form-editor-model';
 import { StatementDraft } from './statement-draft';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
@@ -80,5 +80,33 @@ describe('StatementDraft', () => {
 		expect(rebased.values.map(value => value.kind)).toEqual(['written', 'written', 'term']);
 		expect(rebased.toStatementValues()).toEqual([{ kind: 'existing', anchor: 110 }, { kind: 'existing', anchor: 120 }, { kind: 'term', term: RdfDataFactory.literal('1', RdfDataFactory.namedNode(XSD.integer)) }]);
 		expect(rebased.hasSameValues(StatementDraft.fromProperty(after))).toBe(false);
+	});
+
+	it('neither writes nor compares a new blank node until its type is chosen, and writes it with its type', () => {
+		const stored = StatementDraft.fromProperty(createLabelProperty());
+		const draft = stored.withNodeAppended();
+		const type = RdfDataFactory.namedNode(`${EX}Leaf`);
+
+		expect(draft.hasSameValues(stored)).toBe(true);
+		expect(new StatementDraft(RDFS.label, []).withNodeAppended().isComplete).toBe(false);
+		expect(draft.toStatementValues()).toEqual(stored.toStatementValues());
+		expect(draft.withoutUntypedNodes().values).toHaveLength(3);
+
+		const typed = draft.withNodeType(3, type);
+
+		expect(typed.hasSameValues(stored)).toBe(false);
+		expect(typed.toStatementValues()[3]).toEqual({ kind: 'node', statements: [{ predicate: RDF.type, values: [{ kind: 'term', term: type }] }] });
+		expect(typed.withoutUntypedNodes()).toBe(typed);
+		expect(typed.withNodeType(0, type)).toBe(typed);
+	});
+
+	it('keeps a new blank node as it is when carried over, until an edit writing it was sent, and then finds it among the blank nodes', () => {
+		const node: TermView = { term: RdfDataFactory.blankNode('b0'), editable: true, anchor: 140 };
+		const typed = new StatementDraft(RDFS.label, []).withNodeAppended().withNodeType(0, RdfDataFactory.namedNode(`${EX}Leaf`));
+		const written = new StatementDraft(RDFS.label, [{ kind: 'written', view: node }]);
+
+		expect(typed.rebasedOnto(written).values[0]).toBe(typed.values[0]);
+		expect(typed.withNodesSent(true).rebasedOnto(written).values[0]).toEqual({ kind: 'written', view: node });
+		expect(typed.withNodesSent(true).rebasedOnto(new StatementDraft(RDFS.label, [])).values[0]).toMatchObject({ kind: 'term', node: { sent: false } });
 	});
 });
