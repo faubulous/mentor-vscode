@@ -63,20 +63,33 @@ body {
 	background: var(--vscode-editor-background);
 }
 
-/* The filter at the start, which gives way first when the editor is narrow, and the actions at the end. */
+/*
+ * Stuck below the context bar, the toolbar ends the header the two make: the line under it and
+ * its shadow run across the whole width of the editor, as the context bar does, and the scroll
+ * area clips them at its sides.
+ */
+.form-toolbar.is-stuck {
+	border-bottom-color: transparent;
+}
+
+.form-toolbar.is-stuck::after {
+	content: '';
+	position: absolute;
+	left: -100vw;
+	right: -100vw;
+	bottom: -1px;
+	height: 1px;
+	background: var(--form-hairline);
+	box-shadow: 0 2px 6px -2px var(--vscode-widget-shadow, transparent);
+	pointer-events: none;
+}
+
+/* A slim row with the actions at its end. */
 .form-toolbar-content {
 	display: flex;
 	align-items: center;
-	justify-content: space-between;
-	gap: 12px;
-	height: 40px;
-}
-
-.form-toolbar-start {
-	display: flex;
-	align-items: center;
-	flex: 0 1 auto;
-	min-width: 0;
+	justify-content: flex-end;
+	height: 28px;
 }
 
 .form-toolbar-end {
@@ -126,74 +139,94 @@ body {
 	color: inherit;
 }
 
-/* The filter: a text field with its search icon, token, count and clear button inside. */
-.filter-field {
+/*
+ * The find of the form, as the text editor of VS Code draws it: a widget floating near the top of
+ * the editor at its right, over the sticky header, in the colours of the editor widgets.
+ */
+.find-widget {
+	position: absolute;
+	top: 6px;
+	right: 24px;
+	z-index: 20;
 	display: flex;
 	align-items: center;
-	gap: 6px;
-	width: 360px;
-	max-width: 100%;
+	gap: 2px;
+	padding: 4px 4px 4px 6px;
+	border: 1px solid var(--vscode-editorWidget-border, transparent);
+	border-radius: 8px;
+	background: var(--vscode-editorWidget-background);
+	color: var(--vscode-editorWidget-foreground, var(--vscode-foreground));
+	box-shadow: 0 0 8px 2px var(--vscode-widget-shadow, transparent);
 }
 
-.filter-field vscode-textfield {
-	flex: 1 1 auto;
-	min-width: 0;
+.find-widget-input {
+	width: 220px;
 }
 
-.filter-shortcut {
-	flex: none;
-	padding: 0 5px;
-	border: 1px solid var(--form-hairline);
-	border-radius: 3px;
-	color: var(--vscode-descriptionForeground);
-	font-family: var(--form-mono);
-	font-size: 11px;
-	line-height: 16px;
+.find-widget-count {
+	min-width: 70px;
+	padding: 0 6px;
+	font-size: 12px;
+	white-space: nowrap;
 }
 
-.filter-count {
-	flex: none;
-	color: var(--vscode-descriptionForeground);
-	font-size: 11px;
+.find-widget-count.is-empty {
+	color: var(--vscode-errorForeground);
 }
 
-.filter-clear,
-.filter-token-clear {
-	flex: none;
+.find-widget-button,
+.find-widget-token-clear {
 	display: grid;
 	place-items: center;
-	width: 18px;
-	height: 18px;
 	padding: 0;
 	border: 0;
-	border-radius: 3px;
-	background: transparent;
-	color: var(--vscode-descriptionForeground);
+	border-radius: var(--mentor-radius-lg);
+	background: none;
+	color: inherit;
 	cursor: pointer;
 }
 
-.filter-clear:hover,
-.filter-token-clear:hover {
-	background: var(--form-tint);
-	color: var(--vscode-foreground);
+.find-widget-button {
+	width: 22px;
+	height: 22px;
+}
+
+.find-widget-button:hover:not(:disabled),
+.find-widget-token-clear:hover {
+	background: var(--vscode-toolbar-hoverBackground, var(--form-tint));
+}
+
+.find-widget-button:disabled {
+	opacity: 0.4;
+	cursor: default;
+}
+
+.find-widget-button:focus-visible,
+.find-widget-token-clear:focus-visible {
+	outline: 1px solid var(--vscode-focusBorder);
 }
 
 /* The definition tree node the list is narrowed to, as a token before the text. */
-.filter-token {
+.find-widget-token {
 	flex: none;
 	display: inline-flex;
 	align-items: center;
 	gap: 2px;
-	max-width: 40%;
+	max-width: 160px;
+	margin-right: 4px;
 	padding: 0 2px 0 6px;
 	border-radius: 3px;
 	background: var(--form-tint);
-	color: var(--vscode-foreground);
 	font-size: 12px;
 	line-height: 18px;
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
+}
+
+.find-widget-token-clear {
+	width: 16px;
+	height: 16px;
 }
 
 /* ---------- Body: the scroll area and the overview ruler ---------- */
@@ -282,6 +315,7 @@ body {
 /*
  * The running head shows once the title of the document has scrolled away. It hangs from an
  * anchor of no height, so it overlays the entries instead of moving them, and fades in and out.
+ * With the toolbar stuck below it, the two are one header, which the line under the toolbar ends.
  */
 .context-bar-anchor {
 	position: sticky;
@@ -296,9 +330,7 @@ body {
 	left: 0;
 	right: 0;
 	height: var(--form-context-bar-height);
-	border-bottom: 1px solid var(--form-hairline);
 	background: var(--vscode-editor-background);
-	box-shadow: 0 2px 6px -2px var(--vscode-widget-shadow, transparent);
 	opacity: 0;
 	visibility: hidden;
 	transition: opacity 120ms ease, visibility 0s linear 120ms;
@@ -1157,6 +1189,11 @@ body {
 
 .resource-values:focus-within {
 	border-color: var(--vscode-focusBorder);
+}
+
+/* A pill stands in a wrapper of its own height, so the box centres it with an even space around it. */
+.resource-values > [data-value-index] {
+	display: flex;
 }
 
 .resource-values > .combobox {

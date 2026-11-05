@@ -1,16 +1,10 @@
 import { SectionHeaderContextMenu } from '@src/views/webviews/components/section-header-context-menu';
-import { FilterField, FilterFieldProps } from './filter-field';
 import { LanguagePicker, LanguagePickerProps } from './language-picker';
 
 /**
  * Properties of the {@link FormToolbar} component.
  */
 export interface FormToolbarProps {
-	/**
-	 * The filter field.
-	 */
-	filter: FilterFieldProps;
-
 	/**
 	 * The language picker, where the document writes language tags.
 	 */
@@ -25,20 +19,25 @@ export interface FormToolbarProps {
 	 * Called when the external declarations are to be shown or hidden.
 	 */
 	onToggleExternalDeclarations: () => void;
+
+	/**
+	 * Whether the toolbar stays below the context bar, as it does once the title of the document
+	 * has scrolled away: the two are one header then, which a line and a shadow end.
+	 */
+	stuck?: boolean;
 }
 
 /**
  * The bar under the title of the document, as wide as the column of the form, which stays below
- * the context bar once the title has scrolled away: the filter at its start, and the language
- * picker and the menu of further actions at its end.
- * @param props The filter and the actions.
+ * the context bar once the title has scrolled away: the language picker and the menu of further
+ * actions at its end. Ctrl+F finds in the form with the find widget.
+ * @param props The actions.
  * @returns The toolbar.
  */
-export function FormToolbar({ filter, languages, externalDeclarationsHidden, onToggleExternalDeclarations }: FormToolbarProps): React.JSX.Element {
+export function FormToolbar({ languages, externalDeclarationsHidden, onToggleExternalDeclarations, stuck = false }: FormToolbarProps): React.JSX.Element {
 	return (
-		<div className="form-toolbar" role="toolbar" aria-label="Form editor">
+		<div className={`form-toolbar${stuck ? ' is-stuck' : ''}`} role="toolbar" aria-label="Form editor">
 			<div className="form-toolbar-content">
-				<div className="form-toolbar-start"><FilterField {...filter} /></div>
 				<div className="form-toolbar-end">
 					{languages && <LanguagePicker {...languages} />}
 					<SectionHeaderContextMenu items={[

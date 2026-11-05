@@ -7,6 +7,7 @@ import { useStylesheet, useWebviewMessaging, useWebviewState } from '@src/views/
 import { useSharedStylesheets } from '@src/views/webviews/hooks/use-shared-stylesheets';
 import { BlockList, RevealRequest } from './components/block-list';
 import { ContextBar } from './components/context-bar';
+import { FindWidget } from './components/find-widget';
 import { DocumentHeader } from './components/document-header';
 import { FormErrorBoundary } from './components/form-error-boundary';
 import { FormToolbar } from './components/form-toolbar';
@@ -44,6 +45,9 @@ function FormEditor(): React.JSX.Element {
 	const [cardStates, setCardStates] = useState(() => ResourceCardStates.fromOpenCards(PersistedViewState.read(storedViewState).openCards));
 	const [filterText, setFilterText] = useState('');
 	const [typeFilter, setTypeFilter] = useState<TypeFilter>();
+	const [findOpen, setFindOpen] = useState(false);
+	const [findFocusRequest, setFindFocusRequest] = useState(0);
+	const [matchIndex, setMatchIndex] = useState<number>();
 	const [revealRequest, setRevealRequest] = useState<RevealRequest>();
 	const [revealed, setRevealed] = useState<NamedNode | BlankNode>();
 	const [currentId, setCurrentId] = useState<string>();
@@ -85,6 +89,7 @@ function FormEditor(): React.JSX.Element {
 				break;
 			case 'FilterResources':
 				setTypeFilter({ label: message.label, resourceKeys: new Set(message.resources.map(resource => termToString(resource))) });
+				setFindOpen(true);
 				break;
 			case 'ResourceRenamed':
 				setCardStates(current => current.renamed(termToString(message.resource), termToString(message.renamed)));
@@ -181,7 +186,37 @@ function FormEditor(): React.JSX.Element {
 	const handleRenameResource = useCallback((resource: NamedNode, localPart: string) => post({ id: 'RenameResource', resource, localPart }), [post]);
 	const handleRevealProblem = useCallback((problem: DocumentProblem) => handleRevealInTextEditor(problem.line, problem.character), [handleRevealInTextEditor]);
 
-	// Undo in a field undoes its typing, elsewhere the document; the filter is the find of the form.
+	// A new text or token narrows the list anew, and the steps start over.
+	useEffect(() => setMatchIndex(undefined), [filterText, typeFilter]);
+
+	// The find widget takes the focus when it opens, and again whenever Ctrl+F asks for it.
+	useEffect(() => {
+		const field = filterRef.current;
+
+		if (findFocusRequest > 0 && field) {
+			void field.updateComplete.then(() => field.focus());
+		}
+	}, [findFocusRequest]);
+
+	const handleStepMatch = useCallback((step: 1 | -1) => {
+		if (listed.length === 0) {
+			return;
+		}
+
+		const next = matchIndex === undefined ? (step > 0 ? 0 : listed.length - 1) : (matchIndex + step + listed.length) % listed.length;
+
+		setMatchIndex(next);
+		handleRevealResource(listed[next].term);
+	}, [listed, matchIndex, handleRevealResource]);
+
+	const handleCloseFind = useCallback(() => {
+		setFindOpen(false);
+		setFilterText('');
+		setTypeFilter(undefined);
+		scrollElement?.focus();
+	}, [scrollElement]);
+
+	// Undo in a field undoes its typing, elsewhere the document; Ctrl+F opens the find of the form.
 	const handleKeyDown = useCallback((event: KeyboardEvent<HTMLDivElement>) => {
 		if (routeUndo(event)) {
 			return;
@@ -189,7 +224,8 @@ function FormEditor(): React.JSX.Element {
 
 		if (event.key.toLowerCase() === 'f' && (event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey) {
 			event.preventDefault();
-			filterRef.current?.focus();
+			setFindOpen(true);
+			setFindFocusRequest(current => current + 1);
 		}
 	}, [routeUndo]);
 
@@ -239,6 +275,20 @@ function FormEditor(): React.JSX.Element {
 					: (
 						<FormErrorBoundary onOpenTextEditor={handleOpenTextEditor} resetKey={snapshot.version}>
 							<div className="form-editor-body">
+								{findOpen && (
+									<FindWidget
+										text={filterText}
+										onChange={setFilterText}
+										token={typeFilter?.label}
+										onClearToken={() => setTypeFilter(undefined)}
+										matchCount={listed.length}
+										matchIndex={matchIndex}
+										onPrevious={() => handleStepMatch(-1)}
+										onNext={() => handleStepMatch(1)}
+										onClose={handleCloseFind}
+										fieldRef={filterRef}
+									/>
+								)}
 								<div className="form-editor-ruler" ref={setRulerElement} />
 								<div className="form-editor-scroll" ref={setScrollElement} tabIndex={-1}>
 									<ContextBar
@@ -254,18 +304,10 @@ function FormEditor(): React.JSX.Element {
 									<div className="form-editor-content">
 										<DocumentHeader fileName={snapshot.fileName} documentResource={documentResource} titleRef={setTitleElement} />
 										<FormToolbar
-											filter={{
-												text: filterText,
-												onChange: setFilterText,
-												matchCount: listed.length,
-												token: typeFilter?.label,
-												onClearToken: () => setTypeFilter(undefined),
-												shortcut: _isMac() ? '⌘F' : 'Ctrl+F',
-												fieldRef: filterRef
-											}}
 											languages={pickerProps}
 											externalDeclarationsHidden={declarationsHidden}
 											onToggleExternalDeclarations={handleToggleExternalDeclarations}
+											stuck={titleScrolledPast}
 										/>
 										{snapshot.resources.length === 0
 											? <EmptyState onOpenTextEditor={handleOpenTextEditor} />
@@ -292,14 +334,6 @@ function FormEditor(): React.JSX.Element {
 			</div>
 		</FormEditorContext.Provider>
 	);
-}
-
-/**
- * Indicate whether the editor runs on a Mac, whose shortcuts are written with ⌘.
- * @returns `true` on a Mac.
- */
-function _isMac(): boolean {
-	return /mac/i.test(navigator.platform);
 }
 
 /**
