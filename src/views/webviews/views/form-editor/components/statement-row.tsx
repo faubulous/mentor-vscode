@@ -13,7 +13,6 @@ import { StatementRowState } from '../state/statement-row-state';
 import { CardGlyph } from './card-glyph';
 import { CardUsage } from './card-usage';
 import { EditedRow } from './edited-row';
-import { LabelPredicatePicker } from './label-predicate-picker';
 import { PredicateField } from './predicate-field';
 import { ResourceValues } from './resource-values';
 import { getRowErrorMessage } from './row-error-message';
@@ -280,7 +279,7 @@ function _gutterOf(header: RowHeader): React.JSX.Element {
 
 /**
  * The predicate of a header row: "type" for a nested card, and "label" for a card of the list, which
- * offers the label predicates where the row is edited.
+ * is the predicate field of any row where the row is edited.
  * @param header The header.
  * @param edited The row, where it is edited.
  * @returns The predicate cell.
@@ -292,7 +291,7 @@ function _headerPredicateOf(header: RowHeader, edited: EditedRow | undefined): R
 
 	return (
 		<span className="statement-predicate">
-			{edited ? <LabelPredicatePicker editor={edited.editor} predicate={edited.state.draft.predicate} services={edited.services} /> : 'label'}
+			{edited ? <PredicateField editor={edited.editor} state={edited.state} label="label" /> : 'label'}
 		</span>
 	);
 }

@@ -547,39 +547,6 @@ body {
 	font-weight: 600;
 }
 
-/* The predicate of the label row, which opens the menu of the label predicates. */
-.label-predicate-picker {
-	position: relative;
-	display: inline-block;
-}
-
-.label-predicate-button {
-	padding: 0 5px;
-	border: 0;
-	border-radius: var(--mentor-radius-md);
-	background: none;
-	color: var(--vscode-descriptionForeground);
-	font: inherit;
-	line-height: var(--form-field-height, var(--statement-line-height));
-	cursor: pointer;
-}
-
-.label-predicate-button:hover {
-	background: var(--form-tint);
-	color: var(--vscode-foreground);
-}
-
-.label-predicate-button:focus-visible {
-	outline: 1px solid var(--vscode-focusBorder);
-}
-
-.label-predicate-picker vscode-context-menu {
-	position: absolute;
-	top: 100%;
-	left: 0;
-	z-index: 10;
-}
-
 .filter-match {
 	border-radius: 2px;
 	background: var(--vscode-editor-findMatchHighlightBackground);

@@ -343,8 +343,8 @@ export interface DocumentSnapshot {
 	dominantTypeIri?: string;
 
 	/**
-	 * The label predicates Mentor is configured with, most preferred first, which the label row of a
-	 * card offers.
+	 * The label predicates Mentor is configured with, most preferred first: the label row of a card
+	 * shows the most preferred one the resource has.
 	 */
 	labelPredicates: NamedNode[];
 }

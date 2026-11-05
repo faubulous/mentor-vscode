@@ -71,12 +71,14 @@ describe('ResourceCard, its label row', () => {
 		expect(host.submitted.map(record => record.operations)).toEqual([[{ op: 'setValues', subject: TEST_SUBJECT, predicate: RDFS.label, values: [{ kind: 'term', term: RdfDataFactory.literal('Oak') }] }]]);
 	});
 
-	it('writes the label with another label predicate picked from the menu of the label row', async () => {
+	it('writes the label with another predicate typed into the predicate field of the label row, which reads "label" at rest', async () => {
 		const { host, labelRow } = renderCard([createProperty('rdfs:label', [createLiteralView('Tree')])]);
+		const predicate = within(labelRow).getByLabelText('Predicate');
 
-		await act(async () => {
-			labelRow.querySelector('vscode-context-menu')!.dispatchEvent(new CustomEvent('vsc-context-menu-select', { detail: { value: SKOS.prefLabel } }));
-		});
+		expect((predicate as HTMLInputElement).value).toBe('label');
+
+		type(predicate, 'skos:prefLabel');
+		await leave(predicate);
 
 		expect(host.submitted.map(record => record.operations)).toEqual([[{ op: 'setPredicate', subject: TEST_SUBJECT, predicate: RDFS.label, newPredicate: SKOS.prefLabel }]]);
 	});
@@ -86,6 +88,7 @@ describe('ResourceCard, its label row', () => {
 		const input = within(labelRow).getByLabelText('New value');
 
 		expect(input.getAttribute('placeholder')).toBe('Add label');
+		expect((within(labelRow).getByLabelText('Predicate') as HTMLInputElement).value).toBe('label');
 
 		type(input, 'Oak');
 		await leave(input);

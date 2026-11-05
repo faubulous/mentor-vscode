@@ -30,7 +30,9 @@ export interface PredicateFieldProps {
 
 /**
  * The predicate of an edited row: its label at rest, and how it is written while the field has
- * the focus. The predicate it names is taken when the field is left or Enter is pressed in it.
+ * the focus. A row for a new statement shows what is typed at rest too, unless its predicate is
+ * given, as the label row of a card without a label has. The predicate it names is taken when the
+ * field is left or Enter is pressed in it.
  * @param props The row, the label of its predicate and whether the field takes the focus.
  * @returns The field.
  */
@@ -68,7 +70,7 @@ export function PredicateField({ editor, state, label, autoFocus = false }: Pred
 		<vscode-textfield
 			ref={fieldRef}
 			className="input-field is-predicate"
-			value={focused || editor.isNew ? state.predicateText : label}
+			value={focused || (editor.isNew && state.stored.predicate === undefined) ? state.predicateText : label}
 			placeholder="predicate"
 			title={state.predicateText}
 			aria-label="Predicate"
