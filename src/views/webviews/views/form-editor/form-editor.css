@@ -723,7 +723,6 @@ body {
 	position: relative;
 	display: block;
 	grid-column: 2 / -1;
-	padding: 2px 0 2px calc(var(--form-comment-bar-width) + var(--mentor-space-3));
 	color: var(--vscode-descriptionForeground);
 	white-space: pre-wrap;
 }
@@ -731,13 +730,6 @@ body {
 .statement-comment::before,
 .statement-value-comment::before {
 	content: '';
-	position: absolute;
-	top: 2px;
-	bottom: 2px;
-	left: 0;
-	width: var(--form-comment-bar-width);
-	border-radius: var(--form-comment-bar-width);
-	background: var(--form-comment-bar-color);
 }
 
 .statement-list-items {
@@ -1382,7 +1374,7 @@ body {
 /* A comment between entries: grey text behind a bar in the gutter, where an entry has its glyph. */
 .form-block.is-comment .comment-block {
 	display: grid;
-	grid-template-columns: var(--form-glyph-column) minmax(0, 1fr);
+	grid-template-columns: minmax(0, 1fr);
 	padding: 16px 0 12px;
 	border-bottom: 1px solid var(--form-hairline);
 }
@@ -1391,9 +1383,6 @@ body {
 	content: '';
 	align-self: stretch;
 	justify-self: center;
-	width: var(--form-comment-bar-width);
-	border-radius: var(--form-comment-bar-width);
-	background: var(--form-comment-bar-color);
 }
 
 .comment-block-text {
