@@ -800,12 +800,10 @@ body {
  * the button that removes a property.
  */
 .resource-card.is-nested {
-	--form-nested-radius: 10px;
 	position: relative;
 	margin: 2px 0;
 	padding: 6px 0;
 	border: 1px solid var(--form-hairline);
-	border-radius: var(--form-nested-radius);
 	background: color-mix(in oklab, var(--vscode-foreground) 3%, transparent);
 }
 
