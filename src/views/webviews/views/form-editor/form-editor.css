@@ -19,6 +19,8 @@ body {
 	--form-hairline: var(--vscode-widget-border, var(--vscode-panel-border, #2b2b2b));
 	/* The column of the glyph of an entry, as wide as the glyph and the even space on either side of it. */
 	--form-glyph-column: 44px;
+	/* The height of the context bar, below which the toolbar stays. */
+	--form-context-bar-height: 30px;
 	/* The gap between the columns of a card: after the gutter, the predicate and the values. */
 	--form-column-gap: 20px;
 	/* The box a field draws on intent: the border and the background of a VS Code input. */
@@ -49,39 +51,39 @@ body {
 
 /* ---------- Toolbar ---------- */
 
+/*
+ * The toolbar stands under the title of the document, in the column of the form, and stays below
+ * the context bar once the title has scrolled away. It covers the entries that scroll under it.
+ */
 .form-toolbar {
-	flex: 0 0 auto;
-	position: relative;
-	z-index: 2;
+	position: sticky;
+	top: var(--form-context-bar-height);
+	z-index: 11;
 	border-bottom: 1px solid var(--form-hairline);
 	background: var(--vscode-editor-background);
 }
 
+/* The filter at the start, which gives way first when the editor is narrow, and the actions at the end. */
 .form-toolbar-content {
-	box-sizing: content-box;
-	display: grid;
-	/* The end keeps the width of its controls; the filter gives way before them. */
-	grid-template-columns: minmax(0, 1fr) minmax(0, auto) minmax(max-content, 1fr);
-	align-items: center;
-	gap: 12px;
-	max-width: var(--form-column);
-	height: 40px;
-	padding: 0 var(--form-inset-end) 0 var(--form-inset);
-}
-
-.form-toolbar-middle {
 	display: flex;
 	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	height: 40px;
+}
+
+.form-toolbar-start {
+	display: flex;
+	align-items: center;
+	flex: 0 1 auto;
 	min-width: 0;
 }
 
 .form-toolbar-end {
 	display: flex;
 	align-items: center;
-	justify-content: flex-end;
+	flex: none;
 	gap: 6px;
-	min-width: 0;
-	margin-right: -6px;
 }
 
 /* The language picker names the language in muted text with a chevron right after it, and draws
@@ -239,8 +241,8 @@ body {
 
 /*
  * The content is one column, inset from the left edge of the editor and capped in width, while
- * the scroll area keeps the full width. The toolbar and the context bar use the same column, so
- * their edges align with the entries.
+ * the scroll area keeps the full width. The toolbar is part of it, and the context bar uses the
+ * same column, so their edges align with the entries.
  */
 .form-editor-content,
 .form-editor-banner {
@@ -293,7 +295,7 @@ body {
 	top: 0;
 	left: 0;
 	right: 0;
-	height: 30px;
+	height: var(--form-context-bar-height);
 	border-bottom: 1px solid var(--form-hairline);
 	background: var(--vscode-editor-background);
 	box-shadow: 0 2px 6px -2px var(--vscode-widget-shadow, transparent);
@@ -354,7 +356,6 @@ body {
 
 .document-header {
 	padding: 20px 0 12px;
-	border-bottom: 1px solid var(--form-hairline);
 }
 
 .document-header-title {

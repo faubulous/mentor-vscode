@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 
 /**
- * The bars that stay at the top of the scroll container while the form scrolls: the context bar,
- * once the title of the document has scrolled away.
+ * The bars that stay at the top of the scroll container while the form scrolls, one below the
+ * other: the context bar, once the title of the document has scrolled away, and the toolbar.
  */
-const STICKY_SELECTORS = ['.context-bar'];
+const STICKY_SELECTORS = ['.context-bar', '.form-toolbar'];
 
 /**
  * Measure how much of the top of the scroll container the sticky bars cover while the form is
@@ -47,11 +47,11 @@ function _stickyElementsOf(scrollElement: HTMLElement): HTMLElement[] {
 }
 
 /**
- * The height of the tallest sticky bar. The context bar keeps its height while it is hidden, as
- * it is shown whenever an entry further down is scrolled to.
+ * The height of the sticky bars together, as they stand one below the other. The context bar
+ * keeps its height while it is hidden, as it is shown whenever an entry further down is scrolled to.
  * @param scrollElement The scroll container.
  * @returns The height in pixels.
  */
 function _stickyHeightOf(scrollElement: HTMLElement): number {
-	return Math.max(0, ..._stickyElementsOf(scrollElement).map(element => element.offsetHeight));
+	return _stickyElementsOf(scrollElement).reduce((height, element) => height + element.offsetHeight, 0);
 }

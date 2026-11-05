@@ -28,8 +28,9 @@ export interface FormToolbarProps {
 }
 
 /**
- * The bar along the top of the editor, which stays while the form scrolls: the filter in its
- * middle, and the language picker and the menu of further actions at its end.
+ * The bar under the title of the document, as wide as the column of the form, which stays below
+ * the context bar once the title has scrolled away: the filter at its start, and the language
+ * picker and the menu of further actions at its end.
  * @param props The filter and the actions.
  * @returns The toolbar.
  */
@@ -37,8 +38,7 @@ export function FormToolbar({ filter, languages, externalDeclarationsHidden, onT
 	return (
 		<div className="form-toolbar" role="toolbar" aria-label="Form editor">
 			<div className="form-toolbar-content">
-				<div className="form-toolbar-start" />
-				<div className="form-toolbar-middle"><FilterField {...filter} /></div>
+				<div className="form-toolbar-start"><FilterField {...filter} /></div>
 				<div className="form-toolbar-end">
 					{languages && <LanguagePicker {...languages} />}
 					<SectionHeaderContextMenu items={[

@@ -30,7 +30,7 @@ function renderToolbar(width: number) {
 describe('FormToolbar, in a real browser', () => {
 	it('keeps the language picker and the menu at their width in a narrow editor, where the filter gives way', () => {
 		const wide = renderToolbar(1000);
-		const narrow = renderToolbar(450);
+		const narrow = renderToolbar(360);
 
 		expect(narrow.languages.width).toBe(wide.languages.width);
 		expect(narrow.menu.width).toBe(wide.menu.width);

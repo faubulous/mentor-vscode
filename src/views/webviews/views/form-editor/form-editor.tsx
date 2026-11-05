@@ -233,22 +233,6 @@ function FormEditor(): React.JSX.Element {
 	return (
 		<FormEditorContext.Provider value={context}>
 			<div className="form-editor" onKeyDown={handleKeyDown}>
-				{!blocking && (
-					<FormToolbar
-						filter={{
-							text: filterText,
-							onChange: setFilterText,
-							matchCount: listed.length,
-							token: typeFilter?.label,
-							onClearToken: () => setTypeFilter(undefined),
-							shortcut: _isMac() ? '⌘F' : 'Ctrl+F',
-							fieldRef: filterRef
-						}}
-						languages={pickerProps}
-						externalDeclarationsHidden={declarationsHidden}
-						onToggleExternalDeclarations={handleToggleExternalDeclarations}
-					/>
-				)}
 				{snapshot.readOnly && !blocking && <ReadOnlyBanner readOnly={snapshot.readOnly} onOpenTextEditor={handleOpenTextEditor} />}
 				{blocking && snapshot.readOnly
 					? <ProblemState readOnly={snapshot.readOnly} problems={snapshot.problems} onRevealProblem={handleRevealProblem} onOpenTextEditor={handleOpenTextEditor} />
@@ -269,6 +253,20 @@ function FormEditor(): React.JSX.Element {
 									/>
 									<div className="form-editor-content">
 										<DocumentHeader fileName={snapshot.fileName} documentResource={documentResource} titleRef={setTitleElement} />
+										<FormToolbar
+											filter={{
+												text: filterText,
+												onChange: setFilterText,
+												matchCount: listed.length,
+												token: typeFilter?.label,
+												onClearToken: () => setTypeFilter(undefined),
+												shortcut: _isMac() ? '⌘F' : 'Ctrl+F',
+												fieldRef: filterRef
+											}}
+											languages={pickerProps}
+											externalDeclarationsHidden={declarationsHidden}
+											onToggleExternalDeclarations={handleToggleExternalDeclarations}
+										/>
 										{snapshot.resources.length === 0
 											? <EmptyState onOpenTextEditor={handleOpenTextEditor} />
 											: (
