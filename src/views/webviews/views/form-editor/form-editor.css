@@ -28,9 +28,6 @@ body {
 	--form-tint: var(--vscode-toolbar-hoverBackground, color-mix(in oklab, var(--vscode-foreground) 10%, transparent));
 	--form-hover: var(--vscode-list-hoverBackground, color-mix(in oklab, var(--vscode-foreground) 5%, transparent));
 	--form-mono: var(--vscode-editor-font-family, monospace);
-	/* The bar along the left edge of a comment: its width and its colour. */
-	--form-comment-bar-width: 3px;
-	--form-comment-bar-color: color-mix(in oklab, var(--vscode-descriptionForeground) 55%, transparent);
 
 	display: flex;
 	flex-direction: column;
@@ -717,19 +714,13 @@ body {
 	align-items: stretch;
 }
 
-/* The comment lines above a property or a value: grey text behind a bar. */
+/* The comment lines above a property or a value: grey text. */
 .statement-comment,
 .statement-value-comment {
-	position: relative;
 	display: block;
 	grid-column: 2 / -1;
 	color: var(--vscode-descriptionForeground);
 	white-space: pre-wrap;
-}
-
-.statement-comment::before,
-.statement-value-comment::before {
-	content: '';
 }
 
 .statement-list-items {
@@ -1371,18 +1362,10 @@ body {
 
 /* ---------- Comments ---------- */
 
-/* A comment between entries: grey text behind a bar in the gutter, where an entry has its glyph. */
+/* A comment between entries: grey text. */
 .form-block.is-comment .comment-block {
-	display: grid;
-	grid-template-columns: minmax(0, 1fr);
 	padding: 16px 0 12px;
 	border-bottom: 1px solid var(--form-hairline);
-}
-
-.comment-block::before {
-	content: '';
-	align-self: stretch;
-	justify-self: center;
 }
 
 .comment-block-text {
