@@ -98,6 +98,7 @@ describe('StatementList', () => {
 		expect(screen.getByText('the node').classList.contains('statement-comment')).toBe(true);
 		expect(screen.getByText('Loading…').closest('.resource-card.is-nested')?.getAttribute('data-resource-id')).toBe('_:b2');
 		expect(dataService.requested).toEqual([RdfDataFactory.blankNode('b2')]);
+		expect(screen.queryByRole('button', { name: 'More actions' })).toBeNull();
 	});
 
 	it('stands in for a node beyond the nesting limit and for one that holds the list already', async () => {

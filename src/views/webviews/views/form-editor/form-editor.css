@@ -700,6 +700,7 @@ body {
  */
 .resource-card.is-nested {
 	--form-nested-radius: 10px;
+	position: relative;
 	margin: 2px 0;
 	padding: 6px 0;
 	border: 1px solid var(--form-hairline);
@@ -761,6 +762,53 @@ body {
 .statement-list.is-editable > .nested-card-header > .statement-predicate {
 	padding-left: 5px;
 	line-height: var(--form-field-height);
+}
+
+/*
+ * The ⋯ button of a nested card and its menu, over the actions column of the header row. The button
+ * is faint until the pointer or the focus is in the card, and stays in the order of Tab.
+ */
+.nested-card-menu {
+	position: absolute;
+	top: 6px;
+	right: 4px;
+}
+
+.nested-card-more {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 24px;
+	height: var(--form-field-height, var(--statement-line-height));
+	padding: 0;
+	border: 0;
+	border-radius: var(--mentor-radius-md);
+	background: none;
+	color: var(--vscode-descriptionForeground);
+	cursor: pointer;
+	opacity: 0;
+}
+
+.resource-card.is-nested:hover > .nested-card-menu > .nested-card-more,
+.resource-card.is-nested:focus-within > .nested-card-menu > .nested-card-more {
+	opacity: 1;
+}
+
+.nested-card-more:hover {
+	background: var(--form-tint);
+	color: var(--vscode-foreground);
+}
+
+.nested-card-more:focus-visible {
+	outline: 1px solid var(--vscode-focusBorder);
+	opacity: 1;
+}
+
+.nested-card-menu vscode-context-menu {
+	position: absolute;
+	top: 100%;
+	right: 0;
+	z-index: 10;
 }
 
 /* The other properties of a collapsed nested card, named after its type. */

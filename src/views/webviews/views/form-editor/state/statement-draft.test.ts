@@ -109,4 +109,18 @@ describe('StatementDraft', () => {
 		expect(typed.withNodesSent(true).rebasedOnto(written).values[0]).toEqual({ kind: 'written', view: node });
 		expect(typed.withNodesSent(true).rebasedOnto(new StatementDraft(RDFS.label, [])).values[0]).toMatchObject({ kind: 'term', node: { sent: false } });
 	});
+
+	it('adds a copy of a written value after it, written as a copy of its text and found among the blank nodes once sent', () => {
+		const node: TermView = { term: RdfDataFactory.blankNode('b0'), editable: true, anchor: 140 };
+		const copied: TermView = { term: RdfDataFactory.blankNode('b1'), editable: true, anchor: 160 };
+		const draft = new StatementDraft(RDFS.label, [{ kind: 'written', view: node }]).withValueCopied(0);
+
+		expect(draft.toStatementValues()).toEqual([{ kind: 'existing', anchor: 140 }, { kind: 'copy', anchor: 140 }]);
+		expect(draft.isComplete).toBe(true);
+		expect(draft.withValueCopied(1)).toBe(draft);
+
+		const written = new StatementDraft(RDFS.label, [{ kind: 'written', view: node }, { kind: 'written', view: copied }]);
+
+		expect(draft.withNodesSent(true).rebasedOnto(written).values).toEqual(written.values);
+	});
 });

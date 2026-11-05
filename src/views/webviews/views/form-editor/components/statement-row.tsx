@@ -285,7 +285,7 @@ function _resourcePills(resources: readonly ShownValue[], context: StatementRowC
  */
 function _shownValues(values: readonly RowValue[], services: StatementServices | undefined, languageFilter: LanguageFilter): ShownValue[] {
 	return values.flatMap((value, index): ShownValue[] => {
-		const view = value.kind === 'written' ? value.view : services?.resolver.viewOf(value.term) ?? { term: value.term, editable: false };
+		const view = value.kind === 'written' ? value.view : value.node?.copyOf ?? services?.resolver.viewOf(value.term) ?? { term: value.term, editable: false };
 
 		return languageFilter.shows(view.term) ? [{ value, view, index }] : [];
 	});

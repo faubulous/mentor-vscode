@@ -445,6 +445,20 @@ describe('FormEditorSession', () => {
 		expect(postedOf(posted, 'DocumentSnapshot')).toHaveLength(1);
 	});
 
+	it('puts the text of a blank node on the clipboard, for the version it was read from only', async () => {
+		const { receive, document } = await createSession('ex:A ex:p [ ex:q "x" ; ex:r [ ex:s 1 ] ] .\n');
+		const writeText = vi.spyOn(vscode.env.clipboard, 'writeText');
+		const anchor = document.getText().indexOf('[');
+
+		await receive({ id: 'CopyAsTurtle', anchor, version: document.version + 1 });
+
+		expect(writeText).not.toHaveBeenCalled();
+
+		await receive({ id: 'CopyAsTurtle', anchor, version: document.version });
+
+		expect(writeText).toHaveBeenCalledWith('[ ex:q "x" ; ex:r [ ex:s 1 ] ]');
+	});
+
 	it('posts nothing once disposed', async () => {
 		const { session, posted } = await createSession('ex:A a ex:Class .\n');
 

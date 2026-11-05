@@ -332,6 +332,15 @@ export class StatementRowEditor implements EditWriter {
 	}
 
 	/**
+	 * Add a copy of a written value after it and write the row, as Duplicate does.
+	 * @param index The index of the value.
+	 */
+	duplicateValue(index: number): void {
+		this._update(this._state.withDraft(this._state.draft.withValueCopied(index)));
+		this._requestValues();
+	}
+
+	/**
 	 * Remove the property with all its values and write that, as the remove button of a row does.
 	 */
 	removeProperty(): void {

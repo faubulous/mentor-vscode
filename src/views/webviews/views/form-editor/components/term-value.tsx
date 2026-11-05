@@ -1,6 +1,7 @@
 import { TermView } from '../form-editor-model';
 import { useIriNavigation } from '../hooks/use-iri-navigation';
 import { LiteralValue } from './literal-value';
+import { NestedCardActions } from './nested-card-menu';
 import { NestedResourceCard } from './nested-resource-card';
 import { StatementRowContext } from './statement-row-context';
 import { ValuePill } from './value-pill';
@@ -13,6 +14,11 @@ export interface TermValueProps extends StatementRowContext {
 	 * The value.
 	 */
 	view: TermView;
+
+	/**
+	 * What the row can do with a blank node shown as a nested card; absent where the row only reads.
+	 */
+	nestedActions?: NestedCardActions;
 }
 
 /**
@@ -21,7 +27,7 @@ export interface TermValueProps extends StatementRowContext {
  * @param props The value and where it stands.
  * @returns The value.
  */
-export function TermValue({ view, dataService, depth, visited }: TermValueProps): React.JSX.Element {
+export function TermValue({ view, dataService, depth, visited, nestedActions }: TermValueProps): React.JSX.Element {
 	const navigate = useIriNavigation();
 
 	if (view.collection) {
@@ -37,7 +43,7 @@ export function TermValue({ view, dataService, depth, visited }: TermValueProps)
 	}
 
 	if (view.nested) {
-		return <NestedResourceCard nested={view.nested} dataService={dataService} depth={depth + 1} visited={visited} />;
+		return <NestedResourceCard nested={view.nested} dataService={dataService} depth={depth + 1} visited={visited} actions={nestedActions} />;
 	}
 
 	switch (view.term.termType) {

@@ -15,7 +15,7 @@ import { EditOperation } from '@src/services/editing/edit-operation';
 import { getLog } from '@src/utilities/vscode/log';
 import { ResourceReferenceProvider } from '@src/providers/resource-reference-provider';
 import { getSubjectIconName } from '@src/utilities/subject-icon';
-import { tokensMatchText } from '@src/utilities/tokens';
+import { getBlankNodeSpan, tokensMatchText } from '@src/utilities/tokens';
 import { DocumentSyntaxError } from '@src/services/document/document-syntax-error';
 import { WebviewComponentFactory } from '../../webview-component-factory';
 import { ExecuteCommandMessage } from '../../webview-messaging';
@@ -333,6 +333,9 @@ export class FormEditorSession implements vscode.Disposable {
 			case 'PickLanguage':
 				await this._pickLanguage(message.allLanguages);
 				break;
+			case 'CopyAsTurtle':
+				await this._copyAsTurtle(message.anchor, message.version);
+				break;
 			case 'ExecuteCommand': {
 				const command = message as ExecuteCommandMessage;
 
@@ -383,6 +386,28 @@ export class FormEditorSession implements vscode.Disposable {
 
 		if (selection.kind === 'language') {
 			void this._refreshWhenLoaded();
+		}
+	}
+
+	/**
+	 * Put the text of a blank node written in place on the clipboard, as Copy as Turtle does. The
+	 * anchor is an offset into the version the webview read it from; once the document changed, the
+	 * node may be written elsewhere, and nothing is copied.
+	 * @param anchor The offset the node starts at.
+	 * @param version The document version the offset belongs to.
+	 */
+	private async _copyAsTurtle(anchor: number, version: number): Promise<void> {
+		const context = this._getTokenizedContext();
+		const text = this._document.getText();
+
+		if (!context || version !== this._document.version || !tokensMatchText(context.tokens, text)) {
+			return;
+		}
+
+		const span = getBlankNodeSpan(context.tokens, anchor);
+
+		if (span) {
+			await vscode.env.clipboard.writeText(text.slice(span.start, span.end));
 		}
 	}
 

@@ -96,6 +96,15 @@ describe('StatementRowEditor', () => {
 		expect(untyped.editor.state.draft.values).toHaveLength(1);
 	});
 
+	it('writes a copy of a written value after it at once, as Duplicate does', () => {
+		const { editor, requested } = createEditor();
+
+		editor.duplicateValue(0);
+
+		expect(requested).toEqual([editor]);
+		expect(editor.takeEdit()).toEqual([{ op: 'setValues', subject: TEST_SUBJECT, predicate: RDFS.label, values: [{ kind: 'existing', anchor: 110 }, { kind: 'copy', anchor: 110 }] }]);
+	});
+
 	it('takes the sent mark off a new blank node when the edit writing it is refused', () => {
 		const { editor } = createEditor();
 

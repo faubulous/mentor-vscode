@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { RDF, RDFS } from '@faubulous/mentor-rdf';
 import { createEditingHostStub } from '@src/utilities/mocks/editing-host-fixtures';
 import { createResourceDataServiceStub } from '@src/utilities/mocks/resource-data-service-fixtures';
-import { TEST_NAMESPACES, createIriView, createLiteralView, createProperty, createTestResourceDetail, withAnchors } from '@src/utilities/mocks/statement-fixtures';
+import { TEST_NAMESPACES, TEST_SUBJECT, createIriView, createLiteralView, createProperty, createTestResourceDetail, withAnchors } from '@src/utilities/mocks/statement-fixtures';
 import { renderWebview } from '@src/utilities/mocks/webview-test-utils';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { ResourceDetail, TermView } from '../form-editor-model';
@@ -49,7 +49,8 @@ function renderCard(nodeDetail: ResourceDetail = NODE_DETAIL) {
 	const host = createEditingHostStub();
 	const editing = new EditingController(host);
 	const dataService = createResourceDataServiceStub([DETAIL, nodeDetail]);
-	const context: FormEditorContextValue = { readOnly: false, editing, namespaces: NAMESPACES, languageTags: {}, resources: [] };
+	const onCopyAsTurtle = vi.fn();
+	const context: FormEditorContextValue = { readOnly: false, editing, namespaces: NAMESPACES, languageTags: {}, resources: [], onCopyAsTurtle };
 
 	renderWebview(
 		<FormEditorContext.Provider value={context}>
@@ -57,7 +58,17 @@ function renderCard(nodeDetail: ResourceDetail = NODE_DETAIL) {
 		</FormEditorContext.Provider>
 	);
 
-	return { host, editing };
+	return { host, editing, onCopyAsTurtle };
+}
+
+/**
+ * Pick an item of the ⋯ menu of the nested card, as the menu reports a pick.
+ * @param value The value of the item.
+ */
+async function pick(value: string): Promise<void> {
+	await act(async () => {
+		nestedCard().querySelector('vscode-context-menu')!.dispatchEvent(new CustomEvent('vsc-context-menu-select', { detail: { value } }));
+	});
 }
 
 /**
@@ -212,5 +223,50 @@ describe('StatementList, with a blank node', () => {
 			predicate: RDF.type,
 			values: [{ kind: 'term', term: RdfDataFactory.namedNode(`${TEST_NAMESPACES.ex}Leaf`) }]
 		}]]);
+	});
+
+	it('duplicates the blank node from the ⋯ menu of its card, writing a copy after it at once', async () => {
+		const { host } = renderCard();
+
+		expect(within(nestedCard()).getByRole('button', { name: 'More actions' })).toBeTruthy();
+
+		await pick('duplicate');
+
+		expect(host.submitted.map(record => record.operations)).toEqual([[{
+			op: 'setValues',
+			subject: TEST_SUBJECT,
+			predicate: RDFS.comment,
+			values: [{ kind: 'existing', anchor: 120 }, { kind: 'existing', anchor: 130 }, { kind: 'copy', anchor: 130 }]
+		}]]);
+	});
+
+	it('removes the blank node from the ⋯ menu of its card, writing the row at once', async () => {
+		const { host } = renderCard();
+
+		await pick('remove');
+
+		expect(host.submitted.map(record => record.operations)).toEqual([[{ op: 'setValues', subject: TEST_SUBJECT, predicate: RDFS.comment, values: [{ kind: 'existing', anchor: 120 }] }]]);
+	});
+
+	it('copies the blank node as Turtle from the ⋯ menu of its card, by where it is written', async () => {
+		const { onCopyAsTurtle } = renderCard();
+
+		await pick('copy');
+
+		expect(onCopyAsTurtle).toHaveBeenCalledWith(130, 1);
+	});
+
+	it('opens the ⋯ menu on a right-click on the card, but leaves a right-click in a text field to the browser', () => {
+		renderCard();
+
+		const menu = nestedCard().querySelector('vscode-context-menu') as HTMLElement & { show?: boolean };
+
+		fireEvent.contextMenu(within(nestedRowOf('rdfs:label')).getByLabelText('Value 1'));
+
+		expect(menu.show).not.toBe(true);
+
+		fireEvent.contextMenu(nestedRowOf('rdfs:label'));
+
+		expect(menu.show).toBe(true);
 	});
 });

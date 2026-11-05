@@ -39,6 +39,7 @@ import {
 	getTokenRange,
 	hasSourcePosition,
 	tokensMatchText,
+	getBlankNodeSpan,
 } from '@src/utilities/tokens';
 
 function makeToken(typeName: string, image: string, startLine = 1, startColumn = 1, endLine = 1, endColumn = 10, payload?: any): any {
@@ -643,3 +644,34 @@ describe('tokensMatchText', () => {
 	});
 });
 
+describe('getBlankNodeSpan', () => {
+	/**
+	 * Read the tokens of a Turtle text with the real lexer.
+	 */
+	async function tokensOf(text: string): Promise<IToken[]> {
+		const parsers = await vi.importActual<typeof import('@faubulous/mentor-rdf-parsers')>('@faubulous/mentor-rdf-parsers');
+
+		return new parsers.TurtleLexer().tokenize(text).tokens;
+	}
+
+	it('spans a blank node from its bracket to the bracket that closes it, over the nodes nested in it', async () => {
+		const text = 'ex:s ex:p [ ex:q [ ex:r 1 ] ; ex:t [] ], ex:a .';
+		const tokens = await tokensOf(text);
+		const outer = getBlankNodeSpan(tokens, text.indexOf('['))!;
+		const inner = getBlankNodeSpan(tokens, text.indexOf('[', text.indexOf('[') + 1))!;
+		const empty = getBlankNodeSpan(tokens, text.indexOf('[]'))!;
+
+		expect(text.slice(outer.start, outer.end)).toBe('[ ex:q [ ex:r 1 ] ; ex:t [] ]');
+		expect(text.slice(inner.start, inner.end)).toBe('[ ex:r 1 ]');
+		expect(text.slice(empty.start, empty.end)).toBe('[]');
+	});
+
+	it('spans nothing where no blank node starts, or one is not closed', async () => {
+		const text = 'ex:s ex:p ex:a, [ ex:q 1';
+		const tokens = await tokensOf(text);
+
+		expect(getBlankNodeSpan(tokens, text.indexOf('ex:a'))).toBeUndefined();
+		expect(getBlankNodeSpan(tokens, text.indexOf('['))).toBeUndefined();
+		expect(getBlankNodeSpan(tokens, 3)).toBeUndefined();
+	});
+});
