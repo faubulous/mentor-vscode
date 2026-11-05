@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { OWL, RDF } from '@faubulous/mentor-rdf';
+import { OWL, RDF, RDFS, SKOS } from '@faubulous/mentor-rdf';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
-import { TEST_NAMESPACES, TEST_SUBJECT, createIriView, createProperty, createSampleResourceDetail, withAnchors } from '@src/utilities/mocks/statement-fixtures';
+import { TEST_NAMESPACES, TEST_SUBJECT, createIriView, createLiteralView, createProperty, createSampleResourceDetail, createTestResourceDetail, withAnchors } from '@src/utilities/mocks/statement-fixtures';
 import { PropertyView } from '../form-editor-model';
 import { TypedTermReader } from '../services/statement/typed-term-reader';
 import { StatementRowEntry, StatementRows, StatementRowsData } from './statement-rows';
@@ -35,7 +35,7 @@ function createRows(keepNewRowOpen = true): StatementRows {
  * Make the rows of the nested card of a blank node, which the type leads.
  */
 function createBoxRows(): StatementRows {
-	return new StatementRows({ requestWrite: () => undefined, flush: () => undefined }, { keepNewRowOpen: false, typeRow: true });
+	return new StatementRows({ requestWrite: () => undefined, flush: () => undefined }, { keepNewRowOpen: false, leadingRow: { predicates: [RDF.type], predicateText: 'a' } });
 }
 
 describe('StatementRows', () => {
@@ -124,14 +124,14 @@ describe('StatementRows', () => {
 	it('leads the rows of a nested card with the type, wherever the type is written', () => {
 		const entries = createBoxRows().reconcile(dataOf([SAMPLE[1], SAMPLE[2], SAMPLE[0]]));
 
-		expect(entries.map(entry => [entry.property?.predicate.prefixedName, entry.isType === true])).toEqual([['rdf:type', true], ['rdfs:label', false], ['rdfs:subClassOf', false]]);
+		expect(entries.map(entry => [entry.property?.predicate.prefixedName, entry.isLeading === true])).toEqual([['rdf:type', true], ['rdfs:label', false], ['rdfs:subClassOf', false]]);
 	});
 
 	it('stands in for the type of an untyped node with a row of rdf:type that Add property and leaving it leave alone', () => {
 		const rows = createBoxRows();
 		const placeholder = rows.reconcile(dataOf([SAMPLE[1]]))[0];
 
-		expect(placeholder.isType).toBe(true);
+		expect(placeholder.isLeading).toBe(true);
 		expect(placeholder.property).toBeUndefined();
 		expect(placeholder.editor?.state.stored.predicate).toBe(RDF.type);
 
@@ -157,5 +157,20 @@ describe('StatementRows', () => {
 		expect(entries[0].editor).toBe(editor);
 		expect(entries[0].property).toBe(SAMPLE[0]);
 		expect(entries).toHaveLength(2);
+	});
+
+	it('leads the rows of a card of the list with its most preferred label, and stands in for a missing one without closing the row for a new statement', () => {
+		const label = createProperty('skos:prefLabel', [createLiteralView('Tree')]);
+		const otherLabel = createProperty('rdfs:label', [createLiteralView('A tree')]);
+		const rows = new StatementRows({ requestWrite: () => undefined, flush: () => undefined }, { keepNewRowOpen: true, leadingRow: { predicates: [SKOS.prefLabel, RDFS.label], predicateText: 'skos:prefLabel' } });
+		const entries = rows.reconcile(dataOf(withAnchors(createTestResourceDetail([otherLabel, label])).properties));
+
+		expect(entries.map(entry => [entry.property?.predicate.prefixedName ?? 'new', entry.isLeading === true])).toEqual([['skos:prefLabel', true], ['rdfs:label', false], ['new', false]]);
+
+		const unlabelled = new StatementRows({ requestWrite: () => undefined, flush: () => undefined }, { keepNewRowOpen: true, leadingRow: { predicates: [SKOS.prefLabel], predicateText: 'skos:prefLabel' } }).reconcile(dataOf([SAMPLE[0]]));
+
+		expect(unlabelled.map(entry => entry.isLeading === true)).toEqual([true, false, false]);
+		expect(unlabelled[0].editor?.state.stored.predicate).toBe(SKOS.prefLabel);
+		expect(unlabelled[2].editor?.isOpen).toBe(true);
 	});
 });

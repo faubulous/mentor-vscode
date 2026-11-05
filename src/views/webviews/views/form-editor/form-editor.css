@@ -18,7 +18,9 @@ body {
 	/* The hairline between entries and under the bars. */
 	--form-hairline: var(--vscode-widget-border, var(--vscode-panel-border, #2b2b2b));
 	/* The column of the glyph of an entry, as wide as the glyph and the even space on either side of it. */
-	--form-glyph-column: 40px;
+	--form-glyph-column: 44px;
+	/* The gap between the columns of a card: after the gutter, the predicate and the values. */
+	--form-column-gap: 20px;
 	/* The tint of chips and the hover of entries. */
 	--form-tint: var(--vscode-toolbar-hoverBackground, color-mix(in oklab, var(--vscode-foreground) 10%, transparent));
 	--form-hover: var(--vscode-list-hoverBackground, color-mix(in oklab, var(--vscode-foreground) 5%, transparent));
@@ -399,12 +401,14 @@ body {
 	box-shadow: inset 2px 0 0 var(--vscode-focusBorder);
 }
 
-/* The header is the clickable area: the glyph in the gutter, the title, and the chevron at the end. */
+/* The header of a collapsed card is its clickable area: the glyph in the gutter, the title, and the usages. */
 .resource-card-header {
 	display: grid;
-	grid-template-columns: var(--form-glyph-column) minmax(0, 1fr) 32px;
+	grid-template-columns: var(--form-glyph-column) minmax(0, 1fr) auto;
+	column-gap: var(--form-column-gap);
 	align-items: center;
 	min-height: 26px;
+	padding-right: 12px;
 	cursor: pointer;
 	outline: none;
 }
@@ -414,9 +418,9 @@ body {
 	outline-offset: -1px;
 }
 
-.resource-card-glyph {
+.resource-card-gutter {
 	display: flex;
-	justify-self: center;
+	justify-content: center;
 }
 
 .resource-card-title {
@@ -444,17 +448,18 @@ body {
 	font-weight: 500;
 }
 
-.resource-card-chevron {
-	display: grid;
-	place-items: center;
-	justify-self: center;
+/* How often the resource is used, at the end of the header or the label row. */
+.card-usage {
 	color: var(--vscode-descriptionForeground);
+	font-size: 12px;
+	line-height: var(--form-field-height, 26px);
+	white-space: nowrap;
 }
 
-/* The body and the footer align with the title, past the gutter of the glyph. */
-.resource-card-body,
-.resource-card-footer {
-	padding-left: var(--form-glyph-column);
+/* The description and the identifier of a card line up with the title, past the gutter. */
+.resource-card-description,
+.resource-card-iri {
+	padding-left: calc(var(--form-glyph-column) + var(--form-column-gap));
 	padding-right: 32px;
 }
 
@@ -472,10 +477,74 @@ body {
 	overflow-wrap: anywhere;
 }
 
-.resource-card-footer {
-	margin-top: 4px;
+/*
+ * The glyph in the gutter of a card: the icon of its kind at rest, and the chevron while the pointer
+ * or the focus is on the header or the label row.
+ */
+.card-glyph {
+	display: inline-grid;
+	place-items: center;
+	width: 24px;
+	height: 24px;
+}
+
+.card-glyph-kind,
+.card-glyph-chevron {
+	grid-area: 1 / 1;
+	display: flex;
+}
+
+.card-glyph-chevron {
+	visibility: hidden;
 	color: var(--vscode-descriptionForeground);
-	font-size: 12px;
+}
+
+.resource-card-header:hover .card-glyph-kind,
+.resource-card-header:focus-visible .card-glyph-kind,
+.statement-line.is-card-label:hover .card-glyph-kind,
+.card-collapse:focus-visible .card-glyph-kind {
+	visibility: hidden;
+}
+
+.resource-card-header:hover .card-glyph-chevron,
+.resource-card-header:focus-visible .card-glyph-chevron,
+.statement-line.is-card-label:hover .card-glyph-chevron,
+.card-collapse:focus-visible .card-glyph-chevron {
+	visibility: visible;
+}
+
+/* The button in the gutter of the label row, which collapses the card. */
+.card-collapse {
+	display: flex;
+	justify-self: center;
+	padding: 0;
+	border: 0;
+	border-radius: var(--mentor-radius-md);
+	background: none;
+	cursor: pointer;
+}
+
+.card-collapse:focus-visible {
+	outline: 1px solid var(--vscode-focusBorder);
+}
+
+/*
+ * The label row leads an expanded card: its last column, where the other rows have their actions,
+ * grows to the width of the usages, and the label is the title of the card.
+ */
+.statement-line.is-card-label {
+	grid-template-columns: var(--form-gutter) var(--form-predicate-column) minmax(0, 1fr) minmax(var(--form-actions-column), auto);
+	column-gap: var(--form-column-gap);
+}
+
+.statement-line.is-card-label .literal-field {
+	--vscode-font-size: 18px;
+	--vscode-font-weight: 600;
+}
+
+.statement-line.is-card-label .literal-text {
+	font-size: 18px;
+	font-weight: 600;
 }
 
 .filter-match {
@@ -527,10 +596,9 @@ body {
 .statement-list {
 	--form-line-border: color-mix(in oklab, var(--vscode-foreground) 8%, transparent);
 	--statement-line-height: 22px;
-	--form-gutter: 44px;
+	--form-gutter: var(--form-glyph-column);
 	--form-predicate-column: 200px;
 	--form-actions-column: 62px;
-	--form-column-gap: 20px;
 	display: grid;
 	grid-template-columns: var(--form-gutter) var(--form-predicate-column) minmax(0, 1fr) var(--form-actions-column);
 	column-gap: var(--form-column-gap);
@@ -699,12 +767,10 @@ body {
  * the button that removes a property.
  */
 .resource-card.is-nested {
-	--form-nested-radius: 10px;
 	position: relative;
 	margin: 2px 0;
 	padding: 6px 0;
 	border: 1px solid var(--form-hairline);
-	border-radius: var(--form-nested-radius);
 	background: color-mix(in oklab, var(--vscode-foreground) 3%, transparent);
 }
 
@@ -1228,6 +1294,28 @@ body {
 	.statement-value-comment,
 	.row-error {
 		grid-column: 1;
+	}
+
+	/* The label row keeps the button that collapses the card and the usages, and leaves out the predicate. */
+	.statement-line.is-card-label {
+		grid-template-columns: auto minmax(0, 1fr) auto;
+	}
+
+	.statement-line.is-card-label > .statement-gutter,
+	.statement-line.is-card-label > .statement-actions {
+		display: block;
+	}
+
+	.statement-line.is-card-label > .statement-actions {
+		padding-right: 8px;
+	}
+
+	.statement-line.is-card-label > .statement-predicate {
+		display: none;
+	}
+
+	.statement-line.is-card-label > .statement-values {
+		grid-column: 2;
 	}
 }
 

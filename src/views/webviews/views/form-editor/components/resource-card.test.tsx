@@ -5,7 +5,9 @@ import userEvent from '@testing-library/user-event';
 import { renderWebview } from '@src/utilities/mocks/webview-test-utils';
 import { createResourceDataServiceStub } from '@src/utilities/mocks/resource-data-service-fixtures';
 import { createResourceSummary } from '@src/utilities/mocks/resource-summary-fixtures';
-import { createIriView, createProperty, createTestResourceDetail } from '@src/utilities/mocks/statement-fixtures';
+import { RDFS } from '@faubulous/mentor-rdf';
+import { createIriView, createLiteralView, createProperty, createTestResourceDetail } from '@src/utilities/mocks/statement-fixtures';
+import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { FormEditorContext, FormEditorContextValue } from '../state/form-editor-context';
 import { ResourceCard } from './resource-card';
 
@@ -16,9 +18,9 @@ const TREE = createResourceSummary('Tree', { label: 'Apple tree', description: '
  */
 function renderCard(context: Partial<FormEditorContextValue> = {}, expanded = false, summary = TREE, writing = false) {
 	const onToggle = vi.fn();
-	const dataService = createResourceDataServiceStub([createTestResourceDetail([createProperty('ex:p', [createIriView('ex:A', 'A')])])].map(detail => ({ ...detail, term: summary.term })));
+	const dataService = createResourceDataServiceStub([createTestResourceDetail([createProperty('rdfs:label', [createLiteralView('Apple tree')]), createProperty('ex:p', [createIriView('ex:A', 'A')])])].map(detail => ({ ...detail, term: summary.term })));
 	const result = renderWebview(
-		<FormEditorContext.Provider value={{ readOnly: true, namespaces: [], languageTags: {}, ...context }}>
+		<FormEditorContext.Provider value={{ readOnly: true, namespaces: [], languageTags: {}, labelPredicates: [RdfDataFactory.namedNode(RDFS.label)], ...context }}>
 			<ResourceCard summary={summary} dataService={dataService} expanded={expanded} writing={writing} onToggle={onToggle} />
 		</FormEditorContext.Provider>
 	);
@@ -27,13 +29,14 @@ function renderCard(context: Partial<FormEditorContextValue> = {}, expanded = fa
 }
 
 describe('ResourceCard', () => {
-	it('puts the label and the type in the header, the description in the body and the usage count in the footer', () => {
+	it('puts the label, the type and the usage count in the header of a collapsed card, and the description and the identifier under it', () => {
 		renderCard();
 
 		expect(screen.getByText('Apple tree').closest('.resource-card-header')).not.toBeNull();
 		expect(screen.getByText('Class').closest('.resource-card-header')).not.toBeNull();
-		expect(screen.getByText('A tree bearing apples').closest('.resource-card-body')).not.toBeNull();
-		expect(screen.getByText('1 usage').closest('.resource-card-footer')).not.toBeNull();
+		expect(screen.getByText('1 usage').closest('.resource-card-header')).not.toBeNull();
+		expect(screen.getByText('A tree bearing apples').classList.contains('resource-card-description')).toBe(true);
+		expect(screen.getByText('ex:Tree').classList.contains('resource-card-iri')).toBe(true);
 	});
 
 	it('leaves the dominant type unsaid, dims a resource without a stated label and marks the matches of the filter', () => {
@@ -44,7 +47,7 @@ describe('ResourceCard', () => {
 		expect(screen.getByText('apple', { selector: 'mark' })).toBeTruthy();
 	});
 
-	it('toggles from the header, with the pointer and the keyboard, and shows the identifier once expanded', async () => {
+	it('expands from the header, with the pointer and the keyboard', async () => {
 		const { onToggle } = renderCard();
 		const header = screen.getByRole('button', { expanded: false });
 
@@ -54,19 +57,30 @@ describe('ResourceCard', () => {
 
 		expect(onToggle).toHaveBeenCalledTimes(2);
 		expect(onToggle).toHaveBeenCalledWith(TREE.term);
-		expect(screen.queryByText('ex:Tree')).toBeNull();
-
-		renderCard({}, true);
-
-		expect(screen.getByText('ex:Tree').classList.contains('resource-card-iri')).toBe(true);
-		expect(screen.getByRole('button', { expanded: true })).toBeTruthy();
 	});
 
-	it('leaves out the body and the footer of a resource with nothing to put in them', () => {
+	it('leads an expanded card with its label row, whose button collapses the card, and ends it with the identifier', async () => {
+		const { container, onToggle } = renderCard({}, true);
+		const labelRow = screen.getByRole('group', { name: 'Label' });
+
+		expect(container.querySelector('.resource-card-header')).toBeNull();
+		expect(container.querySelector('.statement-line')).toBe(labelRow);
+		expect(labelRow.querySelector('.statement-predicate')?.textContent).toBe('label');
+		expect(labelRow.textContent).toContain('Apple tree');
+		expect(labelRow.querySelector('.card-usage')?.textContent).toBe('1 usage');
+		expect(screen.queryByRole('group', { name: 'rdfs:label' })).toBeNull();
+		expect(container.querySelector('.resource-card')?.lastElementChild?.textContent).toBe('ex:Tree');
+
+		await userEvent.click(screen.getByRole('button', { name: 'Collapse' }));
+
+		expect(onToggle).toHaveBeenCalledWith(TREE.term);
+	});
+
+	it('leaves out the description and the usage count of a resource without them', () => {
 		const { container } = renderCard({}, false, createResourceSummary('Bare'));
 
-		expect(container.querySelector('.resource-card-body')).toBeNull();
-		expect(container.querySelector('.resource-card-footer')).toBeNull();
+		expect(container.querySelector('.resource-card-description')).toBeNull();
+		expect(container.querySelector('.card-usage')).toBeNull();
 	});
 
 	it('marks the revealed card', () => {

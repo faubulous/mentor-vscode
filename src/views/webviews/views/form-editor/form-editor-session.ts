@@ -695,6 +695,7 @@ export class FormEditorSession implements vscode.Disposable {
 			namespaces: [],
 			resources: [],
 			languageTags: {},
+			labelPredicates: [],
 			readOnly,
 			problems: []
 		};

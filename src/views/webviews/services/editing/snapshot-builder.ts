@@ -4,6 +4,7 @@ import { NamedNode } from '@rdfjs/types';
 import { termToString } from 'rdf-string';
 import { ITokenizedDocumentContext } from '@src/services/document/document-context.interface';
 import { getFileName } from '@src/utilities/uri';
+import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { DocumentProblem, DocumentSnapshot, ReadOnlyReason, ResourceSummary } from '@src/views/webviews/views/form-editor/form-editor-model';
 import { ExternalDeclarationDetector } from './external-declaration-detector';
 import { ResourceIndex, ResourceIndexEntry, getEntry, typeIrisOf } from './resource-index';
@@ -118,6 +119,7 @@ export class SnapshotBuilder {
 				activeLanguage: this._input.context.activeLanguageTag?.toLowerCase() || undefined,
 				readOnly: this._input.readOnly,
 				problems: this._input.problems ?? [],
+				labelPredicates: context.predicates.label.map(predicate => RdfDataFactory.namedNode(predicate)),
 				dominantTypeIri: _dominantTypeOf(resources.filter(resource => !documentResource?.equals(resource.term)))
 			}
 		};
