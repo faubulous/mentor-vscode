@@ -205,6 +205,7 @@ function FormEditor(): React.JSX.Element {
 		languageTags: snapshot?.languageTags ?? {},
 		languageFilter,
 		resources: snapshot?.resources,
+		labelPredicates: snapshot?.labelPredicates,
 		onRevealResource: handleRevealResource,
 		onOpenExternal: handleOpenExternal,
 		onCopyAsTurtle: handleCopyAsTurtle,

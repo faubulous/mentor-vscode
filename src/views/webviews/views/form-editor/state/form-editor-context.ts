@@ -43,6 +43,12 @@ export interface FormEditorContextValue {
 	resources?: ResourceSummary[];
 
 	/**
+	 * The label predicates Mentor is configured with, most preferred first, which the label row of
+	 * a card offers.
+	 */
+	labelPredicates?: readonly NamedNode[];
+
+	/**
 	 * Scroll to a resource, used by nested blank node placeholders.
 	 */
 	onRevealResource?: (resource: NamedNode | BlankNode) => void;

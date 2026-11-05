@@ -1,5 +1,4 @@
 import { BlankNode, NamedNode } from '@rdfjs/types';
-import { RDF } from '@faubulous/mentor-rdf/ontologies';
 import { PropertyView } from '../form-editor-model';
 import { TypedTermReader } from '../services/statement/typed-term-reader';
 import { IEditingController } from './editing-controller.interface';
@@ -29,9 +28,10 @@ export interface StatementRowEntry {
 	editor?: StatementRowEditor;
 
 	/**
-	 * Whether the row is the type of a blank node, which leads its nested card.
+	 * Whether the row leads the rows of its card, as the type of a blank node or the label of a
+	 * resource does.
 	 */
-	isType?: boolean;
+	isLeading?: boolean;
 }
 
 /**
@@ -76,6 +76,23 @@ export interface StatementRowsData {
 }
 
 /**
+ * The row that leads the rows of a card: the property of the most preferred of some predicates,
+ * such as the label predicates of a card of the list or the type of a nested card, or while the
+ * resource has none of them, a row that stands in for it whose value writes the first of them.
+ */
+export interface LeadingRow {
+	/**
+	 * The IRIs of the predicates the row shows, most preferred first.
+	 */
+	predicates: readonly string[];
+
+	/**
+	 * How the predicate of the row that stands in is written.
+	 */
+	predicateText: string;
+}
+
+/**
  * How the rows of a card offer new statements.
  */
 export interface StatementRowsOptions {
@@ -87,10 +104,9 @@ export interface StatementRowsOptions {
 	keepNewRowOpen: boolean;
 
 	/**
-	 * Whether the type leads the rows, as in the nested card of a blank node: the row of `rdf:type`
-	 * comes first, and while the resource has no type a row stands in for it whose value writes it.
+	 * The row that leads the rows, if one does.
 	 */
-	typeRow?: boolean;
+	leadingRow?: LeadingRow;
 }
 
 /**
@@ -113,7 +129,7 @@ export class StatementRows implements StatementRowOwner {
 
 	private _data?: StatementRowsData;
 
-	private _typePlaceholder?: StatementRowEditor;
+	private _leadingPlaceholder?: StatementRowEditor;
 
 	/**
 	 * Create the rows of a card.
@@ -155,7 +171,8 @@ export class StatementRows implements StatementRowOwner {
 
 		this._data = data;
 
-		let typeEntry: StatementRowEntry | undefined;
+		const leadingPredicate = this._leadingPredicateOf(data.properties);
+		let leadingEntry: StatementRowEntry | undefined;
 
 		this._notEditable = new Set();
 
@@ -173,8 +190,8 @@ export class StatementRows implements StatementRowOwner {
 			unmatched.delete(editor);
 			editor.deliver({ ...data, property, predicateText: data.predicateTextOf(property) });
 
-			if (this._options.typeRow && predicate === RDF.type) {
-				typeEntry = { key: `row-${editor.id}`, property, editor, isType: true };
+			if (predicate === leadingPredicate) {
+				leadingEntry = { key: `row-${editor.id}`, property, editor, isLeading: true };
 			} else {
 				entries.push({ key: `row-${editor.id}`, property, editor });
 			}
@@ -188,16 +205,16 @@ export class StatementRows implements StatementRowOwner {
 
 		this._editors = this._editors.filter(editor => !unmatched.has(editor) || editor.isNew);
 
-		for (const editor of this._editors.filter(current => current.isNew && current !== this._typePlaceholder)) {
+		for (const editor of this._editors.filter(current => current.isNew && current !== this._leadingPlaceholder)) {
 			editor.deliver({ ...data, property: undefined, predicateText: editor.state.predicateText });
 			entries.push({ key: `row-${editor.id}`, editor });
 		}
 
-		if (this._options.typeRow) {
-			entries.unshift(typeEntry ?? this._typePlaceholderEntry(data));
+		if (this._options.leadingRow) {
+			entries.unshift(leadingEntry ?? this._leadingPlaceholderEntry(data, this._options.leadingRow));
 		}
 
-		if (this._options.keepNewRowOpen && !this._editors.some(editor => editor.isOpen)) {
+		if (this._options.keepNewRowOpen && !this._editors.some(editor => editor.isOpen && editor !== this._leadingPlaceholder)) {
 			const editor = this._create({ ...data, property: undefined, predicateText: '' });
 
 			entries.push({ key: `row-${editor.id}`, editor });
@@ -221,15 +238,15 @@ export class StatementRows implements StatementRowOwner {
 	merged(row: StatementRowEditor): void {
 		this._editors = this._editors.filter(editor => editor !== row);
 
-		if (row === this._typePlaceholder) {
-			this._typePlaceholder = undefined;
+		if (row === this._leadingPlaceholder) {
+			this._leadingPlaceholder = undefined;
 		}
 
 		this._notify();
 	}
 
 	abandoned(row: StatementRowEditor): void {
-		if (!this._options.keepNewRowOpen && row !== this._typePlaceholder) {
+		if (!this._options.keepNewRowOpen && row !== this._leadingPlaceholder) {
 			this.merged(row);
 		}
 	}
@@ -240,7 +257,7 @@ export class StatementRows implements StatementRowOwner {
 	 * @returns The row, or `undefined` before the card rendered its rows.
 	 */
 	addRow(): StatementRowEditor | undefined {
-		const open = this._editors.find(editor => editor.isOpen && editor !== this._typePlaceholder);
+		const open = this._editors.find(editor => editor.isOpen && editor !== this._leadingPlaceholder);
 
 		if (open || !this._data) {
 			return open;
@@ -254,20 +271,34 @@ export class StatementRows implements StatementRowOwner {
 	}
 
 	/**
-	 * The row that stands in for the type while the resource has none: a row for a new statement of
-	 * `rdf:type`, kept across renders. Once its value is written it claims the type, and the type
-	 * property it then holds replaces it; a placeholder the type arrived without goes.
+	 * The predicate of the property that leads the rows: the most preferred of the leading
+	 * predicates the resource has.
+	 * @param properties The properties of the resource.
+	 * @returns The IRI of the predicate, or `undefined` when no row leads or the resource has none.
+	 */
+	private _leadingPredicateOf(properties: readonly PropertyView[]): string | undefined {
+		const predicates = new Set(properties.flatMap(property => property.predicate.term.termType === 'NamedNode' ? [property.predicate.term.value] : []));
+
+		return this._options.leadingRow?.predicates.find(predicate => predicates.has(predicate));
+	}
+
+	/**
+	 * The row that stands in for the leading property while the resource has none: a row for a new
+	 * statement of the first leading predicate, kept across renders. Once its value is written it
+	 * claims the predicate, and the property it then holds replaces it; a placeholder the property
+	 * arrived without goes.
 	 * @param data The data of the card.
+	 * @param leadingRow The leading predicates.
 	 * @returns The row.
 	 */
-	private _typePlaceholderEntry(data: StatementRowsData): StatementRowEntry {
-		const placeholderData = { ...data, property: undefined, predicateText: 'a', predicate: RDF.type };
-		const placeholder = this._typePlaceholder?.isNew ? this._typePlaceholder : this._create(placeholderData);
+	private _leadingPlaceholderEntry(data: StatementRowsData, leadingRow: LeadingRow): StatementRowEntry {
+		const placeholderData = { ...data, property: undefined, predicateText: leadingRow.predicateText, predicate: leadingRow.predicates[0] };
+		const placeholder = this._leadingPlaceholder?.isNew ? this._leadingPlaceholder : this._create(placeholderData);
 
-		this._typePlaceholder = placeholder;
+		this._leadingPlaceholder = placeholder;
 		placeholder.deliver(placeholderData);
 
-		return { key: `row-${placeholder.id}`, editor: placeholder, isType: true };
+		return { key: `row-${placeholder.id}`, editor: placeholder, isLeading: true };
 	}
 
 	/**

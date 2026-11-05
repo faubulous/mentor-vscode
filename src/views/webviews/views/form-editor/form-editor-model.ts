@@ -341,4 +341,10 @@ export interface DocumentSnapshot {
 	 * The type most definitions have, which their entries do not repeat.
 	 */
 	dominantTypeIri?: string;
+
+	/**
+	 * The label predicates Mentor is configured with, most preferred first, which the label row of a
+	 * card offers.
+	 */
+	labelPredicates: NamedNode[];
 }

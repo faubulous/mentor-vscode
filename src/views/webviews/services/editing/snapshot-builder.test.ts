@@ -42,6 +42,10 @@ describe('SnapshotBuilder', () => {
 		expect(snapshotOf('ex:A a owl:Class .').activeLanguage).toBeUndefined();
 	});
 
+	it('names the label predicates Mentor is configured with, most preferred first', () => {
+		expect(snapshotOf('ex:A a owl:Class .').labelPredicates.map(predicate => predicate.value)).toEqual([SKOS.prefLabel, RDFS.label]);
+	});
+
 	it('reports the file name of the document', () => {
 		const snapshot = snapshotOf('ex:A a owl:Class .');
 
