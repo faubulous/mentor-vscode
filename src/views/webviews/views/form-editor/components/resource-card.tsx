@@ -6,6 +6,7 @@ import { useResourceDetail } from '../hooks/use-resource-detail';
 import { IResourceDataService } from '../services/resource-data-service.interface';
 import { useFormEditorContext } from '../state/form-editor-context';
 import { HighlightedText } from './highlighted-text';
+import { ResourceCardFooter } from './resource-card-footer';
 import { ResourceCardHeader } from './resource-card-header';
 import { StatementList } from './statement-list';
 
@@ -49,7 +50,8 @@ export interface ResourceCardProps {
  * One resource of the document as a card of the list. Collapsed, the header is the clickable
  * area: the glyph of its kind in the gutter, the label with the type, and the usage count; the
  * description and the identifier of the resource follow. Expanded, the card is its statements, led
- * by the label row, whose button collapses the card again, and followed by the identifier. Cards
+ * by the label row, whose button collapses the card again, and followed by the footer with the
+ * IRI, whose local part renames the resource. Cards
  * are set apart by hairlines, not boxes.
  * @param props The resource and its state.
  * @returns The card.
@@ -80,7 +82,7 @@ export function ResourceCard({ summary, dataService, expanded, writing = false, 
 						: <div className="resource-form-loading">Loading…</div>}
 				</div>
 			)}
-			<div className="resource-card-iri">{_identifierOf(summary)}</div>
+			{expanded && detail ? <ResourceCardFooter summary={summary} /> : <div className="resource-card-iri">{_identifierOf(summary)}</div>}
 		</article>
 	);
 }

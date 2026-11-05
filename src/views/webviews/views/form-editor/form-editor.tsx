@@ -86,6 +86,9 @@ function FormEditor(): React.JSX.Element {
 			case 'FilterResources':
 				setTypeFilter({ label: message.label, resourceKeys: new Set(message.resources.map(resource => termToString(resource))) });
 				break;
+			case 'ResourceRenamed':
+				setCardStates(current => current.renamed(termToString(message.resource), termToString(message.renamed)));
+				break;
 			case 'LanguagePicked':
 				updateViewState({ allLanguages: message.allLanguages || undefined });
 				break;
@@ -175,6 +178,7 @@ function FormEditor(): React.JSX.Element {
 	const handleOpenTextEditor = useCallback(() => post({ id: 'ExecuteCommand', command: 'mentor.command.openTextEditor' }), [post]);
 	const handleOpenExternal = useCallback((iri: string) => post({ id: 'ExecuteCommand', command: 'vscode.open', args: [iri] }), [post]);
 	const handleCopyAsTurtle = useCallback((anchor: number, version: number) => post({ id: 'CopyAsTurtle', anchor, version }), [post]);
+	const handleRenameResource = useCallback((resource: NamedNode, localPart: string) => post({ id: 'RenameResource', resource, localPart }), [post]);
 	const handleRevealProblem = useCallback((problem: DocumentProblem) => handleRevealInTextEditor(problem.line, problem.character), [handleRevealInTextEditor]);
 
 	// Undo in a field undoes its typing, elsewhere the document; the filter is the find of the form.
@@ -209,10 +213,11 @@ function FormEditor(): React.JSX.Element {
 		onRevealResource: handleRevealResource,
 		onOpenExternal: handleOpenExternal,
 		onCopyAsTurtle: handleCopyAsTurtle,
+		onRenameResource: handleRenameResource,
 		revealedResource: revealed,
 		dominantTypeIri: snapshot?.dominantTypeIri,
 		filterText
-	}), [snapshot, editable, controller, languageFilter, handleRevealResource, handleOpenExternal, handleCopyAsTurtle, revealed, filterText]);
+	}), [snapshot, editable, controller, languageFilter, handleRevealResource, handleOpenExternal, handleCopyAsTurtle, handleRenameResource, revealed, filterText]);
 
 	if (!snapshot) {
 		return (

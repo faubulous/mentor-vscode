@@ -88,7 +88,7 @@ function setValues(document: vscode.TextDocument, values: unknown[]): Thenable<E
  * Verifies that the values of a statement edited in the form are written in the syntax of the
  * document by a real extension host: as a list of objects in Turtle, and as one line per value
  * with the subject and the graph of its neighbour in N-Triples and N-Quads; a new nested node and
- * a copy of one in Turtle.
+ * a copy of one in Turtle; and a resource renamed from its card.
  */
 suite('form editor values', () => {
 	suiteSetup(async () => {
@@ -163,5 +163,13 @@ suite('form editor values', () => {
 
 		assert.ok(copied.ok, `the copy must be written, got ${JSON.stringify(copied)}`);
 		assert.strictEqual(document.getText(), '@prefix ex: <http://example.org/values#> .\n\nex:s ex:p "a", [ a ex:T ], [ a ex:T ] .\n');
+	});
+
+	test('renames a resource from its card as F2 does', async () => {
+		const document = await openInFormEditor('data/form-values.ttl');
+
+		await vscode.commands.executeCommand('mentor.e2e.renameFormEditorResource', document.uri.toString(), `${NS}s`, 't');
+
+		assert.strictEqual(document.getText(), '@prefix ex: <http://example.org/values#> .\n\nex:t ex:p "a", ex:b .\n');
 	});
 });

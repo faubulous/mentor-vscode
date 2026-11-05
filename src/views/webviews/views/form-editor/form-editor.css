@@ -21,6 +21,9 @@ body {
 	--form-glyph-column: 44px;
 	/* The gap between the columns of a card: after the gutter, the predicate and the values. */
 	--form-column-gap: 20px;
+	/* The box a field draws on intent: the border and the background of a VS Code input. */
+	--form-field-border: var(--vscode-settings-textInputBorder, var(--vscode-settings-textInputBackground, #313131));
+	--form-field-background: var(--vscode-settings-textInputBackground, #313131);
 	/* The tint of chips and the hover of entries. */
 	--form-tint: var(--vscode-toolbar-hoverBackground, color-mix(in oklab, var(--vscode-foreground) 10%, transparent));
 	--form-hover: var(--vscode-list-hoverBackground, color-mix(in oklab, var(--vscode-foreground) 5%, transparent));
@@ -475,6 +478,63 @@ body {
 	font-family: var(--form-mono);
 	font-size: 12px;
 	overflow-wrap: anywhere;
+}
+
+/* The footer of an expanded card: the button that opens the IRI in the gutter, then the IRI. */
+.resource-card-footer {
+	display: grid;
+	grid-template-columns: var(--form-glyph-column) minmax(0, 1fr);
+	column-gap: var(--form-column-gap);
+	align-items: center;
+	margin-top: 6px;
+	padding-right: 32px;
+}
+
+.resource-card-footer > .resource-card-iri {
+	margin-top: 0;
+	padding: 0;
+}
+
+.resource-card-open {
+	display: flex;
+	justify-self: center;
+	padding: 3px;
+	border: 0;
+	border-radius: var(--mentor-radius-md);
+	background: none;
+	color: var(--vscode-descriptionForeground);
+	cursor: pointer;
+}
+
+.resource-card-open:hover {
+	background: var(--form-tint);
+	color: var(--vscode-foreground);
+}
+
+.resource-card-open:focus-visible {
+	outline: 1px solid var(--vscode-focusBorder);
+}
+
+/* The local part of the IRI in the footer, a mono field with the namespace before it. */
+.resource-card-local-part {
+	--vscode-font-family: var(--form-mono);
+	--vscode-font-size: 12px;
+	--vscode-settings-textInputForeground: var(--vscode-descriptionForeground);
+}
+
+.resource-card-local-part:focus-within {
+	--vscode-settings-textInputForeground: var(--vscode-foreground);
+}
+
+/*
+ * The namespace sits where the text of a field starts, and the local part follows it without a
+ * gap: the margins take the place of the padding the field keeps before its input.
+ */
+.resource-card-namespace {
+	margin-left: 4px;
+	margin-right: -4px;
+	color: var(--vscode-descriptionForeground);
+	white-space: pre;
 }
 
 /*
@@ -985,8 +1045,6 @@ body {
  */
 .statement-list.is-editable {
 	--form-field-height: 26px;
-	--form-field-border: var(--vscode-settings-textInputBorder, var(--vscode-settings-textInputBackground, #313131));
-	--form-field-background: var(--vscode-settings-textInputBackground, #313131);
 }
 
 .statement-list.is-editable > .statement-line {

@@ -31,9 +31,19 @@ export interface PrefixedNameParts {
 const LOCAL_NAME_ESCAPE = /\\([_~.\-!$&'()*+,;=/?#@%])/g;
 
 /**
- * A local name that can be written after a prefix without escapes.
+ * The characters of a local name that can be written after a prefix without escapes.
  */
 const PLAIN_LOCAL_NAME = /^[A-Za-z_][\w.-]*$/;
+
+/**
+ * Indicate whether a local name can be written as it is, after a prefix and at the end of an IRI
+ * reference alike: a letter or `_`, then letters, digits, `_`, `-` and `.`, not ending in `.`.
+ * @param name The local name.
+ * @returns `true` for a plain local name.
+ */
+export function isPlainLocalName(name: string): boolean {
+	return PLAIN_LOCAL_NAME.test(name) && !name.endsWith('.');
+}
 
 /**
  * Split a prefixed name at its first colon, as local names may contain colons, e.g. `ex:a:b`.
@@ -109,7 +119,7 @@ export function getPrefixedName(prefixes: Readonly<PrefixMap>, iri: string): str
 	for (const [prefix, namespaceIri] of Object.entries(prefixes)) {
 		const localName = iri.slice(namespaceIri.length);
 
-		if (iri.startsWith(namespaceIri) && PLAIN_LOCAL_NAME.test(localName) && namespaceIri.length > namespaceLength) {
+		if (iri.startsWith(namespaceIri) && isPlainLocalName(localName) && namespaceIri.length > namespaceLength) {
 			prefixedName = `${prefix}:${localName}`;
 			namespaceLength = namespaceIri.length;
 		}

@@ -46,6 +46,16 @@ describe('SnapshotBuilder', () => {
 		expect(snapshotOf('ex:A a owl:Class .').labelPredicates.map(predicate => predicate.value)).toEqual([SKOS.prefLabel, RDFS.label]);
 	});
 
+	it('names the local part of the IRI of a resource, which a rename changes as F2 does', () => {
+		const snapshot = snapshotOf(`
+			ex:A a owl:Class .
+			<http://other.org/ns#Thing> a owl:Class .
+			[] a owl:Class .
+		`);
+
+		expect(snapshot.resources.map(resource => resource.localPart)).toEqual(['A', 'Thing', undefined]);
+	});
+
 	it('reports the file name of the document', () => {
 		const snapshot = snapshotOf('ex:A a owl:Class .');
 
