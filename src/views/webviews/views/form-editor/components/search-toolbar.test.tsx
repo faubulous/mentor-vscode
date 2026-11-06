@@ -3,15 +3,15 @@ import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWebview } from '@src/utilities/mocks/webview-test-utils';
-import { FindWidget, FindWidgetProps } from './find-widget';
+import { SearchToolbar, SearchToolbarProps } from './search-toolbar';
 
 /**
  * Render the widget with the given properties over sensible defaults, with its callbacks recorded.
  */
-function renderWidget(props: Partial<FindWidgetProps> = {}) {
+function renderWidget(props: Partial<SearchToolbarProps> = {}) {
 	const callbacks = { onChange: vi.fn(), onPrevious: vi.fn(), onNext: vi.fn(), onClose: vi.fn(), onClearToken: vi.fn() };
 
-	renderWebview(<FindWidget text="" matchCount={0} {...callbacks} {...props} />);
+	renderWebview(<SearchToolbar text="" matchCount={0} {...callbacks} {...props} />);
 
 	return { ...callbacks, field: screen.getByLabelText('Find') as HTMLInputElement };
 }
@@ -20,10 +20,10 @@ function renderWidget(props: Partial<FindWidgetProps> = {}) {
  * The text that tells which match was stepped to of how many.
  */
 function countText(): string {
-	return document.querySelector('.find-widget-count')?.textContent ?? '';
+	return document.querySelector('.search-toolbar-count')?.textContent ?? '';
 }
 
-describe('FindWidget', () => {
+describe('SearchToolbar', () => {
 	it('tells how many resources match before a match was stepped to', () => {
 		renderWidget({ text: 'tree', matchCount: 7 });
 
@@ -40,7 +40,7 @@ describe('FindWidget', () => {
 		renderWidget({ text: 'tree', matchCount: 0 });
 
 		expect(countText()).toBe('No results');
-		expect(document.querySelector('.find-widget-count')?.classList.contains('is-empty')).toBe(true);
+		expect(document.querySelector('.search-toolbar-count')?.classList.contains('is-empty')).toBe(true);
 		expect((screen.getByLabelText('Next Match (Enter)') as HTMLButtonElement).disabled).toBe(true);
 	});
 
@@ -80,7 +80,7 @@ describe('FindWidget', () => {
 	it('shows the definition tree node the list is narrowed to as a token that can be cleared', async () => {
 		const { onClearToken } = renderWidget({ token: 'Person', matchCount: 4 });
 
-		expect(screen.getByText('Person').classList.contains('find-widget-token')).toBe(true);
+		expect(screen.getByText('Person').classList.contains('search-toolbar-token')).toBe(true);
 		expect(countText()).toBe('4 found');
 
 		await userEvent.click(screen.getByLabelText('Show all resources, not only Person'));

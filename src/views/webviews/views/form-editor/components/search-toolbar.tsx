@@ -2,9 +2,9 @@ import { FormEvent, KeyboardEvent, Ref } from 'react';
 import { VscodeTextfield } from '@vscode-elements/elements';
 
 /**
- * Properties of the {@link FindWidget} component.
+ * Properties of the {@link SearchToolbar} component.
  */
-export interface FindWidgetProps {
+export interface SearchToolbarProps {
 	/**
 	 * The text typed so far.
 	 */
@@ -57,15 +57,15 @@ export interface FindWidgetProps {
 }
 
 /**
- * The find of the form, as the text editor of VS Code has it: a widget at the top right of the
- * editor that narrows the list to the resources whose label, description or IRI contains the text,
- * after the definition tree node chosen in the tree, if any. It tells which match was stepped to
- * of how many; Enter and the down arrow button step to the next, Shift+Enter and the up arrow
- * button to the previous, and Escape or the close button close it.
+ * The search of the form, as the find of the text editor of VS Code looks: a toolbar at the top
+ * right of the editor that narrows the list to the resources whose label, description or IRI
+ * contains the text, after the definition tree node chosen in the tree, if any. It tells which
+ * match was stepped to of how many; Enter and the down arrow button step to the next, Shift+Enter
+ * and the up arrow button to the previous, and Escape or the close button close it.
  * @param props The text, the token, the matches and their callbacks.
- * @returns The widget.
+ * @returns The toolbar.
  */
-export function FindWidget(props: FindWidgetProps): React.JSX.Element {
+export function SearchToolbar(props: SearchToolbarProps): React.JSX.Element {
 	const { text, onChange, token, onClearToken, matchCount, matchIndex, onPrevious, onNext, onClose, fieldRef } = props;
 	const finding = text.trim() !== '' || token !== undefined;
 
@@ -86,34 +86,34 @@ export function FindWidget(props: FindWidgetProps): React.JSX.Element {
 	};
 
 	return (
-		<div className="find-widget" role="search" aria-label="Find in the form">
+		<div className="search-toolbar" role="search" aria-label="Find in the form">
 			{token && (
-				<span className="find-widget-token">
+				<span className="search-toolbar-token">
 					{token}
-					<button type="button" className="find-widget-token-clear" aria-label={`Show all resources, not only ${token}`} onClick={onClearToken}>
+					<button type="button" className="search-toolbar-token-clear" aria-label={`Show all resources, not only ${token}`} onClick={onClearToken}>
 						<vscode-icon name="close" size={10}></vscode-icon>
 					</button>
 				</span>
 			)}
 			<vscode-textfield
 				ref={fieldRef}
-				className="find-widget-input"
+				className="search-toolbar-input"
 				placeholder="Find"
 				aria-label="Find"
 				value={text}
 				onInput={(event: FormEvent<VscodeTextfield>) => onChange(event.currentTarget.value ?? '')}
 				onKeyDown={handleKeyDown}
 			/>
-			<span className={`find-widget-count${finding && matchCount === 0 ? ' is-empty' : ''}`} aria-live="polite">
+			<span className={`search-toolbar-count${finding && matchCount === 0 ? ' is-empty' : ''}`} aria-live="polite">
 				{_countOf(finding, matchCount, matchIndex)}
 			</span>
-			<button type="button" className="find-widget-button" aria-label="Previous Match (Shift+Enter)" title="Previous Match (Shift+Enter)" disabled={matchCount === 0} onClick={onPrevious}>
+			<button type="button" className="search-toolbar-button" aria-label="Previous Match (Shift+Enter)" title="Previous Match (Shift+Enter)" disabled={matchCount === 0} onClick={onPrevious}>
 				<vscode-icon name="arrow-up" size={16}></vscode-icon>
 			</button>
-			<button type="button" className="find-widget-button" aria-label="Next Match (Enter)" title="Next Match (Enter)" disabled={matchCount === 0} onClick={onNext}>
+			<button type="button" className="search-toolbar-button" aria-label="Next Match (Enter)" title="Next Match (Enter)" disabled={matchCount === 0} onClick={onNext}>
 				<vscode-icon name="arrow-down" size={16}></vscode-icon>
 			</button>
-			<button type="button" className="find-widget-button" aria-label="Close (Escape)" title="Close (Escape)" onClick={onClose}>
+			<button type="button" className="search-toolbar-button" aria-label="Close (Escape)" title="Close (Escape)" onClick={onClose}>
 				<vscode-icon name="close" size={16}></vscode-icon>
 			</button>
 		</div>

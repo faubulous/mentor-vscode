@@ -140,10 +140,10 @@ body {
 }
 
 /*
- * The find of the form, as the text editor of VS Code draws it: a widget floating near the top of
- * the editor at its right, over the sticky header, in the colours of the editor widgets.
+ * The search toolbar of the form, as the find of the text editor of VS Code looks: floating near the
+ * top of the editor at its right, over the sticky header, in the colours of the editor widgets.
  */
-.find-widget {
+.search-toolbar {
 	position: absolute;
 	top: 6px;
 	right: 24px;
@@ -159,23 +159,23 @@ body {
 	box-shadow: 0 0 8px 2px var(--vscode-widget-shadow, transparent);
 }
 
-.find-widget-input {
+.search-toolbar-input {
 	width: 220px;
 }
 
-.find-widget-count {
+.search-toolbar-count {
 	min-width: 70px;
 	padding: 0 6px;
 	font-size: 12px;
 	white-space: nowrap;
 }
 
-.find-widget-count.is-empty {
+.search-toolbar-count.is-empty {
 	color: var(--vscode-errorForeground);
 }
 
-.find-widget-button,
-.find-widget-token-clear {
+.search-toolbar-button,
+.search-toolbar-token-clear {
 	display: grid;
 	place-items: center;
 	padding: 0;
@@ -186,28 +186,28 @@ body {
 	cursor: pointer;
 }
 
-.find-widget-button {
+.search-toolbar-button {
 	width: 22px;
 	height: 22px;
 }
 
-.find-widget-button:hover:not(:disabled),
-.find-widget-token-clear:hover {
+.search-toolbar-button:hover:not(:disabled),
+.search-toolbar-token-clear:hover {
 	background: var(--vscode-toolbar-hoverBackground, var(--form-tint));
 }
 
-.find-widget-button:disabled {
+.search-toolbar-button:disabled {
 	opacity: 0.4;
 	cursor: default;
 }
 
-.find-widget-button:focus-visible,
-.find-widget-token-clear:focus-visible {
+.search-toolbar-button:focus-visible,
+.search-toolbar-token-clear:focus-visible {
 	outline: 1px solid var(--vscode-focusBorder);
 }
 
 /* The definition tree node the list is narrowed to, as a token before the text. */
-.find-widget-token {
+.search-toolbar-token {
 	flex: none;
 	display: inline-flex;
 	align-items: center;
@@ -224,7 +224,7 @@ body {
 	text-overflow: ellipsis;
 }
 
-.find-widget-token-clear {
+.search-toolbar-token-clear {
 	width: 16px;
 	height: 16px;
 }

@@ -30,7 +30,7 @@ export interface FormToolbarProps {
 /**
  * The bar under the title of the document, as wide as the column of the form, which stays below
  * the context bar once the title has scrolled away: the language picker and the menu of further
- * actions at its end. Ctrl+F finds in the form with the find widget.
+ * actions at its end. Ctrl+F searches the form with the search toolbar.
  * @param props The actions.
  * @returns The toolbar.
  */

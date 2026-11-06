@@ -7,7 +7,7 @@ import { useStylesheet, useWebviewMessaging, useWebviewState } from '@src/views/
 import { useSharedStylesheets } from '@src/views/webviews/hooks/use-shared-stylesheets';
 import { BlockList, RevealRequest } from './components/block-list';
 import { ContextBar } from './components/context-bar';
-import { FindWidget } from './components/find-widget';
+import { SearchToolbar } from './components/search-toolbar';
 import { DocumentHeader } from './components/document-header';
 import { FormErrorBoundary } from './components/form-error-boundary';
 import { FormToolbar } from './components/form-toolbar';
@@ -189,7 +189,7 @@ function FormEditor(): React.JSX.Element {
 	// A new text or token narrows the list anew, and the steps start over.
 	useEffect(() => setMatchIndex(undefined), [filterText, typeFilter]);
 
-	// The find widget takes the focus when it opens, and again whenever Ctrl+F asks for it.
+	// The search toolbar takes the focus when it opens, and again whenever Ctrl+F asks for it.
 	useEffect(() => {
 		const field = filterRef.current;
 
@@ -276,7 +276,7 @@ function FormEditor(): React.JSX.Element {
 						<FormErrorBoundary onOpenTextEditor={handleOpenTextEditor} resetKey={snapshot.version}>
 							<div className="form-editor-body">
 								{findOpen && (
-									<FindWidget
+									<SearchToolbar
 										text={filterText}
 										onChange={setFilterText}
 										token={typeFilter?.label}
