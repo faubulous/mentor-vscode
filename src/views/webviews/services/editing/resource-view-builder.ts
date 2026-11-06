@@ -66,11 +66,14 @@ export class ResourceViewBuilder {
 		const primaryType = _primaryTypeIndex(typeIris);
 		const label = this._resolveLabel(entry.term);
 
+		const prefixedName = this._toPrefixedName(entry.term);
+
 		return {
 			term: entry.term,
 			label: label.text,
 			description: this._annotations.findDescription(entry)?.text,
-			prefixedName: this._toPrefixedName(entry.term),
+			prefixedName,
+			localPart: _localPartOf(entry.term, prefixedName),
 			iconName: this._resolveIconName(entry, typeIris),
 			typeIri: typeIris[primaryType],
 			typeLabel: typeLabels?.[primaryType],
@@ -395,3 +398,19 @@ function _valueKindOf(values: readonly TermView[]): ValueKindHint | undefined {
 	return { kind: kinds.size === 1 ? [...kinds][0] : 'any', source: 'usage' };
 }
 
+/**
+ * The local part of the IRI of a resource, which renaming it changes as F2 does: what follows the
+ * prefix of its prefixed name, else what follows the namespace of the IRI.
+ * @param term The resource.
+ * @param prefixedName The prefixed name of the resource, if it has one.
+ * @returns The local part, or `undefined` for a blank node and an IRI without one.
+ */
+function _localPartOf(term: NamedNode | BlankNode, prefixedName: string | undefined): string | undefined {
+	if (term.termType !== 'NamedNode') {
+		return undefined;
+	}
+
+	const localPart = prefixedName ? prefixedName.slice(prefixedName.indexOf(':') + 1) : term.value.slice(Uri.getNamespaceIri(term.value).length);
+
+	return localPart || undefined;
+}

@@ -1,16 +1,10 @@
 import { SectionHeaderContextMenu } from '@src/views/webviews/components/section-header-context-menu';
-import { FilterField, FilterFieldProps } from './filter-field';
 import { LanguagePicker, LanguagePickerProps } from './language-picker';
 
 /**
  * Properties of the {@link FormToolbar} component.
  */
 export interface FormToolbarProps {
-	/**
-	 * The filter field.
-	 */
-	filter: FilterFieldProps;
-
 	/**
 	 * The language picker, where the document writes language tags.
 	 */
@@ -25,20 +19,25 @@ export interface FormToolbarProps {
 	 * Called when the external declarations are to be shown or hidden.
 	 */
 	onToggleExternalDeclarations: () => void;
+
+	/**
+	 * Whether the toolbar stays below the context bar, as it does once the title of the document
+	 * has scrolled away: the two are one header then, which a line and a shadow end.
+	 */
+	stuck?: boolean;
 }
 
 /**
- * The bar along the top of the editor, which stays while the form scrolls: the filter in its
- * middle, and the language picker and the menu of further actions at its end.
- * @param props The filter and the actions.
+ * The bar under the title of the document, as wide as the column of the form, which stays below
+ * the context bar once the title has scrolled away: the language picker and the menu of further
+ * actions at its end. Ctrl+F searches the form with the search toolbar.
+ * @param props The actions.
  * @returns The toolbar.
  */
-export function FormToolbar({ filter, languages, externalDeclarationsHidden, onToggleExternalDeclarations }: FormToolbarProps): React.JSX.Element {
+export function FormToolbar({ languages, externalDeclarationsHidden, onToggleExternalDeclarations, stuck = false }: FormToolbarProps): React.JSX.Element {
 	return (
-		<div className="form-toolbar" role="toolbar" aria-label="Form editor">
+		<div className={`form-toolbar${stuck ? ' is-stuck' : ''}`} role="toolbar" aria-label="Form editor">
 			<div className="form-toolbar-content">
-				<div className="form-toolbar-start" />
-				<div className="form-toolbar-middle"><FilterField {...filter} /></div>
 				<div className="form-toolbar-end">
 					{languages && <LanguagePicker {...languages} />}
 					<SectionHeaderContextMenu items={[

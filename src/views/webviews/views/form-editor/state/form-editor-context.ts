@@ -66,6 +66,13 @@ export interface FormEditorContextValue {
 	onCopyAsTurtle?: (anchor: number, version: number) => void;
 
 	/**
+	 * Rename a resource as F2 does: give its IRI another local part, wherever the workspace writes it.
+	 * @param resource The resource.
+	 * @param localPart The new local part.
+	 */
+	onRenameResource?: (resource: NamedNode, localPart: string) => void;
+
+	/**
 	 * The resource last revealed, as from the definition tree, whose entry is marked until the
 	 * form is used.
 	 */

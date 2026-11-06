@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { RDFS } from '@faubulous/mentor-rdf';
 import { TEST_NAMESPACES } from './mocks/statement-fixtures';
 import {
+	isPlainLocalName,
 	getIriFromPrefixedName,
 	getIriFromText,
 	getNamespaceIriFromPrefixedName,
@@ -102,5 +103,15 @@ describe('getIriFromText', () => {
 		expect(getIriFromText(TEST_NAMESPACES, 'rdfs:label')).toBe(RDFS.label);
 		expect(getIriFromText(TEST_NAMESPACES, 'foo:x')).toBeUndefined();
 		expect(getIriFromText(TEST_NAMESPACES, 'word')).toBeUndefined();
+	});
+});
+
+describe('isPlainLocalName', () => {
+	it('accepts a local name written the same after a prefix and at the end of an IRI reference', () => {
+		expect(['Oak', '_oak', 'oak-tree', 'oak.tree', 'oak_2'].every(isPlainLocalName)).toBe(true);
+	});
+
+	it('refuses an empty local name, one ending in a dot, and one with other characters', () => {
+		expect(['', 'oak.', '2oak', 'oak tree', 'oak/tree', 'oak#tree', 'oak:tree'].some(isPlainLocalName)).toBe(false);
 	});
 });

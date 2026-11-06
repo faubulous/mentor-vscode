@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { EditOperation } from '@src/services/editing/edit-operation';
 import { FormEditorSession } from './form-editor-session';
 import { BlankNode, NamedNode } from '@rdfjs/types';
@@ -134,7 +135,7 @@ export class FormEditorProvider implements vscode.CustomTextEditorProvider, vsco
 
 	/**
 	 * Register the test-only hooks of the end-to-end suite, which reach what the VS Code API
-	 * cannot: the snapshot a form editor shows and the edits its form would send.
+	 * cannot: the snapshot a form editor shows, and the edits and renames its form would send.
 	 */
 	private _registerTestHooks(): void {
 		this._context.subscriptions.push(
@@ -150,6 +151,15 @@ export class FormEditorProvider implements vscode.CustomTextEditorProvider, vsco
 				}
 
 				return session.applyEdit(`e2e-${Date.now()}`, version, reviveTerms(operations));
+			}),
+			vscode.commands.registerCommand('mentor.e2e.renameFormEditorResource', async (documentUri: string, iri: string, localPart: string) => {
+				const session = this._sessionsOf(vscode.Uri.parse(documentUri))[0];
+
+				if (!session) {
+					throw new Error(`No form editor shows ${documentUri}.`);
+				}
+
+				await session.renameResource(RdfDataFactory.namedNode(iri), localPart);
 			})
 		);
 	}

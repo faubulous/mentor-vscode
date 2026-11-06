@@ -19,15 +19,17 @@ body {
 	--form-hairline: var(--vscode-widget-border, var(--vscode-panel-border, #2b2b2b));
 	/* The column of the glyph of an entry, as wide as the glyph and the even space on either side of it. */
 	--form-glyph-column: 44px;
+	/* The height of the context bar, below which the toolbar stays. */
+	--form-context-bar-height: 30px;
 	/* The gap between the columns of a card: after the gutter, the predicate and the values. */
 	--form-column-gap: 20px;
+	/* The box a field draws on intent: the border and the background of a VS Code input. */
+	--form-field-border: var(--vscode-settings-textInputBorder, var(--vscode-settings-textInputBackground, #313131));
+	--form-field-background: var(--vscode-settings-textInputBackground, #313131);
 	/* The tint of chips and the hover of entries. */
 	--form-tint: var(--vscode-toolbar-hoverBackground, color-mix(in oklab, var(--vscode-foreground) 10%, transparent));
 	--form-hover: var(--vscode-list-hoverBackground, color-mix(in oklab, var(--vscode-foreground) 5%, transparent));
 	--form-mono: var(--vscode-editor-font-family, monospace);
-	/* The bar along the left edge of a comment: its width and its colour. */
-	--form-comment-bar-width: 3px;
-	--form-comment-bar-color: color-mix(in oklab, var(--vscode-descriptionForeground) 55%, transparent);
 
 	display: flex;
 	flex-direction: column;
@@ -49,39 +51,52 @@ body {
 
 /* ---------- Toolbar ---------- */
 
+/*
+ * The toolbar stands under the title of the document, in the column of the form, and stays below
+ * the context bar once the title has scrolled away. It covers the entries that scroll under it.
+ */
 .form-toolbar {
-	flex: 0 0 auto;
-	position: relative;
-	z-index: 2;
+	position: sticky;
+	top: var(--form-context-bar-height);
+	z-index: 11;
 	border-bottom: 1px solid var(--form-hairline);
 	background: var(--vscode-editor-background);
 }
 
-.form-toolbar-content {
-	box-sizing: content-box;
-	display: grid;
-	/* The end keeps the width of its controls; the filter gives way before them. */
-	grid-template-columns: minmax(0, 1fr) minmax(0, auto) minmax(max-content, 1fr);
-	align-items: center;
-	gap: 12px;
-	max-width: var(--form-column);
-	height: 40px;
-	padding: 0 var(--form-inset-end) 0 var(--form-inset);
+/*
+ * Stuck below the context bar, the toolbar ends the header the two make: the line under it and
+ * its shadow run across the whole width of the editor, as the context bar does, and the scroll
+ * area clips them at its sides.
+ */
+.form-toolbar.is-stuck {
+	border-bottom-color: transparent;
 }
 
-.form-toolbar-middle {
+.form-toolbar.is-stuck::after {
+	content: '';
+	position: absolute;
+	left: -100vw;
+	right: -100vw;
+	bottom: -1px;
+	height: 1px;
+	background: var(--form-hairline);
+	box-shadow: 0 2px 6px -2px var(--vscode-widget-shadow, transparent);
+	pointer-events: none;
+}
+
+/* A slim row with the actions at its end. */
+.form-toolbar-content {
 	display: flex;
 	align-items: center;
-	min-width: 0;
+	justify-content: flex-end;
+	height: 28px;
 }
 
 .form-toolbar-end {
 	display: flex;
 	align-items: center;
-	justify-content: flex-end;
+	flex: none;
 	gap: 6px;
-	min-width: 0;
-	margin-right: -6px;
 }
 
 /* The language picker names the language in muted text with a chevron right after it, and draws
@@ -124,74 +139,94 @@ body {
 	color: inherit;
 }
 
-/* The filter: a text field with its search icon, token, count and clear button inside. */
-.filter-field {
+/*
+ * The search toolbar of the form, as the find of the text editor of VS Code looks: floating near the
+ * top of the editor at its right, over the sticky header, in the colours of the editor widgets.
+ */
+.search-toolbar {
+	position: absolute;
+	top: 6px;
+	right: 24px;
+	z-index: 20;
 	display: flex;
 	align-items: center;
-	gap: 6px;
-	width: 360px;
-	max-width: 100%;
+	gap: 2px;
+	padding: 4px 4px 4px 6px;
+	border: 1px solid var(--vscode-editorWidget-border, transparent);
+	border-radius: 8px;
+	background: var(--vscode-editorWidget-background);
+	color: var(--vscode-editorWidget-foreground, var(--vscode-foreground));
+	box-shadow: 0 0 8px 2px var(--vscode-widget-shadow, transparent);
 }
 
-.filter-field vscode-textfield {
-	flex: 1 1 auto;
-	min-width: 0;
+.search-toolbar-input {
+	width: 220px;
 }
 
-.filter-shortcut {
-	flex: none;
-	padding: 0 5px;
-	border: 1px solid var(--form-hairline);
-	border-radius: 3px;
-	color: var(--vscode-descriptionForeground);
-	font-family: var(--form-mono);
-	font-size: 11px;
-	line-height: 16px;
+.search-toolbar-count {
+	min-width: 70px;
+	padding: 0 6px;
+	font-size: 12px;
+	white-space: nowrap;
 }
 
-.filter-count {
-	flex: none;
-	color: var(--vscode-descriptionForeground);
-	font-size: 11px;
+.search-toolbar-count.is-empty {
+	color: var(--vscode-errorForeground);
 }
 
-.filter-clear,
-.filter-token-clear {
-	flex: none;
+.search-toolbar-button,
+.search-toolbar-token-clear {
 	display: grid;
 	place-items: center;
-	width: 18px;
-	height: 18px;
 	padding: 0;
 	border: 0;
-	border-radius: 3px;
-	background: transparent;
-	color: var(--vscode-descriptionForeground);
+	border-radius: var(--mentor-radius-lg);
+	background: none;
+	color: inherit;
 	cursor: pointer;
 }
 
-.filter-clear:hover,
-.filter-token-clear:hover {
-	background: var(--form-tint);
-	color: var(--vscode-foreground);
+.search-toolbar-button {
+	width: 22px;
+	height: 22px;
+}
+
+.search-toolbar-button:hover:not(:disabled),
+.search-toolbar-token-clear:hover {
+	background: var(--vscode-toolbar-hoverBackground, var(--form-tint));
+}
+
+.search-toolbar-button:disabled {
+	opacity: 0.4;
+	cursor: default;
+}
+
+.search-toolbar-button:focus-visible,
+.search-toolbar-token-clear:focus-visible {
+	outline: 1px solid var(--vscode-focusBorder);
 }
 
 /* The definition tree node the list is narrowed to, as a token before the text. */
-.filter-token {
+.search-toolbar-token {
 	flex: none;
 	display: inline-flex;
 	align-items: center;
 	gap: 2px;
-	max-width: 40%;
+	max-width: 160px;
+	margin-right: 4px;
 	padding: 0 2px 0 6px;
 	border-radius: 3px;
 	background: var(--form-tint);
-	color: var(--vscode-foreground);
 	font-size: 12px;
 	line-height: 18px;
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
+}
+
+.search-toolbar-token-clear {
+	width: 16px;
+	height: 16px;
 }
 
 /* ---------- Body: the scroll area and the overview ruler ---------- */
@@ -239,8 +274,8 @@ body {
 
 /*
  * The content is one column, inset from the left edge of the editor and capped in width, while
- * the scroll area keeps the full width. The toolbar and the context bar use the same column, so
- * their edges align with the entries.
+ * the scroll area keeps the full width. The toolbar is part of it, and the context bar uses the
+ * same column, so their edges align with the entries.
  */
 .form-editor-content,
 .form-editor-banner {
@@ -280,6 +315,7 @@ body {
 /*
  * The running head shows once the title of the document has scrolled away. It hangs from an
  * anchor of no height, so it overlays the entries instead of moving them, and fades in and out.
+ * With the toolbar stuck below it, the two are one header, which the line under the toolbar ends.
  */
 .context-bar-anchor {
 	position: sticky;
@@ -293,10 +329,8 @@ body {
 	top: 0;
 	left: 0;
 	right: 0;
-	height: 30px;
-	border-bottom: 1px solid var(--form-hairline);
+	height: var(--form-context-bar-height);
 	background: var(--vscode-editor-background);
-	box-shadow: 0 2px 6px -2px var(--vscode-widget-shadow, transparent);
 	opacity: 0;
 	visibility: hidden;
 	transition: opacity 120ms ease, visibility 0s linear 120ms;
@@ -354,7 +388,6 @@ body {
 
 .document-header {
 	padding: 20px 0 12px;
-	border-bottom: 1px solid var(--form-hairline);
 }
 
 .document-header-title {
@@ -475,6 +508,63 @@ body {
 	font-family: var(--form-mono);
 	font-size: 12px;
 	overflow-wrap: anywhere;
+}
+
+/* The footer of an expanded card: the button that opens the IRI in the gutter, then the IRI. */
+.resource-card-footer {
+	display: grid;
+	grid-template-columns: var(--form-glyph-column) minmax(0, 1fr);
+	column-gap: var(--form-column-gap);
+	align-items: center;
+	margin-top: 6px;
+	padding-right: 32px;
+}
+
+.resource-card-footer > .resource-card-iri {
+	margin-top: 0;
+	padding: 0;
+}
+
+.resource-card-open {
+	display: flex;
+	justify-self: center;
+	padding: 3px;
+	border: 0;
+	border-radius: var(--mentor-radius-md);
+	background: none;
+	color: var(--vscode-descriptionForeground);
+	cursor: pointer;
+}
+
+.resource-card-open:hover {
+	background: var(--form-tint);
+	color: var(--vscode-foreground);
+}
+
+.resource-card-open:focus-visible {
+	outline: 1px solid var(--vscode-focusBorder);
+}
+
+/* The local part of the IRI in the footer, a mono field with the namespace before it. */
+.resource-card-local-part {
+	--vscode-font-family: var(--form-mono);
+	--vscode-font-size: 12px;
+	--vscode-settings-textInputForeground: var(--vscode-descriptionForeground);
+}
+
+.resource-card-local-part:focus-within {
+	--vscode-settings-textInputForeground: var(--vscode-foreground);
+}
+
+/*
+ * The namespace sits where the text of a field starts, and the local part follows it without a
+ * gap: the margins take the place of the padding the field keeps before its input.
+ */
+.resource-card-namespace {
+	margin-left: 4px;
+	margin-right: -4px;
+	color: var(--vscode-descriptionForeground);
+	white-space: pre;
 }
 
 /*
@@ -657,27 +747,13 @@ body {
 	align-items: stretch;
 }
 
-/* The comment lines above a property or a value: grey text behind a bar. */
+/* The comment lines above a property or a value: grey text. */
 .statement-comment,
 .statement-value-comment {
-	position: relative;
 	display: block;
 	grid-column: 2 / -1;
-	padding: 2px 0 2px calc(var(--form-comment-bar-width) + var(--mentor-space-3));
 	color: var(--vscode-descriptionForeground);
 	white-space: pre-wrap;
-}
-
-.statement-comment::before,
-.statement-value-comment::before {
-	content: '';
-	position: absolute;
-	top: 2px;
-	bottom: 2px;
-	left: 0;
-	width: var(--form-comment-bar-width);
-	border-radius: var(--form-comment-bar-width);
-	background: var(--form-comment-bar-color);
 }
 
 .statement-list-items {
@@ -985,8 +1061,6 @@ body {
  */
 .statement-list.is-editable {
 	--form-field-height: 26px;
-	--form-field-border: var(--vscode-settings-textInputBorder, var(--vscode-settings-textInputBackground, #313131));
-	--form-field-background: var(--vscode-settings-textInputBackground, #313131);
 }
 
 .statement-list.is-editable > .statement-line {
@@ -1115,6 +1189,11 @@ body {
 
 .resource-values:focus-within {
 	border-color: var(--vscode-focusBorder);
+}
+
+/* A pill stands in a wrapper of its own height, so the box centres it with an even space around it. */
+.resource-values > [data-value-index] {
+	display: flex;
 }
 
 .resource-values > .combobox {
@@ -1321,21 +1400,10 @@ body {
 
 /* ---------- Comments ---------- */
 
-/* A comment between entries: grey text behind a bar in the gutter, where an entry has its glyph. */
+/* A comment between entries: grey text. */
 .form-block.is-comment .comment-block {
-	display: grid;
-	grid-template-columns: var(--form-glyph-column) minmax(0, 1fr);
 	padding: 16px 0 12px;
 	border-bottom: 1px solid var(--form-hairline);
-}
-
-.comment-block::before {
-	content: '';
-	align-self: stretch;
-	justify-self: center;
-	width: var(--form-comment-bar-width);
-	border-radius: var(--form-comment-bar-width);
-	background: var(--form-comment-bar-color);
 }
 
 .comment-block-text {

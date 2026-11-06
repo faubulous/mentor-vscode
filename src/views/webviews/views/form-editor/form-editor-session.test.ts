@@ -459,6 +459,56 @@ describe('FormEditorSession', () => {
 		expect(writeText).toHaveBeenCalledWith('[ ex:q "x" ; ex:r [ ex:s 1 ] ]');
 	});
 
+	it('renames a resource as F2 does, at a prefixed name of it, and tells the webview and the status bar', async () => {
+		const { posted, receive, document } = await createSession('ex:A a ex:Class .\nex:B ex:p ex:A .\n');
+		const edit = new vscode.WorkspaceEdit();
+
+		edit.replace(document.uri, new vscode.Range(new vscode.Position(2, 3), new vscode.Position(2, 4)), 'Oak');
+		edit.replace(vscode.Uri.parse('file:///workspace/other.ttl'), new vscode.Range(new vscode.Position(0, 3), new vscode.Position(0, 4)), 'Oak');
+
+		const executeCommand = vi.spyOn(vscode.commands, 'executeCommand').mockResolvedValueOnce(edit);
+		const applyEdit = vi.spyOn(vscode.workspace, 'applyEdit').mockResolvedValueOnce(true);
+		const setStatusBarMessage = vi.spyOn(vscode.window, 'setStatusBarMessage');
+
+		await receive({ id: 'Ready' });
+		await receive({ id: 'RenameResource', resource: RdfDataFactory.namedNode(`${EX}A`), localPart: 'Oak' });
+
+		expect(executeCommand).toHaveBeenCalledWith('vscode.executeDocumentRenameProvider', document.uri, new vscode.Position(2, 3), 'Oak');
+		expect(applyEdit).toHaveBeenCalledWith(edit);
+		expect(setStatusBarMessage).toHaveBeenCalledWith('Renamed: 2 references updated in 2 files.', expect.any(Number));
+		expect(postedOf(posted, 'ResourceRenamed')).toEqual([{ id: 'ResourceRenamed', resource: RdfDataFactory.namedNode(`${EX}A`), renamed: RdfDataFactory.namedNode(`${EX}Oak`) }]);
+	});
+
+	it('renames a resource written as an IRI reference in its local part, before the closing bracket', async () => {
+		const { receive, document } = await createSession('<http://other.org/ns#Thing> a ex:Class .\n');
+		const edit = new vscode.WorkspaceEdit();
+
+		edit.replace(document.uri, new vscode.Range(new vscode.Position(2, 21), new vscode.Position(2, 26)), 'Oak');
+
+		const executeCommand = vi.spyOn(vscode.commands, 'executeCommand').mockResolvedValueOnce(edit);
+
+		vi.spyOn(vscode.workspace, 'applyEdit').mockResolvedValueOnce(true);
+
+		await receive({ id: 'Ready' });
+		await receive({ id: 'RenameResource', resource: RdfDataFactory.namedNode('http://other.org/ns#Thing'), localPart: 'Oak' });
+
+		expect(executeCommand).toHaveBeenCalledWith('vscode.executeDocumentRenameProvider', document.uri, new vscode.Position(2, '<http://other.org/ns#Thing>'.length - 2), 'Oak');
+	});
+
+	it('renames nothing to a local part that cannot be written as it is, or to the same one', async () => {
+		const { posted, receive } = await createSession('ex:A a ex:Class .\n');
+		const executeCommand = vi.spyOn(vscode.commands, 'executeCommand');
+		const showErrorMessage = vi.spyOn(vscode.window, 'showErrorMessage');
+
+		await receive({ id: 'Ready' });
+		await receive({ id: 'RenameResource', resource: RdfDataFactory.namedNode(`${EX}A`), localPart: 'an oak' });
+		await receive({ id: 'RenameResource', resource: RdfDataFactory.namedNode(`${EX}A`), localPart: 'A' });
+
+		expect(showErrorMessage).toHaveBeenCalledOnce();
+		expect(executeCommand).not.toHaveBeenCalledWith('vscode.executeDocumentRenameProvider', expect.anything(), expect.anything(), expect.anything());
+		expect(postedOf(posted, 'ResourceRenamed')).toEqual([]);
+	});
+
 	it('posts nothing once disposed', async () => {
 		const { session, posted } = await createSession('ex:A a ex:Class .\n');
 

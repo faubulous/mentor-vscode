@@ -7,6 +7,8 @@
 **/.claude
 log.txt
 
+docs/specs/**
+
 # Generated icon font artifacts
 media/mentor-icons.json
 media/mentor-icons.woff

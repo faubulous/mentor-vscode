@@ -3,7 +3,7 @@ import { container } from 'tsyringe';
 import { isTemplate } from 'triplate';
 import { BlankNode, NamedNode } from '@rdfjs/types';
 import { termToString } from 'rdf-string';
-import { RdfSyntax } from '@faubulous/mentor-rdf-parsers';
+import { RdfSyntax, RdfToken } from '@faubulous/mentor-rdf-parsers';
 import { VocabularyRepository, rdf } from '@faubulous/mentor-rdf';
 import { ServiceToken } from '@src/services/tokens';
 import { ISettingsService } from '@src/services/core';
@@ -15,7 +15,9 @@ import { EditOperation } from '@src/services/editing/edit-operation';
 import { getLog } from '@src/utilities/vscode/log';
 import { ResourceReferenceProvider } from '@src/providers/resource-reference-provider';
 import { getSubjectIconName } from '@src/utilities/subject-icon';
-import { getBlankNodeSpan, tokensMatchText } from '@src/utilities/tokens';
+import { getBlankNodeSpan, getTokenAtPosition, tokensMatchText } from '@src/utilities/tokens';
+import { isPlainLocalName } from '@src/utilities/prefixed-name';
+import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { DocumentSyntaxError } from '@src/services/document/document-syntax-error';
 import { WebviewComponentFactory } from '../../webview-component-factory';
 import { ExecuteCommandMessage } from '../../webview-messaging';
@@ -34,6 +36,11 @@ import { reviveTerms } from '@src/utilities/rdf-terms';
  * How many problems of a document a snapshot points at.
  */
 const MAX_PROBLEMS = 20;
+
+/**
+ * How long the status bar tells how many references a rename changed, in milliseconds.
+ */
+const RENAME_REPORT_DURATION = 5000;
 
 /**
  * The syntaxes the form editor can read. N3 is excluded because its formulas and rules have no
@@ -253,6 +260,44 @@ export class FormEditorSession implements vscode.Disposable {
 		return outcome;
 	}
 
+	/**
+	 * Rename a resource as F2 does, with Mentor's rename provider: its IRI gets another local part
+	 * wherever the workspace writes it, as one edit that one undo takes back. The status bar tells
+	 * how many references changed, and the webview the IRI the resource has now.
+	 * @param resource The resource.
+	 * @param localPart The new local part.
+	 */
+	async renameResource(resource: NamedNode, localPart: string): Promise<void> {
+		await this._waitUntilLoaded();
+
+		const context = this._getTokenizedContext();
+		const summary = this._snapshot?.resources.find(candidate => candidate.term.equals(resource));
+
+		if (!context || !summary?.localPart || localPart === summary.localPart) {
+			return;
+		}
+
+		if (!isPlainLocalName(localPart)) {
+			void vscode.window.showErrorMessage(`'${localPart}' cannot be the local part of an IRI: it starts with a letter or '_' and holds letters, digits, '_', '-' and '.'.`);
+
+			return;
+		}
+
+		const position = tokensMatchText(context.tokens, this._document.getText()) ? _renamePositionOf(context, resource.value, summary.prefixedName !== undefined) : undefined;
+		const edit = position ? await this._renameEditAt(position, localPart) : undefined;
+
+		if (!edit || edit.size === 0 || !(await vscode.workspace.applyEdit(edit))) {
+			void vscode.window.showErrorMessage(`${summary.prefixedName ?? resource.value} could not be renamed.`);
+
+			return;
+		}
+
+		const renamed = RdfDataFactory.namedNode(resource.value.slice(0, resource.value.length - summary.localPart.length) + localPart);
+
+		vscode.window.setStatusBarMessage(_renameReport(edit), RENAME_REPORT_DURATION);
+		this._postMessage({ id: 'ResourceRenamed', resource, renamed });
+	}
+
 	dispose(): void {
 		if (this._disposed) {
 			return;
@@ -335,6 +380,9 @@ export class FormEditorSession implements vscode.Disposable {
 				break;
 			case 'CopyAsTurtle':
 				await this._copyAsTurtle(message.anchor, message.version);
+				break;
+			case 'RenameResource':
+				await this.renameResource(message.resource, message.localPart);
 				break;
 			case 'ExecuteCommand': {
 				const command = message as ExecuteCommandMessage;
@@ -435,14 +483,36 @@ export class FormEditorSession implements vscode.Disposable {
 		this._refreshPending = true;
 
 		try {
-			while (this._contextService.isLoading(this._documentUri)) {
-				await this._contextService.waitUntilLoaded(this._documentUri);
-			}
+			await this._waitUntilLoaded();
 		} finally {
 			this._refreshPending = false;
 		}
 
 		this._publishSnapshot();
+	}
+
+	/**
+	 * Wait until the document is loaded, the parse delivered last included.
+	 */
+	private async _waitUntilLoaded(): Promise<void> {
+		while (this._contextService.isLoading(this._documentUri)) {
+			await this._contextService.waitUntilLoaded(this._documentUri);
+		}
+	}
+
+
+	/**
+	 * Ask Mentor's rename provider for the edit that renames the IRI written at a position.
+	 * @param position The position of a written reference of the IRI.
+	 * @param localPart The new local part.
+	 * @returns The edit, or `undefined` when the provider cannot rename there.
+	 */
+	private async _renameEditAt(position: vscode.Position, localPart: string): Promise<vscode.WorkspaceEdit | undefined> {
+		try {
+			return await vscode.commands.executeCommand<vscode.WorkspaceEdit>('vscode.executeDocumentRenameProvider', this._document.uri, position, localPart);
+		} catch {
+			return undefined;
+		}
 	}
 
 	/**
@@ -710,4 +780,46 @@ export class FormEditorSession implements vscode.Disposable {
 			void this._panel.webview.postMessage(message);
 		}
 	}
+}
+
+/**
+ * Find where the local part of an IRI is written in a document, so that Mentor's rename provider
+ * renames the IRI there rather than its prefix: in a prefixed name where the resource has one,
+ * else in an IRI reference, on the last character of the local part.
+ * @param context The context of the document.
+ * @param iri The IRI.
+ * @param prefixed Whether the resource has a prefixed name.
+ * @returns The position, or `undefined` when the document writes the IRI nowhere.
+ */
+function _renamePositionOf(context: TurtleDocument, iri: string, prefixed: boolean): vscode.Position | undefined {
+	const wanted = prefixed ? RdfToken.PNAME_LN.name : RdfToken.IRIREF.name;
+	const references = context.references.getRanges(iri).flatMap(range => {
+		const token = getTokenAtPosition(context.tokens, range.start);
+
+		return token ? [{ range, token }] : [];
+	});
+	const reference = references.find(candidate => candidate.token.tokenType.name === wanted) ?? references[0];
+
+	if (!reference) {
+		return undefined;
+	}
+
+	// The last character of the local part: before the closing bracket of an IRI reference.
+	const image = reference.token.image;
+	const offset = reference.token.tokenType.name === RdfToken.IRIREF.name ? image.length - 2 : image.length - 1;
+
+	return new vscode.Position(reference.range.start.line, reference.range.start.character + offset);
+}
+
+/**
+ * Tell how many references a rename changed, in how many files.
+ * @param edit The edit of the rename.
+ * @returns The report.
+ */
+function _renameReport(edit: vscode.WorkspaceEdit): string {
+	const entries = edit.entries();
+	const references = entries.reduce((count, [, edits]) => count + edits.length, 0);
+	const files = entries.length;
+
+	return `Renamed: ${references} ${references === 1 ? 'reference' : 'references'} updated${files > 1 ? ` in ${files} files` : ''}.`;
 }

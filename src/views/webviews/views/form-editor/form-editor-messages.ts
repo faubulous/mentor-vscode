@@ -43,7 +43,11 @@ export type FormEditorHostMessage =
 	/**
 	 * A language was chosen in the language quick pick, or the values of every language.
 	 */
-	| { id: 'LanguagePicked'; allLanguages: boolean };
+	| { id: 'LanguagePicked'; allLanguages: boolean }
+	/**
+	 * A resource was renamed: its IRI is now `renamed`.
+	 */
+	| { id: 'ResourceRenamed'; resource: NamedNode; renamed: NamedNode };
 
 /**
  * Messages sent from the webview to the extension host.
@@ -75,6 +79,10 @@ export type FormEditorWebviewMessage =
 	 * offset it starts at in the document version `version`.
 	 */
 	| { id: 'CopyAsTurtle'; anchor: number; version: number }
+	/**
+	 * Rename a resource as F2 does: give its IRI another local part, wherever the workspace writes it.
+	 */
+	| { id: 'RenameResource'; resource: NamedNode; localPart: string }
 	| ExecuteCommandMessage;
 
 /**

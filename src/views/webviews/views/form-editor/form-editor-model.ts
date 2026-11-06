@@ -162,6 +162,13 @@ export interface ResourceSummary {
 	prefixedName?: string;
 
 	/**
+	 * The local part of the IRI of the resource, which renaming it changes as F2 does: what follows
+	 * the prefix of its prefixed name, else what follows the namespace of the IRI, up to its last
+	 * `#` or `/`. Absent for a blank node and an IRI without a local part.
+	 */
+	localPart?: string;
+
+	/**
 	 * The glyph that marks what kind of resource this is.
 	 */
 	iconName: string;

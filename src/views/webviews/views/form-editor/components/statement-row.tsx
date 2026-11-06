@@ -365,14 +365,14 @@ function _rangeOf(header: RowHeader['kind'] | undefined, property: PropertyView 
 }
 
 /**
- * The placeholder of the input of the next value.
+ * The placeholder of the input of the next value, which a row with values leaves empty.
  * @param valueCount The number of values of the row.
  * @param header The kind of header the row is, if it is one.
  * @returns The placeholder.
  */
 function _placeholderOf(valueCount: number, header: RowHeader['kind'] | undefined): string {
 	if (valueCount > 0) {
-		return 'add a value';
+		return '';
 	}
 
 	switch (header) {

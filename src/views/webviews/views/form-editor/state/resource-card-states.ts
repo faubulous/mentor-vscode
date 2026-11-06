@@ -86,6 +86,16 @@ export class ResourceCardStates {
 
 
 	/**
+	 * Carry the state of a card over to the key its resource has after a rename.
+	 * @param key The key of the card before the rename.
+	 * @param renamedKey The key of the card after the rename.
+	 * @returns The next states.
+	 */
+	renamed(key: string, renamedKey: string): ResourceCardStates {
+		return this._with(key, COLLAPSED_CARD)._with(renamedKey, this.stateOf(key));
+	}
+
+	/**
 	 * Replace the state of one card, dropping the entry of a collapsed card so the map holds only
 	 * the open ones.
 	 * @param key The key of the card.
