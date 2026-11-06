@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { toJsonId, getIriFromNodeId, getLocalPartAndQuery, getLocalPartOffset, toDisplayPath, getFileName, getPath, getFolderPath, shortenPathStart } from '@src/utilities/uri';
+import { toJsonId, getIriFromNodeId, getLocalPartAndQuery, getLocalPartOffset, toDisplayPath, getFileName, getPath, getFolderPath, shortenPathStart, getLocalPartFromLabel } from '@src/utilities/uri';
 
 describe('toJsonId', () => {
 	it('converts http URI to dot-separated identifier', () => {
@@ -235,5 +235,18 @@ describe('getLocalPartOffset', () => {
 
 	it('returns undefined for an empty local part', () => {
 		expect(getLocalPartOffset('<http://example.org/ns#>', '')).toBeUndefined();
+	});
+});
+
+describe('getLocalPartFromLabel', () => {
+	it('joins the words of a label in PascalCase for a class and in camelCase for a property', () => {
+		expect(getLocalPartFromLabel('Apple tree', 'pascal')).toBe('AppleTree');
+		expect(getLocalPartFromLabel('has part', 'camel')).toBe('hasPart');
+		expect(getLocalPartFromLabel('Has part', 'camel')).toBe('hasPart');
+	});
+
+	it('separates the words at anything but letters and digits, and keeps the rest of each word', () => {
+		expect(getLocalPartFromLabel('  DNA-sequence (raw) 2 ', 'pascal')).toBe('DNASequenceRaw2');
+		expect(getLocalPartFromLabel('--', 'pascal')).toBe('');
 	});
 });
