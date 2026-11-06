@@ -185,3 +185,27 @@ export function shortenPathStart(path: string, maxLength: number): string {
 
 	return PATH_ELLIPSIS + lastSegment.slice(lastSegment.length - (maxLength - PATH_ELLIPSIS.length));
 }
+
+/**
+ * How the words of a label are joined into the local part of an IRI: in PascalCase, as classes
+ * are named, or in camelCase, as properties are.
+ */
+export type LocalPartCase = 'pascal' | 'camel';
+
+/**
+ * Make the local part of an IRI from a label: its words joined, each starting with a capital
+ * letter, but the first in lower case in camelCase. Anything but letters and digits separates
+ * the words; the rest of each word is kept as it is written.
+ * @param label The label.
+ * @param letterCase How the words are joined.
+ * @returns The local part, empty for a label without letters or digits.
+ */
+export function getLocalPartFromLabel(label: string, letterCase: LocalPartCase): string {
+	const words = label.split(/[^\p{L}\p{N}]+/u).filter(word => word.length > 0);
+
+	return words.map((word, index) => {
+		const first = index === 0 && letterCase === 'camel' ? word[0].toLowerCase() : word[0].toUpperCase();
+
+		return first + word.slice(1);
+	}).join('');
+}

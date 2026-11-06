@@ -6,7 +6,7 @@ import 'reflect-metadata';
 
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
-import { RDF } from '@faubulous/mentor-rdf';
+import { RDF, RDFS, _OWL, _RDFS } from '@faubulous/mentor-rdf';
 import { RdfSyntax } from '@faubulous/mentor-rdf-parsers';
 import { ServiceToken } from '@src/services/tokens';
 import { IDocumentContext } from '@src/services/document/document-context.interface';
@@ -76,6 +76,32 @@ async function createSession(body: string, context?: IDocumentContext, services:
 	await session.initialize();
 
 	return { session, document, context: context ?? turtle, ...testPanel };
+}
+
+/**
+ * Give a resource a new label through the form, and tell the local parts the label rule renamed it
+ * to with Mentor's rename provider.
+ * @param body The statements, written after the prefix declarations.
+ * @param localName The local name of the resource.
+ * @param label The new label, which replaces the labels the resource has.
+ * @returns The local parts asked for.
+ */
+async function relabel(body: string, localName: string, label: ReturnType<typeof RdfDataFactory.literal>): Promise<string[]> {
+	const text = `@prefix owl: <${_OWL}> .\n@prefix rdfs: <${_RDFS}> .\n${body}`;
+	const context = createTurtleDocument(URI, RdfSyntax.Turtle);
+
+	context.predicates.label.push(RDFS.label);
+	context.parse(PREAMBLE + text);
+
+	const { session, document, receive } = await createSession(text, context);
+	const executeCommand = vi.spyOn(vscode.commands, 'executeCommand').mockResolvedValue(undefined);
+
+	vi.spyOn(vscode.workspace, 'applyEdit').mockImplementation(async edit => applyWorkspaceEditTo(edit, document));
+
+	await receive({ id: 'Ready' });
+	await session.applyEdit('e1', 1, [{ op: 'setValues', subject: RdfDataFactory.namedNode(`${EX}${localName}`), predicate: RDFS.label, values: [{ kind: 'term', term: label }] }]);
+
+	return executeCommand.mock.calls.filter(call => call[0] === 'vscode.executeDocumentRenameProvider').map(call => call[3] as string);
 }
 
 /**
@@ -507,6 +533,23 @@ describe('FormEditorSession', () => {
 		expect(showErrorMessage).toHaveBeenCalledOnce();
 		expect(executeCommand).not.toHaveBeenCalledWith('vscode.executeDocumentRenameProvider', expect.anything(), expect.anything(), expect.anything());
 		expect(postedOf(posted, 'ResourceRenamed')).toEqual([]);
+	});
+
+	it('renames a class whose IRI was made from its label when the label changes, as the label rule does', async () => {
+		expect(await relabel('ex:AppleTree a owl:Class ; rdfs:label "Apple tree"@en .\n', 'AppleTree', RdfDataFactory.literal('Oak tree', 'en'))).toEqual(['OakTree']);
+	});
+
+	it('renames a property in camelCase', async () => {
+		expect(await relabel('ex:hasPart a owl:ObjectProperty ; rdfs:label "has part"@en .\n', 'hasPart', RdfDataFactory.literal('has piece', 'en'))).toEqual(['hasPiece']);
+	});
+
+	it('leaves an IRI that was not made from the label, and a resource that is neither a class nor a property', async () => {
+		expect(await relabel('ex:A-HR a owl:Class ; rdfs:label "Ampere hour"@en .\n', 'A-HR', RdfDataFactory.literal('Ampere second', 'en'))).toEqual([]);
+		expect(await relabel('ex:Oak a ex:Tree ; rdfs:label "Oak"@en .\n', 'Oak', RdfDataFactory.literal('Birch', 'en'))).toEqual([]);
+	});
+
+	it('leaves the IRI when a label of another language than the one shown changes', async () => {
+		expect(await relabel('ex:AppleTree a owl:Class ; rdfs:label "Apple tree"@en .\n', 'AppleTree', RdfDataFactory.literal('Apfelbaum', 'de'))).toEqual([]);
 	});
 
 	it('posts nothing once disposed', async () => {

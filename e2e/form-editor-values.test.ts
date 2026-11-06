@@ -16,7 +16,7 @@ const factory = new DataFactory();
 /**
  * The fixture documents of these tests, which no other suite opens.
  */
-const DOCUMENTS = ['data/form-values.ttl', 'data/form-values.nt', 'data/form-values.nq'];
+const DOCUMENTS = ['data/form-values.ttl', 'data/form-values.nt', 'data/form-values.nq', 'data/form-label-rule.ttl'];
 
 /**
  * What the edit hook reports.
@@ -88,7 +88,7 @@ function setValues(document: vscode.TextDocument, values: unknown[]): Thenable<E
  * Verifies that the values of a statement edited in the form are written in the syntax of the
  * document by a real extension host: as a list of objects in Turtle, and as one line per value
  * with the subject and the graph of its neighbour in N-Triples and N-Quads; a new nested node and
- * a copy of one in Turtle; and a resource renamed from its card.
+ * a copy of one in Turtle; a resource renamed from its card, and a class renamed with its label.
  */
 suite('form editor values', () => {
 	suiteSetup(async () => {
@@ -171,5 +171,18 @@ suite('form editor values', () => {
 		await vscode.commands.executeCommand('mentor.e2e.renameFormEditorResource', document.uri.toString(), `${NS}s`, 't');
 
 		assert.strictEqual(document.getText(), '@prefix ex: <http://example.org/values#> .\n\nex:t ex:p "a", ex:b .\n');
+	});
+
+	test('renames a class whose IRI was made from its label when the label is edited, as the label rule does', async () => {
+		const document = await openInFormEditor('data/form-label-rule.ttl');
+		const outcome = await vscode.commands.executeCommand<EditOutcomeView>('mentor.e2e.applyFormEditorEdit', document.uri.toString(), [{
+			op: 'setValues',
+			subject: factory.namedNode('http://example.org/label-rule#AppleTree'),
+			predicate: 'http://www.w3.org/2000/01/rdf-schema#label',
+			values: [{ kind: 'term', term: factory.literal('Oak tree', 'en') }]
+		}]);
+
+		assert.ok(outcome.ok, `the edit must be applied, got ${JSON.stringify(outcome)}`);
+		assert.ok(document.getText().includes('ex:OakTree a owl:Class ;\n    rdfs:label "Oak tree"@en .'), `the class must follow its label, got ${document.getText()}`);
 	});
 });
