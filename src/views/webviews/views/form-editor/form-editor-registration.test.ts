@@ -53,7 +53,7 @@ describe('registerFormEditor', () => {
 		configureEnabled(false);
 		registerFormEditor(createContext());
 
-		expect(container.isRegistered(ServiceToken.FormEditorProvider)).toBe(false);
+		expect(container.isRegistered(ServiceToken.DefinitionRevealTarget)).toBe(false);
 		expect(register).toHaveBeenCalledWith(FormEditorProvider.viewType, expect.any(DisabledFormEditorProvider));
 	});
 
@@ -70,7 +70,7 @@ describe('registerFormEditor', () => {
 		configureEnabled(true);
 		registerFormEditor(createContext());
 
-		expect(container.isRegistered(ServiceToken.FormEditorProvider)).toBe(true);
+		expect(container.isRegistered(ServiceToken.DefinitionRevealTarget)).toBe(true);
 	});
 
 	it('offers to reload the window when the flag changes', async () => {

@@ -34,7 +34,7 @@ export function registerFormEditor(context: vscode.ExtensionContext): void {
 	);
 
 	if (getConfig('formEditor').get<boolean>('enabled', false)) {
-		container.registerInstance(ServiceToken.FormEditorProvider, new FormEditorProvider(context));
+		container.registerInstance(ServiceToken.DefinitionRevealTarget, new FormEditorProvider(context));
 	} else {
 		new DisabledFormEditorProvider(context);
 	}

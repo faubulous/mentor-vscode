@@ -3,10 +3,8 @@ import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
 import { IDocumentContextService } from '@src/services/document';
 import { ResourceDefinitionProvider } from '@src/providers';
+import { IDefinitionRevealTarget } from './reveal-definition.interface';
 import { DefinitionTreeNode, getIriFromArgument } from '@src/views/trees/definition-tree/definition-tree-node';
-import { BlankNode, NamedNode } from '@rdfjs/types';
-import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
-import type { FormEditorProvider } from '@src/views/webviews/views/form-editor';
 
 const contextService = () => container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
 
@@ -22,9 +20,9 @@ export const revealDefinition = {
 
 		const context = contextService();
 
-		// A form editor in front shows the definition, or narrows to what a type or section lists,
-		// instead of a text editor being opened for it.
-		if (_showInFormEditor(context, arg, uri)) {
+		// An editor in front that shows definitions itself, such as the form editor, shows the
+		// definition, or narrows to what a type or section lists, instead of a text editor.
+		if (_showInRevealTarget(context, arg, uri)) {
 			return;
 		}
 
@@ -48,43 +46,30 @@ export const revealDefinition = {
 };
 
 /**
- * Show a definition tree node in the form editor in front, when the document of the tree is open
- * in one: a type or section node narrows the editor to the resources it lists, any other node
- * reveals the card of its resource. The tree keeps the focus, as no editor is activated.
+ * Show a definition tree node in an editor in front that shows definitions itself, such as the
+ * form editor: a type or section node narrows it to the resources the node lists, any other node
+ * reveals its resource. The editor decides from the resources it holds, so a resource it does not
+ * describe falls through to the text editor. The tree keeps the focus, as no editor is activated.
  * @param context The document context service.
  * @param arg The node, or its identifier.
- * @param iri The IRI of the node.
- * @returns Whether the node was shown in a form editor.
+ * @param resource The IRI or blank node identifier of the node.
+ * @returns Whether an editor showed the node.
  */
-function _showInFormEditor(context: IDocumentContextService, arg: DefinitionTreeNode | string, iri: string): boolean {
+function _showInRevealTarget(context: IDocumentContextService, arg: DefinitionTreeNode | string, resource: string): boolean {
 	const documentUri = context.activeContext?.uri;
-	const formEditor = _formEditorProvider();
+	const target = container.isRegistered(ServiceToken.DefinitionRevealTarget)
+		? container.resolve<IDefinitionRevealTarget>(ServiceToken.DefinitionRevealTarget)
+		: undefined;
 
-	if (!documentUri || !formEditor?.isActive(documentUri)) {
+	if (!documentUri || !target) {
 		return false;
 	}
 
 	const members = arg instanceof DefinitionTreeNode ? arg.getMemberIris() : undefined;
 
-	if (members && arg instanceof DefinitionTreeNode) {
-		formEditor.filterResources(documentUri, _labelOf(arg), members.map(_termOf));
-
-		return true;
-	}
-
-	formEditor.revealResource(documentUri, _termOf(iri));
-
-	return true;
-}
-
-/**
- * The form editor provider, when the extension registered one.
- * @returns The provider, or `undefined` when the form editor is not enabled.
- */
-function _formEditorProvider(): FormEditorProvider | undefined {
-	return container.isRegistered(ServiceToken.FormEditorProvider)
-		? container.resolve<FormEditorProvider>(ServiceToken.FormEditorProvider)
-		: undefined;
+	return members && arg instanceof DefinitionTreeNode
+		? target.filterDefinitions(documentUri, _labelOf(arg), members)
+		: target.revealDefinition(documentUri, resource);
 }
 
 /**
@@ -96,16 +81,4 @@ function _labelOf(node: DefinitionTreeNode): string {
 	const label = node.getLabel();
 
 	return typeof label === 'string' ? label : label.label;
-}
-
-/**
- * Get the term of a resource of the tree, which names it by an IRI or by the identifier of a
- * blank node. The store names blank nodes as the parser does, so the form knows them by the same
- * identifiers. An absolute IRI has a scheme, followed by a colon, which a blank node identifier
- * never holds.
- * @param value The IRI or the blank node identifier.
- * @returns The term.
- */
-function _termOf(value: string): NamedNode | BlankNode {
-	return value.includes(':') ? RdfDataFactory.namedNode(value) : RdfDataFactory.blankNode(value);
 }

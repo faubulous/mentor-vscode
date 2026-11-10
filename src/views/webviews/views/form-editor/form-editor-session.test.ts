@@ -318,6 +318,21 @@ describe('FormEditorSession', () => {
 		expect(postedOf(posted, 'FilterResources')).toEqual([{ id: 'FilterResources', label: 'Classes', resources: [resource] }]);
 	});
 
+	it('names a resource of the document by its IRI or by the identifier of its blank node, and nothing it does not describe', async () => {
+		const testSession = await createSession('ex:A ex:p [ ex:q "x" ] .\n_:b ex:p ex:B .\n');
+		const { session, posted } = testSession;
+
+		await testSession.receive({ id: 'Ready' });
+
+		const [snapshot] = postedOf(posted, 'DocumentSnapshot');
+		const labelled = snapshot.snapshot.resources.find(resource => resource.term.termType === 'BlankNode')!.term;
+
+		expect(session.resourceNamed(`${EX}A`)).toEqual(RdfDataFactory.namedNode(`${EX}A`));
+		expect(session.resourceNamed(labelled.value)).toEqual(labelled);
+		expect(session.resourceNamed(`${EX}Unknown`)).toBeUndefined();
+		expect(session.resourceNamed('nowhere')).toBeUndefined();
+	});
+
 	it('reveals a blank node written inside another resource by the card it is written in', async () => {
 		const testSession = await createSession('ex:A ex:p [ ex:q [ ex:r "x" ] ] .\n_:b ex:p ex:B .\n');
 		const { session, posted } = testSession;

@@ -241,6 +241,23 @@ export class FormEditorSession implements vscode.Disposable {
 	}
 
 	/**
+	 * Find the resource of the document a name stands for: a resource named by an IRI, or a blank
+	 * node by its identifier, as the definition tree names them. The document decides, not the
+	 * spelling of the name.
+	 * @param name The IRI or the blank node identifier.
+	 * @returns The resource, or `undefined` when the document describes none by that name.
+	 */
+	resourceNamed(name: string): NamedNode | BlankNode | undefined {
+		if (!this._index) {
+			return undefined;
+		}
+
+		const candidates = [RdfDataFactory.namedNode(name), RdfDataFactory.blankNode(name)];
+
+		return candidates.find(candidate => getEntry(this._index!, candidate) !== undefined);
+	}
+
+	/**
 	 * Find the resource whose card shows a resource. Before the document is indexed, every resource
 	 * is taken to have a card of its own.
 	 * @param resource The resource.

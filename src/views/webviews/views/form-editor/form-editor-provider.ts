@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { EditOperation } from '@src/services/editing/edit-operation';
+import { IDefinitionRevealTarget } from '@src/commands/definition-tree/reveal-definition.interface';
 import { FormEditorSession } from './form-editor-session';
-import { BlankNode, NamedNode } from '@rdfjs/types';
 import { reviveTerms } from '@src/utilities/rdf-terms';
 
 /**
@@ -10,7 +10,7 @@ import { reviveTerms } from '@src/utilities/rdf-terms';
  * works on the ordinary text document, so saving, dirty state, hot exit and undo are handled by
  * VS Code, and every change stays a plain text edit.
  */
-export class FormEditorProvider implements vscode.CustomTextEditorProvider, vscode.Disposable {
+export class FormEditorProvider implements vscode.CustomTextEditorProvider, IDefinitionRevealTarget, vscode.Disposable {
 	/**
 	 * The view type contributed in the manifest.
 	 */
@@ -68,27 +68,49 @@ export class FormEditorProvider implements vscode.CustomTextEditorProvider, vsco
 	}
 
 	/**
-	 * Reveal a resource in every form editor showing a document.
-	 * @param uri The document to reveal the resource in.
-	 * @param resource The resource to scroll to.
+	 * Reveal a resource in every form editor of a document while one is in front, where the
+	 * document describes the resource.
+	 * @param documentUri The document.
+	 * @param resource The IRI or blank node identifier the definition tree names the resource by.
+	 * @returns Whether an editor revealed it.
 	 */
-	revealResource(uri: vscode.Uri, resource: NamedNode | BlankNode): void {
-		for (const session of this._sessionsOf(uri)) {
-			session.revealResource(resource);
+	revealDefinition(documentUri: vscode.Uri, resource: string): boolean {
+		if (!this.isActive(documentUri)) {
+			return false;
 		}
+
+		let revealed = false;
+
+		for (const session of this._sessionsOf(documentUri)) {
+			const term = session.resourceNamed(resource);
+
+			if (term) {
+				session.revealResource(term);
+				revealed = true;
+			}
+		}
+
+		return revealed;
 	}
 
 	/**
-	 * Narrow every form editor showing a document to the resources the definition tree lists
-	 * under a node.
-	 * @param uri The document.
+	 * Narrow every form editor of a document, while one is in front, to the resources the
+	 * definition tree lists under a node and the document describes.
+	 * @param documentUri The document.
 	 * @param label The label of the node.
-	 * @param resources The resources listed under it.
+	 * @param resources The IRIs or blank node identifiers of the resources listed under it.
+	 * @returns Whether the editors were narrowed.
 	 */
-	filterResources(uri: vscode.Uri, label: string, resources: (NamedNode | BlankNode)[]): void {
-		for (const session of this._sessionsOf(uri)) {
-			session.filterResources(label, resources);
+	filterDefinitions(documentUri: vscode.Uri, label: string, resources: readonly string[]): boolean {
+		if (!this.isActive(documentUri)) {
+			return false;
 		}
+
+		for (const session of this._sessionsOf(documentUri)) {
+			session.filterResources(label, resources.flatMap(resource => session.resourceNamed(resource) ?? []));
+		}
+
+		return true;
 	}
 
 	/**
