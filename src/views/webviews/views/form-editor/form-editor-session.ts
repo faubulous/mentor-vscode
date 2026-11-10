@@ -284,7 +284,7 @@ export class FormEditorSession implements vscode.Disposable {
 		this._postMessage({ id: 'EditApplied', editId, version: outcome.version });
 
 		for (const rename of renames) {
-			await this.renameResource(rename.resource, rename.localPart);
+			await this.renameResource(rename.resource, rename.iri);
 		}
 
 		return outcome;
@@ -296,9 +296,9 @@ export class FormEditorSession implements vscode.Disposable {
 	 * follows the label of the same language. Read before the edit, from what the edit changes.
 	 * @param context The context of the document.
 	 * @param operations The operations of the edit.
-	 * @returns The resources to rename, with their new local parts.
+	 * @returns The resources to rename, with their new IRIs.
 	 */
-	private _labelRenamesOf(context: TurtleDocument, operations: readonly EditOperation[]): { resource: NamedNode; localPart: string }[] {
+	private _labelRenamesOf(context: TurtleDocument, operations: readonly EditOperation[]): { resource: NamedNode; iri: string }[] {
 		const labelPredicates = new Set(context.predicates.label);
 
 		return operations.flatMap(operation => {
@@ -306,22 +306,22 @@ export class FormEditorSession implements vscode.Disposable {
 				return [];
 			}
 
-			const localPart = this._labelLocalPartOf(operation.subject, operation.predicate, operation.values);
+			const iri = this._labelIriOf(operation.subject, operation.predicate, operation.values);
 
-			return localPart ? [{ resource: operation.subject, localPart }] : [];
+			return iri ? [{ resource: operation.subject, iri }] : [];
 		});
 	}
 
 	/**
-	 * The local part the label rule gives a resource when its label changes: the IRI is made from a
-	 * label of the predicate when that label gives its local part, in the case of the kind of the
-	 * resource, and then follows the new label of the same language.
+	 * The IRI the label rule gives a resource when its label changes: the IRI is made from a label
+	 * of the predicate when that label gives its local part, in the case of the kind of the
+	 * resource, and then follows the new label of the same language, in the same namespace.
 	 * @param resource The resource.
 	 * @param predicate The IRI of the label predicate.
 	 * @param values The values the edit gives the predicate.
-	 * @returns The new local part, or `undefined` when the IRI is not made from a label or stays.
+	 * @returns The new IRI, or `undefined` when the IRI is not made from a label or stays.
 	 */
-	private _labelLocalPartOf(resource: NamedNode, predicate: string, values: readonly StatementValue[]): string | undefined {
+	private _labelIriOf(resource: NamedNode, predicate: string, values: readonly StatementValue[]): string | undefined {
 		const summary = this._snapshot?.resources.find(candidate => candidate.term.equals(resource));
 		const entry = this._index ? getEntry(this._index, resource) : undefined;
 		const letterCase = entry ? _localPartCaseOf(typeIrisOf(entry)) : undefined;
@@ -335,7 +335,11 @@ export class FormEditorSession implements vscode.Disposable {
 		const label = values.find(value => value.kind === 'term' && value.term.termType === 'Literal' && source?.termType === 'Literal' && value.term.language === source.language);
 		const renamed = label?.kind === 'term' ? getLocalPartFromLabel(label.term.value, letterCase) : undefined;
 
-		return renamed && renamed !== localPart && isPlainLocalName(renamed) ? renamed : undefined;
+		if (!renamed || renamed === localPart || !isPlainLocalName(renamed)) {
+			return undefined;
+		}
+
+		return resource.value.slice(0, resource.value.length - localPart.length) + renamed;
 	}
 
 	/**
