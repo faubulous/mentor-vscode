@@ -4,7 +4,7 @@ import { isTemplate } from 'triplate';
 import { BlankNode, NamedNode } from '@rdfjs/types';
 import { termToString } from 'rdf-string';
 import { RdfSyntax, RdfToken } from '@faubulous/mentor-rdf-parsers';
-import { VocabularyRepository, rdf } from '@faubulous/mentor-rdf';
+import { OWL, RDF, RDFS, VocabularyRepository, rdf } from '@faubulous/mentor-rdf';
 import { ServiceToken } from '@src/services/tokens';
 import { ISettingsService } from '@src/services/core';
 import { LanguageSelection, SelectActiveLanguageOptions, selectActiveLanguage } from '@src/commands/document/select-active-language';
@@ -12,6 +12,8 @@ import { IDocumentContextService } from '@src/services/document/document-context
 import { IDocumentTokenSource } from '@src/services/document/document-token-source.interface';
 import { TurtleDocument } from '@src/languages/turtle/turtle-document';
 import { EditOperation } from '@src/services/editing/edit-operation';
+import { StatementValue } from '@src/services/editing/statement-value';
+import { LocalPartCase, getLocalPartFromLabel } from '@src/utilities/uri';
 import { getLog } from '@src/utilities/vscode/log';
 import { ResourceReferenceProvider } from '@src/providers/resource-reference-provider';
 import { getSubjectIconName } from '@src/utilities/subject-icon';
@@ -21,7 +23,7 @@ import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { DocumentSyntaxError } from '@src/services/document/document-syntax-error';
 import { WebviewComponentFactory } from '../../webview-component-factory';
 import { ExecuteCommandMessage } from '../../webview-messaging';
-import { ResourceIndex, ResourceIndexOptions, findCardResource, getEntry } from '../../services/editing/resource-index';
+import { ResourceIndex, ResourceIndexOptions, findCardResource, getEntry, typeIrisOf } from '../../services/editing/resource-index';
 import { ResourceViewBuilder } from '../../services/editing/resource-view-builder';
 import { SnapshotBuilder } from '../../services/editing/snapshot-builder';
 import { EditOutcome, FormEditorEditHandler } from './form-editor-edit-handler';
@@ -36,6 +38,29 @@ import { reviveTerms } from '@src/utilities/rdf-terms';
  * How many problems of a document a snapshot points at.
  */
 const MAX_PROBLEMS = 20;
+
+/**
+ * The types of a class, whose local part the label rule writes in PascalCase.
+ */
+const CLASS_TYPES = new Set([OWL.Class, RDFS.Class]);
+
+/**
+ * The types of a property, whose local part the label rule writes in camelCase.
+ */
+const PROPERTY_TYPES = new Set([
+	RDF.Property,
+	OWL.ObjectProperty,
+	OWL.DatatypeProperty,
+	OWL.AnnotationProperty,
+	OWL.OntologyProperty,
+	OWL.FunctionalProperty,
+	OWL.InverseFunctionalProperty,
+	OWL.TransitiveProperty,
+	OWL.SymmetricProperty,
+	OWL.AsymmetricProperty,
+	OWL.ReflexiveProperty,
+	OWL.IrreflexiveProperty
+]);
 
 /**
  * How long the status bar tells how many references a rename changed, in milliseconds.
@@ -242,6 +267,7 @@ export class FormEditorSession implements vscode.Disposable {
 			return this._rejectEdit(editId, { ok: false, problem: { kind: 'readOnly' }, detail: 'The document has no tokenized context.' });
 		}
 
+		const renames = this._labelRenamesOf(context, operations);
 		const outcome = await this._editHandler.handle({ editId, baseVersion, operations }, {
 			document: this._document,
 			context,
@@ -257,7 +283,59 @@ export class FormEditorSession implements vscode.Disposable {
 
 		this._postMessage({ id: 'EditApplied', editId, version: outcome.version });
 
+		for (const rename of renames) {
+			await this.renameResource(rename.resource, rename.localPart);
+		}
+
 		return outcome;
+	}
+
+	/**
+	 * The renames the label rule asks for when an edit gives a label a new value: a class whose IRI
+	 * was made from its label in PascalCase, or a property whose IRI was made from it in camelCase,
+	 * follows the label of the same language. Read before the edit, from what the edit changes.
+	 * @param context The context of the document.
+	 * @param operations The operations of the edit.
+	 * @returns The resources to rename, with their new local parts.
+	 */
+	private _labelRenamesOf(context: TurtleDocument, operations: readonly EditOperation[]): { resource: NamedNode; localPart: string }[] {
+		const labelPredicates = new Set(context.predicates.label);
+
+		return operations.flatMap(operation => {
+			if (operation.op !== 'setValues' || operation.subject.termType !== 'NamedNode' || !labelPredicates.has(operation.predicate)) {
+				return [];
+			}
+
+			const localPart = this._labelLocalPartOf(operation.subject, operation.predicate, operation.values);
+
+			return localPart ? [{ resource: operation.subject, localPart }] : [];
+		});
+	}
+
+	/**
+	 * The local part the label rule gives a resource when its label changes: the IRI is made from a
+	 * label of the predicate when that label gives its local part, in the case of the kind of the
+	 * resource, and then follows the new label of the same language.
+	 * @param resource The resource.
+	 * @param predicate The IRI of the label predicate.
+	 * @param values The values the edit gives the predicate.
+	 * @returns The new local part, or `undefined` when the IRI is not made from a label or stays.
+	 */
+	private _labelLocalPartOf(resource: NamedNode, predicate: string, values: readonly StatementValue[]): string | undefined {
+		const summary = this._snapshot?.resources.find(candidate => candidate.term.equals(resource));
+		const entry = this._index ? getEntry(this._index, resource) : undefined;
+		const letterCase = entry ? _localPartCaseOf(typeIrisOf(entry)) : undefined;
+		const localPart = summary?.localPart;
+
+		if (!entry || !localPart || !letterCase) {
+			return undefined;
+		}
+
+		const source = entry.quads.find(quad => quad.predicate.value === predicate && quad.object.termType === 'Literal' && getLocalPartFromLabel(quad.object.value, letterCase) === localPart)?.object;
+		const label = values.find(value => value.kind === 'term' && value.term.termType === 'Literal' && source?.termType === 'Literal' && value.term.language === source.language);
+		const renamed = label?.kind === 'term' ? getLocalPartFromLabel(label.term.value, letterCase) : undefined;
+
+		return renamed && renamed !== localPart && isPlainLocalName(renamed) ? renamed : undefined;
 	}
 
 	/**
@@ -831,4 +909,18 @@ function _renameReport(edit: vscode.WorkspaceEdit): string {
 	const files = entries.length;
 
 	return `Renamed: ${references} ${references === 1 ? 'reference' : 'references'} updated${files > 1 ? ` in ${files} files` : ''}.`;
+}
+
+/**
+ * The case the label rule writes the local part of a resource in: PascalCase for a class,
+ * camelCase for a property, by its types.
+ * @param types The IRIs of the types of the resource.
+ * @returns The case, or `undefined` for a resource the rule leaves alone.
+ */
+function _localPartCaseOf(types: readonly string[]): LocalPartCase | undefined {
+	if (types.some(type => CLASS_TYPES.has(type))) {
+		return 'pascal';
+	}
+
+	return types.some(type => PROPERTY_TYPES.has(type)) ? 'camel' : undefined;
 }
