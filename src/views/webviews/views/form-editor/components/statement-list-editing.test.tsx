@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
-import { act, fireEvent, within } from '@testing-library/react';
+import { act, fireEvent, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { RDFS, XSD } from '@faubulous/mentor-rdf';
 import { createEditingHostStub, EditingHostStub } from '@src/utilities/mocks/editing-host-fixtures';
 import { createResourceDataServiceStub } from '@src/utilities/mocks/resource-data-service-fixtures';
@@ -91,9 +92,11 @@ function withValues(index: number, values: PropertyView['values']): ResourceDeta
 }
 
 /**
- * Type a new statement into the row for new statements and leave it.
+ * Open a row for a new statement with Add property, type a statement into it and leave it.
  */
 async function typeNewStatement(predicate: string, value: string): Promise<void> {
+	await userEvent.click(screen.getByRole('button', { name: 'Add property' }));
+
 	const row = rows()[rows().length - 1];
 
 	type(within(row).getByLabelText('Predicate'), predicate);
@@ -103,10 +106,11 @@ async function typeNewStatement(predicate: string, value: string): Promise<void>
 }
 
 describe('StatementList, edited', () => {
-	it('shows each statement as fields and a row for a new statement after them', () => {
+	it('shows each statement as fields, and the link that adds a property after them', () => {
 		renderList();
 
-		expect(rowLabels()).toEqual(['rdf:type', 'rdfs:label', 'rdfs:subClassOf', 'New statement']);
+		expect(rowLabels()).toEqual(['rdf:type', 'rdfs:label', 'rdfs:subClassOf']);
+		expect(screen.getByRole('button', { name: 'Add property' })).toBeTruthy();
 		expect((within(rows()[1]).getByLabelText('Value 1') as HTMLInputElement).value).toBe('Tree');
 		expect(within(rows()[1]).getByText('en').classList.contains('literal-field-tag')).toBe(true);
 		expect(within(rows()[0]).getByText('Class').closest('.value-pill')).not.toBeNull();
@@ -221,13 +225,30 @@ describe('StatementList, edited', () => {
 		expect(host.submitted).toEqual([]);
 	});
 
-	it('writes a new statement typed into its row, keeps the row editable until the host shows it, and opens another row', async () => {
+	it('opens a row for a new statement with Add property, and closes it when it is left empty', async () => {
+		renderList();
+
+		await userEvent.click(screen.getByRole('button', { name: 'Add property' }));
+
+		const row = rows()[3];
+
+		expect(row.getAttribute('aria-label')).toBe('New statement');
+		expect(screen.queryByRole('button', { name: 'Add property' })).toBeNull();
+
+		await leave(row);
+
+		expect(rowLabels()).toEqual(['rdf:type', 'rdfs:label', 'rdfs:subClassOf']);
+		expect(screen.getByRole('button', { name: 'Add property' })).toBeTruthy();
+	});
+
+	it('writes a new statement typed into its row, keeps the row editable until the host shows it, and offers Add property again', async () => {
 		const { host, deliver } = renderList();
 
 		await typeNewStatement('rdfs:comment', 'A tree');
 
 		expect(host.submitted[0].operations).toEqual([{ op: 'setValues', subject: TEST_SUBJECT, predicate: RDFS.comment, values: [{ kind: 'term', term: RdfDataFactory.literal('A tree') }] }]);
-		expect(rowLabels()).toEqual(['rdf:type', 'rdfs:label', 'rdfs:subClassOf', 'New statement', 'New statement']);
+		expect(rowLabels()).toEqual(['rdf:type', 'rdfs:label', 'rdfs:subClassOf', 'New statement']);
+		expect(screen.getByRole('button', { name: 'Add property' })).toBeTruthy();
 
 		const submitted = rows()[3];
 
@@ -236,7 +257,7 @@ describe('StatementList, edited', () => {
 		await settle(host);
 		await deliver({ ...SAMPLE, properties: [...SAMPLE.properties, { predicate: { term: RdfDataFactory.namedNode(RDFS.comment), prefixedName: 'rdfs:comment', editable: true }, values: [{ ...createLiteralView('A tree'), anchor: 900 }] }] }, { version: 2 });
 
-		expect(rowLabels()).toEqual(['rdf:type', 'rdfs:label', 'rdfs:subClassOf', 'rdfs:comment', 'New statement']);
+		expect(rowLabels()).toEqual(['rdf:type', 'rdfs:label', 'rdfs:subClassOf', 'rdfs:comment']);
 		expect(rows()[3]).toBe(submitted);
 	});
 
@@ -251,7 +272,7 @@ describe('StatementList, edited', () => {
 			predicate: RDFS.label,
 			values: [{ kind: 'existing', anchor: SAMPLE.properties[1].values[0].anchor }, { kind: 'term', term: RdfDataFactory.literal('Baum') }]
 		}]);
-		expect(rowLabels()).toEqual(['rdf:type', 'rdfs:label', 'rdfs:subClassOf', 'New statement']);
+		expect(rowLabels()).toEqual(['rdf:type', 'rdfs:label', 'rdfs:subClassOf']);
 	});
 
 	it('keeps a refused new statement editable, with the reason shown under it', async () => {
@@ -346,7 +367,8 @@ describe('StatementList, edited', () => {
 		renderList(detail);
 
 		expect(rows()[0].classList.contains('is-editable')).toBe(false);
-		expect(rowLabels()[1]).toBe('New statement');
+		expect(rowLabels()).toEqual(['ex:p']);
+		expect(screen.getByRole('button', { name: 'Add property' })).toBeTruthy();
 	});
 
 	it('refuses a new statement of a predicate whose row only reads, rather than replacing its values', async () => {

@@ -28,7 +28,7 @@ export interface StatementRowOwner {
 	merged(row: StatementRowEditor): void;
 
 	/**
-	 * Note that a row for a new statement was left with nothing typed, which the card may close.
+	 * Note that a row for a new statement was left with nothing typed, which the card closes.
 	 * @param row The row.
 	 */
 	abandoned(row: StatementRowEditor): void;

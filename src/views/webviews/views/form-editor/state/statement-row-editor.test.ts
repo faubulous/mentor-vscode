@@ -53,6 +53,17 @@ describe('StatementRowEditor', () => {
 		expect(editor.ready).toBe(false);
 	});
 
+	it('hands a row for a new statement back to the card when it is left with nothing typed, and on Escape', () => {
+		const abandoned = vi.fn();
+		const { editor, requested } = createEditor('new', { abandoned });
+
+		editor.leave();
+		editor.revert();
+
+		expect(abandoned.mock.calls).toEqual([[editor], [editor]]);
+		expect(requested).toEqual([]);
+	});
+
 	it('removes its property with all values at once, as the remove button of a row does', () => {
 		const { editor, requested } = createEditor();
 
@@ -60,16 +71,6 @@ describe('StatementRowEditor', () => {
 
 		expect(requested).toEqual([editor]);
 		expect(editor.takeEdit()).toEqual([{ op: 'setValues', subject: TEST_SUBJECT, predicate: RDFS.label, values: [] }]);
-	});
-
-	it('hands a row for a new statement back to the card when it is left with nothing typed', () => {
-		const abandoned = vi.fn();
-		const { editor, requested } = createEditor('new', { abandoned });
-
-		editor.leave();
-
-		expect(abandoned).toHaveBeenCalledWith(editor);
-		expect(requested).toEqual([]);
 	});
 
 	it('writes a new blank node once its type is chosen, and drops one without a type when the row is left', () => {

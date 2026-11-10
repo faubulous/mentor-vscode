@@ -86,6 +86,7 @@ describe('SnapshotBuilder', () => {
 		`);
 
 		expect(snapshot.resources.map(resource => resource.typeLabel)).toEqual(['owl:Class', 'owl:Class']);
+		expect(snapshot.resources.map(resource => resource.typeLabels)).toEqual([['owl:Class'], ['owl:Class', 'rdfs:Class']]);
 		expect(snapshot.resources.map(resource => resource.usageCount)).toEqual([3, 3]);
 		expect(snapshot.resources[0].description).toBe('About A');
 	});

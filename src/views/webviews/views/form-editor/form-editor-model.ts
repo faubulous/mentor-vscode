@@ -184,6 +184,16 @@ export interface ResourceSummary {
 	typeLabel?: string;
 
 	/**
+	 * The labels of every type the resource asserts, in the order asserted, where they resolve.
+	 */
+	typeLabels?: string[];
+
+	/**
+	 * Where the resource is first written in the document, which a text editor reveals.
+	 */
+	position?: DocumentPosition;
+
+	/**
 	 * Set for a term of another vocabulary that the document only declares, with its type and
 	 * nothing of its own, as Protégé writes them; the view can hide these.
 	 */

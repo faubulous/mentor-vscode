@@ -22,11 +22,6 @@ export interface StatementRowsOptions {
 	card: NamedNode | BlankNode;
 
 	/**
-	 * Whether a row for a new statement is always open after the others, as in a card of the list.
-	 */
-	keepNewRowOpen: boolean;
-
-	/**
 	 * The row that leads the rows, as the label of a card of the list or the type of a nested card.
 	 */
 	leadingRow?: LeadingRow;
@@ -75,16 +70,16 @@ export interface StatementRowsResult {
  * @param options What the rows are made from.
  * @returns The rows in the order they are shown, and the means to open a row for a new statement.
  */
-export function useStatementRows({ detail, card, keepNewRowOpen, leadingRow, version, stale, editing, services }: StatementRowsOptions): StatementRowsResult {
+export function useStatementRows({ detail, card, leadingRow, version, stale, editing, services }: StatementRowsOptions): StatementRowsResult {
 	const edited = services !== undefined;
 	const leadingKey = leadingRow ? [leadingRow.predicateText, ...leadingRow.predicates].join(' ') : '';
 
 	// A list shows one resource throughout: the cards are keyed by it. The rows start over when the
 	// predicates that lead them change, as when the label predicates are configured anew.
 	const rows = useMemo(
-		() => editing && edited ? new StatementRows(editing, { keepNewRowOpen, leadingRow }) : undefined,
+		() => editing && edited ? new StatementRows(editing, { leadingRow }) : undefined,
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-		[editing, edited, keepNewRowOpen, leadingKey]
+		[editing, edited, leadingKey]
 	);
 	const subscribe = useCallback((listener: () => void) => rows?.subscribe(listener) ?? (() => undefined), [rows]);
 	const revision = useSyncExternalStore(subscribe, () => rows?.revision ?? 0);

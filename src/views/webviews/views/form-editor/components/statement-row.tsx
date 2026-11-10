@@ -10,10 +10,9 @@ import { RowValue } from '../state/row-value';
 import { useFormEditorContext } from '../state/form-editor-context';
 import { StatementRowEditor } from '../state/statement-row-editor';
 import { StatementRowState } from '../state/statement-row-state';
-import { CardGlyph } from './card-glyph';
-import { CardUsage } from './card-usage';
 import { EditedRow } from './edited-row';
 import { PredicateField } from './predicate-field';
+import { PropertyComments } from './property-comments';
 import { ResourceValues } from './resource-values';
 import { getRowErrorMessage } from './row-error-message';
 import { RowError } from './row-error';
@@ -25,7 +24,7 @@ import { TermValue } from './term-value';
 /**
  * The header of the nested card of a blank node, which the row of its type leads.
  */
-export interface NestedCardHeader {
+interface NestedCardHeader {
 	/**
 	 * Tells the header of a nested card apart.
 	 */
@@ -42,6 +41,11 @@ export interface NestedCardHeader {
 	summary: string;
 
 	/**
+	 * The comment lines written above the node, shown in the header as its caption.
+	 */
+	caption?: string[];
+
+	/**
 	 * Collapse or expand the card.
 	 */
 	onToggle: () => void;
@@ -50,26 +54,11 @@ export interface NestedCardHeader {
 /**
  * The label row of an expanded card of the list, which leads its rows.
  */
-export interface CardLabelHeader {
+interface CardLabelHeader {
 	/**
 	 * Tells the label row of a card apart.
 	 */
 	kind: 'label';
-
-	/**
-	 * The name of the icon of the kind of the resource.
-	 */
-	iconName: string;
-
-	/**
-	 * How often the document uses the resource, if counted.
-	 */
-	usageCount?: number;
-
-	/**
-	 * Collapse the card.
-	 */
-	onCollapse: () => void;
 }
 
 /**
@@ -98,8 +87,8 @@ export interface StatementRowProps extends StatementRowContext {
 	services?: StatementServices;
 
 	/**
-	 * Whether the predicate field takes the focus when the row appears, as for a row opened by Add
-	 * property.
+	 * Whether the predicate field takes the focus when the row appears, as in a row Add property
+	 * opened.
 	 */
 	autoFocus?: boolean;
 
@@ -138,19 +127,21 @@ interface ShownValue {
 /**
  * A statement of a card on the grid of its card: the predicate, a line per literal, the resources
  * as pills in one box, and the card of a blank node or the items of a list, each with the comment
- * lines written above it. A row that only reads shows the predicate by its label and the values as
- * they are read. An edited row shows the same layout as fields that are plain at rest and draw
- * their box on intent: the predicate field, a field per literal with the label of its language tag
- * or datatype after the text, the input of the next value after the last pill, and a button that
- * removes each value, and in the nested card of a blank node one that removes the property. It is
- * written when the focus leaves it or Enter is pressed in a literal; Escape gives up what was
- * typed. Keys pressed in the rows of a blank node shown in the row are theirs. While the form shows
- * one language, the literals of the others are left out, and an edited row whose literals lack the
- * language has an empty field for it.
+ * lines written above it, and the comment lines written above the statement under its values. A
+ * row that only reads shows the predicate by its label and the values as they are read. An edited
+ * row shows the same layout as fields that are plain at rest and draw their box on intent: the
+ * predicate field, a field per literal with the label of its language tag or datatype after the
+ * text, the input of the next value after the last pill, and a button that removes each value, and
+ * in the nested card of a blank node one that removes the property. A header row without a value
+ * asks for it with a link that turns into the input in place. The row is written when the focus
+ * leaves it or Enter is pressed in a literal; Escape gives up what was typed. Keys pressed in the
+ * rows of a blank node shown in the row are theirs. While the form shows one language, the
+ * literals of the others are left out, and an edited row whose literals lack the language has an
+ * empty field for it.
  * @param props The statement, its editor and where the row stands.
  * @returns The row.
  */
-export function StatementRow({ property, editor, services, autoFocus, removable, header, ...context }: StatementRowProps): React.JSX.Element {
+export function StatementRow({ property, editor, services, autoFocus = false, removable, header, ...context }: StatementRowProps): React.JSX.Element {
 	const state = useRowEditorState(editor);
 	const edited: EditedRow | undefined = editor && state && services ? { editor, state, services } : undefined;
 	const { languageFilter = LanguageFilter.ALL } = useFormEditorContext();
@@ -161,9 +152,9 @@ export function StatementRow({ property, editor, services, autoFocus, removable,
 	const predicateView = edited ? _editedPredicateView(edited.state, edited.services) : property?.predicate;
 	const label = predicateView ? getTermLabel(predicateView) : state?.predicateText ?? '';
 	const error = state ? getRowErrorMessage(state) : undefined;
+	const rowKind = _rowKindOf(literals.length, resources.length, wholes.length);
 	const [addingValue, setAddingValue] = useState(false);
-	// A row of blank nodes only offers Add value under their cards, not the input of a new value.
-	const asksToAdd = edited !== undefined && !header && literals.length === 0 && resources.length === 0 && wholes.length > 0 && edited.state.pendingText === '' && !addingValue;
+	const addLink = edited && !addingValue ? _addLinkOf(edited, header, literals.length, resources.length, wholes.length) : undefined;
 	// The label row is the title of its card: it offers the input of a new value only while the
 	// resource has no label, and the label of another language comes through the language picker.
 	const titled = header?.kind === 'label' && literals.length > 0;
@@ -192,16 +183,16 @@ export function StatementRow({ property, editor, services, autoFocus, removable,
 
 	return (
 		<div
-			className={`statement-line${edited ? ' is-editable' : ''}${editor?.isNew && !header ? ' is-draft' : ''}${_headerClassOf(header)}`}
+			className={`statement-line is-${rowKind}-row${edited ? ' is-editable' : ''}${editor?.isNew && !header ? ' is-draft' : ''}${_headerClassOf(header)}`}
 			role="group"
 			aria-label={header ? _headerLabelOf(header) : editor?.isNew ? 'New statement' : label}
 			tabIndex={edited ? -1 : undefined}
 			onKeyDown={edited ? handleKeyDown : undefined}
 			onBlur={edited ? handleBlur : undefined}
 		>
-			<span className="statement-gutter">{header && _gutterOf(header)}</span>
+			{header?.kind === 'type' && <span className="statement-gutter">{_chevron(header)}</span>}
 			{header
-				? _headerPredicateOf(header, edited)
+				? _headerPredicateOf(header, edited, label)
 				: (
 					<span className="statement-predicate" title={edited ? undefined : predicateView && getTermTitle(predicateView.term)}>
 						{edited ? <PredicateField editor={edited.editor} state={edited.state} label={label} autoFocus={autoFocus} /> : label}
@@ -209,13 +200,14 @@ export function StatementRow({ property, editor, services, autoFocus, removable,
 				)}
 			<span className="statement-values">
 				{literals.map(entry => <StatementValueCell key={entry.index} {...entry} edited={edited} {...context} />)}
-				{edited ? !asksToAdd && !titled && _resourceBox(edited, resources, property, { header: header?.kind, autoFocus: addingValue }) : _resourcePills(resources, context)}
+				{edited ? !addLink && !titled && _resourceBox(edited, resources, property, { header: header?.kind, autoFocus: addingValue, label }) : _resourcePills(resources, context)}
 				{wholes.map(entry => <StatementValueCell key={entry.index} {...entry} edited={edited} {...context} />)}
-				{asksToAdd && <button type="button" className="statement-value-add" onClick={() => setAddingValue(true)}>Add value</button>}
+				{addLink && <button type="button" className="add-link statement-value-add" onClick={() => setAddingValue(true)}>{addLink}</button>}
 				{header?.kind === 'type' && header.collapsed && header.summary && <span className="nested-card-summary">{header.summary}</span>}
+				{header?.kind === 'type' && header.caption && <span className="nested-card-caption">{header.caption.join('\n')}</span>}
+				{property && <PropertyComments property={property} />}
 			</span>
 			<span className="statement-actions">
-				{header?.kind === 'label' && header.usageCount !== undefined && <CardUsage count={header.usageCount} />}
 				{removable && !header && edited && !edited.editor.isNew && (
 					<button type="button" className="statement-row-remove" aria-label={`Remove ${label}`} title="Remove property" onClick={() => edited.editor.removeProperty()}>
 						<vscode-icon name="close" size={12}></vscode-icon>
@@ -260,38 +252,22 @@ function _headerLabelOf(header: RowHeader): string {
 }
 
 /**
- * The gutter of a header row: the chevron of a nested card, or the button that collapses a card of
- * the list, showing the icon of its kind at rest.
- * @param header The header.
- * @returns The content of the gutter.
- */
-function _gutterOf(header: RowHeader): React.JSX.Element {
-	if (header.kind === 'type') {
-		return _chevron(header);
-	}
-
-	return (
-		<button type="button" className="card-collapse" aria-expanded="true" aria-label="Collapse" title="Collapse" onClick={header.onCollapse}>
-			<CardGlyph iconName={header.iconName} expanded={true} />
-		</button>
-	);
-}
-
-/**
- * The predicate of a header row: "type" for a nested card, and "label" for a card of the list, which
- * is the predicate field of any row where the row is edited.
+ * The predicate of a header row: "type" for a nested card, and the label predicate of a card of
+ * the list by its own label, so that it is not mistaken for another, in the predicate field of any
+ * row where the row is edited.
  * @param header The header.
  * @param edited The row, where it is edited.
+ * @param label The label of the predicate of the row.
  * @returns The predicate cell.
  */
-function _headerPredicateOf(header: RowHeader, edited: EditedRow | undefined): React.JSX.Element {
+function _headerPredicateOf(header: RowHeader, edited: EditedRow | undefined, label: string): React.JSX.Element {
 	if (header.kind === 'type') {
 		return <span className="statement-predicate" title={RDF.type}>type</span>;
 	}
 
 	return (
 		<span className="statement-predicate">
-			{edited ? <PredicateField editor={edited.editor} state={edited.state} label="label" /> : 'label'}
+			{edited ? <PredicateField editor={edited.editor} state={edited.state} label={label} /> : label}
 		</span>
 	);
 }
@@ -303,10 +279,33 @@ function _headerPredicateOf(header: RowHeader, edited: EditedRow | undefined): R
  */
 function _chevron(header: NestedCardHeader): React.JSX.Element {
 	return (
-		<button type="button" className="nested-card-chevron" aria-expanded={!header.collapsed} aria-label={header.collapsed ? 'Expand' : 'Collapse'} title={header.collapsed ? 'Expand' : 'Collapse'} onClick={header.onToggle}>
+		<button type="button" className="icon-button is-small nested-card-chevron" aria-expanded={!header.collapsed} aria-label={header.collapsed ? 'Expand' : 'Collapse'} title={header.collapsed ? 'Expand' : 'Collapse'} onClick={header.onToggle}>
 			<vscode-icon name={header.collapsed ? 'chevron-right' : 'chevron-down'} size={14}></vscode-icon>
 		</button>
 	);
+}
+
+/**
+ * The text of the link an edited row without a value asks for one with, which turns into the
+ * input in place: a header row asks to choose the type or to add the label, and a row of blank
+ * nodes only offers Add value under their cards, so nothing moves above a click into a card.
+ * @param edited The row.
+ * @param header The header the row is, if it is one.
+ * @param literals The number of literal fields of the row.
+ * @param resources The number of pills of the row.
+ * @param wholes The number of blank nodes and lists of the row.
+ * @returns The text, or `undefined` for a row that shows its input.
+ */
+function _addLinkOf(edited: EditedRow, header: RowHeader | undefined, literals: number, resources: number, wholes: number): string | undefined {
+	if (literals > 0 || resources > 0 || edited.state.pendingText !== '') {
+		return undefined;
+	}
+
+	if (header && wholes === 0) {
+		return _placeholderOf(0, header.kind, '');
+	}
+
+	return !header && wholes > 0 ? 'Add value' : undefined;
 }
 
 /**
@@ -318,11 +317,12 @@ function _chevron(header: NestedCardHeader): React.JSX.Element {
  * @param edited The row.
  * @param resources The resources of the row.
  * @param property The property of the row, whose values tell what the predicate takes.
- * @param options Whether the row is the type of a blank node, and whether the input takes the focus.
+ * @param options The kind of header the row is, whether the input takes the focus, and the label
+ * of the predicate, which the input of an empty row asks to add a value for.
  * @returns The box.
  */
-function _resourceBox(edited: EditedRow, resources: readonly ShownValue[], property: PropertyView | undefined, options: { header?: RowHeader['kind']; autoFocus: boolean }): React.JSX.Element {
-	const { header, autoFocus } = options;
+function _resourceBox(edited: EditedRow, resources: readonly ShownValue[], property: PropertyView | undefined, options: { header?: RowHeader['kind']; autoFocus: boolean; label: string }): React.JSX.Element {
+	const { header, autoFocus, label } = options;
 	const isType = header === 'type';
 	const { editor, state, services } = edited;
 	const range = _rangeOf(header, property);
@@ -337,7 +337,7 @@ function _resourceBox(edited: EditedRow, resources: readonly ShownValue[], prope
 				range={range}
 				pendingText={state.pendingText}
 				services={services}
-				placeholder={_placeholderOf(state.draft.values.length, header)}
+				placeholder={_placeholderOf(state.draft.values.length, header, label)}
 				onPendingInput={text => editor.inputPending(text)}
 				onPick={term => editor.addValue(term)}
 				onCreate={() => editor.commitPending()}
@@ -365,12 +365,14 @@ function _rangeOf(header: RowHeader['kind'] | undefined, property: PropertyView 
 }
 
 /**
- * The placeholder of the input of the next value, which a row with values leaves empty.
+ * The placeholder of the input of the next value, which a row with values leaves empty: an empty
+ * row asks to add a value for its predicate, by its label.
  * @param valueCount The number of values of the row.
  * @param header The kind of header the row is, if it is one.
+ * @param label The label of the predicate of the row, empty while it has none.
  * @returns The placeholder.
  */
-function _placeholderOf(valueCount: number, header: RowHeader['kind'] | undefined): string {
+function _placeholderOf(valueCount: number, header: RowHeader['kind'] | undefined, label: string): string {
 	if (valueCount > 0) {
 		return '';
 	}
@@ -381,8 +383,25 @@ function _placeholderOf(valueCount: number, header: RowHeader['kind'] | undefine
 		case 'label':
 			return 'Add label';
 		default:
-			return 'value';
+			return label ? `Add ${label}` : 'value';
 	}
+}
+
+/**
+ * The kind of a row, by the values it leads with, which decides how tall it is and where its
+ * predicate sits: a literal row of fields, a resource row of pills, or a nested row of the cards
+ * of blank nodes and lists. A row without values is a resource row, as its input is.
+ * @param literals The number of literal fields of the row.
+ * @param resources The number of pills of the row.
+ * @param wholes The number of blank nodes and lists of the row.
+ * @returns The kind.
+ */
+function _rowKindOf(literals: number, resources: number, wholes: number): 'literal' | 'resource' | 'nested' {
+	if (literals > 0) {
+		return 'literal';
+	}
+
+	return resources === 0 && wholes > 0 ? 'nested' : 'resource';
 }
 
 /**

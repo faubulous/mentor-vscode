@@ -28,9 +28,11 @@ async function renderList(detail: ResourceDetail = SAMPLE, others: ResourceDetai
 	const editing = new EditingController(host);
 	const dataService = createResourceDataServiceStub([detail, ...others]);
 	const ui = (current: ResourceDetail) => (
-		<div className="form-editor">
+		<div className="form-editor" style={{ height: 'auto', overflow: 'visible' }}>
 			<FormEditorContext.Provider value={{ readOnly: false, editing, namespaces: NAMESPACES, languageTags: {}, resources }}>
-				<StatementList detail={current} dataService={dataService} depth={0} visited={[current.term]} />
+				<article className="resource-card is-expanded" style={{ width: 1000 }}>
+					<StatementList detail={current} dataService={dataService} depth={0} visited={[current.term]} />
+				</article>
 			</FormEditorContext.Provider>
 			<button type="button" className="outside">Outside</button>
 		</div>
@@ -194,37 +196,23 @@ describe('StatementList, edited in a browser', () => {
 		expect((within(rows()[1]).getByLabelText('Value 1') as HTMLInputElement).value).toBe('Trees');
 	});
 
-	it('adds a new statement typed into its row', async () => {
+	it('adds a new statement typed into the row Add property opens, with the focus in its predicate', async () => {
 		const { host } = await renderList();
+
+		await userEvent.click(document.querySelector<HTMLElement>('.statement-list-add')!);
+
 		const row = rows()[3];
 
-		await userEvent.click(within(row).getByLabelText('Predicate'));
+		await expect.poll(() => document.activeElement).toBe(within(row).getByLabelText('Predicate'));
 		await userEvent.keyboard('rdfs:seeAlso');
 		await userEvent.click(within(row).getByLabelText('New value'));
+
+		expect((within(row).getByLabelText('New value') as unknown as { placeholder: string }).placeholder).toBe('Add rdfs:seeAlso');
+
 		await userEvent.keyboard('ex:Plant{Enter}');
 		await leaveList();
 
 		expect(host.submitted.map(edit => edit.operations[0])).toEqual([{ op: 'setValues', subject: TEST_SUBJECT, predicate: RDFS.seeAlso, values: [{ kind: 'term', term: RdfDataFactory.namedNode(`${EXAMPLE_NAMESPACE}Plant`) }] }]);
-	});
-
-	it('puts the focus into the predicate of the row Add property opens in the nested card of a blank node, and closes it when it is left empty', async () => {
-		const node = RdfDataFactory.blankNode('b1');
-		const detail = withAnchors(createTestResourceDetail([createProperty('rdfs:comment', [{ term: node, editable: true, nested: { term: node, propertyCount: 1 } }])]));
-		const nodeDetail = withAnchors({ term: node, properties: [createProperty('rdfs:label', [createLiteralView('Leaf')])] });
-
-		await renderList(detail, [nodeDetail]);
-
-		const card = document.querySelector<HTMLElement>('.resource-card.is-nested')!;
-
-		await userEvent.click(within(card).getByRole('button', { name: 'Add property' }));
-
-		const row = within(card).getByRole('group', { name: 'New statement' });
-
-		await expect.poll(() => document.activeElement).toBe(within(row).getByLabelText('Predicate'));
-
-		await leaveList();
-
-		expect(within(card).queryByRole('group', { name: 'New statement' })).toBeNull();
 	});
 
 	it('offers the classes of the document as the type of an untyped blank node', async () => {
@@ -241,7 +229,8 @@ describe('StatementList, edited in a browser', () => {
 
 		const header = within(document.querySelector<HTMLElement>('.resource-card.is-nested')!).getByRole('group', { name: 'Type' });
 
-		await userEvent.click(within(header).getByLabelText('New value'));
+		await userEvent.click(within(header).getByRole('button', { name: 'Choose type' }));
+		await expect.poll(() => document.activeElement).toBe(within(header).getByLabelText('New value'));
 		await userEvent.keyboard('plan');
 
 		expect(Array.from(header.querySelectorAll('.combobox-option-label')).map(option => option.textContent)).toEqual(['Plant', 'Planter']);
@@ -298,5 +287,31 @@ describe('StatementList, edited in a browser', () => {
 		await userEvent.click(duplicate);
 
 		expect(host.submitted.map(edit => edit.operations[0])).toEqual([{ op: 'setValues', subject: TEST_SUBJECT, predicate: RDFS.comment, values: [{ kind: 'existing', anchor: 110 }, { kind: 'copy', anchor: 110 }] }]);
+	});
+
+	it('gives every row of one line the same height of 40px, whether it holds a field or pills', async () => {
+		await renderList();
+
+		expect(rows().map(row => Math.round(row.getBoundingClientRect().height))).toEqual([40, 40, 40]);
+	});
+
+	it('puts the predicates at 44px from the inside of the border of the card, the pills at 228px and the text of a literal at 229px', async () => {
+		await renderList();
+
+		// Measured from the inside of the border of the card.
+		const card = document.querySelector<HTMLElement>('.resource-card')!;
+		const left = card.getBoundingClientRect().left + card.clientLeft;
+		const xOf = (element: Element | null | undefined): number => Math.round(element!.getBoundingClientRect().left - left);
+		// The text of a field starts after its border and padding.
+		const textOf = (field: Element | null): number => {
+			const input = field!.shadowRoot!.querySelector('input')!;
+
+			return Math.round(xOf(input) + parseFloat(getComputedStyle(input).paddingLeft));
+		};
+
+		expect(rows().map(row => textOf(row.querySelector('.statement-predicate vscode-textfield')))).toEqual([44, 44, 44]);
+		expect(xOf(rows()[0].querySelector('.value-pill'))).toBe(228);
+		expect(textOf(within(rows()[1]).getByLabelText('Value 1'))).toBe(229);
+		expect(xOf(document.querySelector('.statement-list-add'))).toBe(44);
 	});
 });

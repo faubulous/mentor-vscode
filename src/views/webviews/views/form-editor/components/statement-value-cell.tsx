@@ -35,9 +35,9 @@ export interface StatementValueCellProps extends StatementRowContext {
 
 /**
  * A literal, a blank node or a list of a statement on a line of its own, with the comment lines
- * written above it. Where its row is edited, a literal is its field, a blank node has the ⋯ menu of
- * its nested card, and a list has a button that removes it; otherwise the value is shown as it is
- * read.
+ * written above it, which the nested card of a blank node shows in its header. Where its row is
+ * edited, a literal is its field, a blank node has the ⋯ menu of its nested card, and a list has a
+ * button that removes it; otherwise the value is shown as it is read.
  * @param props The value, its row and where the row stands.
  * @returns The value.
  */
@@ -48,8 +48,8 @@ export function StatementValueCell({ value, view, index, edited, ...context }: S
 
 	return (
 		<span className={`statement-value${isNode ? ' is-node' : ''}`}>
-			{comments && <span className="statement-value-comment">{comments.join('\n')}</span>}
-			{edited ? _editedValue(value, view, index, edited, context, onCopyAsTurtle) : <TermValue view={view} {...context} />}
+			{comments && !view.nested && <span className="statement-comment statement-value-comment">{comments.join('\n')}</span>}
+			{edited ? _editedValue(value, view, index, edited, context, onCopyAsTurtle) : <TermValue view={view} comments={comments} {...context} />}
 		</span>
 	);
 }
@@ -80,7 +80,7 @@ function _editedValue(value: RowValue, view: TermView, index: number, edited: Ed
 	}
 
 	if (view.nested) {
-		return <TermValue view={view} {...context} nestedActions={_nestedActionsOf(view, index, edited, onCopyAsTurtle)} />;
+		return <TermValue view={view} comments={value.kind === 'written' ? value.view.comments : undefined} {...context} nestedActions={_nestedActionsOf(view, index, edited, onCopyAsTurtle)} />;
 	}
 
 	return (

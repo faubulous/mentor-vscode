@@ -1,12 +1,6 @@
 import { KeyboardEvent, MouseEvent } from 'react';
 import { TermView } from '../form-editor-model';
-import { ResourceIcon } from './resource-icon';
 import { getTermLabel, getTermTitle } from './term-labels';
-
-/**
- * The icon of a resource whose kind nothing tells, as in the definition tree.
- */
-const DEFAULT_PILL_ICON = 'mentor-rdf-individual';
 
 /**
  * Properties of the {@link ValuePill} component.
@@ -40,10 +34,11 @@ export interface ValuePillProps {
 }
 
 /**
- * A resource value as a pill: the icon the definition tree shows for the resource, in the colour
- * the tree gives its kind, and its label, with its IRI told when the pointer rests on it. Where
- * its statement is edited, the pill takes the keys of its row, and a button that takes the place
- * of its icon while the pointer or the focus is on it removes it.
+ * A resource value as a pill: a ring in the colour the definition tree gives the kind of the
+ * resource, dashed for a term the document knows nothing about, and its label, with its IRI told
+ * when the pointer rests on it. Where its statement is edited, the pill takes the keys of its row,
+ * and a button that takes the place of the ring while the pointer or the focus is on it removes
+ * it.
  * @param props The resource and what the pill does.
  * @returns The pill.
  */
@@ -74,7 +69,7 @@ export function ValuePill({ view, onNavigate, onRemove, onKeyDown, pillRef }: Va
 			onClick={onNavigate ? handleClick : undefined}
 			onKeyDown={onKeyDown ?? (onNavigate ? handleKeyDown : undefined)}
 		>
-			<span className="value-pill-icon"><ResourceIcon iconName={view.iconName ?? DEFAULT_PILL_ICON} size={14} /></span>
+			<span className={`value-ring${view.iconName ? '' : ' is-new'}`} data-icon={view.iconName} aria-hidden="true"></span>
 			<span className="value-pill-label">{label}</span>
 			{onRemove && (
 				<button type="button" className="value-pill-remove" tabIndex={-1} aria-label={`Remove ${label}`} title="Remove" onMouseDown={event => event.preventDefault()} onClick={onRemove}>

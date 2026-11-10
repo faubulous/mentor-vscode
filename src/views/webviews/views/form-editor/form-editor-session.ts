@@ -262,20 +262,31 @@ export class FormEditorSession implements vscode.Disposable {
 
 	/**
 	 * Rename a resource as F2 does, with Mentor's rename provider: its IRI gets another local part
-	 * wherever the workspace writes it, as one edit that one undo takes back. The status bar tells
-	 * how many references changed, and the webview the IRI the resource has now.
+	 * wherever the workspace writes it, as one edit that one undo takes back. The namespace of the
+	 * IRI stays, as the provider renames by the local part. The status bar tells how many
+	 * references changed, and the webview the IRI the resource has now.
 	 * @param resource The resource.
-	 * @param localPart The new local part.
+	 * @param iri The new IRI.
 	 */
-	async renameResource(resource: NamedNode, localPart: string): Promise<void> {
+	async renameResource(resource: NamedNode, iri: string): Promise<void> {
 		await this._waitUntilLoaded();
 
 		const context = this._getTokenizedContext();
 		const summary = this._snapshot?.resources.find(candidate => candidate.term.equals(resource));
 
-		if (!context || !summary?.localPart || localPart === summary.localPart) {
+		if (!context || !summary?.localPart || iri === resource.value) {
 			return;
 		}
+
+		const namespace = resource.value.slice(0, resource.value.length - summary.localPart.length);
+
+		if (!iri.startsWith(namespace)) {
+			void vscode.window.showErrorMessage(`${resource.value} cannot be renamed to ${iri}: only the local part after ${namespace} can change.`);
+
+			return;
+		}
+
+		const localPart = iri.slice(namespace.length);
 
 		if (!isPlainLocalName(localPart)) {
 			void vscode.window.showErrorMessage(`'${localPart}' cannot be the local part of an IRI: it starts with a letter or '_' and holds letters, digits, '_', '-' and '.'.`);
@@ -292,10 +303,8 @@ export class FormEditorSession implements vscode.Disposable {
 			return;
 		}
 
-		const renamed = RdfDataFactory.namedNode(resource.value.slice(0, resource.value.length - summary.localPart.length) + localPart);
-
 		vscode.window.setStatusBarMessage(_renameReport(edit), RENAME_REPORT_DURATION);
-		this._postMessage({ id: 'ResourceRenamed', resource, renamed });
+		this._postMessage({ id: 'ResourceRenamed', resource, renamed: RdfDataFactory.namedNode(iri) });
 	}
 
 	dispose(): void {
@@ -382,7 +391,7 @@ export class FormEditorSession implements vscode.Disposable {
 				await this._copyAsTurtle(message.anchor, message.version);
 				break;
 			case 'RenameResource':
-				await this.renameResource(message.resource, message.localPart);
+				await this.renameResource(message.resource, message.iri);
 				break;
 			case 'ExecuteCommand': {
 				const command = message as ExecuteCommandMessage;

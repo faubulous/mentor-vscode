@@ -1,9 +1,8 @@
 import { KeyboardEvent } from 'react';
 import { ResourceSummary } from '../form-editor-model';
 import { useFormEditorContext } from '../state/form-editor-context';
-import { CardGlyph } from './card-glyph';
-import { CardUsage } from './card-usage';
 import { HighlightedText } from './highlighted-text';
+import { ResourceIcon } from './resource-icon';
 
 /**
  * Properties of the {@link ResourceCardHeader} component.
@@ -26,15 +25,15 @@ export interface ResourceCardHeaderProps {
 }
 
 /**
- * The header of a collapsed card, which is its clickable area: the glyph of the kind of the
- * resource in the gutter, which turns into the chevron on hover, the label with the type unless it
- * is the type most resources have, and the usage count.
+ * The label row of a collapsed card, which is its clickable area: the icon of the kind of the
+ * resource in the gutter, and the label as the title of the card with the types after it, except
+ * the type most resources have; it names no predicate.
  * @param props The resource and how the card toggles.
- * @returns The header.
+ * @returns The label row.
  */
 export function ResourceCardHeader({ summary, expanded, onToggle }: ResourceCardHeaderProps): React.JSX.Element {
 	const { filterText, dominantTypeIri } = useFormEditorContext();
-	const showType = summary.typeIri !== undefined && summary.typeIri !== dominantTypeIri;
+	const typeLabels = _typeLabelsOf(summary, dominantTypeIri);
 
 	const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
 		if (event.key === 'Enter' || event.key === ' ') {
@@ -45,12 +44,25 @@ export function ResourceCardHeader({ summary, expanded, onToggle }: ResourceCard
 
 	return (
 		<div className="resource-card-header" role="button" tabIndex={0} aria-expanded={expanded} onClick={onToggle} onKeyDown={handleKeyDown}>
-			<span className="resource-card-gutter"><CardGlyph iconName={summary.iconName} expanded={expanded} /></span>
+			<span className="resource-card-kind"><ResourceIcon iconName={summary.iconName} /></span>
 			<span className="resource-card-title">
 				<span className={`resource-card-label${summary.hasLabel ? '' : ' is-unnamed'}`}><HighlightedText text={summary.label} query={filterText} /></span>
-				{showType && summary.typeLabel && <span className="resource-card-type">{summary.typeLabel}</span>}
+				{typeLabels.map(label => <span key={label} className="resource-card-type">{label}</span>)}
 			</span>
-			{summary.usageCount !== undefined && <CardUsage count={summary.usageCount} />}
 		</div>
 	);
+}
+
+/**
+ * The types a collapsed card names after its title: every type of the resource, except the one
+ * most resources have, which the cards leave unsaid.
+ * @param summary The resource.
+ * @param dominantTypeIri The type most resources have, if any.
+ * @returns The labels of the types, each once.
+ */
+function _typeLabelsOf(summary: ResourceSummary, dominantTypeIri: string | undefined): string[] {
+	const labels = summary.typeLabels ?? (summary.typeLabel ? [summary.typeLabel] : []);
+	const unsaid = summary.typeIri === dominantTypeIri ? summary.typeLabel : undefined;
+
+	return Array.from(new Set(labels.filter(label => label !== unsaid)));
 }
