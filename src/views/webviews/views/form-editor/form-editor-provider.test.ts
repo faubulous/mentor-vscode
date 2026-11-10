@@ -11,6 +11,7 @@ import { createMockWebviewPanel } from '@src/utilities/mocks/vscode';
 import { createMockDocumentContextService, createMockTextDocument } from '@src/utilities/mocks/factories';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { FormEditorProvider } from './form-editor-provider';
+import { FormEditorSession } from './form-editor-session';
 
 const URI = 'file:///workspace/test.ttl';
 
@@ -62,6 +63,7 @@ describe('FormEditorProvider', () => {
 		container.reset();
 		container.registerInstance(ServiceToken.DocumentContextService, createMockDocumentContextService());
 		activateTab(undefined);
+		vi.restoreAllMocks();
 	});
 
 	it('registers itself with VS Code and disposes with the extension', () => {
@@ -85,25 +87,49 @@ describe('FormEditorProvider', () => {
 		expect(provider.isOpen(uri)).toBe(false);
 	});
 
-	it('reveals and filters in every editor showing the document', async () => {
+	it('reveals and filters the definitions of the definition tree in every editor of the document while one is in front', async () => {
 		const { provider } = createProvider();
 		const first = await open(provider);
 		const second = await open(provider);
 		const other = await open(provider, 'file:///workspace/other.ttl');
+		const iri = 'http://example.org/A';
 
-		const resource = RdfDataFactory.namedNode('http://example.org/A');
+		// The sessions describe the resource of the IRI only, as their documents decide.
+		vi.spyOn(FormEditorSession.prototype, 'resourceNamed').mockImplementation(name => name === iri ? RdfDataFactory.namedNode(iri) : undefined);
+		activateTab(new vscode.TabInputCustom(vscode.Uri.parse(URI), FormEditorProvider.viewType));
 
-		provider.revealResource(vscode.Uri.parse(URI), resource);
-		provider.filterResources(vscode.Uri.parse(URI), 'Classes', [resource]);
+		expect(provider.revealDefinition(vscode.Uri.parse(URI), iri)).toBe(true);
+		expect(provider.filterDefinitions(vscode.Uri.parse(URI), 'Classes', [iri, 'unknown'])).toBe(true);
 
 		// The sessions post the snapshot of the document on their own; the requests follow it.
-		const requestsOf = (editor: OpenedEditor) => editor.posted.map(message => message.id).filter(id => id !== 'DocumentSnapshot');
+		const requestsOf = (editor: OpenedEditor) => editor.posted.filter(message => message.id !== 'DocumentSnapshot');
 
 		for (const editor of [first, second]) {
-			expect(requestsOf(editor)).toEqual(['ScrollToResource', 'FilterResources']);
+			expect(requestsOf(editor)).toEqual([
+				{ id: 'ScrollToResource', resource: RdfDataFactory.namedNode(iri) },
+				{ id: 'FilterResources', label: 'Classes', resources: [RdfDataFactory.namedNode(iri)] }
+			]);
 		}
 
 		expect(requestsOf(other)).toEqual([]);
+	});
+
+	it('declines a resource its documents do not describe, and any definition while no form editor of the document is in front', async () => {
+		const { provider } = createProvider();
+		const editor = await open(provider);
+
+		vi.spyOn(FormEditorSession.prototype, 'resourceNamed').mockReturnValue(undefined);
+
+		expect(provider.revealDefinition(vscode.Uri.parse(URI), 'b1')).toBe(false);
+
+		activateTab(new vscode.TabInputCustom(vscode.Uri.parse(URI), FormEditorProvider.viewType));
+
+		expect(provider.revealDefinition(vscode.Uri.parse(URI), 'b1')).toBe(false);
+
+		activateTab(new vscode.TabInputText(vscode.Uri.parse(URI)));
+
+		expect(provider.filterDefinitions(vscode.Uri.parse(URI), 'Classes', ['b1'])).toBe(false);
+		expect(editor.posted.filter(message => message.id !== 'DocumentSnapshot')).toEqual([]);
 	});
 
 	it('is active while the active tab is a form editor of the document', () => {
