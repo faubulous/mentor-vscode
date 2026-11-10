@@ -3,7 +3,7 @@ import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
 import { IDocumentContextService } from '@src/services/document';
 import { ResourceDefinitionProvider } from '@src/providers';
-import { IDefinitionRevealTarget } from './definition-reveal-target.interface';
+import { IDefinitionRevealTarget } from './reveal-definition.interface';
 import { DefinitionTreeNode, getIriFromArgument } from '@src/views/trees/definition-tree/definition-tree-node';
 
 const contextService = () => container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
