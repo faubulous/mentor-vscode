@@ -1,12 +1,13 @@
 import { DCAT, OWL, RDF, SKOS } from '@faubulous/mentor-rdf';
 import { QuadContext } from '@faubulous/mentor-rdf-parsers';
-import { NamedNode } from '@rdfjs/types';
+import { BlankNode, NamedNode } from '@rdfjs/types';
 import { termToString } from 'rdf-string';
 import { ITokenizedDocumentContext } from '@src/services/document/document-context.interface';
 import { getFileName } from '@src/utilities/uri';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { DocumentProblem, DocumentSnapshot, ReadOnlyReason, ResourceSummary } from '@src/views/webviews/views/form-editor/form-editor-model';
 import { ExternalDeclarationDetector } from './external-declaration-detector';
+import { PinnedProperties } from './pinned-properties';
 import { ResourceIndex, ResourceIndexEntry, getEntry, typeIrisOf } from './resource-index';
 import { ResourceIndexBuilder } from './resource-index-builder';
 import { getLanguageTagSpellings } from '@faubulous/mentor-rdf-serializers';
@@ -59,6 +60,22 @@ export interface SnapshotInput {
 	 * Count how often an IRI is referred to across the indexed documents, for the usage counts.
 	 */
 	countUsages?: (iri: string) => number;
+
+	/**
+	 * The properties pinned for the types of resources; none when absent.
+	 */
+	pins?: PinnedProperties;
+
+	/**
+	 * The types of a resource the store infers besides those the document asserts, as of an
+	 * untyped blank node that a property shape is; none when absent.
+	 */
+	inferredTypesOf?: (resource: NamedNode | BlankNode) => readonly string[];
+
+	/**
+	 * Whether a property can be pinned for everyone, which takes a workspace to store it in.
+	 */
+	canPinForEveryone?: boolean;
 }
 
 /**
@@ -101,7 +118,8 @@ export class SnapshotBuilder {
 		const resources = index.summaries.map(summary => ({
 			...summary,
 			usageCount: this._countUsages(summary, index),
-			externalDeclaration: externals.isExternalDeclaration(getEntry(index, summary.term)!) || undefined
+			externalDeclaration: externals.isExternalDeclaration(getEntry(index, summary.term)!) || undefined,
+			...this._pinsOf(summary, getEntry(index, summary.term)!)
 		}));
 
 		return {
@@ -120,11 +138,39 @@ export class SnapshotBuilder {
 				readOnly: this._input.readOnly,
 				problems: this._input.problems ?? [],
 				labelPredicates: context.predicates.label.map(predicate => RdfDataFactory.namedNode(predicate)),
+				descriptionPredicates: context.predicates.description.map(predicate => RdfDataFactory.namedNode(predicate)),
+				canPinForEveryone: this._input.canPinForEveryone,
 				dominantTypeIri: _dominantTypeOf(resources.filter(resource => !documentResource?.equals(resource.term)))
 			}
 		};
 	}
 
+
+	/**
+	 * The pins of a resource and the type a pin of its card is stored under, from its asserted
+	 * types and those the store infers. The type and the label of a resource are what its card
+	 * shows anyway, so they are never pins.
+	 * @param summary The resource.
+	 * @param entry The entry of the resource.
+	 * @returns The fields of the summary, or none for a resource of no known type.
+	 */
+	private _pinsOf(summary: ResourceSummary, entry: ResourceIndexEntry): Pick<ResourceSummary, 'pins' | 'pinType'> {
+		const asserted = typeIrisOf(entry);
+		const inferred = this._input.inferredTypesOf?.(summary.term) ?? [];
+		const types = Array.from(new Set([...asserted, ...inferred]));
+		const pinType = summary.typeIri ?? inferred.find(type => type !== OWL.NamedIndividual) ?? inferred[0];
+
+		if (!pinType) {
+			return {};
+		}
+
+		const fixed = new Set([RDF.type, ...this._input.context.predicates.label]);
+		const pins = (this._input.pins?.pinsOf(types) ?? [])
+			.filter(pin => !fixed.has(pin.predicate))
+			.map(pin => ({ predicate: RdfDataFactory.namedNode(pin.predicate), scope: pin.scope }));
+
+		return pins.length > 0 ? { pins, pinType } : { pinType };
+	}
 
 	/**
 	 * How often a resource is used: across the indexed documents for an IRI, which other documents

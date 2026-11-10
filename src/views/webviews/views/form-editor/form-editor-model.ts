@@ -219,6 +219,39 @@ export interface ResourceSummary {
 	 * lines of each run of comments, the runs being separated by blank lines.
 	 */
 	comments?: string[][];
+
+	/**
+	 * The properties pinned for the types of the resource, asserted or inferred, which its
+	 * collapsed card shows; absent when none is pinned.
+	 */
+	pins?: PinnedProperty[];
+
+	/**
+	 * The type a property pinned on the card is pinned for: the primary asserted type, else the
+	 * first inferred one; absent for a resource of no known type, which cannot pin.
+	 */
+	pinType?: string;
+}
+
+/**
+ * Who a property is pinned for: oneself, in the user settings, or everyone, in the workspace
+ * settings.
+ */
+export type PinScope = 'user' | 'workspace';
+
+/**
+ * A property pinned on the cards of a resource.
+ */
+export interface PinnedProperty {
+	/**
+	 * The predicate.
+	 */
+	predicate: NamedNode;
+
+	/**
+	 * Who it is pinned for.
+	 */
+	scope: PinScope;
 }
 
 /**
@@ -364,4 +397,15 @@ export interface DocumentSnapshot {
 	 * shows the most preferred one the resource has.
 	 */
 	labelPredicates: NamedNode[];
+
+	/**
+	 * The description predicates Mentor is configured with, most preferred first, whose values a
+	 * collapsed card shows as text of its own.
+	 */
+	descriptionPredicates: NamedNode[];
+
+	/**
+	 * Whether a property can be pinned for everyone, which takes a workspace to store it in.
+	 */
+	canPinForEveryone?: boolean;
 }

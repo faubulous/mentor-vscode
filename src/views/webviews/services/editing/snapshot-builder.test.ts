@@ -5,7 +5,9 @@ vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 import { RDFS, SKOS, _OWL, _RDFS, _SKOS } from '@faubulous/mentor-rdf';
 import { createResolvingDocumentContext, readTurtleQuadContexts } from '@src/utilities/mocks/factories';
 import { DocumentSnapshot } from '@src/views/webviews/views/form-editor/form-editor-model';
-import { SnapshotBuilder } from './snapshot-builder';
+import { PinnedProperties } from './pinned-properties';
+import { SnapshotBuilder, SnapshotInput } from './snapshot-builder';
+import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 
 const EX = 'http://example.org/';
 const DCTERMS = 'http://purl.org/dc/terms/';
@@ -15,7 +17,7 @@ const PREAMBLE = Object.entries(NAMESPACES).map(([prefix, iri]) => `@prefix ${pr
 /**
  * Build the snapshot of a Turtle body written after the prefix declarations.
  */
-function snapshotOf(body: string, activeLanguage?: string): DocumentSnapshot {
+function snapshotOf(body: string, activeLanguage?: string, extra: Partial<SnapshotInput> = {}): DocumentSnapshot {
 	const context = createResolvingDocumentContext({
 		namespaces: NAMESPACES,
 		activeLanguage,
@@ -28,7 +30,8 @@ function snapshotOf(body: string, activeLanguage?: string): DocumentSnapshot {
 		uri: 'file:///workspace/vocab.ttl',
 		quadContexts: readTurtleQuadContexts(PREAMBLE + body),
 		context,
-		countUsages: () => 3
+		countUsages: () => 3,
+		...extra
 	}).build().snapshot;
 }
 
@@ -40,6 +43,37 @@ describe('SnapshotBuilder', () => {
 	it('names the language the document is read in, in lower case', () => {
 		expect(snapshotOf('ex:A a owl:Class .', 'en-US').activeLanguage).toBe('en-us');
 		expect(snapshotOf('ex:A a owl:Class .').activeLanguage).toBeUndefined();
+	});
+
+	it('names the properties pinned for the asserted types of a resource and the type a new pin is stored under, leaving out the type and the labels', () => {
+		const pins = PinnedProperties.fromLayers({ [_OWL + 'Class']: [RDFS.label, `${_RDFS}subClassOf`, `${_RDFS}comment`] }, {});
+		const snapshot = snapshotOf('ex:A a owl:Class ; rdfs:label "A" ; rdfs:comment "a class" .\nex:B ex:p "x" .', undefined, { pins });
+		const [classA, untyped] = snapshot.resources;
+
+		expect(classA.pinType).toBe(`${_OWL}Class`);
+		expect(classA.pins).toEqual([
+			{ predicate: RdfDataFactory.namedNode(`${_RDFS}subClassOf`), scope: 'workspace' },
+			{ predicate: RdfDataFactory.namedNode(`${_RDFS}comment`), scope: 'workspace' }
+		]);
+		expect(untyped.pinType).toBeUndefined();
+		expect(untyped.pins).toBeUndefined();
+	});
+
+	it('pins by the types the store infers, as for an untyped blank node a property shape is', () => {
+		const sh = 'http://www.w3.org/ns/shacl#';
+		const pins = PinnedProperties.fromLayers({ [`${sh}PropertyShape`]: [`${sh}path`] }, {});
+		const snapshot = snapshotOf('[] ex:p "x" .', undefined, { pins, inferredTypesOf: () => [`${sh}PropertyShape`] });
+		const [shape] = snapshot.resources;
+
+		expect(shape.pinType).toBe(`${sh}PropertyShape`);
+		expect(shape.pins).toEqual([{ predicate: RdfDataFactory.namedNode(`${sh}path`), scope: 'workspace' }]);
+	});
+
+	it('names the description predicates and whether a property can be pinned for everyone', () => {
+		const snapshot = snapshotOf('ex:A a owl:Class .', undefined, { canPinForEveryone: true });
+
+		expect(snapshot.descriptionPredicates.map(predicate => predicate.value)).toEqual([SKOS.definition, RDFS.comment]);
+		expect(snapshot.canPinForEveryone).toBe(true);
 	});
 
 	it('names the label predicates Mentor is configured with, most preferred first', () => {

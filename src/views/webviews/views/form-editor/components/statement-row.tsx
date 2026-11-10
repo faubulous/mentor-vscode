@@ -10,7 +10,9 @@ import { RowValue } from '../state/row-value';
 import { useFormEditorContext } from '../state/form-editor-context';
 import { StatementRowEditor } from '../state/statement-row-editor';
 import { StatementRowState } from '../state/statement-row-state';
+import { CardPins, useCardPins } from '../state/card-pins-context';
 import { EditedRow } from './edited-row';
+import { PinButton } from './pin-button';
 import { PredicateField } from './predicate-field';
 import { PropertyComments } from './property-comments';
 import { ResourceValues } from './resource-values';
@@ -144,7 +146,8 @@ interface ShownValue {
 export function StatementRow({ property, editor, services, autoFocus = false, removable, header, ...context }: StatementRowProps): React.JSX.Element {
 	const state = useRowEditorState(editor);
 	const edited: EditedRow | undefined = editor && state && services ? { editor, state, services } : undefined;
-	const { languageFilter = LanguageFilter.ALL } = useFormEditorContext();
+	const { languageFilter = LanguageFilter.ALL, canPinForEveryone = false } = useFormEditorContext();
+	const cardPins = useCardPins();
 	const values = _shownValues(state?.draft.values ?? property?.values.map(view => ({ kind: 'written' as const, view })) ?? [], services, languageFilter);
 	const literals = [...values.filter(entry => _kindOf(entry.view) === 'literal'), ..._missingLanguageField(edited, languageFilter)];
 	const resources = values.filter(entry => _kindOf(entry.view) === 'resource');
@@ -186,6 +189,7 @@ export function StatementRow({ property, editor, services, autoFocus = false, re
 			className={`statement-line is-${rowKind}-row${edited ? ' is-editable' : ''}${editor?.isNew && !header ? ' is-draft' : ''}${_headerClassOf(header)}`}
 			role="group"
 			aria-label={header ? _headerLabelOf(header) : editor?.isNew ? 'New statement' : label}
+			data-predicate={_predicateIriOf(predicateView)}
 			tabIndex={edited ? -1 : undefined}
 			onKeyDown={edited ? handleKeyDown : undefined}
 			onBlur={edited ? handleBlur : undefined}
@@ -208,6 +212,7 @@ export function StatementRow({ property, editor, services, autoFocus = false, re
 				{property && <PropertyComments property={property} />}
 			</span>
 			<span className="statement-actions">
+				{!header && context.depth === 0 && _pinOf(predicateView, label, cardPins, canPinForEveryone)}
 				{removable && !header && edited && !edited.editor.isNew && (
 					<button type="button" className="statement-row-remove" aria-label={`Remove ${label}`} title="Remove property" onClick={() => edited.editor.removeProperty()}>
 						<vscode-icon name="close" size={12}></vscode-icon>
@@ -217,6 +222,37 @@ export function StatementRow({ property, editor, services, autoFocus = false, re
 			{error && <RowError message={error} onDismiss={state?.rejection ? () => editor?.dismissRejection() : undefined} />}
 		</div>
 	);
+}
+
+/**
+ * The pin button of a row of a card of the list, for a predicate other than the type, where the
+ * resource can pin.
+ * @param predicateView The predicate of the row, once it names one.
+ * @param label The label of the predicate.
+ * @param cardPins The pins of the card.
+ * @param canPinForEveryone Whether a pin for everyone can be stored.
+ * @returns The button, or nothing.
+ */
+function _pinOf(predicateView: TermView | undefined, label: string, cardPins: CardPins, canPinForEveryone: boolean): React.JSX.Element | null {
+	const predicate = predicateView?.term;
+	const onPin = cardPins.onPin;
+
+	if (!onPin || predicate?.termType !== 'NamedNode' || predicate.value === RDF.type) {
+		return null;
+	}
+
+	const scope = cardPins.pins.find(pin => pin.predicate.equals(predicate))?.scope;
+
+	return <PinButton scope={scope} canPinForEveryone={canPinForEveryone} label={label} onPin={next => onPin(predicate, next)} />;
+}
+
+/**
+ * The IRI of the predicate of a row, which a pinned field of a collapsed card finds the row by.
+ * @param predicateView The predicate, once the row names one.
+ * @returns The IRI, or `undefined`.
+ */
+function _predicateIriOf(predicateView: TermView | undefined): string | undefined {
+	return predicateView?.term.termType === 'NamedNode' ? predicateView.term.value : undefined;
 }
 
 /**

@@ -112,7 +112,17 @@ async function relabel(body: string, localName: string, label: ReturnType<typeof
  * document's triples it finishes, all registered for a session created after.
  */
 function registerLoadingServices() {
-	const store = { version: 1 };
+	// Like the store of Mentor without a reasoner, which refuses to read inferred triples.
+	const store = {
+		version: 1,
+		matchAll: (_graphs: unknown, _subject: unknown, _predicate: unknown, _object: unknown, includeInferred?: boolean) => {
+			if (includeInferred) {
+				throw new Error('Reasoner is not available to include inferred triples.');
+			}
+
+			return [];
+		}
+	};
 	const deliveries = new vscode.EventEmitter<TokenDelivery>();
 	const settingListeners: (() => void)[] = [];
 	let loading = false;
@@ -566,6 +576,43 @@ describe('FormEditorSession', () => {
 
 	it('leaves the IRI when a label of another language than the one shown changes', async () => {
 		expect(await relabel('ex:AppleTree a owl:Class ; rdfs:label "Apple tree"@en .\n', 'AppleTree', RdfDataFactory.literal('Apfelbaum', 'de'))).toEqual([]);
+	});
+
+	it('pins a property of a resource for oneself in the user settings and for everyone in the workspace settings, and unpins it', async () => {
+		const update = vi.fn(async () => undefined);
+		let layers: { workspaceValue?: unknown; globalValue?: unknown } = {};
+
+		vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({ get: (_key: string, value?: unknown) => value, inspect: () => layers, update } as unknown as vscode.WorkspaceConfiguration);
+
+		const { session, receive } = await createSession(`ex:A a <${_OWL}Class> ; <${RDFS.comment}> "a class" .\n`);
+		const resource = RdfDataFactory.namedNode(`${EX}A`);
+		const comment = RdfDataFactory.namedNode(RDFS.comment);
+
+		await receive({ id: 'Ready' });
+		await session.setPin(resource, comment, 'user');
+		await session.setPin(resource, comment, 'workspace');
+
+		layers = { workspaceValue: { [`${_OWL}Class`]: [RDFS.subClassOf, RDFS.comment] } };
+		await session.setPin(resource, comment, undefined);
+
+		expect(update.mock.calls).toEqual([
+			['pinnedProperties', { [`${_OWL}Class`]: [RDFS.comment] }, vscode.ConfigurationTarget.Global],
+			['pinnedProperties', { [`${_OWL}Class`]: [RDFS.subClassOf, RDFS.comment] }, vscode.ConfigurationTarget.Workspace],
+			['pinnedProperties', { [`${_OWL}Class`]: [RDFS.subClassOf] }, vscode.ConfigurationTarget.Workspace]
+		]);
+	});
+
+	it('pins nothing for a resource of no known type', async () => {
+		const update = vi.fn(async () => undefined);
+
+		vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({ get: (_key: string, value?: unknown) => value, inspect: () => ({}), update } as unknown as vscode.WorkspaceConfiguration);
+
+		const { session, receive } = await createSession('ex:A ex:p "x" .\n');
+
+		await receive({ id: 'Ready' });
+		await session.setPin(RdfDataFactory.namedNode(`${EX}A`), RdfDataFactory.namedNode(`${EX}p`), 'user');
+
+		expect(update).not.toHaveBeenCalled();
 	});
 
 	it('posts nothing once disposed', async () => {
