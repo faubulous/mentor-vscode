@@ -147,28 +147,17 @@ export class EditorSnapshotService {
 		};
 	}
 
-
 	/**
-	 * The pins of a resource, from its asserted types and those the store infers. The type and the
-	 * label of a resource are what its card shows anyway, so they are never pins.
+	 * The pins of a resource, from its asserted types and those the store infers.
 	 * @param summary The resource.
 	 * @param entry The entry of the resource.
 	 * @returns The pins, or none for a resource of no known type, which cannot pin.
 	 */
 	private _pinsOf(summary: ResourceSummary, entry: ResourceIndexEntry): Pick<ResourceSummary, 'pins'> {
-		const asserted = typeIrisOf(entry);
 		const inferred = this._input.inferredTypesOf?.(summary.term) ?? [];
+		const pins = (this._input.pins ?? new PinnedPropertiesService()).resolve(typeIrisOf(entry), inferred);
 
-		if (!PinnedPropertiesService.pinTypeOf(asserted, inferred)) {
-			return {};
-		}
-
-		const fixed = new Set([RDF.type, ...this._input.context.predicates.label]);
-		const pins = (this._input.pins?.pinsOf(Array.from(new Set([...asserted, ...inferred]))) ?? [])
-			.filter(pin => !fixed.has(pin.predicate))
-			.map(pin => ({ predicate: RdfDataFactory.namedNode(pin.predicate), scope: pin.scope }));
-
-		return { pins };
+		return pins ? { pins } : {};
 	}
 
 	/**

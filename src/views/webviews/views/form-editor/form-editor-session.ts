@@ -24,7 +24,7 @@ import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { DocumentSyntaxError } from '@src/services/document/document-syntax-error';
 import { WebviewComponentFactory } from '../../webview-component-factory';
 import { ExecuteCommandMessage } from '../../webview-messaging';
-import { ResourceIndex, ResourceIndexOptions, findCardResource, getEntry, typeIrisOf } from '../../services/editing/resource-index';
+import { ResourceIndex, ResourceIndexEntry, ResourceIndexOptions, findCardResource, getEntry, typeIrisOf } from '../../services/editing/resource-index';
 import { ResourceViewBuilder } from '../../services/editing/resource-view-builder';
 import { PinnedPropertiesService } from '../../services/editing/pinned-properties-service';
 import { EditorSnapshotService } from '../../services/editing/editor-snapshot-service';
@@ -753,7 +753,7 @@ export class FormEditorSession implements vscode.Disposable {
 			const entry = getEntry(this._index, resource);
 
 			if (entry) {
-				resources.push(views.buildDetail(entry));
+				resources.push({ ...views.buildDetail(entry), ...this._pinsOf(context, entry) });
 			} else {
 				missing.push(resource);
 			}
@@ -795,9 +795,10 @@ export class FormEditorSession implements vscode.Disposable {
 
 	/**
 	 * Pin a property of a resource for its types, for oneself in the user settings or for everyone
-	 * in the workspace settings, or unpin it. The pin is stored under the pin type of the resource,
-	 * its primary asserted type or else its first inferred one; unpinning takes it from every type
-	 * of the resource. The changed setting rebuilds the snapshot.
+	 * in the workspace settings, or unpin it; a blank node written inside another resource pins as
+	 * any resource does. The pin is stored under the pin type of the resource, its primary asserted
+	 * type or else its first inferred one; unpinning takes it from every type of the resource. The
+	 * changed setting rebuilds the snapshot.
 	 * @param resource The resource.
 	 * @param predicate The predicate.
 	 * @param scope Who to pin it for, or `undefined` to unpin it.
@@ -828,6 +829,19 @@ export class FormEditorSession implements vscode.Disposable {
 		if (change.user) {
 			await configuration.update(PINNED_PROPERTIES_SETTING, change.user, toConfigurationTarget('user'));
 		}
+	}
+
+	/**
+	 * The pins of a resource for the details of its card, as the snapshot holds them for the cards
+	 * of the list, so a nested card of a blank node pins too.
+	 * @param context The context of the document.
+	 * @param entry The resource.
+	 * @returns The fields of the detail.
+	 */
+	private _pinsOf(context: TurtleDocument, entry: ResourceIndexEntry): Pick<ResourceDetail, 'pins'> {
+		const pins = _readPins().resolve(typeIrisOf(entry), this._inferredTypesOf(context.graphs, entry.term));
+
+		return pins ? { pins } : {};
 	}
 
 	/**

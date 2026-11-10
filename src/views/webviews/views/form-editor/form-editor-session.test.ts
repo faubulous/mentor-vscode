@@ -602,6 +602,27 @@ describe('FormEditorSession', () => {
 		]);
 	});
 
+	it('gives the detail of a blank node written inside a resource its pins, and pins its properties as of any resource', async () => {
+		const update = vi.fn(async () => undefined);
+		const layers = { workspaceValue: { [`${EX}Shape`]: [`${EX}q`] } };
+
+		vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({ get: (_key: string, value?: unknown) => value, inspect: () => layers, update } as unknown as vscode.WorkspaceConfiguration);
+
+		const testSession = await createSession('ex:A ex:p [ a ex:Shape ; ex:q "x" ; ex:r "y" ] .\n');
+
+		await testSession.receive({ id: 'Ready' });
+
+		const [detail] = await requestDetails(testSession, [RdfDataFactory.namedNode(`${EX}A`)]);
+		const node = detail.properties[0].values[0].term as BlankNode;
+		const [nodeDetail] = await requestDetails(testSession, [node]);
+
+		expect(nodeDetail.pins).toEqual([{ predicate: RdfDataFactory.namedNode(`${EX}q`), scope: 'workspace' }]);
+
+		await testSession.session.setPin(node, RdfDataFactory.namedNode(`${EX}r`), 'user');
+
+		expect(update).toHaveBeenCalledWith('pinnedProperties', { [`${EX}Shape`]: [`${EX}r`] }, vscode.ConfigurationTarget.Global);
+	});
+
 	it('pins nothing for a resource of no known type', async () => {
 		const update = vi.fn(async () => undefined);
 

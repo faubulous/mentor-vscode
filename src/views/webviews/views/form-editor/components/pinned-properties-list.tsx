@@ -52,14 +52,15 @@ interface PinnedPropertyItem {
  * The pinned properties of a collapsed card, as items that flow from left to right: the predicate
  * as a caption, marked when it is pinned for oneself only, above its values. Resources are small
  * pills, numbers monospace, blank nodes and lists a line that names them, and a description runs
- * the full width, cut after two lines. A property the resource does not have is left out. A click
- * on an item, or Enter on it, expands the card at that property.
+ * the full width, cut after two lines. A property the resource does not have is left out, and so
+ * is the label the title of the card shows. A click on an item, or Enter on it, expands the card
+ * at that property.
  * @param props The statements, the pins and what opens a property.
  * @returns The items, or nothing when the resource has none of the pinned properties.
  */
 export function PinnedPropertiesList({ detail, pins, onOpen }: PinnedPropertiesListProps): React.JSX.Element | null {
-	const { descriptionPredicates = [], languageFilter = LanguageFilter.ALL } = useFormEditorContext();
-	const items = _itemsOf(detail, pins, languageFilter);
+	const { descriptionPredicates = [], labelPredicates = [], languageFilter = LanguageFilter.ALL } = useFormEditorContext();
+	const items = _itemsOf(detail, pins.filter(pin => !_titleOf(detail, labelPredicates)?.equals(pin.predicate)), languageFilter);
 
 	if (items.length === 0) {
 		return null;
@@ -101,6 +102,16 @@ export function PinnedPropertiesList({ detail, pins, onOpen }: PinnedPropertiesL
 			})}
 		</div>
 	);
+}
+
+/**
+ * The label predicate the title of a card shows: the most preferred one the resource has.
+ * @param detail The statements of the resource.
+ * @param labelPredicates The label predicates, most preferred first.
+ * @returns The predicate, or `undefined` for a resource without a label.
+ */
+function _titleOf(detail: ResourceDetail, labelPredicates: readonly NamedNode[]): NamedNode | undefined {
+	return labelPredicates.find(predicate => detail.properties.some(property => property.predicate.term.equals(predicate)));
 }
 
 /**
