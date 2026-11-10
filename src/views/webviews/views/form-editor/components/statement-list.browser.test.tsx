@@ -23,15 +23,17 @@ const RESOURCES = [createResourceSummary('Plant', { label: 'Plant' }), createRes
  * @param others The details of the blank nodes it shows.
  * @param resources The resources of the document.
  */
-async function renderList(detail: ResourceDetail = SAMPLE, others: ResourceDetail[] = [], resources = RESOURCES) {
+async function renderList(detail: ResourceDetail = SAMPLE, others: ResourceDetail[] = [], resources = RESOURCES, width = 1000) {
 	const host = createEditingHostStub();
 	const editing = new EditingController(host);
 	const dataService = createResourceDataServiceStub([detail, ...others]);
 	const ui = (current: ResourceDetail) => (
 		<div className="form-editor" style={{ height: 'auto', overflow: 'visible' }}>
 			<FormEditorContext.Provider value={{ readOnly: false, editing, namespaces: NAMESPACES, languageTags: {}, resources }}>
-				<article className="resource-card is-expanded" style={{ width: 1000 }}>
-					<StatementList detail={current} dataService={dataService} depth={0} visited={[current.term]} />
+				<article className="resource-card is-expanded" style={{ width }}>
+					<div className="resource-card-body">
+						<StatementList detail={current} dataService={dataService} depth={0} visited={[current.term]} />
+					</div>
 				</article>
 			</FormEditorContext.Provider>
 			<button type="button" className="outside">Outside</button>
@@ -293,6 +295,29 @@ describe('StatementList, edited in a browser', () => {
 		await renderList();
 
 		expect(rows().map(row => Math.round(row.getBoundingClientRect().height))).toEqual([40, 40, 40]);
+	});
+
+	it.each([1000, 700])('lets the values of a row run to the inset of the row and a nested card to the inset of its row, in a card %ipx wide', async width => {
+		const node = RdfDataFactory.blankNode('b1');
+		const detail = withAnchors(createTestResourceDetail([createProperty('rdfs:comment', [{ term: node, editable: true, nested: { term: node, propertyCount: 1 } }]), createProperty('rdfs:label', [createLiteralView('Leaf')])]));
+		const nodeDetail = withAnchors({ term: node, properties: [createProperty('rdfs:label', [createLiteralView('Leaf')])] });
+
+		await renderList(detail, [nodeDetail], RESOURCES, width);
+
+		const card = document.querySelector<HTMLElement>('.resource-card:not(.is-nested)')!;
+		const box = document.querySelector<HTMLElement>('.resource-card.is-nested')!;
+		const rightOf = (element: Element): number => Math.round(element.getBoundingClientRect().right);
+		const leftOf = (element: Element): number => Math.round(element.getBoundingClientRect().left);
+
+		await userEvent.click(within(box).getByRole('button', { name: 'Expand' }));
+
+		const labelRow = within(card).getAllByRole('group', { name: 'rdfs:label' }).find(row => !box.contains(row))!;
+
+		// The card pads its rows by 8px, a row keeps a 32px inset for its actions; a nested row 30px inside its 1px border.
+		expect(rightOf(card) - card.clientLeft - rightOf(labelRow.querySelector('.statement-values')!)).toBe(40);
+		expect(rightOf(box) - rightOf(within(box).getByRole('group', { name: 'rdfs:label' }).querySelector('.statement-values')!)).toBe(31);
+		// Below the reference width the nested card spans the row from the gutter: 8px card padding + 36px gutter.
+		expect(leftOf(box) - leftOf(card) - card.clientLeft).toBe(width < 760 ? 44 : 44 + 160 + 20);
 	});
 
 	it('puts the predicates at 44px from the inside of the border of the card, the pills at 228px and the text of a literal at 229px', async () => {

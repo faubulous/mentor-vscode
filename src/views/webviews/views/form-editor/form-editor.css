@@ -20,11 +20,11 @@ body {
 	/* The heights of the context bar and the toolbar, below which the title bars of the cards stay. */
 	--form-context-bar-height: 30px;
 	--form-toolbar-height: 28px;
-	/* The grid of a card: the gutter before the predicate, the predicate column, the gap between the columns and the actions column. */
+	/* The grid of a card: the gutter before the predicate, the predicate column, the gap between the columns, and the inset at the end of a row that its actions overlay. */
 	--form-gutter: 36px;
 	--form-predicate-column: 160px;
 	--form-column-gap: 20px;
-	--form-actions-column: 62px;
+	--form-row-inset: 32px;
 	/* The box of one line of text: a field, the predicate, the IRI. */
 	--form-field-height: 26px;
 	/* The corners: pills and chips take the middle radius of the webviews, fields the large one, icon buttons and floating widgets their own. */
@@ -705,20 +705,21 @@ body {
 /* ---------- Statements ---------- */
 
 /*
- * Every row of a card is a grid of the predicate, the values and the actions of the row, after a
- * gutter that the drag grip is to sit in, with a line under it. A row of one line is 40px. The
- * cells align to the top; the predicate and the actions are nudged so they centre on the first
- * line of the values: a field of 26px, a pill of 24px in its box, or the header of a nested card.
+ * Every row of a card is a grid of the predicate and the values of the row, after a gutter that
+ * the drag grip is to sit in and before an inset that the actions of the row overlay, with a line
+ * under it. A row of one line is 40px. The cells align to the top; the predicate is nudged so it
+ * centres on the first line of the values: a field of 26px, a pill of 24px in its box, or the
+ * header of a nested card.
  */
 .statement-line {
 	position: relative;
 	display: grid;
-	grid-template-columns: var(--form-predicate-column) minmax(0, 1fr) var(--form-actions-column);
+	grid-template-columns: var(--form-predicate-column) minmax(0, 1fr);
 	column-gap: var(--form-column-gap);
 	align-items: start;
 	box-sizing: border-box;
 	min-height: 40px;
-	padding: 6px 4px 6px var(--form-gutter);
+	padding: 6px var(--form-row-inset) 6px var(--form-gutter);
 	border-bottom: 1px solid var(--form-row-border);
 	line-height: 20px;
 }
@@ -731,24 +732,12 @@ body {
 	margin-top: 4px;
 }
 
-.statement-line.is-resource-row > .statement-actions {
-	margin-top: 3px;
-}
-
 .statement-line.is-nested-row {
 	padding-block: 6px;
 }
 
 .statement-line.is-nested-row > .statement-predicate {
 	margin-top: 6px;
-}
-
-.statement-line.is-nested-row > .statement-actions {
-	margin-top: 5px;
-}
-
-.statement-line.is-literal-row > .statement-actions {
-	margin-top: -1px;
 }
 
 /* The last row of a card, which the link that adds a property may follow, has no line under it. */
@@ -789,8 +778,11 @@ body {
 	color: var(--vscode-foreground);
 }
 
+/* The actions of a row overlay its inset at the top right, centred on the first line of the values. */
 .statement-actions {
-	grid-column: 3;
+	position: absolute;
+	top: 6px;
+	right: 4px;
 	display: flex;
 	justify-content: flex-end;
 	gap: 2px;
@@ -946,11 +938,12 @@ body {
 	background: var(--form-nested-background);
 }
 
+/* The grid of a nested card: a narrower predicate column, which gives way as the box narrows, before it stacks. */
 .resource-card.is-nested > .statement-list {
 	--form-gutter: 42px;
-	--form-predicate-column: 120px;
-	--form-actions-column: 56px;
+	--form-predicate-column: clamp(88px, 24cqi, 120px);
 	--form-column-gap: 16px;
+	--form-row-inset: 30px;
 }
 
 /*
@@ -991,14 +984,21 @@ body {
 .resource-card.is-nested .statement-line {
 	align-items: center;
 	min-height: 36px;
-	padding: 0 6px 0 var(--form-gutter);
+	padding: 0 var(--form-row-inset) 0 var(--form-gutter);
 	border-top: 1px solid var(--form-row-border);
 	border-bottom: 0;
 }
 
-.resource-card.is-nested .statement-line > .statement-predicate,
-.resource-card.is-nested .statement-line > .statement-actions {
+.resource-card.is-nested .statement-line > .statement-predicate {
 	margin-top: 0;
+}
+
+/* The actions of a nested row sit at its vertical centre, as its cells do. */
+.resource-card.is-nested .statement-line > .statement-actions,
+.nested-card-header > .statement-actions {
+	top: 50%;
+	right: 6px;
+	transform: translateY(-50%);
 }
 
 .resource-card.is-nested .statement-line > .statement-values {
@@ -1074,18 +1074,11 @@ body {
 .nested-card-header {
 	position: relative;
 	display: grid;
-	grid-template-columns: var(--form-predicate-column) minmax(0, 1fr) var(--form-actions-column);
+	grid-template-columns: var(--form-predicate-column) minmax(0, 1fr);
 	column-gap: var(--form-column-gap);
 	align-items: center;
-	padding: 0 6px 0 var(--form-gutter);
+	padding: 0 var(--form-row-inset) 0 var(--form-gutter);
 	line-height: 20px;
-}
-
-.resource-card.is-nested.is-draft > .statement-list {
-	--form-gutter: 42px;
-	--form-predicate-column: 120px;
-	--form-actions-column: 56px;
-	--form-column-gap: 16px;
 }
 
 /*
@@ -1265,12 +1258,10 @@ body {
 }
 
 /*
- * The label row leads an expanded card: its last column, where the other rows have their actions,
- * is empty, and the label is the title of the card in a box of 30px, with its tag shown only
- * while it is edited.
+ * The label row leads an expanded card: the label is the title of the card in a box of 30px, with
+ * its tag shown only while it is edited.
  */
 .statement-line.is-card-label {
-	grid-template-columns: var(--form-predicate-column) minmax(0, 1fr) auto;
 	min-height: 43px;
 	padding: 6px 10px 6px var(--form-gutter);
 }
@@ -1603,17 +1594,41 @@ body {
 	}
 }
 
-/* A narrow card stacks each row: the predicate as a caption above its values, the actions beside them. */
+/*
+ * Below the reference width a row of nested cards gives them the whole width of the row, from the
+ * gutter to the inset, with its predicate as a caption above them.
+ */
+@container card (max-width: 759px) {
+	.resource-card:not(.is-nested) > .resource-card-body > .statement-list > .statement-line.is-nested-row {
+		grid-template-columns: minmax(0, 1fr);
+		row-gap: 4px;
+	}
+
+	.resource-card:not(.is-nested) > .resource-card-body > .statement-list > .statement-line.is-nested-row > .statement-predicate {
+		grid-row: 1;
+		grid-column: 1;
+		margin-top: 0;
+		font-size: 0.8em;
+		line-height: 18px;
+	}
+
+	.resource-card:not(.is-nested) > .resource-card-body > .statement-list > .statement-line.is-nested-row > .statement-values {
+		grid-row: 2;
+		grid-column: 1;
+	}
+}
+
+/* A narrow card stacks each row: the predicate as a caption above its values, the actions at the top right. */
 @container card (max-width: 560px) {
 	.resource-card {
 		font-size: 0.93em;
 	}
 
 	.resource-card:not(.is-nested) > .resource-card-body > .statement-list > .statement-line {
-		grid-template-columns: minmax(0, 1fr) 28px;
+		grid-template-columns: minmax(0, 1fr);
 		row-gap: 4px;
 		min-height: 0;
-		padding: 10px 6px 12px 16px;
+		padding: 10px var(--form-row-inset) 12px 16px;
 	}
 
 	.resource-card:not(.is-nested) > .resource-card-body > .statement-list > .statement-line > .statement-predicate {
@@ -1630,9 +1645,7 @@ body {
 	}
 
 	.resource-card:not(.is-nested) > .resource-card-body > .statement-list > .statement-line > .statement-actions {
-		grid-row: 1 / span 2;
-		grid-column: 2;
-		margin: 0;
+		top: 8px;
 	}
 
 	.resource-card:not(.is-nested) > .resource-card-body > .statement-list > .statement-line > .row-error {
@@ -1640,7 +1653,6 @@ body {
 	}
 
 	.resource-card:not(.is-nested) > .resource-card-body > .statement-list > .statement-line.is-card-label {
-		grid-template-columns: minmax(0, 1fr) auto;
 		padding: 10px 10px 12px 16px;
 	}
 
@@ -1666,11 +1678,11 @@ body {
 /* A narrow nested card stacks its rows too, keeping the chevron of its header. */
 @container box (max-width: 440px) {
 	.resource-card.is-nested .statement-line:not(.is-card-header) {
-		grid-template-columns: minmax(0, 1fr) 26px;
+		grid-template-columns: minmax(0, 1fr);
 		row-gap: 2px;
 		align-items: start;
 		min-height: 0;
-		padding: 8px 6px 8px 12px;
+		padding: 8px var(--form-row-inset) 8px 12px;
 	}
 
 	.resource-card.is-nested .statement-line:not(.is-card-header) > .statement-predicate {
@@ -1687,8 +1699,8 @@ body {
 	}
 
 	.resource-card.is-nested .statement-line:not(.is-card-header) > .statement-actions {
-		grid-row: 1 / span 2;
-		grid-column: 2;
+		top: 8px;
+		transform: none;
 	}
 
 	.resource-card.is-nested .statement-line.is-card-header {
