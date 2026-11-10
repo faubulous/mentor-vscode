@@ -5,9 +5,10 @@ import { IDocumentContext } from '@src/services/document/document-context.interf
 import { termToString } from 'rdf-string';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { DEFAULT_ICON, getSubjectIconName } from '@src/utilities/subject-icon';
-import { hasSourcePosition } from '@src/utilities/tokens';
+import { getTokenPosition, hasSourcePosition } from '@src/utilities/tokens';
 import { ValueKind, ValueKindHint } from '@src/utilities/value-kind';
 import {
+	DocumentPosition,
 	NestedResourceRef,
 	PropertyView,
 	ResourceDetail,
@@ -65,7 +66,6 @@ export class ResourceViewBuilder {
 		const typeLabels = this._resolveTypeLabels(typeIris);
 		const primaryType = _primaryTypeIndex(typeIris);
 		const label = this._resolveLabel(entry.term);
-
 		const prefixedName = this._toPrefixedName(entry.term);
 
 		return {
@@ -77,6 +77,8 @@ export class ResourceViewBuilder {
 			iconName: this._resolveIconName(entry, typeIris),
 			typeIri: typeIris[primaryType],
 			typeLabel: typeLabels?.[primaryType],
+			typeLabels,
+			position: _positionOf(entry),
 			propertyCount: _countProperties(entry),
 			hasLabel: this._annotations.findLabel(entry) !== undefined,
 			comments: entry.nested ? undefined : leadingCommentRunsOf(entry)
@@ -413,4 +415,21 @@ function _localPartOf(term: NamedNode | BlankNode, prefixedName: string | undefi
 	const localPart = prefixedName ? prefixedName.slice(prefixedName.indexOf(':') + 1) : term.value.slice(Uri.getNamespaceIri(term.value).length);
 
 	return localPart || undefined;
+}
+
+/**
+ * Where a resource is first written: the position of the subject of its first statement.
+ * @param entry The resource.
+ * @returns The position, or `undefined` for a resource written nowhere, as one only referred to.
+ */
+function _positionOf(entry: ResourceIndexEntry): DocumentPosition | undefined {
+	const token = entry.quads[0]?.subjectToken;
+
+	if (!token || !hasSourcePosition(token)) {
+		return undefined;
+	}
+
+	const { start } = getTokenPosition(token);
+
+	return { line: start.line, character: start.character };
 }

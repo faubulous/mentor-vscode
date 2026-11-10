@@ -80,9 +80,10 @@ export type FormEditorWebviewMessage =
 	 */
 	| { id: 'CopyAsTurtle'; anchor: number; version: number }
 	/**
-	 * Rename a resource as F2 does: give its IRI another local part, wherever the workspace writes it.
+	 * Rename a resource as F2 does: give it another IRI in its namespace, wherever the workspace
+	 * writes it.
 	 */
-	| { id: 'RenameResource'; resource: NamedNode; localPart: string }
+	| { id: 'RenameResource'; resource: NamedNode; iri: string }
 	| ExecuteCommandMessage;
 
 /**

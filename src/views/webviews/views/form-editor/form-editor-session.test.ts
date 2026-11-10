@@ -471,7 +471,7 @@ describe('FormEditorSession', () => {
 		const setStatusBarMessage = vi.spyOn(vscode.window, 'setStatusBarMessage');
 
 		await receive({ id: 'Ready' });
-		await receive({ id: 'RenameResource', resource: RdfDataFactory.namedNode(`${EX}A`), localPart: 'Oak' });
+		await receive({ id: 'RenameResource', resource: RdfDataFactory.namedNode(`${EX}A`), iri: `${EX}Oak` });
 
 		expect(executeCommand).toHaveBeenCalledWith('vscode.executeDocumentRenameProvider', document.uri, new vscode.Position(2, 3), 'Oak');
 		expect(applyEdit).toHaveBeenCalledWith(edit);
@@ -490,21 +490,22 @@ describe('FormEditorSession', () => {
 		vi.spyOn(vscode.workspace, 'applyEdit').mockResolvedValueOnce(true);
 
 		await receive({ id: 'Ready' });
-		await receive({ id: 'RenameResource', resource: RdfDataFactory.namedNode('http://other.org/ns#Thing'), localPart: 'Oak' });
+		await receive({ id: 'RenameResource', resource: RdfDataFactory.namedNode('http://other.org/ns#Thing'), iri: 'http://other.org/ns#Oak' });
 
 		expect(executeCommand).toHaveBeenCalledWith('vscode.executeDocumentRenameProvider', document.uri, new vscode.Position(2, '<http://other.org/ns#Thing>'.length - 2), 'Oak');
 	});
 
-	it('renames nothing to a local part that cannot be written as it is, or to the same one', async () => {
+	it('renames nothing to an IRI of another namespace, to a local part that cannot be written as it is, or to the same IRI', async () => {
 		const { posted, receive } = await createSession('ex:A a ex:Class .\n');
 		const executeCommand = vi.spyOn(vscode.commands, 'executeCommand');
 		const showErrorMessage = vi.spyOn(vscode.window, 'showErrorMessage');
 
 		await receive({ id: 'Ready' });
-		await receive({ id: 'RenameResource', resource: RdfDataFactory.namedNode(`${EX}A`), localPart: 'an oak' });
-		await receive({ id: 'RenameResource', resource: RdfDataFactory.namedNode(`${EX}A`), localPart: 'A' });
+		await receive({ id: 'RenameResource', resource: RdfDataFactory.namedNode(`${EX}A`), iri: 'http://other.org/ns#A' });
+		await receive({ id: 'RenameResource', resource: RdfDataFactory.namedNode(`${EX}A`), iri: `${EX}an oak` });
+		await receive({ id: 'RenameResource', resource: RdfDataFactory.namedNode(`${EX}A`), iri: `${EX}A` });
 
-		expect(showErrorMessage).toHaveBeenCalledOnce();
+		expect(showErrorMessage).toHaveBeenCalledTimes(2);
 		expect(executeCommand).not.toHaveBeenCalledWith('vscode.executeDocumentRenameProvider', expect.anything(), expect.anything(), expect.anything());
 		expect(postedOf(posted, 'ResourceRenamed')).toEqual([]);
 	});

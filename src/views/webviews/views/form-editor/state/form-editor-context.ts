@@ -1,6 +1,6 @@
 import { createContext, useContext } from 'react';
 import { BlankNode, NamedNode } from '@rdfjs/types';
-import { NamespaceInfo, ResourceSummary } from '../form-editor-model';
+import { DocumentPosition, NamespaceInfo, ResourceSummary } from '../form-editor-model';
 import { IEditingController } from './editing-controller.interface';
 import { LanguageFilter } from './language-filter';
 
@@ -66,11 +66,17 @@ export interface FormEditorContextValue {
 	onCopyAsTurtle?: (anchor: number, version: number) => void;
 
 	/**
-	 * Rename a resource as F2 does: give its IRI another local part, wherever the workspace writes it.
+	 * Rename a resource as F2 does: give it another IRI in its namespace, wherever the workspace
+	 * writes it.
 	 * @param resource The resource.
-	 * @param localPart The new local part.
+	 * @param iri The new IRI.
 	 */
-	onRenameResource?: (resource: NamedNode, localPart: string) => void;
+	onRenameResource?: (resource: NamedNode, iri: string) => void;
+
+	/**
+	 * Show a position of the document in a text editor beside the form.
+	 */
+	onRevealInTextEditor?: (position: DocumentPosition) => void;
 
 	/**
 	 * The resource last revealed, as from the definition tree, whose entry is marked until the

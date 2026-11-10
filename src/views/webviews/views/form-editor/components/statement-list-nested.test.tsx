@@ -42,10 +42,12 @@ const NODE_DETAIL: ResourceDetail = withAnchors({
 });
 
 /**
- * Render the card, edited, with the details of its blank node at hand.
+ * Render the card, edited, with the details of its blank node at hand, and expand the nested card
+ * of the node, which starts collapsed, unless told otherwise.
  * @param nodeDetail The details of the blank node.
+ * @param expand Whether to expand the nested card.
  */
-function renderCard(nodeDetail: ResourceDetail = NODE_DETAIL) {
+async function renderCard(nodeDetail: ResourceDetail = NODE_DETAIL, expand = true) {
 	const host = createEditingHostStub();
 	const editing = new EditingController(host);
 	const dataService = createResourceDataServiceStub([DETAIL, nodeDetail]);
@@ -57,6 +59,10 @@ function renderCard(nodeDetail: ResourceDetail = NODE_DETAIL) {
 			<StatementList detail={DETAIL} stale={false} dataService={dataService} depth={0} visited={[DETAIL.term]} />
 		</FormEditorContext.Provider>
 	);
+
+	if (expand) {
+		await userEvent.click(within(nestedCard()).getByRole('button', { name: 'Expand' }));
+	}
 
 	return { host, editing, onCopyAsTurtle };
 }
@@ -111,7 +117,7 @@ async function leave(field: HTMLElement): Promise<void> {
 
 describe('StatementList, with a blank node', () => {
 	it('edits the rows of the blank node, writing them with the node as the subject', async () => {
-		const { host } = renderCard();
+		const { host } = await renderCard();
 		const field = within(nestedRowOf('rdfs:label')).getByLabelText('Value 1');
 
 		type(field, 'Twig');
@@ -126,7 +132,7 @@ describe('StatementList, with a blank node', () => {
 	});
 
 	it('leaves the row holding the nested card alone for Escape and Enter pressed in the card', async () => {
-		const { host } = renderCard();
+		const { host } = await renderCard();
 		const outer = within(cardRowOf('rdfs:comment')).getAllByLabelText('Value 1').find(field => !nestedCard().contains(field))!;
 		const inner = within(nestedRowOf('rdfs:comment')).getByLabelText('Value 1');
 
@@ -139,7 +145,7 @@ describe('StatementList, with a blank node', () => {
 	});
 
 	it('removes a property of the blank node with the button of its row, which the card itself has not', async () => {
-		const { host } = renderCard();
+		const { host } = await renderCard();
 
 		expect(within(cardRowOf('rdfs:label')).queryByRole('button', { name: 'Remove rdfs:label' })).toBeNull();
 
@@ -151,7 +157,7 @@ describe('StatementList, with a blank node', () => {
 	});
 
 	it('opens a row for a new property of the blank node with Add property, and closes it when it is left empty', async () => {
-		renderCard();
+		await renderCard();
 
 		expect(within(nestedCard()).queryByRole('group', { name: 'New statement' })).toBeNull();
 
@@ -159,14 +165,17 @@ describe('StatementList, with a blank node', () => {
 
 		const row = within(nestedCard()).getByRole('group', { name: 'New statement' });
 
+		expect(within(nestedCard()).queryByRole('button', { name: 'Add property' })).toBeNull();
+
 		await leave(within(row).getByLabelText('Predicate'));
 
 		expect(within(nestedCard()).queryByRole('group', { name: 'New statement' })).toBeNull();
-		expect(screen.getAllByRole('group', { name: 'New statement' })).toHaveLength(1);
+		expect(screen.queryByRole('group', { name: 'New statement' })).toBeNull();
+		expect(within(nestedCard()).getByRole('button', { name: 'Add property' })).toBeTruthy();
 	});
 
 	it('writes a new property of the blank node typed into the row Add property opened', async () => {
-		const { host } = renderCard();
+		const { host } = await renderCard();
 
 		await userEvent.click(within(nestedCard()).getByRole('button', { name: 'Add property' }));
 
@@ -185,19 +194,16 @@ describe('StatementList, with a blank node', () => {
 		}]]);
 	});
 
-	it('leads the nested card with its type, after a chevron that collapses the card to the type and names the other properties', async () => {
+	it('leads the nested card with its type, collapsed to the type at first and naming the other properties, with a chevron that expands it', async () => {
 		const typed: ResourceDetail = withAnchors({ term: NODE, properties: [...NODE_DETAIL.properties, createProperty('rdf:type', [createIriView('owl:Restriction', 'Restriction')])] });
 
-		renderCard(typed);
+		await renderCard(typed, false);
 
 		const header = within(nestedCard()).getByRole('group', { name: 'Type' });
 
 		expect(nestedCard().querySelector('.statement-line')).toBe(header);
 		expect(header.querySelector('.statement-predicate')?.textContent).toBe('type');
 		expect(within(header).getByText('Restriction')).toBeTruthy();
-
-		await userEvent.click(within(header).getByRole('button', { name: 'Collapse' }));
-
 		expect(within(nestedCard()).queryByRole('group', { name: 'rdfs:label' })).toBeNull();
 		expect(within(nestedCard()).queryByRole('button', { name: 'Add property' })).toBeNull();
 		expect(header.querySelector('.nested-card-summary')?.textContent).toBe('rdfs:label, rdfs:comment');
@@ -205,11 +211,21 @@ describe('StatementList, with a blank node', () => {
 		await userEvent.click(within(header).getByRole('button', { name: 'Expand' }));
 
 		expect(within(nestedCard()).getByRole('group', { name: 'rdfs:label' })).toBeTruthy();
+		expect(within(nestedCard()).getByRole('button', { name: 'Add property' })).toBeTruthy();
+
+		await userEvent.click(within(header).getByRole('button', { name: 'Collapse' }));
+
+		expect(within(nestedCard()).queryByRole('group', { name: 'rdfs:label' })).toBeNull();
 	});
 
-	it('asks to choose the type of an untyped node, and writes the type typed into it', async () => {
-		const { host } = renderCard();
+	it('asks to choose the type of an untyped node with a link that turns into the input, and writes the type typed into it', async () => {
+		const { host } = await renderCard();
 		const header = within(nestedCard()).getByRole('group', { name: 'Type' });
+
+		expect(within(header).queryByLabelText('New value')).toBeNull();
+
+		await userEvent.click(within(header).getByRole('button', { name: 'Choose type' }));
+
 		const input = within(header).getByLabelText('New value');
 
 		expect(input.getAttribute('placeholder')).toBe('Choose type');
@@ -226,7 +242,7 @@ describe('StatementList, with a blank node', () => {
 	});
 
 	it('duplicates the blank node from the ⋯ menu of its card, writing a copy after it at once', async () => {
-		const { host } = renderCard();
+		const { host } = await renderCard();
 
 		expect(within(nestedCard()).getByRole('button', { name: 'More actions' })).toBeTruthy();
 
@@ -241,7 +257,7 @@ describe('StatementList, with a blank node', () => {
 	});
 
 	it('removes the blank node from the ⋯ menu of its card, writing the row at once', async () => {
-		const { host } = renderCard();
+		const { host } = await renderCard();
 
 		await pick('remove');
 
@@ -249,15 +265,15 @@ describe('StatementList, with a blank node', () => {
 	});
 
 	it('copies the blank node as Turtle from the ⋯ menu of its card, by where it is written', async () => {
-		const { onCopyAsTurtle } = renderCard();
+		const { onCopyAsTurtle } = await renderCard();
 
 		await pick('copy');
 
 		expect(onCopyAsTurtle).toHaveBeenCalledWith(130, 1);
 	});
 
-	it('opens the ⋯ menu on a right-click on the card, but leaves a right-click in a text field to the browser', () => {
-		renderCard();
+	it('opens the ⋯ menu on a right-click on the card, but leaves a right-click in a text field to the browser', async () => {
+		await renderCard();
 
 		const menu = nestedCard().querySelector('vscode-context-menu') as HTMLElement & { show?: boolean };
 

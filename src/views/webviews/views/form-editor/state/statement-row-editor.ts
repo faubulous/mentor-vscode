@@ -349,10 +349,15 @@ export class StatementRowEditor implements EditWriter {
 	}
 
 	/**
-	 * Give up what was typed, as Escape does.
+	 * Give up what was typed, as Escape does. A row for a new statement is handed back to the card,
+	 * which closes it.
 	 */
 	revert(): void {
 		this._update(StatementRowState.of(this._state.stored, this._data.predicateText).withRejection(this._state.rejection));
+
+		if (this.isOpen) {
+			this._owner.abandoned(this);
+		}
 	}
 
 	/**
@@ -368,7 +373,8 @@ export class StatementRowEditor implements EditWriter {
 	 * Write the row as the focus leaves it: text typed for a new value is taken as one, literals
 	 * whose text their datatype does not take go back to what is stored, and text that reads as no
 	 * term stays with its problem shown rather than being lost. New blank nodes no type was chosen
-	 * for go. A row for a new statement left with nothing typed is handed back to the card.
+	 * for go. A row for a new statement left with nothing typed is handed back to the card, which
+	 * closes it.
 	 */
 	leave(): void {
 		const draft = this._state.draft.withoutUntypedNodes();
@@ -378,7 +384,6 @@ export class StatementRowEditor implements EditWriter {
 
 			return;
 		}
-
 		const reading = this._data.reader.readValue(this._state.pendingText, this._range);
 		const withPending = reading?.term ? draft.withValueAppended(reading.term) : draft;
 		const next = this._state.withDraft(_withUnfittingLiteralsReverted(withPending));

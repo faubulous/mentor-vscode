@@ -11,10 +11,10 @@ export interface PropertyCommentsProps {
 }
 
 /**
- * The comment lines written above a property, if it has any.
+ * The comment lines written above a property, if it has any, shown under the values of its row.
  * @param props The property.
  * @returns The comment lines.
  */
 export function PropertyComments({ property }: PropertyCommentsProps): React.JSX.Element | null {
-	return property.comments ? <div className="statement-comment">{property.comments.join('\n')}</div> : null;
+	return property.comments ? <span className="statement-comment">{property.comments.join('\n')}</span> : null;
 }

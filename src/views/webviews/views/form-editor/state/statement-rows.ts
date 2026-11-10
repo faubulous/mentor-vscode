@@ -93,16 +93,9 @@ export interface LeadingRow {
 }
 
 /**
- * How the rows of a card offer new statements.
+ * How the rows of a card are led.
  */
 export interface StatementRowsOptions {
-	/**
-	 * Whether a row for a new statement is always open after the others, as in a card of the list;
-	 * otherwise one is opened on request, as by Add property in the nested card of a blank node,
-	 * and closes when it is left with nothing typed.
-	 */
-	keepNewRowOpen: boolean;
-
 	/**
 	 * The row that leads the rows, if one does.
 	 */
@@ -111,10 +104,11 @@ export interface StatementRowsOptions {
 
 /**
  * The statement rows of a card that can be written: a row per property, in document order, and
- * after them the rows for new statements. A row keeps its editor, and with it what was typed and
- * the focus, for as long as the card shows its predicate, found by the IRI of the predicate rather
- * than by its place; a row that wrote a new predicate or a new statement moves on to the property
- * of that predicate.
+ * after them the rows for new statements, which Add property opens and which close again when they
+ * are left with nothing typed. A row keeps its editor, and with it what was typed and the focus,
+ * for as long as the card shows its predicate, found by the IRI of the predicate rather than by
+ * its place; a row that wrote a new predicate or a new statement moves on to the property of that
+ * predicate.
  */
 export class StatementRows implements StatementRowOwner {
 	private readonly _listeners = new Set<() => void>();
@@ -136,7 +130,7 @@ export class StatementRows implements StatementRowOwner {
 	 * @param _editing Writes the rows.
 	 * @param _options How the rows offer new statements.
 	 */
-	constructor(private readonly _editing: IEditingController, private readonly _options: StatementRowsOptions = { keepNewRowOpen: true }) { }
+	constructor(private readonly _editing: IEditingController, private readonly _options: StatementRowsOptions = {}) { }
 
 	/**
 	 * How many times the rows changed outside of a render of the card.
@@ -160,8 +154,7 @@ export class StatementRows implements StatementRowOwner {
 	/**
 	 * Match the properties of the card with the rows, as the card renders: each editable property
 	 * goes to the row that claims its predicate, else to the row that holds it, else to a new row.
-	 * A row whose property went goes too, rows for new statements stay, and one is opened when none
-	 * is waiting for a statement where one is always open.
+	 * A row whose property went goes too, and rows for new statements stay.
 	 * @param data The data of the card.
 	 * @returns The rows in the order they are shown.
 	 */
@@ -214,12 +207,6 @@ export class StatementRows implements StatementRowOwner {
 			entries.unshift(leadingEntry ?? this._leadingPlaceholderEntry(data, this._options.leadingRow));
 		}
 
-		if (this._options.keepNewRowOpen && !this._editors.some(editor => editor.isOpen && editor !== this._leadingPlaceholder)) {
-			const editor = this._create({ ...data, property: undefined, predicateText: '' });
-
-			entries.push({ key: `row-${editor.id}`, editor });
-		}
-
 		return entries;
 	}
 
@@ -246,7 +233,7 @@ export class StatementRows implements StatementRowOwner {
 	}
 
 	abandoned(row: StatementRowEditor): void {
-		if (!this._options.keepNewRowOpen && row !== this._leadingPlaceholder) {
+		if (row !== this._leadingPlaceholder) {
 			this.merged(row);
 		}
 	}

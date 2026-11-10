@@ -25,24 +25,23 @@ function lastOf(entries: readonly StatementRowEntry[]): StatementRowEntry | unde
 
 /**
  * Make the rows of a card whose writes go nowhere.
- * @param keepNewRowOpen Whether a row for a new statement is always open, as in a card of the list.
  */
-function createRows(keepNewRowOpen = true): StatementRows {
-	return new StatementRows({ requestWrite: () => undefined, flush: () => undefined }, { keepNewRowOpen });
+function createRows(): StatementRows {
+	return new StatementRows({ requestWrite: () => undefined, flush: () => undefined });
 }
 
 /**
  * Make the rows of the nested card of a blank node, which the type leads.
  */
 function createBoxRows(): StatementRows {
-	return new StatementRows({ requestWrite: () => undefined, flush: () => undefined }, { keepNewRowOpen: false, leadingRow: { predicates: [RDF.type], predicateText: 'a' } });
+	return new StatementRows({ requestWrite: () => undefined, flush: () => undefined }, { leadingRow: { predicates: [RDF.type], predicateText: 'a' } });
 }
 
 describe('StatementRows', () => {
-	it('gives every editable property a row and opens a row for a new statement after them', () => {
+	it('gives every editable property a row, and none for a new statement until one is asked for', () => {
 		const entries = createRows().reconcile(dataOf(SAMPLE));
 
-		expect(entries.map(entry => entry.property?.predicate.prefixedName ?? 'new')).toEqual(['rdf:type', 'rdfs:label', 'rdfs:subClassOf', 'new']);
+		expect(entries.map(entry => entry.property?.predicate.prefixedName ?? 'new')).toEqual(['rdf:type', 'rdfs:label', 'rdfs:subClassOf']);
 		expect(entries.every(entry => entry.editor !== undefined)).toBe(true);
 	});
 
@@ -53,13 +52,13 @@ describe('StatementRows', () => {
 
 		expect(after[0].editor).toBe(before[2].editor);
 		expect(after[0].key).toBe(before[2].key);
-		expect(after[3].editor).toBe(before[3].editor);
 	});
 
-	it('drops and retires the row of a property that went, and keeps one row open for a new statement', () => {
+	it('drops and retires the row of a property that went, and keeps the row open for a new statement', () => {
 		const rows = createRows();
 		const before = rows.reconcile(dataOf(SAMPLE));
 		const label = before[1].editor!;
+		const added = rows.addRow()!;
 
 		label.inputLiteral(0, 'Oak');
 		label.leave();
@@ -67,7 +66,7 @@ describe('StatementRows', () => {
 		const entries = rows.reconcile(dataOf([SAMPLE[0]], 2));
 
 		expect(entries).toHaveLength(2);
-		expect(entries[1].editor?.isOpen).toBe(true);
+		expect(entries[1].editor).toBe(added);
 		expect(label.busy).toBe(false);
 	});
 
@@ -81,11 +80,12 @@ describe('StatementRows', () => {
 		expect(rows.rowOf(SAMPLE[1].predicate.term.termType === 'NamedNode' ? SAMPLE[1].predicate.term.value : '')).toBe(entries[1].editor);
 	});
 
-	it('opens a row for a new statement only on request in the nested card of a blank node, and closes it when it is left empty', () => {
-		const rows = createRows(false);
-		const entries = rows.reconcile(dataOf(SAMPLE));
+	it('opens a row for a new statement on request, once, and closes it when it is left empty', () => {
+		const rows = createRows();
 
-		expect(entries.map(entry => entry.property?.predicate.prefixedName ?? 'new')).toEqual(['rdf:type', 'rdfs:label', 'rdfs:subClassOf']);
+		expect(rows.addRow()).toBeUndefined();
+
+		rows.reconcile(dataOf(SAMPLE));
 
 		const added = rows.addRow()!;
 
@@ -99,17 +99,8 @@ describe('StatementRows', () => {
 		expect(rows.reconcile(dataOf(SAMPLE)).map(entry => entry.editor)).not.toContain(added);
 	});
 
-	it('keeps the open row for a new statement of a card of the list when it is left empty', () => {
+	it('keeps a row opened on request once something is typed into it, and after Escape closes it', () => {
 		const rows = createRows();
-		const open = lastOf(rows.reconcile(dataOf(SAMPLE)))!.editor!;
-
-		open.leave();
-
-		expect(lastOf(rows.reconcile(dataOf(SAMPLE)))?.editor).toBe(open);
-	});
-
-	it('keeps a row opened on request once something is typed into it', () => {
-		const rows = createRows(false);
 
 		rows.reconcile(dataOf(SAMPLE));
 
@@ -119,21 +110,27 @@ describe('StatementRows', () => {
 		added.leave();
 
 		expect(lastOf(rows.reconcile(dataOf(SAMPLE)))?.editor).toBe(added);
+
+		added.revert();
+
+		expect(rows.reconcile(dataOf(SAMPLE)).map(entry => entry.editor)).not.toContain(added);
 	});
 
 	it('leads the rows of a nested card with the type, wherever the type is written', () => {
 		const entries = createBoxRows().reconcile(dataOf([SAMPLE[1], SAMPLE[2], SAMPLE[0]]));
 
-		expect(entries.map(entry => [entry.property?.predicate.prefixedName, entry.isLeading === true])).toEqual([['rdf:type', true], ['rdfs:label', false], ['rdfs:subClassOf', false]]);
+		expect(entries.map(entry => [entry.property?.predicate.prefixedName ?? 'new', entry.isLeading === true])).toEqual([['rdf:type', true], ['rdfs:label', false], ['rdfs:subClassOf', false]]);
 	});
 
-	it('stands in for the type of an untyped node with a row of rdf:type that Add property and leaving it leave alone', () => {
+	it('stands in for the type of an untyped node with a row of rdf:type, which Add property and leaving it leave alone', () => {
 		const rows = createBoxRows();
-		const placeholder = rows.reconcile(dataOf([SAMPLE[1]]))[0];
+		const entries = rows.reconcile(dataOf([SAMPLE[1]]));
+		const placeholder = entries[0];
 
 		expect(placeholder.isLeading).toBe(true);
 		expect(placeholder.property).toBeUndefined();
 		expect(placeholder.editor?.state.stored.predicate).toBe(RDF.type);
+		expect(entries).toHaveLength(2);
 
 		placeholder.editor!.leave();
 
@@ -159,18 +156,17 @@ describe('StatementRows', () => {
 		expect(entries).toHaveLength(2);
 	});
 
-	it('leads the rows of a card of the list with its most preferred label, and stands in for a missing one without closing the row for a new statement', () => {
+	it('leads the rows of a card of the list with its most preferred label, and stands in for a missing one', () => {
 		const label = createProperty('skos:prefLabel', [createLiteralView('Tree')]);
 		const otherLabel = createProperty('rdfs:label', [createLiteralView('A tree')]);
-		const rows = new StatementRows({ requestWrite: () => undefined, flush: () => undefined }, { keepNewRowOpen: true, leadingRow: { predicates: [SKOS.prefLabel, RDFS.label], predicateText: 'skos:prefLabel' } });
+		const rows = new StatementRows({ requestWrite: () => undefined, flush: () => undefined }, { leadingRow: { predicates: [SKOS.prefLabel, RDFS.label], predicateText: 'skos:prefLabel' } });
 		const entries = rows.reconcile(dataOf(withAnchors(createTestResourceDetail([otherLabel, label])).properties));
 
-		expect(entries.map(entry => [entry.property?.predicate.prefixedName ?? 'new', entry.isLeading === true])).toEqual([['skos:prefLabel', true], ['rdfs:label', false], ['new', false]]);
+		expect(entries.map(entry => [entry.property?.predicate.prefixedName ?? 'new', entry.isLeading === true])).toEqual([['skos:prefLabel', true], ['rdfs:label', false]]);
 
-		const unlabelled = new StatementRows({ requestWrite: () => undefined, flush: () => undefined }, { keepNewRowOpen: true, leadingRow: { predicates: [SKOS.prefLabel], predicateText: 'skos:prefLabel' } }).reconcile(dataOf([SAMPLE[0]]));
+		const unlabelled = new StatementRows({ requestWrite: () => undefined, flush: () => undefined }, { leadingRow: { predicates: [SKOS.prefLabel], predicateText: 'skos:prefLabel' } }).reconcile(dataOf([SAMPLE[0]]));
 
-		expect(unlabelled.map(entry => entry.isLeading === true)).toEqual([true, false, false]);
+		expect(unlabelled.map(entry => entry.isLeading === true)).toEqual([true, false]);
 		expect(unlabelled[0].editor?.state.stored.predicate).toBe(SKOS.prefLabel);
-		expect(unlabelled[2].editor?.isOpen).toBe(true);
 	});
 });

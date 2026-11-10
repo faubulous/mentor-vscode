@@ -152,14 +152,14 @@ export class FormEditorProvider implements vscode.CustomTextEditorProvider, vsco
 
 				return session.applyEdit(`e2e-${Date.now()}`, version, reviveTerms(operations));
 			}),
-			vscode.commands.registerCommand('mentor.e2e.renameFormEditorResource', async (documentUri: string, iri: string, localPart: string) => {
+			vscode.commands.registerCommand('mentor.e2e.renameFormEditorResource', async (documentUri: string, iri: string, renamed: string) => {
 				const session = this._sessionsOf(vscode.Uri.parse(documentUri))[0];
 
 				if (!session) {
 					throw new Error(`No form editor shows ${documentUri}.`);
 				}
 
-				await session.renameResource(RdfDataFactory.namedNode(iri), localPart);
+				await session.renameResource(RdfDataFactory.namedNode(iri), renamed);
 			})
 		);
 	}

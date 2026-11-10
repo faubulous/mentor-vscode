@@ -125,7 +125,7 @@ export function BlockList({ blocks, dataService, scrollElement, cardStates, pinn
 							ref={measureRow}
 							data-index={item.index}
 							data-block-id={block.id}
-							style={{ position: 'absolute', top: 0, left: 0, width: '100%', transform: `translateY(${item.offset}px)` }}
+							style={{ position: 'absolute', top: item.offset, left: 0, width: '100%' }}
 						>
 							{block.kind === 'resource'
 								? <ResourceCard summary={block.resource} dataService={dataService} expanded={cardStates.stateOf(block.id).open !== 'collapsed'} writing={busyIds?.has(block.id) === true} current={block.id === currentId} onToggle={onToggle} />

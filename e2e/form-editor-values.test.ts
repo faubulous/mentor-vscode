@@ -168,7 +168,7 @@ suite('form editor values', () => {
 	test('renames a resource from its card as F2 does', async () => {
 		const document = await openInFormEditor('data/form-values.ttl');
 
-		await vscode.commands.executeCommand('mentor.e2e.renameFormEditorResource', document.uri.toString(), `${NS}s`, 't');
+		await vscode.commands.executeCommand('mentor.e2e.renameFormEditorResource', document.uri.toString(), `${NS}s`, `${NS}t`);
 
 		assert.strictEqual(document.getText(), '@prefix ex: <http://example.org/values#> .\n\nex:t ex:p "a", ex:b .\n');
 	});

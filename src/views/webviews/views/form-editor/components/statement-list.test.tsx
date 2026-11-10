@@ -56,14 +56,17 @@ describe('StatementList', () => {
 		expect(screen.getAllByText(/./, { selector: '.literal-tag' })).toHaveLength(1);
 	});
 
-	it('puts the comment lines above their property and above a later value', () => {
+	it('puts the comment lines of a property under its values, and those of a later value above the value', () => {
 		const detail = createTestResourceDetail([
 			{ ...createProperty('rdfs:label', [createLiteralView('First'), { ...createLiteralView('Second'), comments: ['about the second'] }]), comments: ['what it is called', 'two lines'] }
 		]);
 
 		renderList(detail);
 
-		expect(screen.getByText('what it is called two lines', { normalizer: text => text.replace(/\s+/g, ' ') }).classList.contains('statement-comment')).toBe(true);
+		const comment = screen.getByText('what it is called two lines', { normalizer: text => text.replace(/\s+/g, ' ') });
+
+		expect(comment.classList.contains('statement-comment')).toBe(true);
+		expect(comment.closest('.statement-values')?.lastElementChild).toBe(comment);
 		expect(screen.getByText('about the second').classList.contains('statement-value-comment')).toBe(true);
 	});
 
@@ -89,13 +92,19 @@ describe('StatementList', () => {
 		expect(screen.getAllByRole('listitem').map(item => item.textContent)).toEqual(['A', 'b']);
 	});
 
-	it('renders the card of a blank node in place of its value, with the comments of the node, and asks for one it does not hold', () => {
+	it('renders the card of a blank node in place of its value, collapsed to its header with the comments above the value and the node, and asks for one it does not hold', async () => {
 		const nestedDetail: ResourceDetail = { term: RdfDataFactory.blankNode('b1'), comments: ['the node'], properties: [createProperty('rdfs:comment', [createLiteralView('inside')])] };
-		const detail = createTestResourceDetail([createProperty('ex:has', [createNestedView('b1'), createNestedView('b2')])]);
+		const detail = createTestResourceDetail([createProperty('ex:has', [{ ...createNestedView('b1'), comments: ['the value'] }, createNestedView('b2')])]);
 		const { dataService } = renderList(detail, {}, [nestedDetail]);
 
+		expect(screen.queryByText('inside')).toBeNull();
+
+		await userEvent.click(screen.getByRole('button', { name: 'Expand' }));
+
 		expect(screen.getByText('inside').closest('.resource-card.is-nested')?.getAttribute('data-resource-id')).toBe('_:b1');
-		expect(screen.getByText('the node').classList.contains('statement-comment')).toBe(true);
+		expect(screen.getByText('the value the node', { normalizer: text => text.replace(/\s+/g, ' ') }).classList.contains('nested-card-caption')).toBe(true);
+		expect(screen.getByText(/the node/).closest('.statement-line')?.getAttribute('aria-label')).toBe('Type');
+		expect(screen.queryByText('the value', { selector: '.statement-value-comment' })).toBeNull();
 		expect(screen.getByText('Loading…').closest('.resource-card.is-nested')?.getAttribute('data-resource-id')).toBe('_:b2');
 		expect(dataService.requested).toEqual([RdfDataFactory.blankNode('b2')]);
 		expect(screen.queryByRole('button', { name: 'More actions' })).toBeNull();
@@ -114,6 +123,7 @@ describe('StatementList', () => {
 			</FormEditorContext.Provider>
 		);
 
+		await userEvent.click(screen.getByRole('button', { name: 'Expand' }));
 		await userEvent.click(screen.getByTitle('Show this blank node'));
 
 		expect(screen.getByTitle('Show this blank node').textContent).toContain('[ Opening hours · 2 properties ]');
