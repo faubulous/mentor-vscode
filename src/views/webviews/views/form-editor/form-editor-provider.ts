@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { EditOperation } from '@src/services/editing/edit-operation';
-import { IDefinitionRevealTarget } from '@src/views/trees/definition-tree/definition-reveal-target.interface';
+import { IDefinitionRevealTarget } from '@src/commands/definition-tree/definition-reveal-target.interface';
 import { FormEditorSession } from './form-editor-session';
 import { reviveTerms } from '@src/utilities/rdf-terms';
 

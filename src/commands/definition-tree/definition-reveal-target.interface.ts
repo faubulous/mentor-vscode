@@ -2,8 +2,8 @@ import * as vscode from 'vscode';
 
 /**
  * An editor that shows the definitions of the definition tree itself, in place of a text editor,
- * while it is in front with the document of the tree. The tree asks it first and opens a text
- * editor only when it declines.
+ * while it is in front with the document of the tree. The reveal command of the tree asks it
+ * first and opens a text editor only when it declines.
  */
 export interface IDefinitionRevealTarget {
 	/**
