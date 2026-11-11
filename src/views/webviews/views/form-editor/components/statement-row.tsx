@@ -6,7 +6,7 @@ import { ScopeKey } from '@src/utilities/config-scope';
 import { NamespaceInfo, PropertyView, TermView } from '../form-editor-model';
 import { useRowEditorState } from '../hooks/use-row-editor-state';
 import { StatementServices } from '../hooks/use-statement-services';
-import { RemoveShortcut } from '../services/remove-shortcut';
+import { FormEditorShortcuts } from '../form-editor-shortcuts';
 import { LanguageFilter } from '../state/language-filter';
 import { RowValue } from '../state/row-value';
 import { useFormEditorContext } from '../state/form-editor-context';
@@ -192,7 +192,7 @@ export function StatementRow({ property, editor, services, autoFocus = false, he
 			return;
 		}
 
-		if (RemoveShortcut.matches(event) && !header && editor && !editor.isNew) {
+		if (FormEditorShortcuts.Remove.matches(event) && !header && editor && !editor.isNew) {
 			event.preventDefault();
 			event.stopPropagation();
 			editor.removeProperty();

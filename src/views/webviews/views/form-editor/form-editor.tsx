@@ -15,6 +15,7 @@ import { EmptyState, LoadingState, ProblemState, ReadOnlyBanner } from './compon
 import { DocumentPosition, DocumentProblem, DocumentSnapshot } from './form-editor-model';
 import { ScopeKey } from '@src/utilities/config-scope';
 import { FormEditorMessages, FormEditorWebviewMessage } from './form-editor-messages';
+import { FormEditorShortcuts } from './form-editor-shortcuts';
 import { useBusyResources } from './hooks/use-busy-resources';
 import { useFocusedBlock } from './hooks/use-focused-block';
 import { useFormBlocks } from './hooks/use-form-blocks';
@@ -226,7 +227,7 @@ function FormEditor(): React.JSX.Element {
 			return;
 		}
 
-		if (event.key.toLowerCase() === 'f' && (event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey) {
+		if (FormEditorShortcuts.Find.matches(event)) {
 			event.preventDefault();
 			setFindOpen(true);
 			setFindFocusRequest(current => current + 1);

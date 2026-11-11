@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { VscodeContextMenu } from '@vscode-elements/elements';
 import { useVscodeElementRef } from '@src/views/webviews/hooks';
-import { RemoveShortcut } from '../services/remove-shortcut';
+import { FormEditorShortcuts } from '../form-editor-shortcuts';
 
 /**
  * What the ⋮ menu of a card does; an action that is absent is left out of the menu.
@@ -48,7 +48,7 @@ export function ResourceCardMenu({ actions }: ResourceCardMenuProps): React.JSX.
 	const items = [
 		...(actions.onReveal ? [{ label: 'Reveal in Editor', value: 'reveal' }] : []),
 		...(actions.onReveal && actions.onRemove ? [{ separator: true }] : []),
-		...(actions.onRemove ? [{ label: 'Remove', value: 'remove', keybinding: RemoveShortcut.label }] : [])
+		...(actions.onRemove ? [{ label: 'Remove', value: 'remove', keybinding: FormEditorShortcuts.Remove.label }] : [])
 	];
 
 	if (items.length === 0) {

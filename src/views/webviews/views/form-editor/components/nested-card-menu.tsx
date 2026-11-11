@@ -1,7 +1,7 @@
 import { MutableRefObject } from 'react';
 import { VscodeContextMenu } from '@vscode-elements/elements';
 import { useVscodeElementRef } from '@src/views/webviews/hooks';
-import { RemoveShortcut } from '../services/remove-shortcut';
+import { FormEditorShortcuts } from '../form-editor-shortcuts';
 
 /**
  * What the row holding the nested card of a blank node can do with the node.
@@ -84,7 +84,7 @@ export function NestedCardMenu({ actions, menuRef }: NestedCardMenuProps): React
 					{ label: 'Duplicate', value: 'duplicate' },
 					...(actions.onCopyAsTurtle ? [{ label: 'Copy as Turtle', value: 'copy' }] : []),
 					{ separator: true },
-					{ label: 'Remove', value: 'remove', keybinding: RemoveShortcut.label }
+					{ label: 'Remove', value: 'remove', keybinding: FormEditorShortcuts.Remove.label }
 				]}
 			></vscode-context-menu>
 		</span>

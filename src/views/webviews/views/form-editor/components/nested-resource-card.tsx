@@ -5,7 +5,7 @@ import { termToString } from 'rdf-string';
 import { NestedResourceRef } from '../form-editor-model';
 import { useResourceDetail } from '../hooks/use-resource-detail';
 import { IResourceDataService } from '../services/resource-data-service.interface';
-import { RemoveShortcut } from '../services/remove-shortcut';
+import { FormEditorShortcuts } from '../form-editor-shortcuts';
 import { NestedCardActions, NestedCardMenu } from './nested-card-menu';
 import { NestedResourcePlaceholder } from './nested-resource-placeholder';
 import { PinnedPropertiesContext } from '../state/pinned-properties-context';
@@ -90,7 +90,7 @@ export function NestedResourceCard({ nested, dataService, depth, visited, action
 	// The shortcut of Remove removes the node while the focus is in the header of its card or in no
 	// row of it; a row removes itself by it.
 	const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
-		if (!actions || !RemoveShortcut.matches(event) || !_isOwnHeader(event.target, event.currentTarget)) {
+		if (!actions || !FormEditorShortcuts.Remove.matches(event) || !_isOwnHeader(event.target, event.currentTarget)) {
 			return;
 		}
 

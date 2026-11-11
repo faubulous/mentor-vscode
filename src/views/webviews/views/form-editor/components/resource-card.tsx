@@ -4,7 +4,7 @@ import { termToString } from 'rdf-string';
 import { ResourceSummary } from '../form-editor-model';
 import { useResourceDetail } from '../hooks/use-resource-detail';
 import { IResourceDataService } from '../services/resource-data-service.interface';
-import { RemoveShortcut } from '../services/remove-shortcut';
+import { FormEditorShortcuts } from '../form-editor-shortcuts';
 import { NestedCardsCollapse, NestedCardsCollapseContext } from '../state/nested-cards-collapse-context';
 import { PinnedProperties, PinnedPropertiesContext } from '../state/pinned-properties-context';
 import { useFormEditorContext } from '../state/form-editor-context';
@@ -101,7 +101,7 @@ export function ResourceCard({ summary, dataService, expanded, writing = false, 
 	// The shortcut of Remove removes the card while the focus is in it but in none of its rows,
 	// which remove themselves by it.
 	const handleKeyDown = (event: KeyboardEvent<HTMLElement>): void => {
-		if (!RemoveShortcut.matches(event) || readOnly || !onRemoveResource || (event.target instanceof Element && event.target.closest('.statement-line'))) {
+		if (!FormEditorShortcuts.Remove.matches(event) || readOnly || !onRemoveResource || (event.target instanceof Element && event.target.closest('.statement-line'))) {
 			return;
 		}
 

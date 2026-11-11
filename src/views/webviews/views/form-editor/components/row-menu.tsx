@@ -2,7 +2,7 @@ import { useRef } from 'react';
 import { VscodeContextMenu } from '@vscode-elements/elements';
 import { useVscodeElementRef } from '@src/views/webviews/hooks';
 import { ScopeKey } from '@src/utilities/config-scope';
-import { RemoveShortcut } from '../services/remove-shortcut';
+import { FormEditorShortcuts } from '../form-editor-shortcuts';
 
 /**
  * Properties of the {@link RowMenu} component.
@@ -108,7 +108,7 @@ function _itemsOf(scope: ScopeKey | undefined, pinScopes: readonly ScopeKey[], c
 			...(scope ? [{ label: 'Unpin', value: 'unpin' }] : [])
 		]
 		: [];
-	const removal = canRemove ? [{ label: 'Remove', value: 'remove', keybinding: RemoveShortcut.label }] : [];
+	const removal = canRemove ? [{ label: 'Remove', value: 'remove', keybinding: FormEditorShortcuts.Remove.label }] : [];
 
 	return [...pins, ...(pins.length > 0 && removal.length > 0 ? [{ separator: true }] : []), ...removal];
 }
