@@ -51,6 +51,18 @@ describe('EditSynthesizer', () => {
 		});
 	});
 
+	describe('removeResource', () => {
+		it('removes every block of a resource with the comments directly above it, and leaves the statements that refer to it', () => {
+			const body = `ex:a ex:p ex:s .\n\n# about s\nex:s ex:p ex:b ;\n    ex:q [ ex:r "x" ] .\n\nex:c ex:p ex:d .\n\nex:s ex:t ex:e .\n`;
+
+			expect(edit(body, [{ op: 'removeResource', subject }])).toBe(`ex:a ex:p ex:s .\n\nex:c ex:p ex:d .\n`);
+		});
+
+		it('refuses a resource the document does not describe', () => {
+			expect(edit(`ex:a ex:p ex:s .\n`, [{ op: 'removeResource', subject }])).toBe('rejected:resourceGone');
+		});
+	});
+
 	describe('several operations', () => {
 		it('applies independent operations in one plan', () => {
 			const body = `ex:s ex:p ex:a ;\n    ex:q ex:b .\n`;

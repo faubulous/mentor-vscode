@@ -25,5 +25,11 @@ export type EditOperation =
 	 * Write the values of a predicate of the subject under another predicate, which the subject
 	 * must not carry yet.
 	 */
-	| { op: 'setPredicate'; subject: NamedNode | BlankNode; predicate: string; newPredicate: string };
+	| { op: 'setPredicate'; subject: NamedNode | BlankNode; predicate: string; newPredicate: string }
+	/**
+	 * Remove a resource described at the top level of the document: every block of statements about
+	 * it goes as a whole, with the blank nodes written in it and the comments directly above it.
+	 * Statements of other resources that refer to it stay.
+	 */
+	| { op: 'removeResource'; subject: NamedNode | BlankNode };
 

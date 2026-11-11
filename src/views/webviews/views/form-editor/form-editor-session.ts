@@ -521,6 +521,9 @@ export class FormEditorSession implements vscode.Disposable {
 			case 'SetPin':
 				await this.setPin(message.resource, message.predicate, message.scope);
 				break;
+			case 'RemoveResource':
+				await this.removeResource(message.resource);
+				break;
 			case 'ExecuteCommand': {
 				const command = message as ExecuteCommandMessage;
 
@@ -791,6 +794,50 @@ export class FormEditorSession implements vscode.Disposable {
 		return container.isRegistered(ServiceToken.VocabularyRepository)
 			? container.resolve<VocabularyRepository>(ServiceToken.VocabularyRepository)
 			: undefined;
+	}
+
+	/**
+	 * Remove a resource with all its statements from the document, as one edit that one undo takes
+	 * back, once the user confirms it: the blocks of statements about it go with the blank nodes
+	 * written in them, and the statements of other resources that refer to it stay.
+	 * @param resource The resource.
+	 * @returns Whether the resource was removed.
+	 */
+	async removeResource(resource: NamedNode | BlankNode): Promise<boolean> {
+		const entry = this._index ? getEntry(this._index, resource) : undefined;
+		const context = this._getTokenizedContext();
+
+		if (!entry || !context || this._snapshot?.readOnly !== undefined) {
+			return false;
+		}
+
+		const summary = this._snapshot?.resources.find(candidate => candidate.term.equals(resource));
+		const name = summary?.hasLabel ? summary.label : summary?.prefixedName ?? (resource.termType === 'NamedNode' ? resource.value : `_:${resource.value}`);
+		const count = entry.quads.length;
+		const answer = await vscode.window.showWarningMessage(`Remove ${name}?`, { modal: true, detail: `Its ${count} ${count === 1 ? 'statement is' : 'statements are'} removed from the document. Statements of other resources that refer to it stay.` }, 'Remove');
+
+		if (answer !== 'Remove') {
+			return false;
+		}
+
+		const operations: EditOperation[] = [{ op: 'removeResource', subject: resource }];
+		const outcome = await this._editHandler.handle({ editId: `remove-${Date.now()}`, baseVersion: this._document.version, operations }, {
+			document: this._document,
+			context,
+			tokenSource: this._tokenSource,
+			quadContexts: this._quadContexts
+		});
+
+		if (!outcome.ok) {
+			getLog().info(`Form editor could not remove ${name} (${outcome.problem.kind})${outcome.detail ? `: ${outcome.detail}` : ''}`);
+			void vscode.window.showErrorMessage(`${name} could not be removed.`);
+
+			return false;
+		}
+
+		this._publishSnapshot();
+
+		return true;
 	}
 
 	/**

@@ -1,20 +1,23 @@
-import { FocusEvent, KeyboardEvent, useState } from 'react';
+import { FocusEvent, KeyboardEvent, useRef, useState } from 'react';
 import { RDF } from '@faubulous/mentor-rdf/ontologies';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { ValueKind } from '@src/utilities/value-kind';
 import { ScopeKey } from '@src/utilities/config-scope';
-import { PropertyView, TermView } from '../form-editor-model';
+import { NamespaceInfo, PropertyView, TermView } from '../form-editor-model';
 import { useRowEditorState } from '../hooks/use-row-editor-state';
 import { StatementServices } from '../hooks/use-statement-services';
+import { RemoveShortcut } from '../services/remove-shortcut';
 import { LanguageFilter } from '../state/language-filter';
 import { RowValue } from '../state/row-value';
 import { useFormEditorContext } from '../state/form-editor-context';
 import { StatementRowEditor } from '../state/statement-row-editor';
 import { StatementRowState } from '../state/statement-row-state';
 import { PinnedProperties, usePinnedProperties } from '../state/pinned-properties-context';
+import { getLiteralFieldTag, getLiteralTag } from './datatype-labels';
 import { EditedRow } from './edited-row';
-import { PinButton } from './pin-button';
+import { RowMenu } from './row-menu';
 import { PredicateField } from './predicate-field';
+import { PredicateTags } from './predicate-tags';
 import { PropertyComments } from './property-comments';
 import { ResourceValues } from './resource-values';
 import { getRowErrorMessage } from './row-error-message';
@@ -117,12 +120,6 @@ export interface StatementRowProps extends StatementRowContext {
 	autoFocus?: boolean;
 
 	/**
-	 * Whether an edited row offers a button that removes its property, as the rows of a nested
-	 * blank node do.
-	 */
-	removable?: boolean;
-
-	/**
 	 * The header the row is, where it leads its card.
 	 */
 	header?: RowHeader;
@@ -155,8 +152,9 @@ interface ShownValue {
  * row that only reads shows the predicate by its label and the values as they are read. An edited
  * row shows the same layout as fields that are plain at rest and draw their box on intent: the
  * predicate field, a field per literal with the label of its language tag or datatype after the
- * text, the input of the next value after the last pill, and a button that removes each value, and
- * in the nested card of a blank node one that removes the property. A header row without a value
+ * text, the input of the next value after the last pill, and a button that removes each value. Its
+ * ⋮ menu pins the property and removes it with all its values, as its shortcut does in the row. A
+ * header row without a value
  * asks for it with a link that turns into the input in place. The row is written when the focus
  * leaves it or Enter is pressed in a literal; Escape gives up what was typed. Keys pressed in the
  * rows of a blank node shown in the row are theirs. While the form shows one language, the
@@ -165,10 +163,11 @@ interface ShownValue {
  * @param props The statement, its editor and where the row stands.
  * @returns The row.
  */
-export function StatementRow({ property, editor, services, autoFocus = false, removable, header, ...context }: StatementRowProps): React.JSX.Element {
+export function StatementRow({ property, editor, services, autoFocus = false, header, ...context }: StatementRowProps): React.JSX.Element {
 	const state = useRowEditorState(editor);
 	const edited: EditedRow | undefined = editor && state && services ? { editor, state, services } : undefined;
-	const { languageFilter = LanguageFilter.ALL, pinScopes = [] } = useFormEditorContext();
+	const { languageFilter = LanguageFilter.ALL, pinScopes = [], languageTags, namespaces } = useFormEditorContext();
+	const rowRef = useRef<HTMLDivElement>(null);
 	const cardPins = usePinnedProperties();
 	const values = _shownValues(state?.draft.values ?? property?.values.map(view => ({ kind: 'written' as const, view })) ?? [], services, languageFilter);
 	const literals = [...values.filter(entry => _kindOf(entry.view) === 'literal'), ..._missingLanguageField(edited, languageFilter)];
@@ -179,7 +178,11 @@ export function StatementRow({ property, editor, services, autoFocus = false, re
 	const error = state ? getRowErrorMessage(state) : undefined;
 	const rowKind = _rowKindOf(literals.length, resources.length, wholes.length);
 	const [addingValue, setAddingValue] = useState(false);
-	const addLink = edited && !addingValue ? _addLinkOf(edited, header, literals.length, resources.length, wholes.length) : undefined;
+	// A collapsed nested card shows its type, but does not ask for a missing one: without a type it
+	// leaves out the label of the type too, and its summary takes the row.
+	const folded = header?.kind === 'type' && header.collapsed;
+	const typeless = folded && resources.length === 0;
+	const addLink = edited && !addingValue && !folded ? _addLinkOf(edited, header, literals.length, resources.length, wholes.length) : undefined;
 	// The label row is the title of its card: it offers the input of a new value only while the
 	// resource has no label, and the label of another language comes through the language picker.
 	const titled = header?.kind === 'label' && literals.length > 0;
@@ -189,7 +192,11 @@ export function StatementRow({ property, editor, services, autoFocus = false, re
 			return;
 		}
 
-		if (event.key === 'Escape') {
+		if (RemoveShortcut.matches(event) && !header && editor && !editor.isNew) {
+			event.preventDefault();
+			event.stopPropagation();
+			editor.removeProperty();
+		} else if (event.key === 'Escape') {
 			event.preventDefault();
 			editor?.revert();
 		} else if (event.key === 'Enter' && !event.shiftKey) {
@@ -208,7 +215,8 @@ export function StatementRow({ property, editor, services, autoFocus = false, re
 
 	return (
 		<div
-			className={`statement-line is-${rowKind}-row${edited ? ' is-editable' : ''}${editor?.isNew && !header ? ' is-draft' : ''}${_headerClassOf(header)}`}
+			ref={rowRef}
+			className={`statement-line is-${rowKind}-row${edited ? ' is-editable' : ''}${editor?.isNew && !header ? ' is-draft' : ''}${_headerClassOf(header)}${typeless ? ' is-typeless' : ''}`}
 			role="group"
 			aria-label={header ? _headerLabelOf(header) : editor?.isNew ? 'New statement' : label}
 			data-predicate={_predicateIriOf(predicateView)}
@@ -218,15 +226,20 @@ export function StatementRow({ property, editor, services, autoFocus = false, re
 		>
 			{header?.kind === 'type' && <span className="statement-gutter">{_chevron(header)}</span>}
 			{header
-				? _headerPredicateOf(header, edited, label)
+				? !typeless && _headerPredicateOf(header, edited, label)
 				: (
-					<span className="statement-predicate" title={edited ? undefined : predicateView && getTermTitle(predicateView.term)}>
-						{edited ? <PredicateField editor={edited.editor} state={edited.state} label={label} autoFocus={autoFocus} /> : label}
+					<span className={`statement-predicate${_isIriLabel(predicateView, label) ? ' is-iri' : ''}`} title={edited ? undefined : predicateView && getTermTitle(predicateView.term)}>
+						{edited ? <PredicateField editor={edited.editor} state={edited.state} label={label} autoFocus={autoFocus} /> : <span className="statement-predicate-text">{label}</span>}
+						{wholes.length > 0 && <span className="statement-predicate-count">{wholes.length}</span>}
+						<PredicateTags
+							tags={_tagsOf(literals, edited, languageTags, namespaces)}
+							onOpen={edited ? index => rowRef.current?.querySelector<HTMLElement>(`[data-value-index="${index}"] .literal-field-tag`)?.click() : undefined}
+						/>
 					</span>
 				)}
 			<span className="statement-values">
 				{literals.map(entry => <StatementValueCell key={entry.index} {...entry} edited={edited} {...context} />)}
-				{edited ? !addLink && !titled && _resourceBox(edited, resources, property, { header: header?.kind, autoFocus: addingValue, label }) : _resourcePills(resources, context)}
+				{edited && !(folded && resources.length === 0) ? !addLink && !titled && _resourceBox(edited, resources, property, { header: header?.kind, autoFocus: addingValue, label }) : _resourcePills(resources, context)}
 				{wholes.map(entry => <StatementValueCell key={entry.index} {...entry} edited={edited} {...context} />)}
 				{addLink && <button type="button" className="add-link statement-value-add" onClick={() => setAddingValue(true)}>{addLink}</button>}
 				{header?.kind === 'type' && header.collapsed && _collapsedSummaryOf(header)}
@@ -234,12 +247,7 @@ export function StatementRow({ property, editor, services, autoFocus = false, re
 				{property && <PropertyComments property={property} />}
 			</span>
 			<span className="statement-actions">
-				{!header && _pinOf(predicateView, label, cardPins, pinScopes)}
-				{removable && !header && edited && !edited.editor.isNew && (
-					<button type="button" className="statement-row-remove" aria-label={`Remove ${label}`} title="Remove property" onClick={() => edited.editor.removeProperty()}>
-						<vscode-icon name="close" size={12}></vscode-icon>
-					</button>
-				)}
+				{!header && _rowMenuOf(predicateView, label, cardPins, pinScopes, edited)}
 			</span>
 			{error && <RowError message={error} onDismiss={state?.rejection ? () => editor?.dismissRejection() : undefined} />}
 		</div>
@@ -269,34 +277,79 @@ function _collapsedSummaryOf(header: NestedCardHeader): React.JSX.Element | null
 }
 
 /**
- * The pin button of a row, for a predicate other than the type, where the resource of its card,
- * or the blank node of its nested card, can pin.
+ * The ⋮ menu of a row: the pin of its predicate, for a predicate other than the type where the
+ * resource of its card, or the blank node of its nested card, can pin, and Remove, which removes
+ * the property with all its values, where the row is written. A row for a new statement has none.
  * @param predicateView The predicate of the row, once it names one.
  * @param label The label of the predicate.
  * @param cardPins The pins of the card.
  * @param pinScopes The settings a property can be pinned in.
- * @returns The button, or nothing.
+ * @param edited The row, where it is edited.
+ * @returns The menu, or nothing.
  */
-function _pinOf(predicateView: TermView | undefined, label: string, cardPins: PinnedProperties, pinScopes: readonly ScopeKey[]): React.JSX.Element | null {
+function _rowMenuOf(predicateView: TermView | undefined, label: string, cardPins: PinnedProperties, pinScopes: readonly ScopeKey[], edited: EditedRow | undefined): React.JSX.Element | null {
 	const predicate = predicateView?.term;
 	const onPin = cardPins.onPin;
 
-	if (!onPin || predicate?.termType !== 'NamedNode' || predicate.value === RDF.type) {
+	if (predicate?.termType !== 'NamedNode' || edited?.editor.isNew) {
 		return null;
 	}
 
+	const pinnable = onPin !== undefined && predicate.value !== RDF.type;
 	const scope = cardPins.pins.find(pin => pin.predicate.equals(predicate))?.scope;
 
-	return <PinButton scope={scope} pinScopes={pinScopes} label={label} onPin={next => onPin(predicate, next)} />;
+	return (
+		<RowMenu
+			label={label}
+			scope={pinnable ? scope : undefined}
+			pinScopes={pinScopes}
+			onPin={pinnable ? next => onPin(predicate, next) : undefined}
+			onRemove={edited ? () => edited.editor.removeProperty() : undefined}
+		/>
+	);
 }
 
 /**
- * The IRI of the predicate of a row, which a pinned property of a collapsed card finds the row by.
+ * The IRI of the predicate of a row, which a pinned field of a collapsed card finds the row by.
  * @param predicateView The predicate, once the row names one.
  * @returns The IRI, or `undefined`.
  */
 function _predicateIriOf(predicateView: TermView | undefined): string | undefined {
 	return predicateView?.term.termType === 'NamedNode' ? predicateView.term.value : undefined;
+}
+
+/**
+ * The language tags and datatypes of the literals of a row, which a narrow card shows under the
+ * label: as their fields name them where the row is edited, as they are read otherwise.
+ * @param literals The literals of the row.
+ * @param edited The row, where it is edited.
+ * @param languageTags The spellings of the language tags of the document.
+ * @param namespaces The namespace declarations of the document.
+ * @returns The tags, by the index of their values.
+ */
+function _tagsOf(literals: readonly ShownValue[], edited: EditedRow | undefined, languageTags: Readonly<Record<string, string>>, namespaces: readonly NamespaceInfo[]): { index: number; tag: string }[] {
+	return literals.flatMap(({ view, index }) => {
+		if (view.term.termType !== 'Literal') {
+			return [];
+		}
+
+		const tag = edited
+			? getLiteralFieldTag(view.term, languageTags, datatype => edited.services.resolver.viewOf(datatype).prefixedName)
+			: getLiteralTag(view.term, languageTags, namespaces);
+
+		return tag ? [{ index, tag }] : [];
+	});
+}
+
+/**
+ * Indicate whether a row names its predicate by the IRI, which is then cut at its start, so the
+ * local name stays in view.
+ * @param predicateView The predicate.
+ * @param label The label the row shows.
+ * @returns `true` when the label is the IRI.
+ */
+function _isIriLabel(predicateView: TermView | undefined, label: string): boolean {
+	return predicateView?.term.termType === 'NamedNode' && label === predicateView.term.value;
 }
 
 /**

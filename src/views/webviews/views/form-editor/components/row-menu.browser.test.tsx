@@ -34,7 +34,7 @@ function renderCard() {
 	return document.querySelector<HTMLElement>('.resource-card.is-nested')!;
 }
 
-describe('PinButton, in a browser', () => {
+describe('RowMenu, in a browser', () => {
 	it('opens its menu over the rows after it in a nested card, with only the choices the pin can switch to', async () => {
 		const box = renderCard();
 
@@ -43,9 +43,9 @@ describe('PinButton, in a browser', () => {
 		const row = within(box).getByRole('group', { name: 'ex:q' });
 
 		await userEvent.hover(row);
-		await userEvent.click(within(row).getByRole('button', { name: 'Pin ex:q' }));
+		await userEvent.click(within(row).getByRole('button', { name: 'More actions for ex:q' }));
 
-		const menu = row.querySelector<HTMLElement & { show: boolean }>('vscode-context-menu')!;
+		const menu = row.querySelector<HTMLElement & { show: boolean }>('.row-menu vscode-context-menu')!;
 
 		await expect.poll(() => menu.show).toBe(true);
 

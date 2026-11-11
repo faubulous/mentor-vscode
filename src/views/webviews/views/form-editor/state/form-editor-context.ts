@@ -100,6 +100,12 @@ export interface FormEditorContextValue {
 	onRevealInTextEditor?: (position: DocumentPosition) => void;
 
 	/**
+	 * Remove a resource with all its statements from the document, once the user confirms it.
+	 * @param resource The resource.
+	 */
+	onRemoveResource?: (resource: NamedNode | BlankNode) => void;
+
+	/**
 	 * The resource last revealed, as from the definition tree, whose entry is marked until the
 	 * form is used.
 	 */

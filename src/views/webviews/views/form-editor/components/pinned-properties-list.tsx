@@ -4,6 +4,7 @@ import { PinnedProperty, PropertyView, ResourceDetail, TermView } from '../form-
 import { LiteralDatatypes } from '../services/statement/literal-datatypes';
 import { useFormEditorContext } from '../state/form-editor-context';
 import { LanguageFilter } from '../state/language-filter';
+import { HighlightedText } from './highlighted-text';
 import { getTermLabel } from './term-labels';
 import { ValuePill } from './value-pill';
 
@@ -29,13 +30,14 @@ export interface PinnedPropertiesListProps {
 }
 
 /**
- * A pinned property the resource has, with its values the form shows.
+ * A property a collapsed card shows, with its values the form shows: a pinned one, or the
+ * description of the resource.
  */
 interface PinnedPropertyItem {
 	/**
-	 * The pin.
+	 * The pin, absent for the description, which the card shows unpinned.
 	 */
-	pin: PinnedProperty;
+	pin?: PinnedProperty;
 
 	/**
 	 * The property.
@@ -49,18 +51,20 @@ interface PinnedPropertyItem {
 }
 
 /**
- * The pinned properties of a collapsed card, as items that flow from left to right: the predicate
- * as a caption, marked when it is pinned for oneself only, above its values. Resources are small
- * pills, numbers monospace, blank nodes and lists a line that names them, and a description runs
- * the full width, cut after two lines. A property the resource does not have is left out, and so
- * is the label the title of the card shows. A click on an item, or Enter on it, expands the card
- * at that property.
+ * The pinned properties of a collapsed card and its description, in the order the document writes
+ * them, as items that flow from left to right: the predicate as a caption, marked when it is
+ * pinned for oneself only, above its values. Resources are small pills, numbers monospace, blank
+ * nodes and lists a line that names them. A description runs the full width, cut after a few
+ * lines; the description of the resource, which the card shows pinned or not, has no caption. A
+ * property the resource does not have is left out, and so is the label the title of the card
+ * shows. A click on an item, or Enter on it, expands the card at that property.
  * @param props The statements, the pins and what opens a property.
- * @returns The items, or nothing when the resource has none of the pinned properties.
+ * @returns The items, or nothing when the resource has neither a pinned property nor a description.
  */
 export function PinnedPropertiesList({ detail, pins, onOpen }: PinnedPropertiesListProps): React.JSX.Element | null {
-	const { descriptionPredicates = [], labelPredicates = [], languageFilter = LanguageFilter.ALL } = useFormEditorContext();
-	const items = _itemsOf(detail, pins.filter(pin => !_titleOf(detail, labelPredicates)?.equals(pin.predicate)), languageFilter);
+	const { descriptionPredicates = [], labelPredicates = [], languageFilter = LanguageFilter.ALL, filterText } = useFormEditorContext();
+	const title = _titleOf(detail, labelPredicates);
+	const items = _itemsOf(detail, pins.filter(pin => !title?.equals(pin.predicate)), descriptionPredicates, languageFilter);
 
 	if (items.length === 0) {
 		return null;
@@ -69,33 +73,37 @@ export function PinnedPropertiesList({ detail, pins, onOpen }: PinnedPropertiesL
 	return (
 		<div className="pinned-properties-list">
 			{items.map(({ pin, property, values }) => {
-				const description = descriptionPredicates.some(predicate => predicate.equals(pin.predicate));
+				const predicate = property.predicate.term as NamedNode;
+				const description = descriptionPredicates.some(candidate => candidate.equals(predicate));
 				const label = getTermLabel(property.predicate);
+				const text = values.map(value => value.term.value).join(' ');
 
 				const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
 					if (event.key === 'Enter' || event.key === ' ') {
 						event.preventDefault();
-						onOpen(pin.predicate);
+						onOpen(predicate);
 					}
 				};
 
 				return (
 					<div
-						key={pin.predicate.value}
-						className={`pinned-property${description ? ' is-description' : ''}`}
+						key={predicate.value}
+						className={`pinned-property${description ? ' is-description' : ''}${pin ? '' : ' is-unpinned'}`}
 						role="button"
 						tabIndex={0}
 						aria-label={`${label}: open the property`}
-						title={pin.predicate.value}
-						onClick={() => onOpen(pin.predicate)}
+						title={predicate.value}
+						onClick={() => onOpen(predicate)}
 						onKeyDown={handleKeyDown}
 					>
-						<span className="pinned-property-caption">
-							{label}
-							{pin.scope === 'user' && <vscode-icon name="pin" size={11} title="Pinned for you"></vscode-icon>}
-						</span>
+						{pin && (
+							<span className="pinned-property-caption">
+								{label}
+								{pin.scope === 'user' && <vscode-icon name="pin" size={11} title="Pinned for you"></vscode-icon>}
+							</span>
+						)}
 						<span className="pinned-property-values">
-							{description ? values.map(value => value.term.value).join(' ') : values.map((value, index) => _valueOf(value, index))}
+							{description ? <HighlightedText text={text} query={filterText} /> : values.map((value, index) => _valueOf(value, index))}
 						</span>
 					</div>
 				);
@@ -115,18 +123,25 @@ function _titleOf(detail: ResourceDetail, labelPredicates: readonly NamedNode[])
 }
 
 /**
- * The pinned properties a resource has, with the values the form shows.
+ * The pinned properties a resource has and its description, the most preferred description
+ * predicate it has, with the values the form shows, in the order the document writes them.
  * @param detail The statements of the resource.
  * @param pins The pins.
+ * @param descriptionPredicates The description predicates, most preferred first.
  * @param languageFilter Which literals are shown.
- * @returns The items, in the order of the pins.
+ * @returns The items, in document order.
  */
-function _itemsOf(detail: ResourceDetail, pins: readonly PinnedProperty[], languageFilter: LanguageFilter): PinnedPropertyItem[] {
-	return pins.flatMap(pin => {
-		const property = detail.properties.find(candidate => candidate.predicate.term.equals(pin.predicate));
-		const values = property?.values.filter(value => languageFilter.shows(value.term)) ?? [];
+function _itemsOf(detail: ResourceDetail, pins: readonly PinnedProperty[], descriptionPredicates: readonly NamedNode[], languageFilter: LanguageFilter): PinnedPropertyItem[] {
+	const shown = (property: PropertyView): TermView[] => property.values.filter(value => languageFilter.shows(value.term));
+	const description = descriptionPredicates
+		.map(predicate => detail.properties.find(property => property.predicate.term.equals(predicate)))
+		.find(property => property !== undefined && shown(property).length > 0);
 
-		return property && values.length > 0 ? [{ pin, property, values }] : [];
+	return detail.properties.flatMap(property => {
+		const pin = pins.find(candidate => property.predicate.term.equals(candidate.predicate));
+		const values = shown(property);
+
+		return (pin || property === description) && values.length > 0 ? [{ pin, property, values }] : [];
 	});
 }
 

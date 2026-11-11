@@ -73,7 +73,18 @@ async function renderCard(nodeDetail: ResourceDetail = NODE_DETAIL, expand = tru
  */
 async function pick(value: string): Promise<void> {
 	await act(async () => {
-		nestedCard().querySelector('vscode-context-menu')!.dispatchEvent(new CustomEvent('vsc-context-menu-select', { detail: { value } }));
+		nestedCard().querySelector('.nested-card-menu vscode-context-menu')!.dispatchEvent(new CustomEvent('vsc-context-menu-select', { detail: { value } }));
+	});
+}
+
+/**
+ * Pick an item of the ⋮ menu of a row, as the menu reports a pick.
+ * @param row The row.
+ * @param value The value of the item.
+ */
+async function pickRowItem(row: HTMLElement, value: string): Promise<void> {
+	await act(async () => {
+		row.querySelector('.row-menu vscode-context-menu')!.dispatchEvent(new CustomEvent('vsc-context-menu-select', { detail: { value } }));
 	});
 }
 
@@ -144,16 +155,42 @@ describe('StatementList, with a blank node', () => {
 		expect(host.submitted).toEqual([]);
 	});
 
-	it('removes a property of the blank node with the button of its row, which the card itself has not', async () => {
+	it('removes a row of the blank node with Remove of the ⋮ menu of the row', async () => {
 		const { host } = await renderCard();
 
-		expect(within(cardRowOf('rdfs:label')).queryByRole('button', { name: 'Remove rdfs:label' })).toBeNull();
+		expect(within(nestedRowOf('rdfs:label')).getByRole('button', { name: 'More actions for rdfs:label' })).toBeTruthy();
 
-		await act(async () => {
-			fireEvent.click(within(nestedRowOf('rdfs:label')).getByRole('button', { name: 'Remove rdfs:label' }));
-		});
+		await pickRowItem(nestedRowOf('rdfs:label'), 'remove');
 
 		expect(host.submitted.map(record => record.operations)).toEqual([[{ op: 'setValues', subject: NODE, predicate: RDFS.label, values: [] }]]);
+	});
+
+	it('removes the row the focus is in by Ctrl+Shift+K', async () => {
+		const { host } = await renderCard();
+
+		await act(async () => {
+			fireEvent.keyDown(within(nestedRowOf('rdfs:comment')).getByLabelText('Value 1'), { key: 'K', ctrlKey: true, shiftKey: true });
+		});
+
+		expect(host.submitted.map(record => record.operations)).toEqual([[{ op: 'setValues', subject: NODE, predicate: RDFS.comment, values: [] }]]);
+	});
+
+	it('removes the blank node by Ctrl+Shift+K in the header of its card', async () => {
+		const { host } = await renderCard();
+
+		await act(async () => {
+			fireEvent.keyDown(within(nestedCard()).getByRole('group', { name: 'Type' }), { key: 'K', ctrlKey: true, shiftKey: true });
+		});
+
+		expect(host.submitted.map(record => record.operations)).toEqual([[{ op: 'setValues', subject: TEST_SUBJECT, predicate: RDFS.comment, values: [{ kind: 'existing', anchor: 120 }] }]]);
+	});
+
+	it('removes a row of the card itself with Remove of the ⋮ menu of the row', async () => {
+		const { host } = await renderCard();
+
+		await pickRowItem(cardRowOf('rdfs:label'), 'remove');
+
+		expect(host.submitted.map(record => record.operations)).toEqual([[{ op: 'setValues', subject: TEST_SUBJECT, predicate: RDFS.label, values: [] }]]);
 	});
 
 	it('opens a row for a new property of the blank node with Add property, and closes it when it is left empty', async () => {
@@ -275,7 +312,7 @@ describe('StatementList, with a blank node', () => {
 	it('opens the ⋯ menu on a right-click on the card, but leaves a right-click in a text field to the browser', async () => {
 		await renderCard();
 
-		const menu = nestedCard().querySelector('vscode-context-menu') as HTMLElement & { show?: boolean };
+		const menu = nestedCard().querySelector('.nested-card-menu vscode-context-menu') as HTMLElement & { show?: boolean };
 
 		fireEvent.contextMenu(within(nestedRowOf('rdfs:label')).getByLabelText('Value 1'));
 

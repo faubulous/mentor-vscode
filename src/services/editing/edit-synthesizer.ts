@@ -5,6 +5,7 @@ import { EditPlan, mergePlans } from './edit-plan';
 import { EditRejection, EditRejectionError } from './edit-rejection';
 import { LocalStyleDetector } from './local-style-detector';
 import { PropertyOperations } from './operations/property-operations';
+import { ResourceOperations } from './operations/resource-operations';
 import { ValueListOperations } from './operations/value-list-operations';
 import { StatementModelBuilder } from './statement-model-builder';
 import { SynthesisContext, SynthesisInput } from './synthesis-context';
@@ -82,6 +83,8 @@ export class EditSynthesizer {
 				return new ValueListOperations(context).setValues(operation);
 			case 'setPredicate':
 				return new PropertyOperations(context).setPredicate(operation);
+			case 'removeResource':
+				return new ResourceOperations(context).removeResource(operation);
 			default:
 				throw new EditRejectionError({ kind: 'unsupportedOperation', op: (operation as { op: string }).op });
 		}

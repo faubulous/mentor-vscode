@@ -637,6 +637,34 @@ describe('FormEditorSession', () => {
 		expect(update).not.toHaveBeenCalled();
 	});
 
+	it('removes a resource with its statements once the user confirms it, as one edit, and leaves the statements that refer to it', async () => {
+		const { session, document, receive } = await createSession('ex:A a ex:C ;\n\tex:p [ ex:q "x" ] .\n\nex:B ex:r ex:A .\n');
+		const applyEdit = vi.spyOn(vscode.workspace, 'applyEdit').mockImplementation(async edit => applyWorkspaceEditTo(edit, document));
+		const showWarningMessage = vi.spyOn(vscode.window, 'showWarningMessage').mockResolvedValueOnce('Remove' as never);
+
+		await receive({ id: 'Ready' });
+
+		expect(await session.removeResource(RdfDataFactory.namedNode(`${EX}A`))).toBe(true);
+		expect(showWarningMessage).toHaveBeenCalledWith(expect.stringContaining('Remove'), expect.objectContaining({ modal: true }), 'Remove');
+		expect(applyEdit).toHaveBeenCalledOnce();
+		expect(document.getText()).not.toContain('ex:A a');
+		expect(document.getText()).not.toContain('ex:q');
+		expect(document.getText()).toContain('ex:B ex:r ex:A .');
+	});
+
+	it('removes nothing when the user does not confirm it', async () => {
+		const { session, document, receive } = await createSession('ex:A a ex:C .\n');
+		const text = document.getText();
+		const applyEdit = vi.spyOn(vscode.workspace, 'applyEdit');
+
+		vi.spyOn(vscode.window, 'showWarningMessage').mockResolvedValueOnce(undefined);
+		await receive({ id: 'Ready' });
+
+		expect(await session.removeResource(RdfDataFactory.namedNode(`${EX}A`))).toBe(false);
+		expect(applyEdit).not.toHaveBeenCalled();
+		expect(document.getText()).toBe(text);
+	});
+
 	it('posts nothing once disposed', async () => {
 		const { session, posted } = await createSession('ex:A a ex:Class .\n');
 

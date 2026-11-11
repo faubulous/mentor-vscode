@@ -90,6 +90,10 @@ export type FormEditorWebviewMessage =
 	 * unpin it when no scope is given.
 	 */
 	| { id: 'SetPin'; resource: NamedNode | BlankNode; predicate: NamedNode; scope?: ScopeKey }
+	/**
+	 * Remove a resource with all its statements from the document, once the user confirms it.
+	 */
+	| { id: 'RemoveResource'; resource: NamedNode | BlankNode }
 	| ExecuteCommandMessage;
 
 /**

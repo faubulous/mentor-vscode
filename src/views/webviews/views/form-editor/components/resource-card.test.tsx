@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from 'vitest';
-import { screen, within } from '@testing-library/react';
+import { act, fireEvent, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWebview } from '@src/utilities/mocks/webview-test-utils';
 import { createResourceDataServiceStub } from '@src/utilities/mocks/resource-data-service-fixtures';
@@ -29,33 +29,35 @@ function renderCard(context: Partial<FormEditorContextValue> = {}, expanded = fa
 }
 
 describe('ResourceCard', () => {
-	it('leads a collapsed card with its title bar, holding the IRI as a link and the usage count, then the label row with the kind icon, the label and the type, and the description', () => {
+	it('leads a collapsed card with its title bar, holding the types and the usage count, then the label row with the kind icon and the label, and the description, and ends it with the IRI as a link', () => {
 		const { container } = renderCard({ onOpenExternal: vi.fn() });
-		const titleBar = container.querySelector('.resource-card-title-bar')!;
+		const titleBar = container.querySelector<HTMLElement>('.resource-card-title-bar')!;
+		const footer = container.querySelector<HTMLElement>('.resource-card-footer')!;
 
 		expect(container.querySelector('.resource-card')?.firstElementChild).toBe(titleBar);
-		expect(within(titleBar as HTMLElement).getByRole('button', { name: TREE.term.value }).classList.contains('resource-card-iri-link')).toBe(true);
-		expect(within(titleBar as HTMLElement).getByText('1 usage').classList.contains('card-usage')).toBe(true);
-		expect(within(titleBar as HTMLElement).getByRole('button', { name: 'Expand' }).getAttribute('aria-expanded')).toBe('false');
-		expect(within(titleBar as HTMLElement).queryByRole('button', { name: /all nested/ })).toBeNull();
+		expect(container.querySelector('.resource-card')?.lastElementChild).toBe(footer);
+		expect(within(titleBar).getByText('Class').classList.contains('resource-card-types')).toBe(true);
+		expect(within(titleBar).getByTitle('1 usage').classList.contains('card-usage')).toBe(true);
+		expect(within(titleBar).getByRole('button', { name: 'Expand' }).getAttribute('aria-expanded')).toBe('false');
+		expect(within(titleBar).queryByRole('button', { name: /all nested/ })).toBeNull();
+		expect(within(footer).getByRole('button', { name: TREE.term.value }).classList.contains('resource-card-iri-link')).toBe(true);
 		expect(screen.getByText('Apple tree').closest('.resource-card-header')).not.toBeNull();
-		expect(screen.getByText('Class').closest('.resource-card-header')).not.toBeNull();
 		expect(container.querySelector('.resource-card-header .statement-predicate')).toBeNull();
 		expect(container.querySelector('.resource-card-header .resource-card-kind vscode-icon')?.getAttribute('data-icon')).toBe('mentor-rdf-class');
 		expect(screen.getByText('A tree bearing apples').classList.contains('resource-card-description')).toBe(true);
 	});
 
-	it('names every type of a collapsed card but the one most resources have, and opens its IRI and reveals it in the editor from the title bar', async () => {
+	it('names every type of a collapsed card but the one most resources have, opens its IRI from the footer and reveals it in the editor from the ⋯ menu', async () => {
 		const onOpenExternal = vi.fn();
 		const onRevealInTextEditor = vi.fn();
+		const { container } = renderCard({ dominantTypeIri: 'http://x/Class', onOpenExternal, onRevealInTextEditor }, false, { ...TREE, typeLabels: ['Class', 'Named individual'] });
 
-		renderCard({ dominantTypeIri: 'http://x/Class', onOpenExternal, onRevealInTextEditor }, false, { ...TREE, typeLabels: ['Class', 'Named individual'] });
-
-		expect(screen.queryByText('Class')).toBeNull();
-		expect(screen.getByText('Named individual').classList.contains('resource-card-type')).toBe(true);
+		expect(container.querySelector('.resource-card-types')?.textContent).toBe('Named individual');
 
 		await userEvent.click(screen.getByRole('button', { name: TREE.term.value }));
-		await userEvent.click(screen.getByRole('button', { name: 'Reveal in editor' }));
+		await act(async () => {
+			container.querySelector('.resource-card-menu vscode-context-menu')!.dispatchEvent(new CustomEvent('vsc-context-menu-select', { detail: { value: 'reveal' } }));
+		});
 
 		expect(onOpenExternal).toHaveBeenCalledWith(TREE.term.value);
 		expect(onRevealInTextEditor).toHaveBeenCalledWith({ line: 4, character: 0 });
@@ -115,7 +117,17 @@ describe('ResourceCard', () => {
 
 		expect(container.querySelector('.resource-card-description')).toBeNull();
 		expect(container.querySelector('.card-usage')).toBeNull();
-		expect(screen.queryByRole('button', { name: 'Reveal in editor' })).toBeNull();
+		expect(screen.queryByRole('button', { name: 'More actions' })).toBeNull();
+	});
+
+	it('removes the card by Ctrl+Shift+K from its title bar, and not from a row', async () => {
+		const onRemoveResource = vi.fn();
+		const { container } = renderCard({ readOnly: false, onRemoveResource }, true);
+
+		fireEvent.keyDown(container.querySelector('.resource-card-title-bar button')!, { key: 'K', ctrlKey: true, shiftKey: true });
+		fireEvent.keyDown(container.querySelector('.statement-line')!, { key: 'K', ctrlKey: true, shiftKey: true });
+
+		expect(onRemoveResource.mock.calls).toEqual([[TREE.term]]);
 	});
 
 	it('marks the revealed card', () => {

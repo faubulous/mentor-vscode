@@ -11,20 +11,16 @@ body {
 }
 
 .form-editor {
-	/* The column of the content, the toolbar and the context bar: its width and its insets. */
+	/* The column of the content, the toolbar and the context bar: its width and the padding of the pane around it. */
 	--form-column: 900px;
-	--form-inset: 48px;
-	--form-inset-end: 40px;
+	--form-inset: 32px;
+	--form-inset-end: 32px;
+	--form-pane-top: 24px;
 	/* The hairline between entries and under the bars, and around the cards. */
 	--form-hairline: var(--vscode-widget-border, var(--vscode-panel-border, #2b2b2b));
 	/* The heights of the context bar and the toolbar, below which the title bars of the cards stay. */
 	--form-context-bar-height: 30px;
 	--form-toolbar-height: 28px;
-	/* The grid of a card: the gutter before the predicate, the predicate column, the gap between the columns, and the inset at the end of a row that its actions overlay. */
-	--form-gutter: 36px;
-	--form-predicate-column: 160px;
-	--form-column-gap: 20px;
-	--form-row-inset: 32px;
 	/* The box of one line of text: a field, the predicate, the IRI. */
 	--form-field-height: 26px;
 	/* The corners: pills and chips take the middle radius of the webviews, fields the large one, icon buttons and floating widgets their own. */
@@ -259,6 +255,7 @@ body {
 }
 
 .form-editor-scroll {
+	container: pane / inline-size;
 	flex: 1 1 auto;
 	position: relative;
 	z-index: 1;
@@ -308,6 +305,15 @@ body {
 
 .form-editor-content {
 	padding-bottom: var(--mentor-space-6);
+}
+
+/* A narrow pane, as a side panel or a split editor, pads its content less. */
+@container pane (max-width: 600px) {
+	.form-editor-scroll > * {
+		--form-inset: 12px;
+		--form-inset-end: 12px;
+		--form-pane-top: 12px;
+	}
 }
 
 /* The overview ruler lies under the scrollbar, at the right edge of the scroll area. */
@@ -406,8 +412,9 @@ body {
 
 /* ---------- Document header ---------- */
 
+/* The title of the document and its IRI, above the line of the toolbar. */
 .document-header {
-	padding: 20px 0 12px;
+	padding: var(--form-pane-top) 0 16px;
 }
 
 .document-header-title {
@@ -420,7 +427,7 @@ body {
 	margin: 0;
 	font-size: 20px;
 	font-weight: 600;
-	line-height: 1.3;
+	line-height: 28px;
 }
 
 .document-header-subline {
@@ -428,28 +435,84 @@ body {
 	color: var(--vscode-descriptionForeground);
 	font-family: var(--form-mono);
 	font-size: 12px;
+	line-height: 18px;
 	overflow-wrap: anywhere;
+}
+
+@container pane (max-width: 600px) {
+	.document-header {
+		padding-bottom: 10px;
+	}
+
+	.document-header-title h1 {
+		font-size: 17px;
+		line-height: 24px;
+	}
 }
 
 /* ---------- Resource cards ---------- */
 
 /*
  * Each card is a bordered box with square corners on a surface a step above the editor, and lays
- * itself out by its own width. The title bar runs from edge to edge; the rows sit inside the side
- * padding of the card.
+ * itself out by its own width in one of three densities: wide in the form editor, narrow in a
+ * side panel, and the tooltip density a host asks for with `data-density`. The tokens of the
+ * density size the title bar, the rows, the label column, the chips and the title;
+ * every row, the title and the IRI start at the inset of the card.
  */
 .resource-card {
 	container: card / inline-size;
+	--card-head-h: 36px;
+	--card-head-pad-x: 8px;
+	--card-head-gap: 6px;
+	/* The rows start under the left edge of the kind icon, which stands under the chevron. */
+	--card-inset: 10px;
+	--row-min-h: 32px;
+	--row-pad-y: 6px;
+	--label-min: 120px;
+	--col-gap: 24px;
+	--chip-h: 22px;
+	--chip-pad-x: 8px;
+	--chip-gap: 6px;
+	--icon-btn: 24px;
+	--title-size: 15px;
+	--clamp: 3;
+	/* The room at the end of a row that its actions overlay: the pin of a pinned property and the ⋮ menu. */
+	--row-actions: 44px;
+	/* The padding that makes a row of one field as tall as a row, its line under it included. */
+	--row-field-pad: calc((var(--row-min-h) - var(--form-field-height) - 1px) / 2);
 	position: relative;
-	padding: 0 8px 8px;
+	padding: 0;
 	border: 1px solid var(--form-hairline);
 	background: var(--form-card-background);
 	line-height: 20px;
 }
 
+/* A card in a hover, which the host asks for; the layout of a tooltip comes with the host. */
+.resource-card[data-density="tooltip"] {
+	--card-inset: 10px;
+	--row-min-h: 20px;
+	--row-pad-y: 0px;
+	--label-min: 72px;
+	--col-gap: 8px;
+	--chip-h: 18px;
+	--chip-pad-x: 5px;
+	--chip-gap: 4px;
+	--title-size: 13px;
+	--clamp: none;
+	max-width: 360px;
+	font-size: 12px;
+	line-height: 18px;
+}
+
 /* The cards stand apart; the gap belongs to the block, which the list measures. */
 .form-block.is-resource {
-	padding-top: 8px;
+	padding-top: 12px;
+}
+
+@container pane (max-width: 600px) {
+	.form-block.is-resource {
+		padding-top: 8px;
+	}
 }
 
 /* The card the context bar names, the one the definition tree revealed, or the one being edited. */
@@ -459,8 +522,8 @@ body {
 }
 
 /*
- * The title bar stays in view under the toolbar while the card scrolls: the chevron, the button
- * that opens the IRI, the IRI, the usages and the tools of the card.
+ * The title bar stays in view under the toolbar while the card scrolls: the chevron, the types of
+ * a collapsed card, the usages and the tools.
  */
 .resource-card-title-bar {
 	position: sticky;
@@ -468,11 +531,16 @@ body {
 	z-index: 6;
 	display: flex;
 	align-items: center;
-	min-height: 44px;
-	margin: 0 -8px;
-	padding: 0 8px 0 10px;
+	gap: var(--card-head-gap);
+	min-height: var(--card-head-h);
+	padding: 0 var(--card-head-pad-x);
 	border-bottom: 1px solid var(--form-row-border);
 	background: var(--form-card-title-background);
+}
+
+.icon-button.resource-card-chevron {
+	width: 20px;
+	height: 20px;
 }
 
 /* The buttons of the title bar and the headers: an icon in a square that tints on hover. */
@@ -481,8 +549,8 @@ body {
 	flex: none;
 	align-items: center;
 	justify-content: center;
-	width: 28px;
-	height: 28px;
+	width: var(--icon-btn, 28px);
+	height: var(--icon-btn, 28px);
 	padding: 0;
 	border: 0;
 	border-radius: var(--form-radius-button);
@@ -507,15 +575,15 @@ body {
 }
 
 /*
- * The IRI of the resource, in a box of one line that a field takes the place of where the resource
- * can be renamed. Its text starts where the predicates of the rows start, past the gutter.
+ * The IRI of the resource in the footer, in a box of one line that a field takes the place of
+ * where the resource can be renamed. As text and as a link it is cut at its start, so the local
+ * name stays in view, and the title tells it whole.
  */
 .resource-card-iri {
 	flex: 1 1 auto;
 	display: flex;
 	align-items: center;
 	min-width: 0;
-	margin-left: 1px;
 	height: var(--form-field-height);
 	color: var(--vscode-descriptionForeground);
 	font-family: var(--form-mono);
@@ -528,6 +596,8 @@ body {
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
+	direction: rtl;
+	text-align: left;
 }
 
 /* The IRI of a collapsed card is a quiet link that opens it, shown as one on hover. */
@@ -561,10 +631,62 @@ body {
 	--vscode-settings-textInputForeground: var(--vscode-foreground);
 }
 
-/* How often the resource is used, before the tools. */
+
+/* The types of a collapsed card, muted, where its text starts: past the chevron, as the title under it. */
+.resource-card-types {
+	flex: 1 1 auto;
+	min-width: 0;
+	padding-left: 5px;
+	color: var(--form-muted);
+	font-size: 0.93em;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+/* The ⋯ button of a card and its menu, which opens under it at the right edge of the card. */
+.resource-card-menu {
+	position: relative;
+	display: inline-flex;
+}
+
+.resource-card-menu vscode-context-menu {
+	position: absolute;
+	top: 100%;
+	right: 0;
+	z-index: 10;
+	--vscode-font-size: 12px;
+}
+
+/*
+ * The footer of a card holds the IRI, whose text starts where the title and the types start. While
+ * the card is expanded it stays at the bottom of the view as the card scrolls past it.
+ */
+.resource-card-footer {
+	display: flex;
+	align-items: center;
+	min-height: 28px;
+	padding: 0 var(--card-head-pad-x) 0 calc(var(--card-head-pad-x) + 20px + var(--card-head-gap));
+	border-top: 1px solid var(--form-row-border);
+}
+
+.resource-card-footer.is-expanded {
+	position: sticky;
+	bottom: 0;
+	z-index: 6;
+	min-height: var(--card-head-h);
+	background: var(--form-card-title-background);
+}
+
+/* The line above the footer is the only one between the last row and the IRI. */
+.resource-card-header:has(+ .resource-card-footer),
+.pinned-properties-list:has(+ .resource-card-footer) {
+	border-bottom: 0;
+}
+
+/* How often the resource is used, before the tools; a narrow card leaves out the word. */
 .card-usage {
 	flex: none;
-	margin: 0 6px 0 8px;
 	color: var(--vscode-descriptionForeground);
 	font-size: 0.84em;
 	white-space: nowrap;
@@ -578,17 +700,17 @@ body {
 }
 
 /*
- * The label row of a collapsed card is its clickable area, after the gutter of the rows: the icon
- * of the kind of the resource in the gutter, centred on the chevron of the title bar, and the
- * title with the types after it, starting where the predicates of the rows start.
+ * The label row of a collapsed card is its clickable area: the icon of the kind of the resource,
+ * centred under the chevron of the title bar, then the title, starting where the text of the IRI
+ * starts, and the types. Its line under it is inset, as the lines of the rows are.
  */
 .resource-card-header {
-	position: relative;
-	display: grid;
-	grid-template-columns: minmax(0, 1fr) auto;
-	column-gap: var(--form-column-gap);
-	align-items: start;
-	padding: 6px 10px 6px var(--form-gutter);
+	display: flex;
+	align-items: center;
+	min-height: var(--row-min-h);
+	margin: 0 var(--card-inset);
+	padding: var(--row-pad-y) 0;
+	box-sizing: border-box;
 	border-bottom: 1px solid var(--form-row-border);
 	cursor: pointer;
 	outline: none;
@@ -600,26 +722,25 @@ body {
 }
 
 .resource-card-kind {
-	position: absolute;
-	top: 13px;
-	left: 8px;
 	display: inline-flex;
+	flex: none;
 	width: 16px;
 	height: 16px;
+	/* The chevron after the padding of the title bar, and the text of the IRI inside its box after it. */
+	margin: 0 7px 0 calc(var(--card-head-pad-x) + 2px - var(--card-inset));
 }
 
 .resource-card-title {
 	display: flex;
 	align-items: center;
-	gap: 10px;
+	gap: var(--card-head-gap);
 	min-width: 0;
-	height: 30px;
 }
 
 .resource-card-label {
 	min-width: 0;
 	color: var(--vscode-foreground);
-	font-size: 1.2em;
+	font-size: var(--title-size);
 	font-weight: 600;
 	overflow: hidden;
 	text-overflow: ellipsis;
@@ -630,21 +751,17 @@ body {
 	color: var(--vscode-descriptionForeground);
 }
 
-.resource-card-type {
-	flex: 0 1 auto;
-	min-width: 0;
-	color: var(--form-muted);
-	font-size: 0.93em;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-}
-
-/* The description of a collapsed card, under its label row. */
+/*
+ * The description of a collapsed card, under its label row: text that wraps, cut after a few
+ * lines. Its space around it is margin, not padding, which would show the line after the cut.
+ */
 .resource-card-description {
-	padding: 10px 18px 6px var(--form-gutter);
+	display: -webkit-box;
+	-webkit-line-clamp: var(--clamp);
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+	margin: var(--row-pad-y) var(--card-inset) 10px;
 	color: var(--vscode-foreground);
-	line-height: 1.55;
 }
 
 .filter-match {
@@ -705,39 +822,50 @@ body {
 /* ---------- Statements ---------- */
 
 /*
- * Every row of a card is a grid of the predicate and the values of the row, after a gutter that
- * the drag grip is to sit in and before an inset that the actions of the row overlay, with a line
- * under it. A row of one line is 40px. The cells align to the top; the predicate is nudged so it
- * centres on the first line of the values: a field of 26px, a pill of 24px in its box, or the
- * header of a nested card.
+ * The rows of a card share one grid: the label column as wide as its longest label, at least the
+ * label token and at most 40% of the card, and the values. The grid starts at the inset of the card,
+ * so the labels and the lines under the rows start there too.
+ */
+.statement-list {
+	display: grid;
+	grid-template-columns: fit-content(40%) minmax(0, 1fr);
+	column-gap: var(--col-gap);
+	padding: 0 var(--card-inset) 4px;
+}
+
+/*
+ * Every row of a card is a subgrid of the labels and the values, before an inset that the actions
+ * of the row overlay, with a line under it. A row of one line is as tall as the row token. The
+ * cells align to the top; the predicate is nudged so it centres on the first line of the values: a
+ * field, a chip in its box, or the header of a nested card.
  */
 .statement-line {
 	position: relative;
+	grid-column: 1 / -1;
 	display: grid;
-	grid-template-columns: var(--form-predicate-column) minmax(0, 1fr);
-	column-gap: var(--form-column-gap);
+	grid-template-columns: subgrid;
 	align-items: start;
 	box-sizing: border-box;
-	min-height: 40px;
-	padding: 6px var(--form-row-inset) 6px var(--form-gutter);
+	min-height: var(--row-min-h);
+	padding: var(--row-field-pad) var(--row-actions) var(--row-field-pad) 0;
 	border-bottom: 1px solid var(--form-row-border);
 	line-height: 20px;
 }
 
 .statement-line.is-resource-row {
-	padding-block: 3px;
+	padding-block: 0;
 }
 
 .statement-line.is-resource-row > .statement-predicate {
-	margin-top: 4px;
+	margin-top: calc((var(--row-min-h) - var(--form-field-height)) / 2);
 }
 
 .statement-line.is-nested-row {
-	padding-block: 6px;
+	padding-block: var(--row-pad-y);
 }
 
 .statement-line.is-nested-row > .statement-predicate {
-	margin-top: 6px;
+	margin-top: calc((var(--row-min-h) - var(--form-field-height)) / 2 + 1px);
 }
 
 /* The last row of a card, which the link that adds a property may follow, has no line under it. */
@@ -757,7 +885,7 @@ body {
 /* The predicate, by its label; as plain text it takes the inset of a field, so it lines up with the text of one. */
 .statement-predicate {
 	grid-column: 1;
-	min-width: 0;
+	min-width: var(--label-min);
 	color: var(--vscode-descriptionForeground);
 	overflow: hidden;
 	text-overflow: ellipsis;
@@ -766,6 +894,58 @@ body {
 
 .statement-predicate:not(:has(.input-field)) {
 	padding: 3px 0;
+}
+
+/* A predicate named by its IRI is cut at its start, so its local name stays in view. */
+.statement-predicate.is-iri > .statement-predicate-text {
+	display: block;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	direction: rtl;
+	text-align: left;
+}
+
+/*
+ * The count of the nested cards of a row and the tags of its literals, which a narrow card shows by
+ * the label instead of at the values.
+ */
+.statement-predicate-count,
+.statement-predicate-tags {
+	display: none;
+}
+
+.statement-predicate-count {
+	margin-left: 6px;
+	color: var(--form-muted);
+	font-size: 0.84em;
+}
+
+.statement-predicate-tags {
+	margin-top: 2px;
+	white-space: normal;
+}
+
+.statement-predicate-tag {
+	margin: 0 6px 0 0;
+	padding: 0;
+	border: 0;
+	background: none;
+	color: var(--form-muted);
+	font: inherit;
+	font-size: 0.84em;
+	line-height: 16px;
+}
+
+button.statement-predicate-tag {
+	cursor: pointer;
+}
+
+button.statement-predicate-tag:hover {
+	color: var(--vscode-foreground);
+}
+
+button.statement-predicate-tag:focus-visible {
+	outline: 1px solid var(--vscode-focusBorder);
 }
 
 .statement-values {
@@ -781,8 +961,8 @@ body {
 /* The actions of a row overlay its inset at the top right, centred on the first line of the values. */
 .statement-actions {
 	position: absolute;
-	top: 6px;
-	right: 4px;
+	top: calc((var(--row-min-h) - var(--icon-btn)) / 2);
+	right: 0;
 	display: flex;
 	justify-content: flex-end;
 	gap: 2px;
@@ -801,7 +981,7 @@ body {
 
 /* The nested cards of a row stand apart. */
 .statement-value.is-node + .statement-value.is-node {
-	margin-top: 6px;
+	margin-top: 8px;
 }
 
 /* The comment lines written above a property, under its values, and above a value, before it: quiet text. */
@@ -840,12 +1020,20 @@ body {
 	align-self: stretch;
 }
 
-/* A literal that is read: its text in the box of a field, with its language or datatype after it as a muted label. */
+/*
+ * A literal that is read: its text where the text of a field stands, wrapping and cut after a few
+ * lines, with its language or datatype after it as a muted label. Its space above and below is
+ * margin, not padding, which would show the line after the cut.
+ */
 .literal-value {
-	display: block;
+	display: -webkit-box;
+	-webkit-line-clamp: var(--clamp);
+	-webkit-box-orient: vertical;
+	overflow: hidden;
 	box-sizing: border-box;
-	min-height: var(--form-field-height);
-	padding: 3px 5px;
+	min-height: 20px;
+	margin: 3px 0;
+	padding: 0 5px;
 	white-space: pre-wrap;
 	overflow-wrap: anywhere;
 }
@@ -858,17 +1046,17 @@ body {
 	white-space: nowrap;
 }
 
-/* A resource: a ring in the colour of its kind and its label as a pill of 24px, which leads to its card. */
+/* A resource: a ring in the colour of its kind and its label as a chip, which leads to its card. */
 .value-pill {
 	position: relative;
 	display: inline-flex;
 	align-items: center;
-	gap: 9px;
+	gap: var(--chip-gap, 6px);
 	min-width: 0;
 	max-width: 100%;
 	box-sizing: border-box;
-	height: 24px;
-	padding: 0 10px;
+	height: var(--chip-h, 22px);
+	padding: 0 var(--chip-pad-x, 8px);
 	border: 1px solid transparent;
 	border-radius: var(--form-radius-pill);
 	background: var(--form-pill-background);
@@ -915,9 +1103,9 @@ body {
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
-	gap: 6px;
+	gap: var(--chip-gap);
 	box-sizing: border-box;
-	min-height: 32px;
+	min-height: calc(var(--row-min-h) - 1px);
 	padding: 2px 3px;
 	border: 1px solid transparent;
 }
@@ -938,12 +1126,13 @@ body {
 	background: var(--form-nested-background);
 }
 
-/* The grid of a nested card: a narrower predicate column, which gives way as the box narrows, before it stacks. */
+/*
+ * The grid of a nested card: its labels start past the chevron of its header and its label column
+ * is narrower.
+ */
 .resource-card.is-nested > .statement-list {
-	--form-gutter: 42px;
-	--form-predicate-column: clamp(88px, 24cqi, 120px);
-	--form-column-gap: 16px;
-	--form-row-inset: 54px;
+	--label-min: 88px;
+	padding: 0 0 0 42px;
 }
 
 /*
@@ -955,7 +1144,7 @@ body {
 .resource-card.is-nested .statement-line .resource-values,
 .resource-card.is-nested .statement-line .value-pills {
 	width: calc(100% + 4px);
-	min-height: 24px;
+	min-height: var(--chip-h);
 	margin-left: -4px;
 	padding: 0 4px;
 	border: 0;
@@ -983,8 +1172,8 @@ body {
 
 .resource-card.is-nested .statement-line {
 	align-items: center;
-	min-height: 36px;
-	padding: 0 var(--form-row-inset) 0 var(--form-gutter);
+	min-height: var(--row-min-h);
+	padding: 0 var(--row-actions) 0 0;
 	border-top: 1px solid var(--form-row-border);
 	border-bottom: 0;
 }
@@ -1006,21 +1195,21 @@ body {
 }
 
 .resource-card.is-nested .statement-line > .statement-values {
-	padding: 5px 0;
+	padding: var(--row-field-pad) 0;
 }
 
 .resource-card.is-nested .statement-line.is-resource-row > .statement-values {
-	padding: 3px 0;
+	padding: calc((var(--row-min-h) - var(--chip-h) - 1px) / 2) 0;
 }
 
 .resource-card.is-nested .statement-line.is-nested-row > .statement-values {
-	padding: 4px 0;
+	padding: var(--row-pad-y) 0;
 }
 
-/* The header of a nested card: the chevron in the gutter, the type, and after it the summary of a collapsed card and the caption. */
+/* The header of a nested card: the chevron before the labels, the type, and after it the summary of a collapsed card and the caption. */
 .resource-card.is-nested .statement-line.is-card-header,
 .nested-card-header {
-	min-height: 38px;
+	min-height: var(--row-min-h);
 	border-top: 0;
 }
 
@@ -1065,23 +1254,31 @@ body {
 }
 
 
-.resource-card.is-nested .statement-line.is-card-header > .statement-gutter {
-	top: calc(50% - 13px);
-	left: 6px;
+/* A collapsed nested card without a type gives its summary the whole row. */
+.statement-line.is-card-header.is-typeless > .statement-values {
+	grid-column: 1 / -1;
 }
 
-.nested-card-chevron {
+/* The chevron of a nested card stands before its labels, inside the edge of the box. */
+.resource-card.is-nested .statement-line.is-card-header > .statement-gutter {
+	top: calc((var(--row-min-h) - 20px) / 2);
+	left: -34px;
+}
+
+.icon-button.nested-card-chevron {
+	width: 20px;
+	height: 20px;
 	color: var(--vscode-descriptionForeground);
 }
 
 /* The header of the nested card of a new blank node, laid out like the header of a nested card. */
 .nested-card-header {
 	position: relative;
+	grid-column: 1 / -1;
 	display: grid;
-	grid-template-columns: var(--form-predicate-column) minmax(0, 1fr);
-	column-gap: var(--form-column-gap);
+	grid-template-columns: subgrid;
 	align-items: center;
-	padding: 0 var(--form-row-inset) 0 var(--form-gutter);
+	padding: 0 var(--row-actions) 0 0;
 	line-height: 20px;
 }
 
@@ -1089,9 +1286,10 @@ body {
  * The ⋯ button of a nested card and its menu, over the actions column of the header row. The button
  * is faint until the pointer or the focus is in the card, and stays in the order of Tab.
  */
+/* The ⋮ of a nested card stands on the axis of its chevron, in the middle of the header row. */
 .nested-card-menu {
 	position: absolute;
-	top: 5px;
+	top: calc((var(--row-min-h) - var(--icon-btn)) / 2);
 	right: 6px;
 }
 
@@ -1099,8 +1297,8 @@ body {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	width: 28px;
-	height: 28px;
+	width: var(--icon-btn);
+	height: var(--icon-btn);
 	padding: 0;
 	border: 0;
 	border-radius: var(--form-radius-button);
@@ -1173,29 +1371,30 @@ body {
 }
 
 /*
- * The pin of a row: faint until the pointer or the focus is in the row, and shown at all times
- * while the property is pinned. Its menu opens under it, at the right edge of the row.
+ * The ⋮ menu of a row: its button faint until the pointer or the focus is in the row, and the pin
+ * of a pinned property before it at all times. Its menu opens under it, at the right edge of the row.
  */
-.pin-button {
+.row-menu {
 	position: relative;
 	display: inline-flex;
+	align-items: center;
+	gap: 2px;
 }
 
-.pin-button > .icon-button {
+.row-menu > .icon-button {
 	visibility: hidden;
 }
 
-.pin-button.is-pinned > .icon-button,
-.statement-line:hover > .statement-actions > .pin-button > .icon-button,
-.statement-line:focus-within > .statement-actions > .pin-button > .icon-button {
+.statement-line:hover > .statement-actions > .row-menu > .icon-button,
+.statement-line:focus-within > .statement-actions > .row-menu > .icon-button {
 	visibility: visible;
 }
 
-.statement-line.is-literal-row > .statement-actions > .pin-button > .icon-button {
-	height: var(--form-field-height);
+.row-menu-pin {
+	color: var(--vscode-descriptionForeground);
 }
 
-.pin-button vscode-context-menu {
+.row-menu vscode-context-menu {
 	position: absolute;
 	top: 100%;
 	right: 0;
@@ -1219,8 +1418,9 @@ body {
 .pinned-properties-list {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 12px 40px;
-	padding: 10px 18px 12px var(--form-gutter);
+	gap: 12px var(--col-gap);
+	margin: 0 var(--card-inset);
+	padding: 8px 0 10px;
 	border-bottom: 1px solid var(--form-row-border);
 }
 
@@ -1273,7 +1473,7 @@ body {
 
 .pinned-property.is-description > .pinned-property-values {
 	display: -webkit-box;
-	-webkit-line-clamp: 2;
+	-webkit-line-clamp: var(--clamp);
 	-webkit-box-orient: vertical;
 	overflow: hidden;
 	line-height: 21px;
@@ -1357,15 +1557,15 @@ body {
 }
 
 .statement-list-add-row {
+	grid-column: 1 / -1;
 	display: flex;
 	align-items: center;
-	min-height: 36px;
-	padding: 4px 18px 2px var(--form-gutter);
+	min-height: var(--row-min-h);
+	padding: 2px 0;
 }
 
 .resource-card.is-nested .statement-list-add-row {
-	min-height: 32px;
-	padding: 0 12px 0 var(--form-gutter);
+	padding: 0;
 	border-top: 1px solid var(--form-row-border);
 }
 
@@ -1403,28 +1603,21 @@ body {
 }
 
 .resource-form-loading {
-	padding: 12px 0 4px var(--form-gutter);
+	padding: 8px var(--card-inset) 4px;
 	color: var(--vscode-descriptionForeground);
 }
 
 /*
- * The label row leads an expanded card: the label is the title of the card in a box of 30px, with
- * its tag shown only while it is edited.
+ * The label row leads an expanded card: the label is the title of the card, in the size of the
+ * title, with its tag shown only while it is edited.
  */
 .statement-line.is-card-label {
-	min-height: 43px;
-	padding: 6px 10px 6px var(--form-gutter);
-}
-
-.statement-line.is-card-label > .statement-predicate {
-	margin-top: 2px;
+	padding-right: 0;
 }
 
 .statement-line.is-card-label .literal-field {
-	display: flex;
-	align-items: center;
-	height: 30px;
-	--vscode-font-size: 1.2em;
+	--clamp: 1;
+	--vscode-font-size: var(--title-size);
 	--vscode-font-weight: 600;
 }
 
@@ -1437,9 +1630,8 @@ body {
 }
 
 .statement-line.is-card-label .literal-value {
-	min-height: 30px;
-	padding: 5px 5px;
-	font-size: 1.2em;
+	display: block;
+	font-size: var(--title-size);
 	font-weight: 600;
 	overflow: hidden;
 	text-overflow: ellipsis;
@@ -1474,6 +1666,23 @@ body {
 	width: calc(100% + 5px);
 	margin-left: -5px;
 	--vscode-settings-textInputForeground: var(--vscode-descriptionForeground);
+}
+
+/*
+ * The predicate field takes no width of its own, so the text beside it, which is not shown, sizes
+ * the label column of the card as the text of a row that only reads does.
+ */
+.input-field.is-predicate {
+	contain: inline-size;
+}
+
+.statement-predicate-sizer {
+	display: block;
+	height: 0;
+	padding: 0 5px;
+	overflow: hidden;
+	visibility: hidden;
+	white-space: nowrap;
 }
 
 .input-field.is-predicate:focus-within {
@@ -1546,11 +1755,11 @@ body {
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
-	gap: 6px;
+	gap: var(--chip-gap, 6px);
 	box-sizing: border-box;
 	width: 100%;
-	min-height: 32px;
-	padding: 2px 3px;
+	min-height: calc(var(--row-min-h, 32px) - 1px);
+	padding: 1px 3px;
 	border: 1px solid transparent;
 	border-radius: var(--form-radius-field);
 	cursor: text;
@@ -1737,107 +1946,104 @@ body {
 
 /* ---------- Scaling ---------- */
 
-/* A card of middling width narrows its predicate column; the labels in it ellipsize. */
-@container card (min-width: 561px) and (max-width: 759px) {
-	.resource-card {
-		--form-predicate-column: clamp(120px, 26cqi, 160px);
-	}
-}
-
 /*
- * Below the reference width a row of nested cards gives them the whole width of the row, from the
- * gutter to the inset, with its predicate as a caption above them.
+ * A narrow card, as in a side panel or a split editor: the tokens of the narrow density. The rows
+ * keep their two columns; the usage count drops its word, the tags of literals stand under the
+ * label, and a row of nested cards gives them the whole row, its label with their count above one
+ * list of them.
  */
-@container card (max-width: 759px) {
+@container card (max-width: 559px) {
+	.resource-card > * {
+		--card-head-h: 30px;
+		--card-head-pad-x: 4px;
+		--card-head-gap: 4px;
+		--card-inset: 10px;
+		--row-min-h: 26px;
+		--row-pad-y: 3px;
+		--label-min: 88px;
+		--col-gap: 12px;
+		--chip-h: 20px;
+		--chip-pad-x: 6px;
+		--chip-gap: 5px;
+		--icon-btn: 22px;
+		--title-size: 14px;
+		--clamp: 4;
+	}
+
+	.card-usage-word {
+		display: none;
+	}
+
+	/* The tag of a literal of a row of the card stands under the label of its row. */
+	.resource-card:not(.is-nested) > .resource-card-body > .statement-list > .statement-line.is-literal-row .literal-field-tag[slot="content-after"],
+	.resource-card:not(.is-nested) > .resource-card-body > .statement-list > .statement-line.is-literal-row .literal-tag {
+		display: none;
+	}
+
+	.resource-card:not(.is-nested) > .resource-card-body > .statement-list > .statement-line > .statement-predicate > .statement-predicate-tags {
+		display: block;
+	}
+
 	.resource-card:not(.is-nested) > .resource-card-body > .statement-list > .statement-line.is-nested-row {
-		grid-template-columns: minmax(0, 1fr);
 		row-gap: 4px;
 	}
 
 	.resource-card:not(.is-nested) > .resource-card-body > .statement-list > .statement-line.is-nested-row > .statement-predicate {
 		grid-row: 1;
-		grid-column: 1;
+		grid-column: 1 / -1;
 		margin-top: 0;
-		font-size: 0.8em;
-		line-height: 18px;
 	}
 
 	.resource-card:not(.is-nested) > .resource-card-body > .statement-list > .statement-line.is-nested-row > .statement-values {
 		grid-row: 2;
+		grid-column: 1 / -1;
+	}
+
+	/* The nested cards of the row are one list: no gaps, one line between them. */
+	.statement-line.is-nested-row > .statement-values > .statement-value.is-node + .statement-value.is-node {
+		margin-top: -1px;
+	}
+
+	/*
+	 * The label of a row of nested cards and their count stand on one line: the label as wide as
+	 * its text, which the text beside a field gives it, and the count after it.
+	 */
+	.resource-card:not(.is-nested) > .resource-card-body > .statement-list > .statement-line.is-nested-row > .statement-predicate {
+		display: grid;
+		grid-template-columns: auto auto;
+		justify-content: start;
+		align-items: baseline;
+	}
+
+	.statement-line.is-nested-row > .statement-predicate > :is(.input-field, .statement-predicate-text, .statement-predicate-sizer) {
 		grid-column: 1;
 	}
-}
 
-/* A narrow card stacks each row: the predicate as a caption above its values, the actions at the top right. */
-@container card (max-width: 560px) {
-	.resource-card {
-		font-size: 0.93em;
-	}
-
-	.resource-card:not(.is-nested) > .resource-card-body > .statement-list > .statement-line {
-		grid-template-columns: minmax(0, 1fr);
-		row-gap: 4px;
-		min-height: 0;
-		padding: 10px var(--form-row-inset) 12px 16px;
-	}
-
-	.resource-card:not(.is-nested) > .resource-card-body > .statement-list > .statement-line > .statement-predicate {
+	.resource-card:not(.is-nested) > .resource-card-body > .statement-list > .statement-line.is-nested-row > .statement-predicate > .statement-predicate-count {
+		display: inline;
 		grid-row: 1;
-		grid-column: 1;
-		margin-top: 0;
-		font-size: 0.8em;
-		line-height: 18px;
-	}
-
-	.resource-card:not(.is-nested) > .resource-card-body > .statement-list > .statement-line > .statement-values {
-		grid-row: 2;
-		grid-column: 1;
-	}
-
-	.resource-card:not(.is-nested) > .resource-card-body > .statement-list > .statement-line > .statement-actions {
-		top: 8px;
-	}
-
-	.resource-card:not(.is-nested) > .resource-card-body > .statement-list > .statement-line > .row-error {
-		grid-row: 3;
-	}
-
-	.resource-card:not(.is-nested) > .resource-card-body > .statement-list > .statement-line.is-card-label {
-		padding: 10px 10px 12px 16px;
-	}
-
-	.resource-card-description,
-	.resource-card:not(.is-nested) > .resource-card-body > .statement-list > .statement-list-add-row {
-		padding-left: 16px;
-	}
-
-	.resource-card-kind {
-		top: 11px;
-		left: 0;
-	}
-
-	.value-pill {
-		font-size: 0.93em;
-	}
-
-	.card-usage {
-		display: none;
+		grid-column: 2;
 	}
 }
 
-/* A narrow nested card stacks its rows too, keeping the chevron of its header. */
+/* A narrow nested card stacks its rows, keeping the chevron of its header. */
 @container box (max-width: 440px) {
+	.resource-card.is-nested > .statement-list {
+		padding-left: 12px;
+	}
+
 	.resource-card.is-nested .statement-line:not(.is-card-header) {
 		grid-template-columns: minmax(0, 1fr);
 		row-gap: 2px;
 		align-items: start;
 		min-height: 0;
-		padding: 8px var(--form-row-inset) 8px 12px;
+		padding: 6px var(--row-actions) 6px 0;
 	}
 
 	.resource-card.is-nested .statement-line:not(.is-card-header) > .statement-predicate {
 		grid-row: 1;
 		grid-column: 1;
+		min-width: 0;
 		font-size: 0.8em;
 		line-height: 18px;
 	}
@@ -1849,16 +2055,16 @@ body {
 	}
 
 	.resource-card.is-nested .statement-line:not(.is-card-header) > .statement-actions {
-		top: 8px;
+		top: 6px;
 		margin-top: 0;
 	}
 
 	.resource-card.is-nested .statement-line.is-card-header {
-		grid-template-columns: auto minmax(0, 1fr);
+		padding-left: 26px;
 	}
 
-	.resource-card.is-nested .statement-list-add-row {
-		padding-left: 12px;
+	.resource-card.is-nested .statement-line.is-card-header > .statement-gutter {
+		left: 0;
 	}
 }
 

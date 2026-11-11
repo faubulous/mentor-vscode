@@ -1,14 +1,11 @@
 import { XSD } from '@faubulous/mentor-rdf/ontologies';
-import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { TermView } from '../form-editor-model';
-import { StatementServices } from '../hooks/use-statement-services';
 import { LiteralDatatypes } from '../services/statement/literal-datatypes';
-import { getDatatypeHint, getDatatypeLabel } from './datatype-labels';
+import { getDatatypeHint, getLiteralFieldTag } from './datatype-labels';
 import { EditedRow } from './edited-row';
 import { LiteralField } from './literal-field';
 import { useFormEditorContext } from '../state/form-editor-context';
 import { LanguageFilter } from '../state/language-filter';
-import { getLanguageTagLabel } from './term-labels';
 
 /**
  * Properties of the {@link LiteralValueField} component.
@@ -50,7 +47,7 @@ export function LiteralValueField({ view, index, edited }: LiteralValueFieldProp
 		<LiteralField
 			index={index}
 			text={term.value}
-			tag={getLanguageTagLabel(term, languageTags) ?? _datatypeLabel(datatype, services)}
+			tag={getLiteralFieldTag(term, languageTags, datatype => services.resolver.viewOf(datatype).prefixedName)}
 			problem={editor.unfittingLiterals.has(index) ? getDatatypeHint(datatype) : undefined}
 			numeric={LiteralDatatypes.isNumeric(datatype)}
 			integer={datatype === XSD.integer}
@@ -82,15 +79,4 @@ function _input(edited: EditedRow, index: number, language: string, text: string
 	} else {
 		edited.editor.inputLiteral(index, text);
 	}
-}
-
-/**
- * The label of a datatype: the name the fields know it by, else its prefixed name; Text for plain
- * text.
- * @param datatype The IRI of the datatype.
- * @param services Gives the datatype its prefixed name.
- * @returns The label.
- */
-function _datatypeLabel(datatype: string, services: StatementServices): string {
-	return getDatatypeLabel(datatype) ?? services.resolver.viewOf(RdfDataFactory.namedNode(datatype)).prefixedName ?? datatype;
 }

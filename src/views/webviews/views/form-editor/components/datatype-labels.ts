@@ -1,5 +1,9 @@
+import { Literal, NamedNode } from '@rdfjs/types';
 import { XSD } from '@faubulous/mentor-rdf/ontologies';
+import { getLocalPartAndQuery } from '@src/utilities/uri';
+import { NamespaceInfo } from '../form-editor-model';
 import { MARKDOWN_DATATYPE } from '../services/statement/literal-datatypes';
+import { getLanguageTagLabel } from './term-labels';
 
 /**
  * How a datatype is named in the literal fields, and what to type when a text does not fit it.
@@ -46,4 +50,37 @@ export function getDatatypeLabel(iri: string): string | undefined {
  */
 export function getDatatypeHint(iri: string): string {
 	return DATATYPE_TEXTS.get(iri)?.hint ?? `The text is no value of ${getDatatypeLabel(iri) ?? iri}.`;
+}
+
+/**
+ * The tag of a literal in its field: its language, else the label of its datatype the fields know,
+ * else the prefixed name of the datatype, else its IRI; Text for plain text.
+ * @param term The literal.
+ * @param languageTags The spellings of the language tags of the document.
+ * @param prefixedNameOf Gives a datatype its prefixed name, where it has one.
+ * @returns The tag.
+ */
+export function getLiteralFieldTag(term: Literal, languageTags: Readonly<Record<string, string>>, prefixedNameOf: (datatype: NamedNode) => string | undefined): string {
+	return getLanguageTagLabel(term, languageTags) ?? getDatatypeLabel(term.datatype.value) ?? prefixedNameOf(term.datatype) ?? term.datatype.value;
+}
+
+/**
+ * The tag of a literal that is read: its language, else its datatype by its prefixed name, or its
+ * local name where no prefix is declared; none for a plain string.
+ * @param term The literal.
+ * @param languageTags The spellings of the language tags of the document.
+ * @param namespaces The namespace declarations of the document.
+ * @returns The tag, or `undefined` for a plain string.
+ */
+export function getLiteralTag(term: Literal, languageTags: Readonly<Record<string, string>>, namespaces: readonly NamespaceInfo[]): string | undefined {
+	const language = getLanguageTagLabel(term, languageTags);
+	const datatype = term.datatype.value;
+
+	if (language || datatype === XSD.string) {
+		return language;
+	}
+
+	const namespace = namespaces.find(candidate => datatype.startsWith(candidate.iri));
+
+	return namespace ? `${namespace.prefix}:${datatype.slice(namespace.iri.length)}` : getLocalPartAndQuery(datatype);
 }

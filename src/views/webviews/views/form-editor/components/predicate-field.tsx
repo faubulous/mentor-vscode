@@ -66,19 +66,25 @@ export function PredicateField({ editor, state, label, autoFocus = false }: Pred
 		}
 	};
 
+	// The field takes no width of its own; the label beside it, which is not shown, sizes the label
+	// column of the card to the longest label, as the text of a row that only reads does. What is
+	// typed does not, so the columns stay where they are while a predicate is typed.
 	return (
-		<vscode-textfield
-			ref={fieldRef}
-			className="input-field is-predicate"
-			value={focused || (editor.isNew && state.stored.predicate === undefined) ? state.predicateText : label}
-			placeholder="predicate"
-			title={state.predicateText}
-			aria-label="Predicate"
-			autocomplete="off"
-			onFocus={() => setFocused(true)}
-			onBlur={handleBlur}
-			onInput={(event: FormEvent<VscodeTextfield>) => editor.inputPredicate(event.currentTarget.value)}
-			onKeyDown={handleKeyDown}
-		/>
+		<>
+			<vscode-textfield
+				ref={fieldRef}
+				className="input-field is-predicate"
+				value={focused || (editor.isNew && state.stored.predicate === undefined) ? state.predicateText : label}
+				placeholder="predicate"
+				title={state.predicateText}
+				aria-label="Predicate"
+				autocomplete="off"
+				onFocus={() => setFocused(true)}
+				onBlur={handleBlur}
+				onInput={(event: FormEvent<VscodeTextfield>) => editor.inputPredicate(event.currentTarget.value)}
+				onKeyDown={handleKeyDown}
+			/>
+			<span className="statement-predicate-sizer" aria-hidden="true">{editor.isNew ? '' : label}</span>
+		</>
 	);
 }

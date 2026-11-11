@@ -1,14 +1,16 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BlankNode, NamedNode } from '@rdfjs/types';
 import { termToString } from 'rdf-string';
 import { ResourceSummary } from '../form-editor-model';
 import { useResourceDetail } from '../hooks/use-resource-detail';
 import { IResourceDataService } from '../services/resource-data-service.interface';
+import { RemoveShortcut } from '../services/remove-shortcut';
 import { NestedCardsCollapse, NestedCardsCollapseContext } from '../state/nested-cards-collapse-context';
 import { PinnedProperties, PinnedPropertiesContext } from '../state/pinned-properties-context';
 import { useFormEditorContext } from '../state/form-editor-context';
 import { HighlightedText } from './highlighted-text';
 import { PinnedPropertiesList } from './pinned-properties-list';
+import { ResourceCardFooter } from './resource-card-footer';
 import { ResourceCardHeader } from './resource-card-header';
 import { ResourceCardTitleBar } from './resource-card-title-bar';
 import { StatementList } from './statement-list';
@@ -51,17 +53,18 @@ export interface ResourceCardProps {
 
 /**
  * One resource of the document as a card of the list, led by its title bar, which stays in view
- * while the card scrolls. Collapsed, the label row is the clickable area: the icon of the kind of
- * the resource in the gutter, the label and the types; the properties pinned for the types of the
- * resource follow as fields, which open the card at their property, and the description, unless
- * it is pinned. Expanded, the card is its statements, led by the label row, whose rows pin their
+ * while the card scrolls, and ended by its footer with the IRI, which stays in view at the bottom
+ * while the card is expanded. Collapsed, the label row is the clickable area: the icon of the kind
+ * of the resource and the label; the properties pinned for the types of the resource and its
+ * description follow as fields in the order the document writes them, which open the card at their
+ * property. Expanded, the card is its statements, led by the label row, whose rows pin their
  * properties, and ends with the link that adds a property. The title bar asks the nested cards of
  * the card to collapse or expand all at once.
  * @param props The resource and its state.
  * @returns The card.
  */
 export function ResourceCard({ summary, dataService, expanded, writing = false, current, onToggle }: ResourceCardProps): React.JSX.Element {
-	const { revealedResource, filterText, descriptionPredicates = [], onSetPin } = useFormEditorContext();
+	const { revealedResource, filterText, readOnly, onSetPin, onRemoveResource } = useFormEditorContext();
 	const { detail, stale } = useResourceDetail(dataService, summary.term);
 	const marked = current === true || revealedResource?.equals(summary.term) === true;
 	const toggle = useCallback((): void => onToggle(summary.term), [onToggle, summary.term]);
@@ -75,7 +78,6 @@ export function ResourceCard({ summary, dataService, expanded, writing = false, 
 	const showsPins = !expanded && pins.pins.length > 0;
 	const [openedPredicate, setOpenedPredicate] = useState<NamedNode>();
 	const cardRef = useRef<HTMLElement>(null);
-	const pinnedDescription = showsPins && detail !== undefined && pins.pins.some(pin => descriptionPredicates.some(predicate => predicate.equals(pin.predicate)) && detail.properties.some(property => property.predicate.term.equals(pin.predicate)));
 
 	// A card showing its statements, or the pinned ones while collapsed, holds them current,
 	// wherever the list is scrolled to.
@@ -96,17 +98,28 @@ export function ResourceCard({ summary, dataService, expanded, writing = false, 
 		}
 	}, [openedPredicate, expanded, detail]);
 
+	// The shortcut of Remove removes the card while the focus is in it but in none of its rows,
+	// which remove themselves by it.
+	const handleKeyDown = (event: KeyboardEvent<HTMLElement>): void => {
+		if (!RemoveShortcut.matches(event) || readOnly || !onRemoveResource || (event.target instanceof Element && event.target.closest('.statement-line'))) {
+			return;
+		}
+
+		event.preventDefault();
+		onRemoveResource(summary.term);
+	};
+
 	const openAt = useCallback((predicate: NamedNode): void => {
 		setOpenedPredicate(predicate);
 		onToggle(summary.term);
 	}, [onToggle, summary.term]);
 
 	return (
-		<article ref={cardRef} className={`resource-card${expanded ? ' is-expanded' : ''}${marked ? ' is-current' : ''}`} data-resource-id={termToString(summary.term)}>
+		<article ref={cardRef} onKeyDown={handleKeyDown} className={`resource-card${expanded ? ' is-expanded' : ''}${marked ? ' is-current' : ''}`} data-resource-id={termToString(summary.term)}>
 			<ResourceCardTitleBar summary={summary} expanded={expanded} nestedCollapsed={nestedCollapse.collapsed} onToggle={toggle} onToggleNested={toggleNested} />
 			{(!expanded || !detail) && <ResourceCardHeader summary={summary} expanded={expanded} onToggle={toggle} />}
 			{showsPins && detail && <PinnedPropertiesList detail={detail} pins={pins.pins} onOpen={openAt} />}
-			{!expanded && summary.description && !pinnedDescription && <div className="resource-card-description"><HighlightedText text={summary.description} query={filterText} /></div>}
+			{!expanded && summary.description && !(showsPins && detail) && <div className="resource-card-description"><HighlightedText text={summary.description} query={filterText} /></div>}
 			{showsStatements && (
 				<PinnedPropertiesContext.Provider value={pins}>
 					<NestedCardsCollapseContext.Provider value={nestedCollapse}>
@@ -118,6 +131,7 @@ export function ResourceCard({ summary, dataService, expanded, writing = false, 
 					</NestedCardsCollapseContext.Provider>
 				</PinnedPropertiesContext.Provider>
 			)}
+			<ResourceCardFooter summary={summary} expanded={expanded} />
 		</article>
 	);
 }
