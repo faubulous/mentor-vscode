@@ -9,6 +9,7 @@ import type { EditProblem } from '@src/services/editing/edit-problem';
 import type { ExecuteCommandMessage } from '../../webview-messaging';
 import type { BlankNode, NamedNode } from '@rdfjs/types';
 import type { DocumentPosition, DocumentSnapshot, ResourceDetail } from './form-editor-model';
+import type { ScopeKey } from '@src/utilities/config-scope';
 
 /**
  * Messages sent from the extension host to the webview.
@@ -84,6 +85,11 @@ export type FormEditorWebviewMessage =
 	 * writes it.
 	 */
 	| { id: 'RenameResource'; resource: NamedNode; iri: string }
+	/**
+	 * Pin a property of a resource for the types of the resource, for oneself or for everyone, or
+	 * unpin it when no scope is given.
+	 */
+	| { id: 'SetPin'; resource: NamedNode | BlankNode; predicate: NamedNode; scope?: ScopeKey }
 	| ExecuteCommandMessage;
 
 /**

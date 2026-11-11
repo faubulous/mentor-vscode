@@ -5,7 +5,9 @@ vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 import { RDFS, SKOS, _OWL, _RDFS, _SKOS } from '@faubulous/mentor-rdf';
 import { createResolvingDocumentContext, readTurtleQuadContexts } from '@src/utilities/mocks/factories';
 import { DocumentSnapshot } from '@src/views/webviews/views/form-editor/form-editor-model';
-import { SnapshotBuilder } from './snapshot-builder';
+import { PinnedPropertiesService } from './pinned-properties-service';
+import { EditorSnapshotService, SnapshotInput } from './editor-snapshot-service';
+import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 
 const EX = 'http://example.org/';
 const DCTERMS = 'http://purl.org/dc/terms/';
@@ -15,24 +17,25 @@ const PREAMBLE = Object.entries(NAMESPACES).map(([prefix, iri]) => `@prefix ${pr
 /**
  * Build the snapshot of a Turtle body written after the prefix declarations.
  */
-function snapshotOf(body: string, activeLanguage?: string): DocumentSnapshot {
+function snapshotOf(body: string, activeLanguage?: string, extra: Partial<SnapshotInput> = {}): DocumentSnapshot {
 	const context = createResolvingDocumentContext({
 		namespaces: NAMESPACES,
 		activeLanguage,
 		predicates: { label: [SKOS.prefLabel, RDFS.label], description: [SKOS.definition, RDFS.comment] }
 	});
 
-	return new SnapshotBuilder({
+	return new EditorSnapshotService({
 		version: 7,
 		revision: 1,
 		uri: 'file:///workspace/vocab.ttl',
 		quadContexts: readTurtleQuadContexts(PREAMBLE + body),
 		context,
-		countUsages: () => 3
+		countUsages: () => 3,
+		...extra
 	}).build().snapshot;
 }
 
-describe('SnapshotBuilder', () => {
+describe('EditorSnapshotService', () => {
 	it('stamps the document version so stale messages can be discarded', () => {
 		expect(snapshotOf('ex:A a owl:Class .').version).toBe(7);
 	});
@@ -40,6 +43,34 @@ describe('SnapshotBuilder', () => {
 	it('names the language the document is read in, in lower case', () => {
 		expect(snapshotOf('ex:A a owl:Class .', 'en-US').activeLanguage).toBe('en-us');
 		expect(snapshotOf('ex:A a owl:Class .').activeLanguage).toBeUndefined();
+	});
+
+	it('names the properties pinned for the asserted types of a resource, leaving out the type and the labels, and none for an untyped one, which cannot pin', () => {
+		const pins = PinnedPropertiesService.fromLayers({ [_OWL + 'Class']: [RDFS.label, `${_RDFS}subClassOf`, `${_RDFS}comment`] }, {});
+		const snapshot = snapshotOf('ex:A a owl:Class ; rdfs:label "A" ; rdfs:comment "a class" .\nex:B ex:p "x" .', undefined, { pins });
+		const [classA, untyped] = snapshot.resources;
+
+		expect(classA.pins).toEqual([
+			{ predicate: RdfDataFactory.namedNode(`${_RDFS}subClassOf`), scope: 'workspace' },
+			{ predicate: RdfDataFactory.namedNode(`${_RDFS}comment`), scope: 'workspace' }
+		]);
+		expect(untyped.pins).toBeUndefined();
+	});
+
+	it('pins by the types the store infers, as for an untyped blank node a property shape is', () => {
+		const sh = 'http://www.w3.org/ns/shacl#';
+		const pins = PinnedPropertiesService.fromLayers({ [`${sh}PropertyShape`]: [`${sh}path`] }, {});
+		const snapshot = snapshotOf('[] ex:p "x" .', undefined, { pins, inferredTypesOf: () => [`${sh}PropertyShape`] });
+		const [shape] = snapshot.resources;
+
+		expect(shape.pins).toEqual([{ predicate: RdfDataFactory.namedNode(`${sh}path`), scope: 'workspace' }]);
+	});
+
+	it('names the description predicates and the settings a property can be pinned in', () => {
+		const snapshot = snapshotOf('ex:A a owl:Class .', undefined, { pinScopes: ['user', 'workspace'] });
+
+		expect(snapshot.descriptionPredicates.map(predicate => predicate.value)).toEqual([SKOS.definition, RDFS.comment]);
+		expect(snapshot.pinScopes).toEqual(['user', 'workspace']);
 	});
 
 	it('names the label predicates Mentor is configured with, most preferred first', () => {
@@ -168,7 +199,7 @@ describe('SnapshotBuilder', () => {
 
 	it('carries the problems and the reason the document is read only', () => {
 		const context = createResolvingDocumentContext({ namespaces: NAMESPACES });
-		const { snapshot } = new SnapshotBuilder({
+		const { snapshot } = new EditorSnapshotService({
 			version: 1,
 			revision: 1,
 			uri: 'file:///workspace/vocab.ttl',
@@ -190,7 +221,7 @@ describe('SnapshotBuilder', () => {
 	});
 });
 
-describe('SnapshotBuilder comments', () => {
+describe('EditorSnapshotService comments', () => {
 	it('carries the comments closing the document, and none when there are none', () => {
 		expect(snapshotOf('ex:A a owl:Class .\n\n# The end.\n# Really.\n').trailingComments).toEqual([['The end.', 'Really.']]);
 		expect(snapshotOf('ex:A a owl:Class .').trailingComments).toBeUndefined();

@@ -7,6 +7,7 @@
 
 import type { BlankNode, Literal, NamedNode } from '@rdfjs/types';
 import type { ValueKindHint } from '@src/utilities/value-kind';
+import type { ScopeKey } from '@src/utilities/config-scope';
 
 /**
  * A position in the document, used to reveal a term in the text editor.
@@ -219,6 +220,29 @@ export interface ResourceSummary {
 	 * lines of each run of comments, the runs being separated by blank lines.
 	 */
 	comments?: string[][];
+
+	/**
+	 * The properties pinned for the types of the resource, asserted or inferred, which its
+	 * collapsed card shows: empty when none is pinned, and absent for a resource of no known type,
+	 * whose properties cannot be pinned since pins are stored per type.
+	 */
+	pins?: PinnedProperty[];
+}
+
+/**
+ * A property pinned on the cards of a resource.
+ */
+export interface PinnedProperty {
+	/**
+	 * The predicate.
+	 */
+	predicate: NamedNode;
+
+	/**
+	 * The settings it is pinned in: the user settings pin it for oneself, the workspace settings
+	 * for everyone.
+	 */
+	scope: ScopeKey;
 }
 
 /**
@@ -364,4 +388,16 @@ export interface DocumentSnapshot {
 	 * shows the most preferred one the resource has.
 	 */
 	labelPredicates: NamedNode[];
+
+	/**
+	 * The description predicates Mentor is configured with, most preferred first, whose values a
+	 * collapsed card shows as text of its own.
+	 */
+	descriptionPredicates: NamedNode[];
+
+	/**
+	 * The settings a property can be pinned in, in the order the pin menu offers them: the user
+	 * settings, and the workspace settings where a workspace is open.
+	 */
+	pinScopes?: readonly ScopeKey[];
 }

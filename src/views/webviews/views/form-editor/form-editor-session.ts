@@ -15,6 +15,7 @@ import { EditOperation } from '@src/services/editing/edit-operation';
 import { StatementValue } from '@src/services/editing/statement-value';
 import { LocalPartCase, getLocalPartFromLabel } from '@src/utilities/uri';
 import { getLog } from '@src/utilities/vscode/log';
+import { getConfig, toConfigurationTarget } from '@src/utilities/vscode/config';
 import { ResourceReferenceProvider } from '@src/providers/resource-reference-provider';
 import { getSubjectIconName } from '@src/utilities/subject-icon';
 import { getBlankNodeSpan, getTokenAtPosition, tokensMatchText } from '@src/utilities/tokens';
@@ -25,11 +26,13 @@ import { WebviewComponentFactory } from '../../webview-component-factory';
 import { ExecuteCommandMessage } from '../../webview-messaging';
 import { ResourceIndex, ResourceIndexOptions, findCardResource, getEntry, typeIrisOf } from '../../services/editing/resource-index';
 import { ResourceViewBuilder } from '../../services/editing/resource-view-builder';
-import { SnapshotBuilder } from '../../services/editing/snapshot-builder';
+import { PinnedPropertiesService } from '../../services/editing/pinned-properties-service';
+import { EditorSnapshotService } from '../../services/editing/editor-snapshot-service';
 import { EditOutcome, FormEditorEditHandler } from './form-editor-edit-handler';
 import { FormEditorHostMessage, FormEditorWebviewMessage } from './form-editor-messages';
 import { getFormReadOnlyReason } from './form-editor-read-only';
 import { DocumentProblem, DocumentSnapshot, ReadOnlyReason, ResourceDetail } from './form-editor-model';
+import { ScopeKey } from '@src/utilities/config-scope';
 import { QuadContextCache } from './quad-context-cache';
 import { reviveTerms } from '@src/utilities/rdf-terms';
 
@@ -99,6 +102,27 @@ interface ObjectIconCache {
 }
 
 /**
+ * The types of the resources of the document as the store knows them, inferred ones included,
+ * read at one version of it.
+ */
+interface InferredTypeCache {
+	/**
+	 * The version of the store the types were read at.
+	 */
+	version: number;
+
+	/**
+	 * The types of each resource asked for, by the key of its term.
+	 */
+	types: Map<string, readonly string[]>;
+}
+
+/**
+ * The setting that holds the pinned properties, in the `mentor.formEditor` section.
+ */
+const PINNED_PROPERTIES_SETTING = 'pinnedProperties';
+
+/**
  * Serves one form editor tab. VS Code creates one webview panel per tab, so state is held per
  * session rather than per provider, and every subscription is disposed with the panel instead
  * of with the extension.
@@ -151,6 +175,8 @@ export class FormEditorSession implements vscode.Disposable {
 	private _sentSnapshot?: DocumentSnapshot;
 
 	private _objectIcons?: ObjectIconCache;
+
+	private _inferredTypes?: InferredTypeCache;
 
 	private _disposed = false;
 
@@ -492,6 +518,9 @@ export class FormEditorSession implements vscode.Disposable {
 			case 'RenameResource':
 				await this.renameResource(message.resource, message.iri);
 				break;
+			case 'SetPin':
+				await this.setPin(message.resource, message.predicate, message.scope);
+				break;
 			case 'ExecuteCommand': {
 				const command = message as ExecuteCommandMessage;
 
@@ -672,7 +701,7 @@ export class FormEditorSession implements vscode.Disposable {
 	 * @param key What the snapshot is built from.
 	 */
 	private _rebuildSnapshot(context: TurtleDocument, readOnly: ReadOnlyReason | undefined, problems: DocumentProblem[], key: string): void {
-		const result = new SnapshotBuilder({
+		const result = new EditorSnapshotService({
 			version: this._document.version,
 			revision: ++this._revision,
 			uri: this._documentUri,
@@ -680,7 +709,10 @@ export class FormEditorSession implements vscode.Disposable {
 			context,
 			readOnly,
 			problems,
-			countUsages: iri => this._countUsages(iri)
+			countUsages: iri => this._countUsages(iri),
+			pins: _readPins(),
+			inferredTypesOf: resource => this._inferredTypesOf(context.graphs, resource),
+			pinScopes: _pinScopes()
 		}).build();
 
 		this._index = result.index;
@@ -759,6 +791,85 @@ export class FormEditorSession implements vscode.Disposable {
 		return container.isRegistered(ServiceToken.VocabularyRepository)
 			? container.resolve<VocabularyRepository>(ServiceToken.VocabularyRepository)
 			: undefined;
+	}
+
+	/**
+	 * Pin a property of a resource for its types, for oneself in the user settings or for everyone
+	 * in the workspace settings, or unpin it. The pin is stored under the pin type of the resource,
+	 * its primary asserted type or else its first inferred one; unpinning takes it from every type
+	 * of the resource. The changed setting rebuilds the snapshot.
+	 * @param resource The resource.
+	 * @param predicate The predicate.
+	 * @param scope Who to pin it for, or `undefined` to unpin it.
+	 */
+	async setPin(resource: NamedNode | BlankNode, predicate: NamedNode, scope: ScopeKey | undefined): Promise<void> {
+		const entry = this._index ? getEntry(this._index, resource) : undefined;
+		const context = this._getTokenizedContext();
+
+		if (!entry || !context || (scope && !_pinScopes().includes(scope))) {
+			return;
+		}
+
+		const asserted = typeIrisOf(entry);
+		const inferred = this._inferredTypesOf(context.graphs, resource);
+		const pinType = PinnedPropertiesService.pinTypeOf(asserted, inferred);
+
+		if (!pinType) {
+			return;
+		}
+
+		const change = _readPins().withPin(Array.from(new Set([...asserted, ...inferred])), pinType, predicate.value, scope);
+		const configuration = getConfig('formEditor');
+
+		if (change.workspace) {
+			await configuration.update(PINNED_PROPERTIES_SETTING, change.workspace, toConfigurationTarget('workspace'));
+		}
+
+		if (change.user) {
+			await configuration.update(PINNED_PROPERTIES_SETTING, change.user, toConfigurationTarget('user'));
+		}
+	}
+
+	/**
+	 * The types of a resource the store knows, inferred ones included, which an untyped blank node
+	 * of a shape gets from the reasoner. Memoized until the store changes.
+	 * @param graphs The graphs of the document.
+	 * @param resource The resource.
+	 * @returns The type IRIs, none when there is no store.
+	 */
+	private _inferredTypesOf(graphs: string[], resource: NamedNode | BlankNode): readonly string[] {
+		const store = this._getVocabulary()?.store;
+
+		if (!store) {
+			return [];
+		}
+
+		if (!this._inferredTypes || this._inferredTypes.version !== store.version) {
+			this._inferredTypes = { version: store.version, types: new Map() };
+		}
+
+		const key = termToString(resource);
+		const known = this._inferredTypes.types.get(key);
+
+		if (known) {
+			return known;
+		}
+
+		const types = new Set<string>();
+
+		// Read with the inference graphs when the store has a reasoner; asking for them without one
+		// throws.
+		for (const quad of store.matchAll(graphs, resource, rdf.type, null, store.reasoner ? true : false)) {
+			if (quad.object.termType === 'NamedNode') {
+				types.add(quad.object.value);
+			}
+		}
+
+		const result = Array.from(types);
+
+		this._inferredTypes.types.set(key, result);
+
+		return result;
 	}
 
 	/**
@@ -874,6 +985,7 @@ export class FormEditorSession implements vscode.Disposable {
 			resources: [],
 			languageTags: {},
 			labelPredicates: [],
+			descriptionPredicates: [],
 			readOnly,
 			problems: []
 		};
@@ -944,4 +1056,24 @@ function _localPartCaseOf(types: readonly string[]): LocalPartCase | undefined {
 	}
 
 	return types.some(type => PROPERTY_TYPES.has(type)) ? 'camel' : undefined;
+}
+
+/**
+ * Read the pinned properties from the two layers of the setting: the workspace one for everyone,
+ * the user one for oneself.
+ * @returns The pins.
+ */
+function _readPins(): PinnedPropertiesService {
+	const layers = getConfig('formEditor').inspect<unknown>(PINNED_PROPERTIES_SETTING);
+
+	return PinnedPropertiesService.fromLayers(layers?.workspaceValue, layers?.globalValue);
+}
+
+/**
+ * The settings a property can be pinned in: the user settings, and the workspace settings, which
+ * the pins for everyone are stored in, while a workspace folder is open.
+ * @returns The scopes.
+ */
+function _pinScopes(): ScopeKey[] {
+	return (vscode.workspace.workspaceFolders?.length ?? 0) > 0 ? ['user', 'workspace'] : ['user'];
 }

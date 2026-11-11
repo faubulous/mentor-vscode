@@ -13,6 +13,10 @@ export const appearanceEditingSection = {
 	keys: [
 		'formEditor.enabled',
 	],
+	// The pins of the form editor are set from its cards.
+	hiddenKeys: [
+		'formEditor.pinnedProperties',
+	],
 } as const satisfies SettingsSectionDescriptor;
 
 /**

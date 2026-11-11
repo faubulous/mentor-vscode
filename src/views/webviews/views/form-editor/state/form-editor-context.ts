@@ -1,6 +1,7 @@
 import { createContext, useContext } from 'react';
 import { BlankNode, NamedNode } from '@rdfjs/types';
 import { DocumentPosition, NamespaceInfo, ResourceSummary } from '../form-editor-model';
+import { ScopeKey } from '@src/utilities/config-scope';
 import { IEditingController } from './editing-controller.interface';
 import { LanguageFilter } from './language-filter';
 
@@ -47,6 +48,26 @@ export interface FormEditorContextValue {
 	 * shows the most preferred one the resource has.
 	 */
 	labelPredicates?: readonly NamedNode[];
+
+	/**
+	 * The description predicates Mentor is configured with, whose values a collapsed card shows as
+	 * text of its own.
+	 */
+	descriptionPredicates?: readonly NamedNode[];
+
+	/**
+	 * The settings a property can be pinned in, in the order the pin menu offers them: the user
+	 * settings, and the workspace settings where a workspace is open.
+	 */
+	pinScopes?: readonly ScopeKey[];
+
+	/**
+	 * Pin a property of a resource on the cards of its types, or unpin it.
+	 * @param resource The resource.
+	 * @param predicate The predicate.
+	 * @param scope Who to pin it for, or `undefined` to unpin it.
+	 */
+	onSetPin?: (resource: NamedNode | BlankNode, predicate: NamedNode, scope: ScopeKey | undefined) => void;
 
 	/**
 	 * Scroll to a resource, used by nested blank node placeholders.

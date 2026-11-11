@@ -2384,6 +2384,19 @@
             "title": "Enable Form Editor",
             "description": "Register the form based editor for RDF documents, which the editor title bar switches to. To open a file type in the form editor by default, run 'Reopen Editor With...' on a document of that type and choose 'Configure default editor for ...'. Takes effect after the window is reloaded.",
             "experimental": true
+          },
+          "mentor.formEditor.pinnedProperties": {
+            "type": "object",
+            "default": {},
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "title": "Pinned Properties",
+            "markdownDescription": "The properties the form editor shows on the collapsed cards of every resource of a type, by type IRI, in the order they are pinned. The workspace value holds the pins for everyone, the user value the pins for oneself. While the workspace value names nothing for a type, the defaults of the form editor stand in for it (e.g. `rdfs:subClassOf` for classes). The pin buttons of the form editor change this setting.",
+            "experimental": true
           }
         }
       }
