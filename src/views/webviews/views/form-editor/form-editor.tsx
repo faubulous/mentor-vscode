@@ -12,7 +12,8 @@ import { DocumentHeader } from './components/document-header';
 import { FormErrorBoundary } from './components/form-error-boundary';
 import { FormToolbar } from './components/form-toolbar';
 import { EmptyState, LoadingState, ProblemState, ReadOnlyBanner } from './components/resource-list-states';
-import { DocumentPosition, DocumentProblem, DocumentSnapshot, PinScope } from './form-editor-model';
+import { DocumentPosition, DocumentProblem, DocumentSnapshot } from './form-editor-model';
+import { ScopeKey } from '@src/utilities/config-scope';
 import { FormEditorMessages, FormEditorWebviewMessage } from './form-editor-messages';
 import { useBusyResources } from './hooks/use-busy-resources';
 import { useFocusedBlock } from './hooks/use-focused-block';
@@ -184,7 +185,7 @@ function FormEditor(): React.JSX.Element {
 	const handleOpenExternal = useCallback((iri: string) => post({ id: 'ExecuteCommand', command: 'vscode.open', args: [iri] }), [post]);
 	const handleCopyAsTurtle = useCallback((anchor: number, version: number) => post({ id: 'CopyAsTurtle', anchor, version }), [post]);
 	const handleRenameResource = useCallback((resource: NamedNode, iri: string) => post({ id: 'RenameResource', resource, iri }), [post]);
-	const handleSetPin = useCallback((resource: NamedNode | BlankNode, predicate: NamedNode, scope: PinScope | undefined) => post({ id: 'SetPin', resource, predicate, scope }), [post]);
+	const handleSetPin = useCallback((resource: NamedNode | BlankNode, predicate: NamedNode, scope: ScopeKey | undefined) => post({ id: 'SetPin', resource, predicate, scope }), [post]);
 	const handleRevealProblem = useCallback((problem: DocumentProblem) => handleRevealInTextEditor(problem.line, problem.character), [handleRevealInTextEditor]);
 	const handleRevealPosition = useCallback((position: DocumentPosition) => handleRevealInTextEditor(position.line, position.character), [handleRevealInTextEditor]);
 
@@ -249,7 +250,7 @@ function FormEditor(): React.JSX.Element {
 		resources: snapshot?.resources,
 		labelPredicates: snapshot?.labelPredicates,
 		descriptionPredicates: snapshot?.descriptionPredicates,
-		canPinForEveryone: snapshot?.canPinForEveryone,
+		pinScopes: snapshot?.pinScopes,
 		onSetPin: handleSetPin,
 		onRevealResource: handleRevealResource,
 		onOpenExternal: handleOpenExternal,

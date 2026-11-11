@@ -7,7 +7,8 @@ import { getFileName } from '@src/utilities/uri';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { DocumentProblem, DocumentSnapshot, ReadOnlyReason, ResourceSummary } from '@src/views/webviews/views/form-editor/form-editor-model';
 import { ExternalDeclarationDetector } from './external-declaration-detector';
-import { PinnedProperties } from './pinned-properties';
+import { ScopeKey } from '@src/utilities/config-scope';
+import { PinnedPropertiesService } from './pinned-properties-service';
 import { ResourceIndex, ResourceIndexEntry, getEntry, typeIrisOf } from './resource-index';
 import { ResourceIndexBuilder } from './resource-index-builder';
 import { getLanguageTagSpellings } from '@faubulous/mentor-rdf-serializers';
@@ -64,7 +65,7 @@ export interface SnapshotInput {
 	/**
 	 * The properties pinned for the types of resources; none when absent.
 	 */
-	pins?: PinnedProperties;
+	pins?: PinnedPropertiesService;
 
 	/**
 	 * The types of a resource the store infers besides those the document asserts, as of an
@@ -73,9 +74,10 @@ export interface SnapshotInput {
 	inferredTypesOf?: (resource: NamedNode | BlankNode) => readonly string[];
 
 	/**
-	 * Whether a property can be pinned for everyone, which takes a workspace to store it in.
+	 * The settings a property can be pinned in, in the order the pin menu offers them: the user
+	 * settings, and the workspace settings where a workspace is open.
 	 */
-	canPinForEveryone?: boolean;
+	pinScopes?: readonly ScopeKey[];
 }
 
 /**
@@ -99,9 +101,9 @@ export interface SnapshotResult {
  * individual resources, which are requested for the rows that are actually visible. This keeps
  * the cost of a re-parse proportional to the viewport rather than to the size of the document.
  */
-export class SnapshotBuilder {
+export class EditorSnapshotService {
 	/**
-	 * Create a builder.
+	 * Create the service for one build of a snapshot.
 	 * @param _input The document data to build the snapshot from.
 	 */
 	constructor(private readonly _input: SnapshotInput) { }
@@ -114,7 +116,7 @@ export class SnapshotBuilder {
 		const { context, quadContexts } = this._input;
 		const index = new ResourceIndexBuilder(quadContexts, context).build();
 		const externals = new ExternalDeclarationDetector(index, context.namespaces);
-		const documentResource = SnapshotBuilder._findDocumentResource(index);
+		const documentResource = EditorSnapshotService._findDocumentResource(index);
 		const resources = index.summaries.map(summary => ({
 			...summary,
 			usageCount: this._countUsages(summary, index),
@@ -139,7 +141,7 @@ export class SnapshotBuilder {
 				problems: this._input.problems ?? [],
 				labelPredicates: context.predicates.label.map(predicate => RdfDataFactory.namedNode(predicate)),
 				descriptionPredicates: context.predicates.description.map(predicate => RdfDataFactory.namedNode(predicate)),
-				canPinForEveryone: this._input.canPinForEveryone,
+				pinScopes: this._input.pinScopes,
 				dominantTypeIri: _dominantTypeOf(resources.filter(resource => !documentResource?.equals(resource.term)))
 			}
 		};
@@ -147,29 +149,26 @@ export class SnapshotBuilder {
 
 
 	/**
-	 * The pins of a resource and the type a pin of its card is stored under, from its asserted
-	 * types and those the store infers. The type and the label of a resource are what its card
-	 * shows anyway, so they are never pins.
+	 * The pins of a resource, from its asserted types and those the store infers. The type and the
+	 * label of a resource are what its card shows anyway, so they are never pins.
 	 * @param summary The resource.
 	 * @param entry The entry of the resource.
-	 * @returns The fields of the summary, or none for a resource of no known type.
+	 * @returns The pins, or none for a resource of no known type, which cannot pin.
 	 */
-	private _pinsOf(summary: ResourceSummary, entry: ResourceIndexEntry): Pick<ResourceSummary, 'pins' | 'pinType'> {
+	private _pinsOf(summary: ResourceSummary, entry: ResourceIndexEntry): Pick<ResourceSummary, 'pins'> {
 		const asserted = typeIrisOf(entry);
 		const inferred = this._input.inferredTypesOf?.(summary.term) ?? [];
-		const types = Array.from(new Set([...asserted, ...inferred]));
-		const pinType = summary.typeIri ?? inferred.find(type => type !== OWL.NamedIndividual) ?? inferred[0];
 
-		if (!pinType) {
+		if (!PinnedPropertiesService.pinTypeOf(asserted, inferred)) {
 			return {};
 		}
 
 		const fixed = new Set([RDF.type, ...this._input.context.predicates.label]);
-		const pins = (this._input.pins?.pinsOf(types) ?? [])
+		const pins = (this._input.pins?.pinsOf(Array.from(new Set([...asserted, ...inferred]))) ?? [])
 			.filter(pin => !fixed.has(pin.predicate))
 			.map(pin => ({ predicate: RdfDataFactory.namedNode(pin.predicate), scope: pin.scope }));
 
-		return pins.length > 0 ? { pins, pinType } : { pinType };
+		return { pins };
 	}
 
 	/**

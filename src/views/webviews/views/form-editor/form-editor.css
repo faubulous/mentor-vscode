@@ -1185,7 +1185,7 @@ body {
  * The pinned properties of a collapsed card, under its label row: fields that flow from left to
  * right, the predicate as a caption above the values, a description the full width of the card.
  */
-.pinned-fields {
+.pinned-properties-list {
 	display: flex;
 	flex-wrap: wrap;
 	gap: 12px 40px;
@@ -1193,11 +1193,11 @@ body {
 	border-bottom: 1px solid var(--form-row-border);
 }
 
-.pinned-fields:last-child {
+.pinned-properties-list:last-child {
 	border-bottom: 0;
 }
 
-.pinned-field {
+.pinned-property {
 	display: flex;
 	flex-direction: column;
 	gap: 4px;
@@ -1208,16 +1208,16 @@ body {
 	outline: none;
 }
 
-.pinned-field:focus-visible {
+.pinned-property:focus-visible {
 	outline: 1px solid var(--vscode-focusBorder);
 	outline-offset: 2px;
 }
 
-.pinned-field.is-description {
+.pinned-property.is-description {
 	flex-basis: 100%;
 }
 
-.pinned-field-caption {
+.pinned-property-caption {
 	display: inline-flex;
 	align-items: center;
 	gap: 5px;
@@ -1227,7 +1227,7 @@ body {
 	white-space: nowrap;
 }
 
-.pinned-field-values {
+.pinned-property-values {
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
@@ -1236,11 +1236,11 @@ body {
 	line-height: 20px;
 }
 
-.pinned-field:hover .pinned-field-values {
+.pinned-property:hover .pinned-property-values {
 	color: var(--vscode-foreground);
 }
 
-.pinned-field.is-description > .pinned-field-values {
+.pinned-property.is-description > .pinned-property-values {
 	display: -webkit-box;
 	-webkit-line-clamp: 2;
 	-webkit-box-orient: vertical;
@@ -1248,22 +1248,22 @@ body {
 	line-height: 21px;
 }
 
-.pinned-field-value {
+.pinned-property-value {
 	min-width: 0;
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
 }
 
-.pinned-field-value.is-numeric {
+.pinned-property-value.is-numeric {
 	font-family: var(--form-mono);
 }
 
-.pinned-field-value.is-node {
+.pinned-property-value.is-node {
 	color: var(--vscode-descriptionForeground);
 }
 
-.pinned-fields .value-pill {
+.pinned-properties-list .value-pill {
 	height: 20px;
 	padding: 0 8px;
 	gap: 7px;

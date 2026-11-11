@@ -1,5 +1,5 @@
 import { OWL, RDF, RDFS, SKOS } from '@faubulous/mentor-rdf';
-import { PinScope } from '@src/views/webviews/views/form-editor/form-editor-model';
+import { ScopeKey } from '@src/utilities/config-scope';
 
 /**
  * The predicates pinned for each type, by type IRI, as one layer of the
@@ -19,7 +19,7 @@ export interface ResolvedPin {
 	/**
 	 * Who it is pinned for.
 	 */
-	scope: PinScope;
+	scope: ScopeKey;
 }
 
 /**
@@ -63,7 +63,7 @@ const DEFAULT_PINNED_PROPERTIES: PinLayer = {
  * the pins of a type for everyone; while it names nothing for a type, the defaults stand in for it.
  * The pins of the user layer follow those for everyone.
  */
-export class PinnedProperties {
+export class PinnedPropertiesService {
 	/**
 	 * Create the pins of the two layers.
 	 * @param _workspace The pins for everyone.
@@ -77,8 +77,8 @@ export class PinnedProperties {
 	 * @param user The value of the user layer.
 	 * @returns The pins.
 	 */
-	static fromLayers(workspace: unknown, user: unknown): PinnedProperties {
-		return new PinnedProperties(_layerOf(workspace), _layerOf(user));
+	static fromLayers(workspace: unknown, user: unknown): PinnedPropertiesService {
+		return new PinnedPropertiesService(_layerOf(workspace), _layerOf(user));
 	}
 
 	/**
@@ -103,6 +103,18 @@ export class PinnedProperties {
 	}
 
 	/**
+	 * The type the pins of a resource are stored under, since a resource can have several: its
+	 * primary asserted type, else the first type the store infers for it, passing over
+	 * `owl:NamedIndividual`, which nearly every individual has.
+	 * @param asserted The types the document asserts, in order.
+	 * @param inferred The types the store knows, inferred ones included.
+	 * @returns The type, or `undefined` for a resource of no known type, which cannot pin.
+	 */
+	static pinTypeOf(asserted: readonly string[], inferred: readonly string[]): string | undefined {
+		return _primaryOf(asserted) ?? _primaryOf(inferred);
+	}
+
+	/**
 	 * The change that pins a property for a resource in a scope, or unpins it: the property leaves
 	 * every type of the resource it is pinned for, in both layers, and then joins the pins of the
 	 * type new pins are stored under, in the scope given. Leaving a default writes the defaults of
@@ -113,7 +125,7 @@ export class PinnedProperties {
 	 * @param scope Who to pin it for, or `undefined` to unpin it.
 	 * @returns The layers to write.
 	 */
-	withPin(typeIris: readonly string[], pinType: string, predicate: string, scope: PinScope | undefined): PinChange {
+	withPin(typeIris: readonly string[], pinType: string, predicate: string, scope: ScopeKey | undefined): PinChange {
 		const workspace = this._without(typeIris, predicate, type => this._sharedOf(type), this._workspace);
 		const user = this._without(typeIris, predicate, type => this._user[type] ?? [], this._user);
 
@@ -178,4 +190,13 @@ function _layerOf(value: unknown): PinLayer {
 
 	return Object.fromEntries(Object.entries(value as Record<string, unknown>)
 		.filter((entry): entry is [string, string[]] => Array.isArray(entry[1]) && entry[1].every(item => typeof item === 'string')));
+}
+
+/**
+ * The primary one of some types: the first other than `owl:NamedIndividual`, else that one.
+ * @param types The types.
+ * @returns The type, or `undefined` for none.
+ */
+function _primaryOf(types: readonly string[]): string | undefined {
+	return types.find(type => type !== OWL.NamedIndividual) ?? types[0];
 }

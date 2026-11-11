@@ -4,7 +4,7 @@ import { createContext, useContext } from 'react';
  * What the title bar of a card last asked of the nested cards in it: to collapse or to expand,
  * all of them at once. The revision tells one request from the next with the same answer.
  */
-export interface CardFold {
+export interface NestedCardsCollapse {
 	/**
 	 * Whether the nested cards were asked to collapse.
 	 */
@@ -17,15 +17,15 @@ export interface CardFold {
 }
 
 /**
- * The fold of the card a nested card stands in, which its title bar sets: collapsed until asked
+ * Whether the nested cards of a card are to be collapsed, which its title bar sets: collapsed until asked
  * otherwise, as nested cards start collapsed.
  */
-export const CardFoldContext = createContext<CardFold>({ collapsed: true, revision: 0 });
+export const NestedCardsCollapseContext = createContext<NestedCardsCollapse>({ collapsed: true, revision: 0 });
 
 /**
- * The fold of the card the component stands in.
- * @returns The fold.
+ * Whether the nested cards of the card the component stands in are to be collapsed.
+ * @returns The request.
  */
-export function useCardFold(): CardFold {
-	return useContext(CardFoldContext);
+export function useNestedCardsCollapse(): NestedCardsCollapse {
+	return useContext(NestedCardsCollapseContext);
 }

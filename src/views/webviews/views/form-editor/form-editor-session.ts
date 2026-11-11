@@ -15,7 +15,7 @@ import { EditOperation } from '@src/services/editing/edit-operation';
 import { StatementValue } from '@src/services/editing/statement-value';
 import { LocalPartCase, getLocalPartFromLabel } from '@src/utilities/uri';
 import { getLog } from '@src/utilities/vscode/log';
-import { getConfig } from '@src/utilities/vscode/config';
+import { getConfig, toConfigurationTarget } from '@src/utilities/vscode/config';
 import { ResourceReferenceProvider } from '@src/providers/resource-reference-provider';
 import { getSubjectIconName } from '@src/utilities/subject-icon';
 import { getBlankNodeSpan, getTokenAtPosition, tokensMatchText } from '@src/utilities/tokens';
@@ -26,12 +26,13 @@ import { WebviewComponentFactory } from '../../webview-component-factory';
 import { ExecuteCommandMessage } from '../../webview-messaging';
 import { ResourceIndex, ResourceIndexOptions, findCardResource, getEntry, typeIrisOf } from '../../services/editing/resource-index';
 import { ResourceViewBuilder } from '../../services/editing/resource-view-builder';
-import { PinnedProperties } from '../../services/editing/pinned-properties';
-import { SnapshotBuilder } from '../../services/editing/snapshot-builder';
+import { PinnedPropertiesService } from '../../services/editing/pinned-properties-service';
+import { EditorSnapshotService } from '../../services/editing/editor-snapshot-service';
 import { EditOutcome, FormEditorEditHandler } from './form-editor-edit-handler';
 import { FormEditorHostMessage, FormEditorWebviewMessage } from './form-editor-messages';
 import { getFormReadOnlyReason } from './form-editor-read-only';
-import { DocumentProblem, DocumentSnapshot, PinScope, ReadOnlyReason, ResourceDetail } from './form-editor-model';
+import { DocumentProblem, DocumentSnapshot, ReadOnlyReason, ResourceDetail } from './form-editor-model';
+import { ScopeKey } from '@src/utilities/config-scope';
 import { QuadContextCache } from './quad-context-cache';
 import { reviveTerms } from '@src/utilities/rdf-terms';
 
@@ -700,7 +701,7 @@ export class FormEditorSession implements vscode.Disposable {
 	 * @param key What the snapshot is built from.
 	 */
 	private _rebuildSnapshot(context: TurtleDocument, readOnly: ReadOnlyReason | undefined, problems: DocumentProblem[], key: string): void {
-		const result = new SnapshotBuilder({
+		const result = new EditorSnapshotService({
 			version: this._document.version,
 			revision: ++this._revision,
 			uri: this._documentUri,
@@ -711,7 +712,7 @@ export class FormEditorSession implements vscode.Disposable {
 			countUsages: iri => this._countUsages(iri),
 			pins: _readPins(),
 			inferredTypesOf: resource => this._inferredTypesOf(context.graphs, resource),
-			canPinForEveryone: _hasWorkspace()
+			pinScopes: _pinScopes()
 		}).build();
 
 		this._index = result.index;
@@ -794,32 +795,38 @@ export class FormEditorSession implements vscode.Disposable {
 
 	/**
 	 * Pin a property of a resource for its types, for oneself in the user settings or for everyone
-	 * in the workspace settings, or unpin it. The pin is stored under the type the snapshot names
-	 * for the resource; unpinning takes it from every type of the resource. The changed setting
-	 * rebuilds the snapshot.
+	 * in the workspace settings, or unpin it. The pin is stored under the pin type of the resource,
+	 * its primary asserted type or else its first inferred one; unpinning takes it from every type
+	 * of the resource. The changed setting rebuilds the snapshot.
 	 * @param resource The resource.
 	 * @param predicate The predicate.
 	 * @param scope Who to pin it for, or `undefined` to unpin it.
 	 */
-	async setPin(resource: NamedNode | BlankNode, predicate: NamedNode, scope: PinScope | undefined): Promise<void> {
-		const summary = this._snapshot?.resources.find(candidate => candidate.term.equals(resource));
+	async setPin(resource: NamedNode | BlankNode, predicate: NamedNode, scope: ScopeKey | undefined): Promise<void> {
 		const entry = this._index ? getEntry(this._index, resource) : undefined;
 		const context = this._getTokenizedContext();
 
-		if (!summary?.pinType || !entry || !context || (scope === 'workspace' && !_hasWorkspace())) {
+		if (!entry || !context || (scope && !_pinScopes().includes(scope))) {
 			return;
 		}
 
-		const types = Array.from(new Set([...typeIrisOf(entry), ...this._inferredTypesOf(context.graphs, resource)]));
-		const change = _readPins().withPin(types, summary.pinType, predicate.value, scope);
+		const asserted = typeIrisOf(entry);
+		const inferred = this._inferredTypesOf(context.graphs, resource);
+		const pinType = PinnedPropertiesService.pinTypeOf(asserted, inferred);
+
+		if (!pinType) {
+			return;
+		}
+
+		const change = _readPins().withPin(Array.from(new Set([...asserted, ...inferred])), pinType, predicate.value, scope);
 		const configuration = getConfig('formEditor');
 
 		if (change.workspace) {
-			await configuration.update(PINNED_PROPERTIES_SETTING, change.workspace, vscode.ConfigurationTarget.Workspace);
+			await configuration.update(PINNED_PROPERTIES_SETTING, change.workspace, toConfigurationTarget('workspace'));
 		}
 
 		if (change.user) {
-			await configuration.update(PINNED_PROPERTIES_SETTING, change.user, vscode.ConfigurationTarget.Global);
+			await configuration.update(PINNED_PROPERTIES_SETTING, change.user, toConfigurationTarget('user'));
 		}
 	}
 
@@ -1056,16 +1063,17 @@ function _localPartCaseOf(types: readonly string[]): LocalPartCase | undefined {
  * the user one for oneself.
  * @returns The pins.
  */
-function _readPins(): PinnedProperties {
+function _readPins(): PinnedPropertiesService {
 	const layers = getConfig('formEditor').inspect<unknown>(PINNED_PROPERTIES_SETTING);
 
-	return PinnedProperties.fromLayers(layers?.workspaceValue, layers?.globalValue);
+	return PinnedPropertiesService.fromLayers(layers?.workspaceValue, layers?.globalValue);
 }
 
 /**
- * Indicate whether a workspace is open, which the pins for everyone are stored in.
- * @returns `true` with a workspace folder open.
+ * The settings a property can be pinned in: the user settings, and the workspace settings, which
+ * the pins for everyone are stored in, while a workspace folder is open.
+ * @returns The scopes.
  */
-function _hasWorkspace(): boolean {
-	return (vscode.workspace.workspaceFolders?.length ?? 0) > 0;
+function _pinScopes(): ScopeKey[] {
+	return (vscode.workspace.workspaceFolders?.length ?? 0) > 0 ? ['user', 'workspace'] : ['user'];
 }

@@ -43,7 +43,7 @@ const DETAIL = createTestResourceDetail([
 function renderCard(summary: Partial<ResourceSummary> = {}, expanded = false, loaded = true) {
 	const onToggle = vi.fn();
 	const onSetPin = vi.fn();
-	const resource = createResourceSummary('Tree', { term: DETAIL.term, label: 'Apple tree', description: 'A tree bearing apples', typeIri: `${EX}Tree`, pinType: `${EX}Tree`, pins: PINS, ...summary });
+	const resource = createResourceSummary('Tree', { term: DETAIL.term, label: 'Apple tree', description: 'A tree bearing apples', typeIri: `${EX}Tree`, pins: PINS, ...summary });
 	const dataService = createResourceDataServiceStub(loaded ? [DETAIL] : []);
 	const context: FormEditorContextValue = {
 		readOnly: true,
@@ -51,7 +51,7 @@ function renderCard(summary: Partial<ResourceSummary> = {}, expanded = false, lo
 		languageTags: {},
 		labelPredicates: [RdfDataFactory.namedNode(RDFS.label)],
 		descriptionPredicates: [RdfDataFactory.namedNode(RDFS.comment)],
-		canPinForEveryone: true,
+		pinScopes: ['user', 'workspace'],
 		onSetPin
 	};
 
@@ -73,12 +73,12 @@ describe('ResourceCard, its pins', () => {
 
 	it('shows the pinned properties a collapsed card has as fields, the description among them', () => {
 		const { container } = renderCard();
-		const fields = Array.from(container.querySelectorAll<HTMLElement>('.pinned-field'));
+		const fields = Array.from(container.querySelectorAll<HTMLElement>('.pinned-property'));
 
-		expect(fields.map(field => field.querySelector('.pinned-field-caption')?.textContent)).toEqual(['ex:p', 'ex:count', 'rdfs:comment']);
+		expect(fields.map(field => field.querySelector('.pinned-property-caption')?.textContent)).toEqual(['ex:p', 'ex:count', 'rdfs:comment']);
 		expect(fields[0].querySelector('.value-pill-label')?.textContent).toBe('A');
-		expect(fields[1].querySelector('.pinned-field-value.is-numeric')?.textContent).toBe('42');
-		expect(fields[1].querySelector('.pinned-field-caption vscode-icon')?.getAttribute('title')).toBe('Pinned for you');
+		expect(fields[1].querySelector('.pinned-property-value.is-numeric')?.textContent).toBe('42');
+		expect(fields[1].querySelector('.pinned-property-caption vscode-icon')?.getAttribute('title')).toBe('Pinned for you');
 		expect(fields[2].classList.contains('is-description')).toBe(true);
 		expect(container.querySelector('.resource-card-description')).toBeNull();
 	});
@@ -87,13 +87,13 @@ describe('ResourceCard, its pins', () => {
 		const { container, dataService } = renderCard({ pins: undefined }, false, false);
 
 		expect(dataService.requested).toEqual([]);
-		expect(container.querySelector('.pinned-fields')).toBeNull();
+		expect(container.querySelector('.pinned-properties-list')).toBeNull();
 		expect(container.querySelector('.resource-card-description')?.textContent).toBe('A tree bearing apples');
 	});
 
 	it('expands the card from a pinned field, with the pointer and the keyboard', async () => {
 		const { container, onToggle, resource } = renderCard();
-		const field = container.querySelector<HTMLElement>('.pinned-field')!;
+		const field = container.querySelector<HTMLElement>('.pinned-property')!;
 
 		await userEvent.click(field);
 		fireEvent.keyDown(field, { key: 'Enter' });
@@ -121,7 +121,7 @@ describe('ResourceCard, its pins', () => {
 	});
 
 	it('offers no pin for a resource of no known type', () => {
-		renderCard({ pinType: undefined, pins: undefined }, true);
+		renderCard({ pins: undefined }, true);
 
 		expect(within(screen.getByRole('group', { name: 'ex:p' })).queryByRole('button', { name: /pin/i })).toBeNull();
 	});

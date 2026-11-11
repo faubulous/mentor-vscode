@@ -1,11 +1,12 @@
 import { createContext, useContext } from 'react';
 import { NamedNode } from '@rdfjs/types';
-import { PinnedProperty, PinScope } from '../form-editor-model';
+import { PinnedProperty } from '../form-editor-model';
+import { ScopeKey } from '@src/utilities/config-scope';
 
 /**
  * The pins of the card a row stands in, and what pins a property of it.
  */
-export interface CardPins {
+export interface PinnedProperties {
 	/**
 	 * The properties pinned for the types of the resource of the card.
 	 */
@@ -17,18 +18,18 @@ export interface CardPins {
 	 * @param predicate The predicate.
 	 * @param scope Who to pin it for, or `undefined` to unpin it.
 	 */
-	onPin?: (predicate: NamedNode, scope: PinScope | undefined) => void;
+	onPin?: (predicate: NamedNode, scope: ScopeKey | undefined) => void;
 }
 
 /**
  * The pins of the card a row stands in, which the card provides.
  */
-export const CardPinsContext = createContext<CardPins>({ pins: [] });
+export const PinnedPropertiesContext = createContext<PinnedProperties>({ pins: [] });
 
 /**
  * The pins of the card the component stands in.
  * @returns The pins.
  */
-export function useCardPins(): CardPins {
-	return useContext(CardPinsContext);
+export function usePinnedProperties(): PinnedProperties {
+	return useContext(PinnedPropertiesContext);
 }

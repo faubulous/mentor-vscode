@@ -2,6 +2,7 @@ import { FocusEvent, KeyboardEvent, useState } from 'react';
 import { RDF } from '@faubulous/mentor-rdf/ontologies';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { ValueKind } from '@src/utilities/value-kind';
+import { ScopeKey } from '@src/utilities/config-scope';
 import { PropertyView, TermView } from '../form-editor-model';
 import { useRowEditorState } from '../hooks/use-row-editor-state';
 import { StatementServices } from '../hooks/use-statement-services';
@@ -10,7 +11,7 @@ import { RowValue } from '../state/row-value';
 import { useFormEditorContext } from '../state/form-editor-context';
 import { StatementRowEditor } from '../state/statement-row-editor';
 import { StatementRowState } from '../state/statement-row-state';
-import { CardPins, useCardPins } from '../state/card-pins-context';
+import { PinnedProperties, usePinnedProperties } from '../state/pinned-properties-context';
 import { EditedRow } from './edited-row';
 import { PinButton } from './pin-button';
 import { PredicateField } from './predicate-field';
@@ -22,6 +23,11 @@ import { StatementRowContext } from './statement-row-context';
 import { StatementValueCell } from './statement-value-cell';
 import { getTermLabel, getTermTitle } from './term-labels';
 import { TermValue } from './term-value';
+
+/**
+ * The settings a property can be pinned in while the form names none.
+ */
+const NO_PIN_SCOPES: readonly ScopeKey[] = [];
 
 /**
  * The header of the nested card of a blank node, which the row of its type leads.
@@ -146,8 +152,8 @@ interface ShownValue {
 export function StatementRow({ property, editor, services, autoFocus = false, removable, header, ...context }: StatementRowProps): React.JSX.Element {
 	const state = useRowEditorState(editor);
 	const edited: EditedRow | undefined = editor && state && services ? { editor, state, services } : undefined;
-	const { languageFilter = LanguageFilter.ALL, canPinForEveryone = false } = useFormEditorContext();
-	const cardPins = useCardPins();
+	const { languageFilter = LanguageFilter.ALL, pinScopes = NO_PIN_SCOPES } = useFormEditorContext();
+	const cardPins = usePinnedProperties();
 	const values = _shownValues(state?.draft.values ?? property?.values.map(view => ({ kind: 'written' as const, view })) ?? [], services, languageFilter);
 	const literals = [...values.filter(entry => _kindOf(entry.view) === 'literal'), ..._missingLanguageField(edited, languageFilter)];
 	const resources = values.filter(entry => _kindOf(entry.view) === 'resource');
@@ -212,7 +218,7 @@ export function StatementRow({ property, editor, services, autoFocus = false, re
 				{property && <PropertyComments property={property} />}
 			</span>
 			<span className="statement-actions">
-				{!header && context.depth === 0 && _pinOf(predicateView, label, cardPins, canPinForEveryone)}
+				{!header && context.depth === 0 && _pinOf(predicateView, label, cardPins, pinScopes)}
 				{removable && !header && edited && !edited.editor.isNew && (
 					<button type="button" className="statement-row-remove" aria-label={`Remove ${label}`} title="Remove property" onClick={() => edited.editor.removeProperty()}>
 						<vscode-icon name="close" size={12}></vscode-icon>
@@ -230,10 +236,10 @@ export function StatementRow({ property, editor, services, autoFocus = false, re
  * @param predicateView The predicate of the row, once it names one.
  * @param label The label of the predicate.
  * @param cardPins The pins of the card.
- * @param canPinForEveryone Whether a pin for everyone can be stored.
+ * @param pinScopes The settings a property can be pinned in.
  * @returns The button, or nothing.
  */
-function _pinOf(predicateView: TermView | undefined, label: string, cardPins: CardPins, canPinForEveryone: boolean): React.JSX.Element | null {
+function _pinOf(predicateView: TermView | undefined, label: string, cardPins: PinnedProperties, pinScopes: readonly ScopeKey[]): React.JSX.Element | null {
 	const predicate = predicateView?.term;
 	const onPin = cardPins.onPin;
 
@@ -243,11 +249,11 @@ function _pinOf(predicateView: TermView | undefined, label: string, cardPins: Ca
 
 	const scope = cardPins.pins.find(pin => pin.predicate.equals(predicate))?.scope;
 
-	return <PinButton scope={scope} canPinForEveryone={canPinForEveryone} label={label} onPin={next => onPin(predicate, next)} />;
+	return <PinButton scope={scope} pinScopes={pinScopes} label={label} onPin={next => onPin(predicate, next)} />;
 }
 
 /**
- * The IRI of the predicate of a row, which a pinned field of a collapsed card finds the row by.
+ * The IRI of the predicate of a row, which a pinned property of a collapsed card finds the row by.
  * @param predicateView The predicate, once the row names one.
  * @returns The IRI, or `undefined`.
  */

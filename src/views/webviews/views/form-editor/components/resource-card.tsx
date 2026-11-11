@@ -4,11 +4,11 @@ import { termToString } from 'rdf-string';
 import { ResourceSummary } from '../form-editor-model';
 import { useResourceDetail } from '../hooks/use-resource-detail';
 import { IResourceDataService } from '../services/resource-data-service.interface';
-import { CardFold, CardFoldContext } from '../state/card-fold-context';
-import { CardPins, CardPinsContext } from '../state/card-pins-context';
+import { NestedCardsCollapse, NestedCardsCollapseContext } from '../state/nested-cards-collapse-context';
+import { PinnedProperties, PinnedPropertiesContext } from '../state/pinned-properties-context';
 import { useFormEditorContext } from '../state/form-editor-context';
 import { HighlightedText } from './highlighted-text';
-import { PinnedFields } from './pinned-fields';
+import { PinnedPropertiesList } from './pinned-properties-list';
 import { ResourceCardHeader } from './resource-card-header';
 import { ResourceCardTitleBar } from './resource-card-title-bar';
 import { StatementList } from './statement-list';
@@ -44,7 +44,7 @@ export interface ResourceCardProps {
 	current?: boolean;
 
 	/**
-	 * Expands the card or folds it again.
+	 * Expands the card or collapses it again.
 	 */
 	onToggle: (resource: NamedNode | BlankNode) => void;
 }
@@ -66,12 +66,12 @@ export function ResourceCard({ summary, dataService, expanded, writing = false, 
 	const marked = current === true || revealedResource?.equals(summary.term) === true;
 	const toggle = useCallback((): void => onToggle(summary.term), [onToggle, summary.term]);
 	const showsStatements = expanded || writing;
-	const [fold, setFold] = useState<CardFold>({ collapsed: true, revision: 0 });
-	const toggleNested = useCallback((): void => setFold(current => ({ collapsed: !current.collapsed, revision: current.revision + 1 })), []);
-	const pins = useMemo<CardPins>(() => ({
+	const [nestedCollapse, setNestedCollapse] = useState<NestedCardsCollapse>({ collapsed: true, revision: 0 });
+	const toggleNested = useCallback((): void => setNestedCollapse(current => ({ collapsed: !current.collapsed, revision: current.revision + 1 })), []);
+	const pins = useMemo<PinnedProperties>(() => ({
 		pins: summary.pins ?? [],
-		onPin: summary.pinType && onSetPin ? (predicate, scope) => onSetPin(summary.term, predicate, scope) : undefined
-	}), [summary.pins, summary.pinType, summary.term, onSetPin]);
+		onPin: summary.pins && onSetPin ? (predicate, scope) => onSetPin(summary.term, predicate, scope) : undefined
+	}), [summary.pins, summary.term, onSetPin]);
 	const showsPins = !expanded && pins.pins.length > 0;
 	const [openedPredicate, setOpenedPredicate] = useState<NamedNode>();
 	const cardRef = useRef<HTMLElement>(null);
@@ -103,20 +103,20 @@ export function ResourceCard({ summary, dataService, expanded, writing = false, 
 
 	return (
 		<article ref={cardRef} className={`resource-card${expanded ? ' is-expanded' : ''}${marked ? ' is-current' : ''}`} data-resource-id={termToString(summary.term)}>
-			<ResourceCardTitleBar summary={summary} expanded={expanded} nestedCollapsed={fold.collapsed} onToggle={toggle} onToggleNested={toggleNested} />
+			<ResourceCardTitleBar summary={summary} expanded={expanded} nestedCollapsed={nestedCollapse.collapsed} onToggle={toggle} onToggleNested={toggleNested} />
 			{(!expanded || !detail) && <ResourceCardHeader summary={summary} expanded={expanded} onToggle={toggle} />}
-			{showsPins && detail && <PinnedFields detail={detail} pins={pins.pins} onOpen={openAt} />}
+			{showsPins && detail && <PinnedPropertiesList detail={detail} pins={pins.pins} onOpen={openAt} />}
 			{!expanded && summary.description && !pinnedDescription && <div className="resource-card-description"><HighlightedText text={summary.description} query={filterText} /></div>}
 			{showsStatements && (
-				<CardPinsContext.Provider value={pins}>
-					<CardFoldContext.Provider value={fold}>
+				<PinnedPropertiesContext.Provider value={pins}>
+					<NestedCardsCollapseContext.Provider value={nestedCollapse}>
 						<div className="resource-card-body" hidden={!expanded}>
 							{detail
 								? <StatementList detail={detail} stale={stale} dataService={dataService} depth={0} visited={[summary.term]} labelRow />
 								: <div className="resource-form-loading">Loading…</div>}
 						</div>
-					</CardFoldContext.Provider>
-				</CardPinsContext.Provider>
+					</NestedCardsCollapseContext.Provider>
+				</PinnedPropertiesContext.Provider>
 			)}
 		</article>
 	);
