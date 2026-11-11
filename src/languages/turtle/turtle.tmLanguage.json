@@ -220,9 +220,20 @@
         "literal": {
             "patterns": [
                 {
-                    "name": "string.quoted.triple.turtle",
-                    "begin": "(\"\"\")|(''')",
-                    "end": "(\\1)",
+                    "name": "string.quoted.triple.double.turtle",
+                    "begin": "\"\"\"",
+                    "end": "\"\"\"",
+                    "patterns": [
+                        {
+                            "name": "constant.character.escape.turtle",
+                            "match": "\\\\."
+                        }
+                    ]
+                },
+                {
+                    "name": "string.quoted.triple.single.turtle",
+                    "begin": "'''",
+                    "end": "'''",
                     "patterns": [
                         {
                             "name": "constant.character.escape.turtle",

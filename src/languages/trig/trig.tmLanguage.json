@@ -227,9 +227,20 @@
         "literal": {
             "patterns": [
                 {
-                    "name": "string.quoted.triple.trig",
-                    "begin": "(\"\"\")|(''')",
-                    "end": "(\\1)",
+                    "name": "string.quoted.triple.double.trig",
+                    "begin": "\"\"\"",
+                    "end": "\"\"\"",
+                    "patterns": [
+                        {
+                            "name": "constant.character.escape.trig",
+                            "match": "\\\\."
+                        }
+                    ]
+                },
+                {
+                    "name": "string.quoted.triple.single.trig",
+                    "begin": "'''",
+                    "end": "'''",
                     "patterns": [
                         {
                             "name": "constant.character.escape.trig",
