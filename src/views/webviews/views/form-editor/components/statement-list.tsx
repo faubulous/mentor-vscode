@@ -66,7 +66,7 @@ const TYPE_ROW: LeadingRow = { predicates: [RDF.type], predicateText: 'a' };
  * card asks for it: the label predicate and the label as the title of the card. The nested card of
  * a blank node is led by a header: a chevron that collapses the card to the header, which then
  * names the other properties, the type of the node, which asks to choose one while there is none,
- * and the comments of the node; each of its rows has a button that removes its property. The
+ * and the comments of the node. The ⋮ menu of a row pins its property and removes it. The
  * title bar of the card collapses and expands the nested cards all at once.
  * @param props The resource and where the list stands.
  * @returns The rows.
@@ -107,7 +107,6 @@ export function StatementList({ detail, stale = false, dataService, depth, visit
 			editor={entry?.editor}
 			services={services}
 			autoFocus={entry?.editor !== undefined && entry.editor.id === focusedRowId}
-			removable={nested}
 			header={rowHeader}
 			dataService={dataService}
 			depth={depth}
@@ -174,13 +173,13 @@ function _leadingEntryOf(entries: readonly StatementRowEntry[], leadingRow: Lead
  * header shows.
  * @param rows The rows of the card other than its type.
  * @param pins The pins of the node.
- * @returns The properties, in the order of the pins.
+ * @returns The properties, in the order of the rows, as the document has them.
  */
 function _pinnedOf(rows: readonly StatementRowEntry[], pins: readonly PinnedProperty[]): { label: string; text: string }[] {
-	return pins.flatMap(pin => {
-		const property = rows.find(entry => entry.property?.predicate.term.equals(pin.predicate))?.property;
+	return rows.flatMap(entry => {
+		const property = entry.property;
 
-		if (!property || property.values.length === 0) {
+		if (!property || property.values.length === 0 || !pins.some(pin => property.predicate.term.equals(pin.predicate))) {
 			return [];
 		}
 

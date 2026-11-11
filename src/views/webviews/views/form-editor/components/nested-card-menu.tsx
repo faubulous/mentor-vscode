@@ -1,6 +1,7 @@
 import { MutableRefObject } from 'react';
 import { VscodeContextMenu } from '@vscode-elements/elements';
 import { useVscodeElementRef } from '@src/views/webviews/hooks';
+import { FormEditorShortcuts } from '../form-editor-shortcuts';
 
 /**
  * What the row holding the nested card of a blank node can do with the node.
@@ -38,7 +39,7 @@ export interface NestedCardMenuProps {
 }
 
 /**
- * The ⋯ button of the nested card of a blank node and its menu: Duplicate, Copy as Turtle and
+ * The ⋮ button of the nested card of a blank node and its menu: Duplicate, Copy as Turtle and
  * Remove. The menu hides itself when an item is picked or the user clicks away, so its visibility
  * is left to the element.
  * @param props What the menu offers and where its element is kept.
@@ -75,7 +76,7 @@ export function NestedCardMenu({ actions, menuRef }: NestedCardMenuProps): React
 	return (
 		<span className="nested-card-menu">
 			<button type="button" className="nested-card-more" aria-label="More actions" aria-haspopup="menu" title="More actions" onClick={toggle}>
-				<vscode-icon name="ellipsis" size={14}></vscode-icon>
+				<vscode-icon name="kebab-vertical" size={14}></vscode-icon>
 			</button>
 			<vscode-context-menu
 				ref={setMenuRef}
@@ -83,7 +84,7 @@ export function NestedCardMenu({ actions, menuRef }: NestedCardMenuProps): React
 					{ label: 'Duplicate', value: 'duplicate' },
 					...(actions.onCopyAsTurtle ? [{ label: 'Copy as Turtle', value: 'copy' }] : []),
 					{ separator: true },
-					{ label: 'Remove', value: 'remove' }
+					{ label: 'Remove', value: 'remove', keybinding: FormEditorShortcuts.Remove.label }
 				]}
 			></vscode-context-menu>
 		</span>

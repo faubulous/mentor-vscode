@@ -1,10 +1,11 @@
 import { BlankNode, NamedNode } from '@rdfjs/types';
-import { MouseEvent, useEffect, useRef } from 'react';
+import { KeyboardEvent, MouseEvent, useEffect, useRef } from 'react';
 import { VscodeContextMenu } from '@vscode-elements/elements';
 import { termToString } from 'rdf-string';
 import { NestedResourceRef } from '../form-editor-model';
 import { useResourceDetail } from '../hooks/use-resource-detail';
 import { IResourceDataService } from '../services/resource-data-service.interface';
+import { FormEditorShortcuts } from '../form-editor-shortcuts';
 import { NestedCardActions, NestedCardMenu } from './nested-card-menu';
 import { NestedResourcePlaceholder } from './nested-resource-placeholder';
 import { PinnedPropertiesContext } from '../state/pinned-properties-context';
@@ -86,6 +87,18 @@ export function NestedResourceCard({ nested, dataService, depth, visited, action
 		return <div className="resource-card is-nested" data-resource-id={termToString(nested.term)}><div className="resource-form-loading">Loading…</div></div>;
 	}
 
+	// The shortcut of Remove removes the node while the focus is in the header of its card or in no
+	// row of it; a row removes itself by it.
+	const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
+		if (!actions || !FormEditorShortcuts.Remove.matches(event) || !_isOwnHeader(event.target, event.currentTarget)) {
+			return;
+		}
+
+		event.preventDefault();
+		event.stopPropagation();
+		actions.onRemove();
+	};
+
 	const handleContextMenu = (event: MouseEvent<HTMLDivElement>): void => {
 		if (!menuRef.current || _isTextField(event.target)) {
 			return;
@@ -97,7 +110,7 @@ export function NestedResourceCard({ nested, dataService, depth, visited, action
 	};
 
 	return (
-		<div className="resource-card is-nested" data-resource-id={termToString(nested.term)} onContextMenu={actions ? handleContextMenu : undefined}>
+		<div className="resource-card is-nested" data-resource-id={termToString(nested.term)} onContextMenu={actions ? handleContextMenu : undefined} onKeyDown={actions ? handleKeyDown : undefined}>
 			<PinnedPropertiesContext.Provider value={{ pins: detail.pins ?? [], onPin: detail.pins && onSetPin ? (predicate, scope) => onSetPin(nested.term, predicate, scope) : undefined }}>
 				<StatementList detail={detail} dataService={dataService} depth={depth} visited={[...visited, nested.term]} comments={_captionOf(comments, detail.comments)} />
 			</PinnedPropertiesContext.Provider>
@@ -126,4 +139,21 @@ function _captionOf(valueComments: string[] | undefined, nodeComments: string[] 
  */
 function _isTextField(target: EventTarget): boolean {
 	return target instanceof Element && target.closest('vscode-textfield, vscode-textarea, input, textarea') !== null;
+}
+
+/**
+ * Indicate whether the target of an event in a nested card is in the header of that card, or in no
+ * row of it, rather than in one of its rows or in a card nested in it.
+ * @param target The target of the event.
+ * @param card The nested card.
+ * @returns `true` when the card itself is meant.
+ */
+function _isOwnHeader(target: EventTarget, card: Element): boolean {
+	if (!(target instanceof Element) || target.closest('.resource-card.is-nested') !== card) {
+		return false;
+	}
+
+	const row = target.closest('.statement-line');
+
+	return !row || !card.contains(row) || row.classList.contains('is-card-header');
 }

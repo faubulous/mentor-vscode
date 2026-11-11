@@ -84,6 +84,16 @@ export class ValueOperations {
 	}
 
 	/**
+	 * Remove every block of a subject as a whole, as removing the subject does, which leaves no
+	 * statement about it on purpose.
+	 * @param blocks The top level blocks of the subject.
+	 * @returns The deletions.
+	 */
+	subjectDeletions(blocks: readonly SubjectBlock[]): TextEditSpec[] {
+		return this._blockDeletions(blocks);
+	}
+
+	/**
 	 * Remove top level blocks as a whole: each with the comment lines written directly above it, its
 	 * terminator and the comment that ends its last line. A blank line that separated a removed block
 	 * from its neighbours goes with it, so the blocks that stay keep one blank line between them.

@@ -15,6 +15,7 @@ import { EmptyState, LoadingState, ProblemState, ReadOnlyBanner } from './compon
 import { DocumentPosition, DocumentProblem, DocumentSnapshot } from './form-editor-model';
 import { ScopeKey } from '@src/utilities/config-scope';
 import { FormEditorMessages, FormEditorWebviewMessage } from './form-editor-messages';
+import { FormEditorShortcuts } from './form-editor-shortcuts';
 import { useBusyResources } from './hooks/use-busy-resources';
 import { useFocusedBlock } from './hooks/use-focused-block';
 import { useFormBlocks } from './hooks/use-form-blocks';
@@ -185,6 +186,7 @@ function FormEditor(): React.JSX.Element {
 	const handleOpenExternal = useCallback((iri: string) => post({ id: 'ExecuteCommand', command: 'vscode.open', args: [iri] }), [post]);
 	const handleCopyAsTurtle = useCallback((anchor: number, version: number) => post({ id: 'CopyAsTurtle', anchor, version }), [post]);
 	const handleRenameResource = useCallback((resource: NamedNode, iri: string) => post({ id: 'RenameResource', resource, iri }), [post]);
+	const handleRemoveResource = useCallback((resource: NamedNode | BlankNode) => post({ id: 'RemoveResource', resource }), [post]);
 	const handleSetPin = useCallback((resource: NamedNode | BlankNode, predicate: NamedNode, scope: ScopeKey | undefined) => post({ id: 'SetPin', resource, predicate, scope }), [post]);
 	const handleRevealProblem = useCallback((problem: DocumentProblem) => handleRevealInTextEditor(problem.line, problem.character), [handleRevealInTextEditor]);
 	const handleRevealPosition = useCallback((position: DocumentPosition) => handleRevealInTextEditor(position.line, position.character), [handleRevealInTextEditor]);
@@ -225,7 +227,7 @@ function FormEditor(): React.JSX.Element {
 			return;
 		}
 
-		if (event.key.toLowerCase() === 'f' && (event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey) {
+		if (FormEditorShortcuts.Find.matches(event)) {
 			event.preventDefault();
 			setFindOpen(true);
 			setFindFocusRequest(current => current + 1);
@@ -252,6 +254,7 @@ function FormEditor(): React.JSX.Element {
 		descriptionPredicates: snapshot?.descriptionPredicates,
 		pinScopes: snapshot?.pinScopes,
 		onSetPin: handleSetPin,
+		onRemoveResource: handleRemoveResource,
 		onRevealResource: handleRevealResource,
 		onOpenExternal: handleOpenExternal,
 		onCopyAsTurtle: handleCopyAsTurtle,
@@ -260,7 +263,7 @@ function FormEditor(): React.JSX.Element {
 		revealedResource: revealed,
 		dominantTypeIri: snapshot?.dominantTypeIri,
 		filterText
-	}), [snapshot, editable, controller, languageFilter, handleRevealResource, handleOpenExternal, handleCopyAsTurtle, handleRenameResource, handleRevealPosition, handleSetPin, revealed, filterText]);
+	}), [snapshot, editable, controller, languageFilter, handleRevealResource, handleOpenExternal, handleCopyAsTurtle, handleRenameResource, handleRevealPosition, handleSetPin, handleRemoveResource, revealed, filterText]);
 
 	if (!snapshot) {
 		return (

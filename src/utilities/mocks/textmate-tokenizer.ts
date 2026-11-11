@@ -45,13 +45,30 @@ export class TextMateTokenizer {
 	 * @returns The tokens of the line.
 	 */
 	static async tokenizeLine(scopeName: string, line: string): Promise<TextMateToken[]> {
-		const grammar = await TextMateTokenizer._loadGrammar(scopeName);
-		const result = grammar.tokenizeLine(line, INITIAL);
+		return (await TextMateTokenizer.tokenizeLines(scopeName, [line]))[0];
+	}
 
-		return result.tokens.map(token => ({
-			text: line.substring(token.startIndex, token.endIndex),
-			scopes: token.scopes,
-		}));
+	/**
+	 * Tokenizes consecutive lines of text, each line continuing the state the line before it ended
+	 * in, as a string literal that spans lines does.
+	 * @param scopeName The scope name of the grammar, e.g. `source.turtle`.
+	 * @param lines The lines to tokenize.
+	 * @returns The tokens of each line.
+	 */
+	static async tokenizeLines(scopeName: string, lines: string[]): Promise<TextMateToken[][]> {
+		const grammar = await TextMateTokenizer._loadGrammar(scopeName);
+		let ruleStack = INITIAL;
+
+		return lines.map(line => {
+			const result = grammar.tokenizeLine(line, ruleStack);
+
+			ruleStack = result.ruleStack;
+
+			return result.tokens.map(token => ({
+				text: line.substring(token.startIndex, token.endIndex),
+				scopes: token.scopes,
+			}));
+		});
 	}
 
 	/**

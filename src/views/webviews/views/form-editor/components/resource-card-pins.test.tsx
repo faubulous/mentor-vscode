@@ -83,6 +83,25 @@ describe('ResourceCard, its pins', () => {
 		expect(container.querySelector('.resource-card-description')).toBeNull();
 	});
 
+	it('shows the pinned properties and the description of a collapsed card in the order the document writes them, the description unpinned without a caption', () => {
+		const detail = createTestResourceDetail([
+			createProperty('rdfs:comment', [createLiteralView('A tree bearing apples')]),
+			createProperty('ex:count', [{ term: RdfDataFactory.literal('42', RdfDataFactory.namedNode(XSD.integer)), editable: true }]),
+			createProperty('ex:p', [createIriView('ex:A', 'A')])
+		]);
+		const resource = createResourceSummary('Tree', { term: detail.term, description: 'A tree bearing apples', pins: [PINS[0], PINS[1]] });
+		const { container } = renderWebview(
+			<FormEditorContext.Provider value={{ readOnly: true, namespaces: [], languageTags: {}, labelPredicates: [], descriptionPredicates: [RdfDataFactory.namedNode(RDFS.comment)] }}>
+				<ResourceCard summary={resource} dataService={createResourceDataServiceStub([detail])} expanded={false} onToggle={() => undefined} />
+			</FormEditorContext.Provider>
+		);
+		const fields = Array.from(container.querySelectorAll<HTMLElement>('.pinned-property'));
+
+		expect(fields.map(field => field.querySelector('.pinned-property-caption')?.textContent ?? field.textContent)).toEqual(['A tree bearing apples', 'ex:count', 'ex:p']);
+		expect(fields[0].classList.contains('is-unpinned')).toBe(true);
+		expect(container.querySelector('.resource-card-description')).toBeNull();
+	});
+
 	it('leaves out of the fields the label the title of a collapsed card shows', () => {
 		const { container } = renderCard({ pins: [{ predicate: RdfDataFactory.namedNode(RDFS.label), scope: 'workspace' }, ...PINS] });
 
@@ -107,13 +126,14 @@ describe('ResourceCard, its pins', () => {
 		expect(onToggle.mock.calls).toEqual([[resource.term], [resource.term]]);
 	});
 
-	it('offers to pin the properties of an expanded card but its type, and pins and unpins them from the menu', async () => {
+	it('offers to pin the properties of an expanded card but its type in the ⋮ menu of their rows, marks the pinned ones, and pins and unpins them', async () => {
 		const { onSetPin, resource } = renderCard({}, true);
 		const row = screen.getByRole('group', { name: 'ex:p' });
-		const menu = row.querySelector('vscode-context-menu')!;
+		const menu = row.querySelector('.row-menu vscode-context-menu')!;
 
-		expect(within(row).getByRole('button', { name: 'ex:p: pinned for everyone' })).toBeTruthy();
-		expect(within(screen.getByRole('group', { name: 'ex:count' })).getByRole('button', { name: 'ex:count: pinned for you' })).toBeTruthy();
+		expect(within(row).getByRole('button', { name: 'More actions for ex:p' })).toBeTruthy();
+		expect(within(row).getByTitle('Pinned for everyone')).toBeTruthy();
+		expect(within(screen.getByRole('group', { name: 'ex:count' })).getByTitle('Pinned for you')).toBeTruthy();
 
 		await act(async () => {
 			menu.dispatchEvent(new CustomEvent('vsc-context-menu-select', { detail: { value: 'user' } }));
@@ -126,10 +146,10 @@ describe('ResourceCard, its pins', () => {
 		]);
 	});
 
-	it('offers no pin for a resource of no known type', () => {
+	it('offers no pin for a resource of no known type, and no ⋮ menu for a row of a document that cannot be written then', () => {
 		renderCard({ pins: undefined }, true);
 
-		expect(within(screen.getByRole('group', { name: 'ex:p' })).queryByRole('button', { name: /pin/i })).toBeNull();
+		expect(within(screen.getByRole('group', { name: 'ex:p' })).queryByRole('button', { name: /More actions/ })).toBeNull();
 	});
 
 	it('pins the properties of a nested card for the blank node, and names the pinned ones in its collapsed header', async () => {
@@ -160,10 +180,31 @@ describe('ResourceCard, its pins', () => {
 		const row = within(box).getByRole('group', { name: 'ex:r' });
 
 		await act(async () => {
-			row.querySelector('vscode-context-menu')!.dispatchEvent(new CustomEvent('vsc-context-menu-select', { detail: { value: 'workspace' } }));
+			row.querySelector('.row-menu vscode-context-menu')!.dispatchEvent(new CustomEvent('vsc-context-menu-select', { detail: { value: 'workspace' } }));
 		});
 
-		expect(within(box).getByRole('button', { name: 'ex:q: pinned for everyone' })).toBeTruthy();
+		expect(within(within(box).getByRole('group', { name: 'ex:q' })).getByTitle('Pinned for everyone')).toBeTruthy();
 		expect(onSetPin).toHaveBeenCalledWith(node, RdfDataFactory.namedNode(`${EX}r`), 'workspace');
+	});
+
+	it('names the pinned properties of a collapsed nested card in the order of the document, not of the pins', () => {
+		const node = RdfDataFactory.blankNode('b1');
+		const nodeDetail = {
+			term: node,
+			properties: [createProperty('ex:q', [createLiteralView('report date')]), createProperty('ex:r', [createLiteralView('date')])],
+			pins: [{ predicate: RdfDataFactory.namedNode(`${EX}r`), scope: 'user' as const }, { predicate: RdfDataFactory.namedNode(`${EX}q`), scope: 'workspace' as const }]
+		};
+		const detail = createTestResourceDetail([createProperty('ex:p', [{ term: node, editable: false, nested: { term: node, propertyCount: 2 } }])]);
+		const resource = createResourceSummary('Tree', { term: detail.term, pins: [] });
+
+		renderWebview(
+			<FormEditorContext.Provider value={{ readOnly: true, namespaces: [], languageTags: {} }}>
+				<ResourceCard summary={resource} dataService={createResourceDataServiceStub([detail, nodeDetail])} expanded onToggle={() => undefined} />
+			</FormEditorContext.Provider>
+		);
+
+		const labels = Array.from(document.querySelectorAll('.nested-card-pinned-label'), label => label.textContent);
+
+		expect(labels).toEqual(['ex:q', 'ex:r']);
 	});
 });

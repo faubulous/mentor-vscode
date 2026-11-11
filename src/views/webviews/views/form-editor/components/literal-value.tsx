@@ -1,9 +1,6 @@
-import { XSD } from '@faubulous/mentor-rdf/ontologies';
-import { getLocalPartAndQuery } from '@src/utilities/uri';
 import { Literal } from '@rdfjs/types';
-import { NamespaceInfo } from '../form-editor-model';
 import { useFormEditorContext } from '../state/form-editor-context';
-import { getLanguageTagLabel } from './term-labels';
+import { getLiteralTag } from './datatype-labels';
 
 /**
  * Properties of the {@link LiteralValue} component.
@@ -23,7 +20,7 @@ export interface LiteralValueProps {
  */
 export function LiteralValue({ term }: LiteralValueProps): React.JSX.Element {
 	const { namespaces, languageTags } = useFormEditorContext();
-	const tag = getLanguageTagLabel(term, languageTags) ?? _datatypeTagOf(term.datatype.value, namespaces);
+	const tag = getLiteralTag(term, languageTags, namespaces);
 
 	return (
 		<span className="literal-value">
@@ -31,21 +28,4 @@ export function LiteralValue({ term }: LiteralValueProps): React.JSX.Element {
 			{tag && <span className="literal-tag">{tag}</span>}
 		</span>
 	);
-}
-
-/**
- * The tag a datatype is shown as: its prefixed name when a prefix is declared, else its local
- * name; none for a plain string.
- * @param datatype The IRI of the datatype.
- * @param namespaces The namespace declarations of the document.
- * @returns The tag, or `undefined` for a plain string.
- */
-function _datatypeTagOf(datatype: string, namespaces: readonly NamespaceInfo[]): string | undefined {
-	if (datatype === XSD.string) {
-		return undefined;
-	}
-
-	const namespace = namespaces.find(candidate => datatype.startsWith(candidate.iri));
-
-	return namespace ? `${namespace.prefix}:${datatype.slice(namespace.iri.length)}` : getLocalPartAndQuery(datatype);
 }

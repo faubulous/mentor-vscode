@@ -205,9 +205,20 @@
         "literal": {
             "patterns": [
                 {
-                    "name": "string.quoted.triple.sparql",
-                    "begin": "(\"\"\")|(''')",
-                    "end": "(\\1)",
+                    "name": "string.quoted.triple.double.sparql",
+                    "begin": "\"\"\"",
+                    "end": "\"\"\"",
+                    "patterns": [
+                        {
+                            "name": "constant.character.escape.sparql",
+                            "match": "\\\\."
+                        }
+                    ]
+                },
+                {
+                    "name": "string.quoted.triple.single.sparql",
+                    "begin": "'''",
+                    "end": "'''",
                     "patterns": [
                         {
                             "name": "constant.character.escape.sparql",

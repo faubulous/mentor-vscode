@@ -41,7 +41,8 @@ describe('StatementList', () => {
 		expect(screen.getAllByRole('group').map(row => row.getAttribute('aria-label'))).toEqual(['rdf:type', 'rdfs:label', 'rdfs:subClassOf']);
 		expect(screen.getByText('Class').closest('.value-pill')?.getAttribute('title')).toBe(OWL.Class);
 		expect(screen.getByText('Tree').classList.contains('literal-text')).toBe(true);
-		expect(screen.getByText('en').classList.contains('literal-tag')).toBe(true);
+		expect(screen.getByText('en', { selector: '.literal-tag' })).toBeTruthy();
+		expect(screen.getByText('en', { selector: '.statement-predicate-tag' })).toBeTruthy();
 	});
 
 	it('shows the datatype of a literal as a tag by its prefix, and none for a plain string', () => {
@@ -52,7 +53,7 @@ describe('StatementList', () => {
 
 		renderList(detail);
 
-		expect(screen.getByText('xsd:integer').classList.contains('literal-tag')).toBe(true);
+		expect(screen.getByText('xsd:integer', { selector: '.literal-tag' })).toBeTruthy();
 		expect(screen.getAllByText(/./, { selector: '.literal-tag' })).toHaveLength(1);
 	});
 

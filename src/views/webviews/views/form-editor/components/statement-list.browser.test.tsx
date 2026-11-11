@@ -231,6 +231,7 @@ describe('StatementList, edited in a browser', () => {
 
 		const header = within(document.querySelector<HTMLElement>('.resource-card.is-nested')!).getByRole('group', { name: 'Type' });
 
+		await userEvent.click(within(header).getByRole('button', { name: 'Expand' }));
 		await userEvent.click(within(header).getByRole('button', { name: 'Choose type' }));
 		await expect.poll(() => document.activeElement).toBe(within(header).getByLabelText('New value'));
 		await userEvent.keyboard('plan');
@@ -279,7 +280,7 @@ describe('StatementList, edited in a browser', () => {
 
 		expect(menu.show).toBe(false);
 
-		await userEvent.click(card.querySelector<HTMLElement>('.statement-predicate')!, { button: 'right' });
+		await userEvent.click(card.querySelector<HTMLElement>('.statement-line.is-card-header')!, { button: 'right' });
 		const itemOf = (label: string) => Array.from(menu.shadowRoot?.querySelectorAll<HTMLElement>('vscode-context-menu-item') ?? []).find(item => item.getAttribute('label') === label);
 
 		await expect.poll(() => itemOf('Duplicate')).toBeDefined();
@@ -291,13 +292,64 @@ describe('StatementList, edited in a browser', () => {
 		expect(host.submitted.map(edit => edit.operations[0])).toEqual([{ op: 'setValues', subject: TEST_SUBJECT, predicate: RDFS.comment, values: [{ kind: 'existing', anchor: 110 }, { kind: 'copy', anchor: 110 }] }]);
 	});
 
-	it('gives every row of one line the same height of 40px, whether it holds a field or pills', async () => {
-		await renderList();
+	it('wraps a text too long for its line in an area of three lines at rest, and shows it whole while it has the focus', async () => {
+		const text = Array.from({ length: 30 }, (_, index) => `word${index}`).join(' ').repeat(4);
+		const detail = withAnchors(createTestResourceDetail([createProperty('rdfs:comment', [createLiteralView(text)]), createProperty('rdfs:label', [createLiteralView('Short')])]));
 
-		expect(rows().map(row => Math.round(row.getBoundingClientRect().height))).toEqual([40, 40, 40]);
+		await renderList(detail, [], RESOURCES, 600);
+
+		const long = within(rows()[0]).getByLabelText('Value 1') as HTMLElement & { rows: number };
+
+		await expect.poll(() => long.tagName.toLowerCase()).toBe('vscode-textarea');
+		expect(long.rows).toBe(3);
+		expect(within(rows()[1]).getByLabelText('Value 1').tagName.toLowerCase()).toBe('vscode-textfield');
+
+		await userEvent.click(long);
+
+		await expect.poll(() => (within(rows()[0]).getByLabelText('Value 1') as HTMLElement & { rows: number }).rows).toBeGreaterThan(3);
 	});
 
-	it.each([1000, 700])('lets the values of a row run to the inset of the row and a nested card to the inset of its row, in a card %ipx wide', async width => {
+	it('puts the chevron and the ⋮ of a collapsed nested card on one axis, and shows neither the type nor a request for one where it has none, its summary in their place', async () => {
+		const node = RdfDataFactory.blankNode('b1');
+		const detail = withAnchors(createTestResourceDetail([createProperty('rdfs:comment', [{ term: node, editable: true, nested: { term: node, propertyCount: 1 } }])]));
+		const nodeDetail = withAnchors({ term: node, properties: [createProperty('rdfs:label', [createLiteralView('Leaf')])] });
+
+		await renderList(detail, [nodeDetail]);
+
+		const box = document.querySelector<HTMLElement>('.resource-card.is-nested')!;
+		const centreOf = (element: Element): number => Math.round(element.getBoundingClientRect().top + element.getBoundingClientRect().height / 2);
+
+		expect(centreOf(within(box).getByRole('button', { name: 'Expand' }))).toBe(centreOf(within(box).getByRole('button', { name: 'More actions' })));
+		expect(within(box).queryByRole('button', { name: 'Choose type' })).toBeNull();
+		expect(box.querySelector('.statement-line.is-card-header > .statement-predicate')).toBeNull();
+		expect(Math.round(box.querySelector('.nested-card-summary')!.getBoundingClientRect().left - box.getBoundingClientRect().left)).toBe(42 + 1);
+	});
+
+	it('gives every row of one line the height of the row token of a wide card, whether it holds a field or pills', async () => {
+		await renderList();
+
+		expect(rows().map(row => Math.round(row.getBoundingClientRect().height))).toEqual([32, 32, 32]);
+	});
+
+	it('starts the labels at the inset of a narrow card and the values after a label column as wide as the longest label, at least the label token, and puts the tag of a literal under its label', async () => {
+		await renderList(SAMPLE, [], RESOURCES, 500);
+
+		const card = document.querySelector<HTMLElement>('.resource-card')!;
+		const left = card.getBoundingClientRect().left + card.clientLeft;
+		const xOf = (element: Element | null): number => Math.round(element!.getBoundingClientRect().left - left);
+		const label = rows()[1];
+
+		const column = Math.round(rows()[2].querySelector('.statement-predicate')!.getBoundingClientRect().width);
+		const widest = Math.max(...rows().map(row => Math.ceil(row.querySelector('.statement-predicate-sizer')!.scrollWidth)));
+
+		expect(xOf(rows()[0])).toBe(10);
+		expect(column).toBe(Math.max(88, widest));
+		expect(xOf(rows()[2].querySelector('.statement-values'))).toBe(10 + column + 12);
+		expect(getComputedStyle(within(label).getByText('en', { selector: '.literal-field-tag' })).display).toBe('none');
+		expect(within(label).getByRole('button', { name: 'en' }).getBoundingClientRect().top).toBeGreaterThan(label.querySelector('.statement-predicate vscode-textfield')!.getBoundingClientRect().bottom - 1);
+	});
+
+	it.each([1000, 500])('lets the values of a row run to the inset of the row and a nested card to the inset of its row, in a card %ipx wide', async width => {
 		const node = RdfDataFactory.blankNode('b1');
 		const detail = withAnchors(createTestResourceDetail([createProperty('rdfs:comment', [{ term: node, editable: true, nested: { term: node, propertyCount: 1 } }]), createProperty('rdfs:label', [createLiteralView('Leaf')])]));
 		const nodeDetail = withAnchors({ term: node, properties: [createProperty('rdfs:label', [createLiteralView('Leaf')])] });
@@ -313,14 +365,16 @@ describe('StatementList, edited in a browser', () => {
 
 		const labelRow = within(card).getAllByRole('group', { name: 'rdfs:label' }).find(row => !box.contains(row))!;
 
-		// The card pads its rows by 8px, a row keeps a 32px inset for its pin; a nested row 54px inside its 1px border, for its pin and its remove button.
-		expect(rightOf(card) - card.clientLeft - rightOf(labelRow.querySelector('.statement-values')!)).toBe(40);
-		expect(rightOf(box) - rightOf(within(box).getByRole('group', { name: 'rdfs:label' }).querySelector('.statement-values')!)).toBe(55);
-		// Below the reference width the nested card spans the row from the gutter: 8px card padding + 36px gutter.
-		expect(leftOf(box) - leftOf(card) - card.clientLeft).toBe(width < 760 ? 44 : 44 + 160 + 20);
+		const inset = 10;
+
+		// The values of a row end where the room its actions keep begins, in the card and in the nested card.
+		expect(rightOf(card) - card.clientLeft - rightOf(labelRow.querySelector('.statement-values')!)).toBe(inset + 44);
+		expect(rightOf(box) - rightOf(within(box).getByRole('group', { name: 'rdfs:label' }).querySelector('.statement-values')!)).toBe(45);
+		// A narrow card gives the nested card the whole row from the inset, a wide one the value column.
+		expect(leftOf(box) - leftOf(card) - card.clientLeft).toBe(width < 560 ? inset : inset + 120 + 24);
 	});
 
-	it('puts the predicates at 44px from the inside of the border of the card, the pills at 228px and the text of a literal at 229px', async () => {
+	it('puts the predicates at the inset of a wide card, under the kind icon, and the pills and the text of a literal in the value column', async () => {
 		await renderList();
 
 		// Measured from the inside of the border of the card.
@@ -334,9 +388,9 @@ describe('StatementList, edited in a browser', () => {
 			return Math.round(xOf(input) + parseFloat(getComputedStyle(input).paddingLeft));
 		};
 
-		expect(rows().map(row => textOf(row.querySelector('.statement-predicate vscode-textfield')))).toEqual([44, 44, 44]);
-		expect(xOf(rows()[0].querySelector('.value-pill'))).toBe(228);
-		expect(textOf(within(rows()[1]).getByLabelText('Value 1'))).toBe(229);
-		expect(xOf(document.querySelector('.statement-list-add'))).toBe(44);
+		expect(rows().map(row => textOf(row.querySelector('.statement-predicate vscode-textfield')))).toEqual([10, 10, 10]);
+		expect(xOf(rows()[0].querySelector('.value-pill'))).toBe(158);
+		expect(textOf(within(rows()[1]).getByLabelText('Value 1'))).toBe(159);
+		expect(xOf(document.querySelector('.statement-list-add'))).toBe(10);
 	});
 });
