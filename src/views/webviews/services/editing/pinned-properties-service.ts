@@ -1,4 +1,4 @@
-import { OWL, RDF, RDFS, SKOS } from '@faubulous/mentor-rdf';
+import { OWL, RDF } from '@faubulous/mentor-rdf';
 import { ScopeKey } from '@src/utilities/config-scope';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { PinnedProperty } from '@src/views/webviews/views/form-editor/form-editor-model';
@@ -40,47 +40,49 @@ export interface PinChange {
 }
 
 /**
- * The predicates pinned for the properties of the vocabularies.
+ * The values of the `mentor.formEditor.pinnedProperties` setting in each of its layers, as the
+ * configuration reports them when inspected; each may hold anything.
  */
-const PROPERTY_PINS = [RDFS.domain, RDFS.range];
+export interface PinSettingValues {
+	/**
+	 * The default value, which the extension contributes: the pins for everyone while the
+	 * workspace names nothing for a type.
+	 */
+	defaultValue?: unknown;
 
-/**
- * The properties pinned for everyone while the workspace names nothing for a type.
- */
-const DEFAULT_PINNED_PROPERTIES: PinLayer = {
-	[SKOS.Concept]: [SKOS.broader, SKOS.related],
-	[OWL.Class]: [RDFS.subClassOf],
-	[RDFS.Class]: [RDFS.subClassOf],
-	[OWL.ObjectProperty]: PROPERTY_PINS,
-	[OWL.DatatypeProperty]: PROPERTY_PINS,
-	[OWL.AnnotationProperty]: PROPERTY_PINS,
-	[RDF.Property]: PROPERTY_PINS,
-	[SKOS.Collection]: [SKOS.member],
-	[SKOS.OrderedCollection]: [SKOS.memberList]
-};
+	/**
+	 * The value in the workspace settings: the pins for everyone.
+	 */
+	workspaceValue?: unknown;
+
+	/**
+	 * The value in the user settings: the pins for oneself.
+	 */
+	globalValue?: unknown;
+}
 
 /**
  * The properties shown on the collapsed cards of every resource of a type, pinned for everyone in
  * the workspace layer of the setting and for oneself in the user layer. The workspace layer names
- * the pins of a type for everyone; while it names nothing for a type, the defaults stand in for it.
- * The pins of the user layer follow those for everyone.
+ * the pins of a type for everyone; while it names nothing for a type, the default value of the
+ * setting stands in for it. The pins of the user layer follow those for everyone.
  */
 export class PinnedPropertiesService {
 	/**
-	 * Create the pins of the two layers.
+	 * Create the pins of the layers of the setting.
+	 * @param _defaults The pins for everyone while the workspace names nothing for a type.
 	 * @param _workspace The pins for everyone.
 	 * @param _user The pins for oneself.
 	 */
-	constructor(private readonly _workspace: PinLayer = {}, private readonly _user: PinLayer = {}) { }
+	constructor(private readonly _defaults: PinLayer = {}, private readonly _workspace: PinLayer = {}, private readonly _user: PinLayer = {}) { }
 
 	/**
-	 * Read the pins from the values of the two layers of the setting, which may hold anything.
-	 * @param workspace The value of the workspace layer.
-	 * @param user The value of the user layer.
+	 * Read the pins from the values of the layers of the setting.
+	 * @param values The values, as the configuration reports them; none when absent.
 	 * @returns The pins.
 	 */
-	static fromLayers(workspace: unknown, user: unknown): PinnedPropertiesService {
-		return new PinnedPropertiesService(_layerOf(workspace), _layerOf(user));
+	static fromSetting(values: PinSettingValues | undefined): PinnedPropertiesService {
+		return new PinnedPropertiesService(_layerOf(values?.defaultValue), _layerOf(values?.workspaceValue), _layerOf(values?.globalValue));
 	}
 
 	/**
@@ -165,13 +167,13 @@ export class PinnedPropertiesService {
 	}
 
 	/**
-	 * The pins of a type for everyone: those of the workspace layer, or the defaults while it names
-	 * nothing for the type.
+	 * The pins of a type for everyone: those of the workspace layer, or those of the default value
+	 * while it names nothing for the type.
 	 * @param type The IRI of the type.
 	 * @returns The predicates.
 	 */
 	private _sharedOf(type: string): readonly string[] {
-		return this._workspace[type] ?? DEFAULT_PINNED_PROPERTIES[type] ?? [];
+		return this._workspace[type] ?? this._defaults[type] ?? [];
 	}
 
 	/**

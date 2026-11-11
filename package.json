@@ -2387,7 +2387,40 @@
           },
           "mentor.formEditor.pinnedProperties": {
             "type": "object",
-            "default": {},
+            "default": {
+              "http://www.w3.org/2004/02/skos/core#Concept": [
+                "http://www.w3.org/2004/02/skos/core#broader",
+                "http://www.w3.org/2004/02/skos/core#related"
+              ],
+              "http://www.w3.org/2002/07/owl#Class": [
+                "http://www.w3.org/2000/01/rdf-schema#subClassOf"
+              ],
+              "http://www.w3.org/2000/01/rdf-schema#Class": [
+                "http://www.w3.org/2000/01/rdf-schema#subClassOf"
+              ],
+              "http://www.w3.org/2002/07/owl#ObjectProperty": [
+                "http://www.w3.org/2000/01/rdf-schema#domain",
+                "http://www.w3.org/2000/01/rdf-schema#range"
+              ],
+              "http://www.w3.org/2002/07/owl#DatatypeProperty": [
+                "http://www.w3.org/2000/01/rdf-schema#domain",
+                "http://www.w3.org/2000/01/rdf-schema#range"
+              ],
+              "http://www.w3.org/2002/07/owl#AnnotationProperty": [
+                "http://www.w3.org/2000/01/rdf-schema#domain",
+                "http://www.w3.org/2000/01/rdf-schema#range"
+              ],
+              "http://www.w3.org/1999/02/22-rdf-syntax-ns#Property": [
+                "http://www.w3.org/2000/01/rdf-schema#domain",
+                "http://www.w3.org/2000/01/rdf-schema#range"
+              ],
+              "http://www.w3.org/2004/02/skos/core#Collection": [
+                "http://www.w3.org/2004/02/skos/core#member"
+              ],
+              "http://www.w3.org/2004/02/skos/core#OrderedCollection": [
+                "http://www.w3.org/2004/02/skos/core#memberList"
+              ]
+            },
             "additionalProperties": {
               "type": "array",
               "items": {
@@ -2395,7 +2428,7 @@
               }
             },
             "title": "Pinned Properties",
-            "markdownDescription": "The properties the form editor shows on the collapsed cards of every resource of a type, by type IRI, in the order they are pinned. The workspace value holds the pins for everyone, the user value the pins for oneself. While the workspace value names nothing for a type, the defaults of the form editor stand in for it (e.g. `rdfs:subClassOf` for classes). The pin buttons of the form editor change this setting.",
+            "markdownDescription": "The properties the form editor shows on the collapsed cards of every resource of a type, by type IRI, in the order they are pinned. The workspace value holds the pins for everyone, the user value the pins for oneself. While the workspace value names nothing for a type, the default value stands in for it (e.g. `rdfs:subClassOf` for classes). The pin menus of the form editor change this setting.",
             "experimental": true
           }
         }

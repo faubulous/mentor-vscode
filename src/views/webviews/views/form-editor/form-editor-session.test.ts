@@ -580,7 +580,8 @@ describe('FormEditorSession', () => {
 
 	it('pins a property of a resource for oneself in the user settings and for everyone in the workspace settings, and unpins it', async () => {
 		const update = vi.fn(async () => undefined);
-		let layers: { workspaceValue?: unknown; globalValue?: unknown } = {};
+		const defaultValue = { [`${_OWL}Class`]: [RDFS.subClassOf] };
+		let layers: { defaultValue?: unknown; workspaceValue?: unknown; globalValue?: unknown } = { defaultValue };
 
 		vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({ get: (_key: string, value?: unknown) => value, inspect: () => layers, update } as unknown as vscode.WorkspaceConfiguration);
 
@@ -592,7 +593,7 @@ describe('FormEditorSession', () => {
 		await session.setPin(resource, comment, 'user');
 		await session.setPin(resource, comment, 'workspace');
 
-		layers = { workspaceValue: { [`${_OWL}Class`]: [RDFS.subClassOf, RDFS.comment] } };
+		layers = { defaultValue, workspaceValue: { [`${_OWL}Class`]: [RDFS.subClassOf, RDFS.comment] } };
 		await session.setPin(resource, comment, undefined);
 
 		expect(update.mock.calls).toEqual([

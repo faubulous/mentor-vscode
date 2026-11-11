@@ -1073,14 +1073,12 @@ function _localPartCaseOf(types: readonly string[]): LocalPartCase | undefined {
 }
 
 /**
- * Read the pinned properties from the two layers of the setting: the workspace one for everyone,
- * the user one for oneself.
+ * Read the pinned properties from the layers of the setting: the default value and the workspace
+ * one for everyone, the user one for oneself.
  * @returns The pins.
  */
 function _readPins(): PinnedPropertiesService {
-	const layers = getConfig('formEditor').inspect<unknown>(PINNED_PROPERTIES_SETTING);
-
-	return PinnedPropertiesService.fromLayers(layers?.workspaceValue, layers?.globalValue);
+	return PinnedPropertiesService.fromSetting(getConfig('formEditor').inspect<unknown>(PINNED_PROPERTIES_SETTING));
 }
 
 /**

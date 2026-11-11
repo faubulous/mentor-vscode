@@ -25,11 +25,6 @@ import { getTermLabel, getTermTitle } from './term-labels';
 import { TermValue } from './term-value';
 
 /**
- * The settings a property can be pinned in while the form names none.
- */
-const NO_PIN_SCOPES: readonly ScopeKey[] = [];
-
-/**
  * The header of the nested card of a blank node, which the row of its type leads.
  */
 interface NestedCardHeader {
@@ -173,7 +168,7 @@ interface ShownValue {
 export function StatementRow({ property, editor, services, autoFocus = false, removable, header, ...context }: StatementRowProps): React.JSX.Element {
 	const state = useRowEditorState(editor);
 	const edited: EditedRow | undefined = editor && state && services ? { editor, state, services } : undefined;
-	const { languageFilter = LanguageFilter.ALL, pinScopes = NO_PIN_SCOPES } = useFormEditorContext();
+	const { languageFilter = LanguageFilter.ALL, pinScopes = [] } = useFormEditorContext();
 	const cardPins = usePinnedProperties();
 	const values = _shownValues(state?.draft.values ?? property?.values.map(view => ({ kind: 'written' as const, view })) ?? [], services, languageFilter);
 	const literals = [...values.filter(entry => _kindOf(entry.view) === 'literal'), ..._missingLanguageField(edited, languageFilter)];
