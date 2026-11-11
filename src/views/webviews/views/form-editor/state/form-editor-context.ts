@@ -112,11 +112,6 @@ export interface FormEditorContextValue {
 	revealedResource?: NamedNode | BlankNode;
 
 	/**
-	 * The type most definitions have, which their entries do not repeat.
-	 */
-	dominantTypeIri?: string;
-
-	/**
 	 * The text typed into the filter field, whose matches the entries mark.
 	 */
 	filterText?: string;

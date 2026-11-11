@@ -47,12 +47,12 @@ describe('ResourceCard', () => {
 		expect(screen.getByText('A tree bearing apples').classList.contains('resource-card-description')).toBe(true);
 	});
 
-	it('names every type of a collapsed card but the one most resources have, opens its IRI from the footer and reveals it in the editor from the ⋯ menu', async () => {
+	it('names every type of a collapsed card, opens its IRI from the footer and reveals it in the editor from the ⋯ menu', async () => {
 		const onOpenExternal = vi.fn();
 		const onRevealInTextEditor = vi.fn();
-		const { container } = renderCard({ dominantTypeIri: 'http://x/Class', onOpenExternal, onRevealInTextEditor }, false, { ...TREE, typeLabels: ['Class', 'Named individual'] });
+		const { container } = renderCard({ onOpenExternal, onRevealInTextEditor }, false, { ...TREE, typeLabels: ['Class', 'Named individual'] });
 
-		expect(container.querySelector('.resource-card-types')?.textContent).toBe('Named individual');
+		expect(container.querySelector('.resource-card-types')?.textContent).toBe('Class, Named individual');
 
 		await userEvent.click(screen.getByRole('button', { name: TREE.term.value }));
 		await act(async () => {
@@ -63,10 +63,9 @@ describe('ResourceCard', () => {
 		expect(onRevealInTextEditor).toHaveBeenCalledWith({ line: 4, character: 0 });
 	});
 
-	it('leaves the dominant type unsaid, dims a resource without a stated label and marks the matches of the filter', () => {
-		renderCard({ dominantTypeIri: 'http://x/Class', filterText: 'apple' }, false, { ...TREE, hasLabel: false });
+	it('dims a resource without a stated label and marks the matches of the filter', () => {
+		renderCard({ filterText: 'apple' }, false, { ...TREE, hasLabel: false });
 
-		expect(screen.queryByText('Class')).toBeNull();
 		expect(screen.getByText('Apple', { selector: 'mark' }).closest('.resource-card-label')?.classList.contains('is-unnamed')).toBe(true);
 		expect(screen.getByText('apple', { selector: 'mark' })).toBeTruthy();
 	});

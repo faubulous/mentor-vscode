@@ -379,11 +379,6 @@ export interface DocumentSnapshot {
 	problems: DocumentProblem[];
 
 	/**
-	 * The type most definitions have, which their entries do not repeat.
-	 */
-	dominantTypeIri?: string;
-
-	/**
 	 * The label predicates Mentor is configured with, most preferred first: the label row of a card
 	 * shows the most preferred one the resource has.
 	 */

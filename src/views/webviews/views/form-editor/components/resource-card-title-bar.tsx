@@ -43,9 +43,9 @@ export interface ResourceCardTitleBarProps {
  * @returns The title bar.
  */
 export function ResourceCardTitleBar({ summary, expanded, nestedCollapsed, onToggle, onToggleNested }: ResourceCardTitleBarProps): React.JSX.Element {
-	const { readOnly, dominantTypeIri, onRevealInTextEditor, onRemoveResource } = useFormEditorContext();
+	const { readOnly, onRevealInTextEditor, onRemoveResource } = useFormEditorContext();
 	const position = summary.position;
-	const types = expanded ? [] : _typeLabelsOf(summary, dominantTypeIri);
+	const types = expanded ? [] : _typeLabelsOf(summary);
 
 	return (
 		<div className="resource-card-title-bar">
@@ -72,15 +72,12 @@ export function ResourceCardTitleBar({ summary, expanded, nestedCollapsed, onTog
 }
 
 /**
- * The types the title bar of a collapsed card names: every type of the resource, except the one
- * most resources have, which the cards leave unsaid.
+ * The types the title bar of a collapsed card names: every type of the resource.
  * @param summary The resource.
- * @param dominantTypeIri The type most resources have, if any.
  * @returns The labels of the types, each once.
  */
-function _typeLabelsOf(summary: ResourceSummary, dominantTypeIri: string | undefined): string[] {
+function _typeLabelsOf(summary: ResourceSummary): string[] {
 	const labels = summary.typeLabels ?? (summary.typeLabel ? [summary.typeLabel] : []);
-	const unsaid = summary.typeIri === dominantTypeIri ? summary.typeLabel : undefined;
 
-	return Array.from(new Set(labels.filter(label => label !== unsaid)));
+	return Array.from(new Set(labels));
 }
