@@ -83,6 +83,12 @@ describe('ResourceCard, its pins', () => {
 		expect(container.querySelector('.resource-card-description')).toBeNull();
 	});
 
+	it('leaves out of the fields the label the title of a collapsed card shows', () => {
+		const { container } = renderCard({ pins: [{ predicate: RdfDataFactory.namedNode(RDFS.label), scope: 'workspace' }, ...PINS] });
+
+		expect(Array.from(container.querySelectorAll('.pinned-property-caption')).map(caption => caption.textContent)).toEqual(['ex:p', 'ex:count', 'rdfs:comment']);
+	});
+
 	it('asks for nothing and keeps the description of a collapsed card without pins', () => {
 		const { container, dataService } = renderCard({ pins: undefined }, false, false);
 
@@ -124,5 +130,40 @@ describe('ResourceCard, its pins', () => {
 		renderCard({ pins: undefined }, true);
 
 		expect(within(screen.getByRole('group', { name: 'ex:p' })).queryByRole('button', { name: /pin/i })).toBeNull();
+	});
+
+	it('pins the properties of a nested card for the blank node, and names the pinned ones in its collapsed header', async () => {
+		const node = RdfDataFactory.blankNode('b1');
+		const nodeDetail = {
+			term: node,
+			properties: [createProperty('ex:q', [createLiteralView('report date')]), createProperty('ex:r', [createLiteralView('other')])],
+			pins: [{ predicate: RdfDataFactory.namedNode(`${EX}q`), scope: 'workspace' as const }]
+		};
+		const detail = createTestResourceDetail([createProperty('ex:p', [{ term: node, editable: false, nested: { term: node, propertyCount: 2 } }])]);
+		const onSetPin = vi.fn();
+		const resource = createResourceSummary('Tree', { term: detail.term, pins: [] });
+
+		// The nested card has no label row, so a label predicate pins there as any other.
+		renderWebview(
+			<FormEditorContext.Provider value={{ readOnly: true, namespaces: [], languageTags: {}, labelPredicates: [RdfDataFactory.namedNode(`${EX}q`)], pinScopes: ['user', 'workspace'], onSetPin }}>
+				<ResourceCard summary={resource} dataService={createResourceDataServiceStub([detail, nodeDetail])} expanded onToggle={() => undefined} />
+			</FormEditorContext.Provider>
+		);
+
+		const box = document.querySelector<HTMLElement>('.resource-card.is-nested')!;
+		const header = within(box).getByRole('group', { name: 'Type' });
+
+		expect(header.querySelector('.nested-card-summary.is-pinned')?.textContent).toBe('ex:q report date');
+
+		await userEvent.click(within(header).getByRole('button', { name: 'Expand' }));
+
+		const row = within(box).getByRole('group', { name: 'ex:r' });
+
+		await act(async () => {
+			row.querySelector('vscode-context-menu')!.dispatchEvent(new CustomEvent('vsc-context-menu-select', { detail: { value: 'workspace' } }));
+		});
+
+		expect(within(box).getByRole('button', { name: 'ex:q: pinned for everyone' })).toBeTruthy();
+		expect(onSetPin).toHaveBeenCalledWith(node, RdfDataFactory.namedNode(`${EX}r`), 'workspace');
 	});
 });

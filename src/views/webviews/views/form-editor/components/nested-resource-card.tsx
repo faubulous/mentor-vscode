@@ -7,6 +7,8 @@ import { useResourceDetail } from '../hooks/use-resource-detail';
 import { IResourceDataService } from '../services/resource-data-service.interface';
 import { NestedCardActions, NestedCardMenu } from './nested-card-menu';
 import { NestedResourcePlaceholder } from './nested-resource-placeholder';
+import { PinnedPropertiesContext } from '../state/pinned-properties-context';
+import { useFormEditorContext } from '../state/form-editor-context';
 import { StatementList } from './statement-list';
 
 /**
@@ -53,7 +55,8 @@ export interface NestedResourceCardProps {
 
 /**
  * A blank node rendered below the value that refers to it, as a nested card led by its type, with
- * the comment lines written above the value and above the node as the caption of its header. Beyond the nesting
+ * the comment lines written above the value and above the node as the caption of its header, and
+ * the pins of the types of the node, which its rows set and its collapsed header shows. Beyond the nesting
  * limit it is a placeholder that scrolls to the node. Where its row is edited, the card
  * has a ⋯ menu, which a right-click on the card opens too, except in a text field.
  * @param props The blank node and where it stands.
@@ -61,6 +64,7 @@ export interface NestedResourceCardProps {
  */
 export function NestedResourceCard({ nested, dataService, depth, visited, actions, comments }: NestedResourceCardProps): React.JSX.Element | null {
 	const { detail, stale } = useResourceDetail(dataService, nested.term);
+	const { onSetPin } = useFormEditorContext();
 	const menuRef = useRef<VscodeContextMenu | null>(null);
 
 	// The node is asked for when nothing is known of it, and again after the document changed.
@@ -94,7 +98,9 @@ export function NestedResourceCard({ nested, dataService, depth, visited, action
 
 	return (
 		<div className="resource-card is-nested" data-resource-id={termToString(nested.term)} onContextMenu={actions ? handleContextMenu : undefined}>
-			<StatementList detail={detail} dataService={dataService} depth={depth} visited={[...visited, nested.term]} comments={_captionOf(comments, detail.comments)} />
+			<PinnedPropertiesContext.Provider value={{ pins: detail.pins ?? [], onPin: detail.pins && onSetPin ? (predicate, scope) => onSetPin(nested.term, predicate, scope) : undefined }}>
+				<StatementList detail={detail} dataService={dataService} depth={depth} visited={[...visited, nested.term]} comments={_captionOf(comments, detail.comments)} />
+			</PinnedPropertiesContext.Provider>
 			{actions && <NestedCardMenu actions={actions} menuRef={menuRef} />}
 		</div>
 	);

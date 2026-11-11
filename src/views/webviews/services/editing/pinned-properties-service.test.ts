@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { OWL, RDFS, SKOS } from '@faubulous/mentor-rdf';
+import { OWL, RDF, RDFS, SKOS } from '@faubulous/mentor-rdf';
+import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { PinnedPropertiesService } from './pinned-properties-service';
 
 const SH = 'http://www.w3.org/ns/shacl#';
@@ -70,6 +71,16 @@ describe('PinnedPropertiesService', () => {
 		const change = PinnedPropertiesService.fromLayers({}, {}).withPin([OWL.Class, RDFS.Class], OWL.Class, RDFS.subClassOf, undefined);
 
 		expect(change).toEqual({ workspace: { [OWL.Class]: [], [RDFS.Class]: [] } });
+	});
+
+	it('resolves the pins of a resource by its asserted and inferred types, never pins the type, and gives none to a resource of no known type', () => {
+		const pins = PinnedPropertiesService.fromLayers({ [`${SH}PropertyShape`]: [`${SH}path`, `${SH}name`, RDF.type] }, {});
+
+		expect(pins.resolve([], [`${SH}PropertyShape`])).toEqual([
+			{ predicate: RdfDataFactory.namedNode(`${SH}path`), scope: 'workspace' },
+			{ predicate: RdfDataFactory.namedNode(`${SH}name`), scope: 'workspace' }
+		]);
+		expect(pins.resolve([], [])).toBeUndefined();
 	});
 
 	it('writes nothing to unpin a property that is not pinned', () => {

@@ -943,7 +943,7 @@ body {
 	--form-gutter: 42px;
 	--form-predicate-column: clamp(88px, 24cqi, 120px);
 	--form-column-gap: 16px;
-	--form-row-inset: 30px;
+	--form-row-inset: 54px;
 }
 
 /*
@@ -993,12 +993,16 @@ body {
 	margin-top: 0;
 }
 
-/* The actions of a nested row sit at its vertical centre, as its cells do. */
+/*
+ * The actions of a nested row sit at its vertical centre, as its cells do. A margin centres them
+ * rather than a transform, which would make them a stacking context of their own and put the
+ * menu of a pin under the rows after it.
+ */
 .resource-card.is-nested .statement-line > .statement-actions,
 .nested-card-header > .statement-actions {
 	top: 50%;
 	right: 6px;
-	transform: translateY(-50%);
+	margin-top: -13px;
 }
 
 .resource-card.is-nested .statement-line > .statement-values {
@@ -1139,6 +1143,23 @@ body {
 	white-space: nowrap;
 }
 
+/* The pinned properties of a collapsed nested card, each a muted label before its values. */
+/* The pinned properties take most of the room the header leaves, before the caption. */
+.statement-line.is-card-header > .statement-values > .nested-card-summary.is-pinned {
+	flex-grow: 3;
+	color: var(--vscode-foreground);
+}
+
+/* The pinned properties run on one line, which ends in an ellipsis where it does not fit. */
+.nested-card-pinned + .nested-card-pinned {
+	margin-left: 14px;
+}
+
+.nested-card-pinned-label {
+	color: var(--form-muted);
+	font-size: 0.9em;
+}
+
 /* The comment lines written above a blank node, as the quiet caption of the header of its card. */
 .nested-card-caption {
 	flex: 1 1 auto;
@@ -1179,6 +1200,16 @@ body {
 	top: 100%;
 	right: 0;
 	z-index: 10;
+	--vscode-font-size: 12px;
+}
+
+/*
+ * A card, and a nested card, holding the focus stands over those after it, so the menu it opens
+ * is not covered by them: each lays itself out by its width, which makes it a stacking context.
+ */
+.form-block:focus-within,
+.resource-card.is-nested:focus-within {
+	z-index: 2;
 }
 
 /*
@@ -1819,7 +1850,7 @@ body {
 
 	.resource-card.is-nested .statement-line:not(.is-card-header) > .statement-actions {
 		top: 8px;
-		transform: none;
+		margin-top: 0;
 	}
 
 	.resource-card.is-nested .statement-line.is-card-header {

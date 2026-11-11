@@ -1,5 +1,7 @@
 import { OWL, RDF, RDFS, SKOS } from '@faubulous/mentor-rdf';
 import { ScopeKey } from '@src/utilities/config-scope';
+import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
+import { PinnedProperty } from '@src/views/webviews/views/form-editor/form-editor-model';
 
 /**
  * The predicates pinned for each type, by type IRI, as one layer of the
@@ -112,6 +114,25 @@ export class PinnedPropertiesService {
 	 */
 	static pinTypeOf(asserted: readonly string[], inferred: readonly string[]): string | undefined {
 		return _primaryOf(asserted) ?? _primaryOf(inferred);
+	}
+
+	/**
+	 * The pins of a resource of the given types, in the order of the types and of their pins. The
+	 * type of a resource is what its card shows anyway, so it is never a pin. A label predicate can
+	 * be one: a nested card has no label row, and `sh:path`, which names a property shape, is the
+	 * one most worth pinning there; a card of the list leaves out the label its title shows.
+	 * @param asserted The types the document asserts, in order.
+	 * @param inferred The types the store knows, inferred ones included.
+	 * @returns The pins, or `undefined` for a resource of no known type, which cannot pin.
+	 */
+	resolve(asserted: readonly string[], inferred: readonly string[]): PinnedProperty[] | undefined {
+		if (!PinnedPropertiesService.pinTypeOf(asserted, inferred)) {
+			return undefined;
+		}
+
+		return this.pinsOf(Array.from(new Set([...asserted, ...inferred])))
+			.filter(pin => pin.predicate !== RDF.type)
+			.map(pin => ({ predicate: RdfDataFactory.namedNode(pin.predicate), scope: pin.scope }));
 	}
 
 	/**

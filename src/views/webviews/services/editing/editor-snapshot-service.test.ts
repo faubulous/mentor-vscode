@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 
-import { RDFS, SKOS, _OWL, _RDFS, _SKOS } from '@faubulous/mentor-rdf';
+import { RDF, RDFS, SKOS, _OWL, _RDFS, _SKOS } from '@faubulous/mentor-rdf';
 import { createResolvingDocumentContext, readTurtleQuadContexts } from '@src/utilities/mocks/factories';
 import { DocumentSnapshot } from '@src/views/webviews/views/form-editor/form-editor-model';
 import { PinnedPropertiesService } from './pinned-properties-service';
@@ -45,8 +45,8 @@ describe('EditorSnapshotService', () => {
 		expect(snapshotOf('ex:A a owl:Class .').activeLanguage).toBeUndefined();
 	});
 
-	it('names the properties pinned for the asserted types of a resource, leaving out the type and the labels, and none for an untyped one, which cannot pin', () => {
-		const pins = PinnedPropertiesService.fromLayers({ [_OWL + 'Class']: [RDFS.label, `${_RDFS}subClassOf`, `${_RDFS}comment`] }, {});
+	it('names the properties pinned for the asserted types of a resource, leaving out the type, and none for an untyped one, which cannot pin', () => {
+		const pins = PinnedPropertiesService.fromLayers({ [_OWL + 'Class']: [RDF.type, `${_RDFS}subClassOf`, `${_RDFS}comment`] }, {});
 		const snapshot = snapshotOf('ex:A a owl:Class ; rdfs:label "A" ; rdfs:comment "a class" .\nex:B ex:p "x" .', undefined, { pins });
 		const [classA, untyped] = snapshot.resources;
 
@@ -55,6 +55,14 @@ describe('EditorSnapshotService', () => {
 			{ predicate: RdfDataFactory.namedNode(`${_RDFS}comment`), scope: 'workspace' }
 		]);
 		expect(untyped.pins).toBeUndefined();
+	});
+
+	it('keeps a label predicate among the pins, as sh:path, which names a property shape, is one', () => {
+		const sh = 'http://www.w3.org/ns/shacl#';
+		const pins = PinnedPropertiesService.fromLayers({ [`${sh}PropertyShape`]: [RDFS.label] }, {});
+		const snapshot = snapshotOf('[] rdfs:label "the path" .', undefined, { pins, inferredTypesOf: () => [`${sh}PropertyShape`] });
+
+		expect(snapshot.resources[0].pins).toEqual([{ predicate: RdfDataFactory.namedNode(RDFS.label), scope: 'workspace' }]);
 	});
 
 	it('pins by the types the store infers, as for an untyped blank node a property shape is', () => {

@@ -49,6 +49,12 @@ interface NestedCardHeader {
 	summary: string;
 
 	/**
+	 * The pinned properties the node has, with their values, which the header shows in place of
+	 * the summary while the card is collapsed.
+	 */
+	pinned?: PinnedSummaryItem[];
+
+	/**
 	 * The comment lines written above the node, shown in the header as its caption.
 	 */
 	caption?: string[];
@@ -57,6 +63,21 @@ interface NestedCardHeader {
 	 * Collapse or expand the card.
 	 */
 	onToggle: () => void;
+}
+
+/**
+ * A pinned property of a nested card as its collapsed header names it.
+ */
+interface PinnedSummaryItem {
+	/**
+	 * The label of the predicate.
+	 */
+	label: string;
+
+	/**
+	 * The values, by their labels.
+	 */
+	text: string;
 }
 
 /**
@@ -213,12 +234,12 @@ export function StatementRow({ property, editor, services, autoFocus = false, re
 				{edited ? !addLink && !titled && _resourceBox(edited, resources, property, { header: header?.kind, autoFocus: addingValue, label }) : _resourcePills(resources, context)}
 				{wholes.map(entry => <StatementValueCell key={entry.index} {...entry} edited={edited} {...context} />)}
 				{addLink && <button type="button" className="add-link statement-value-add" onClick={() => setAddingValue(true)}>{addLink}</button>}
-				{header?.kind === 'type' && header.collapsed && header.summary && <span className="nested-card-summary">{header.summary}</span>}
+				{header?.kind === 'type' && header.collapsed && _collapsedSummaryOf(header)}
 				{header?.kind === 'type' && header.caption && <span className="nested-card-caption">{header.caption.join('\n')}</span>}
 				{property && <PropertyComments property={property} />}
 			</span>
 			<span className="statement-actions">
-				{!header && context.depth === 0 && _pinOf(predicateView, label, cardPins, pinScopes)}
+				{!header && _pinOf(predicateView, label, cardPins, pinScopes)}
 				{removable && !header && edited && !edited.editor.isNew && (
 					<button type="button" className="statement-row-remove" aria-label={`Remove ${label}`} title="Remove property" onClick={() => edited.editor.removeProperty()}>
 						<vscode-icon name="close" size={12}></vscode-icon>
@@ -231,8 +252,30 @@ export function StatementRow({ property, editor, services, autoFocus = false, re
 }
 
 /**
- * The pin button of a row of a card of the list, for a predicate other than the type, where the
- * resource can pin.
+ * What the header of a collapsed nested card names after its type: the pinned properties of the
+ * node with their values, else the other properties of the node.
+ * @param header The header.
+ * @returns The summary, or nothing when the node has no other properties.
+ */
+function _collapsedSummaryOf(header: NestedCardHeader): React.JSX.Element | null {
+	if (header.pinned && header.pinned.length > 0) {
+		return (
+			<span className="nested-card-summary is-pinned">
+				{header.pinned.map(item => (
+					<span key={item.label} className="nested-card-pinned">
+						<span className="nested-card-pinned-label">{item.label}</span> {item.text}
+					</span>
+				))}
+			</span>
+		);
+	}
+
+	return header.summary ? <span className="nested-card-summary">{header.summary}</span> : null;
+}
+
+/**
+ * The pin button of a row, for a predicate other than the type, where the resource of its card,
+ * or the blank node of its nested card, can pin.
  * @param predicateView The predicate of the row, once it names one.
  * @param label The label of the predicate.
  * @param cardPins The pins of the card.

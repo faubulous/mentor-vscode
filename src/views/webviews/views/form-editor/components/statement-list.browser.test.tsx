@@ -313,9 +313,9 @@ describe('StatementList, edited in a browser', () => {
 
 		const labelRow = within(card).getAllByRole('group', { name: 'rdfs:label' }).find(row => !box.contains(row))!;
 
-		// The card pads its rows by 8px, a row keeps a 32px inset for its actions; a nested row 30px inside its 1px border.
+		// The card pads its rows by 8px, a row keeps a 32px inset for its pin; a nested row 54px inside its 1px border, for its pin and its remove button.
 		expect(rightOf(card) - card.clientLeft - rightOf(labelRow.querySelector('.statement-values')!)).toBe(40);
-		expect(rightOf(box) - rightOf(within(box).getByRole('group', { name: 'rdfs:label' }).querySelector('.statement-values')!)).toBe(31);
+		expect(rightOf(box) - rightOf(within(box).getByRole('group', { name: 'rdfs:label' }).querySelector('.statement-values')!)).toBe(55);
 		// Below the reference width the nested card spans the row from the gutter: 8px card padding + 36px gutter.
 		expect(leftOf(box) - leftOf(card) - card.clientLeft).toBe(width < 760 ? 44 : 44 + 160 + 20);
 	});

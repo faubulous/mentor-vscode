@@ -1,11 +1,12 @@
 import { BlankNode, NamedNode } from '@rdfjs/types';
 import { RDF } from '@faubulous/mentor-rdf/ontologies';
 import { useMemo, useState } from 'react';
-import { ResourceDetail } from '../form-editor-model';
+import { PinnedProperty, ResourceDetail, TermView } from '../form-editor-model';
 import { useNestedCollapse } from '../hooks/use-nested-collapse';
 import { useStatementRows } from '../hooks/use-statement-rows';
 import { StatementServices, useStatementServices } from '../hooks/use-statement-services';
 import { IResourceDataService } from '../services/resource-data-service.interface';
+import { usePinnedProperties } from '../state/pinned-properties-context';
 import { useFormEditorContext } from '../state/form-editor-context';
 import { LeadingRow, StatementRowEntry } from '../state/statement-rows';
 import { RowHeader, StatementRow } from './statement-row';
@@ -72,6 +73,7 @@ const TYPE_ROW: LeadingRow = { predicates: [RDF.type], predicateText: 'a' };
  */
 export function StatementList({ detail, stale = false, dataService, depth, visited, labelRow = false, comments }: StatementListProps): React.JSX.Element {
 	const { editing, readOnly, labelPredicates } = useFormEditorContext();
+	const { pins } = usePinnedProperties();
 	const editable = !readOnly && editing !== undefined;
 	const nested = depth > 0;
 	const services = useStatementServices(detail, editable);
@@ -90,7 +92,7 @@ export function StatementList({ detail, stale = false, dataService, depth, visit
 	const leadingEntry = leadingRow ? _leadingEntryOf(entries, leadingRow) : undefined;
 	const rows = entries.filter(entry => entry !== leadingEntry);
 	const header: RowHeader | undefined = nested
-		? { kind: 'type', collapsed: collapsed.value, summary: _summaryOf(rows), caption: comments, onToggle: collapsed.toggle }
+		? { kind: 'type', collapsed: collapsed.value, summary: _summaryOf(rows), pinned: _pinnedOf(rows, pins), caption: comments, onToggle: collapsed.toggle }
 		: labelRow ? { kind: 'label' } : undefined;
 	const adding = rows.some(entry => entry.editor?.isOpen === true);
 
@@ -165,6 +167,38 @@ function _leadingEntryOf(entries: readonly StatementRowEntry[], leadingRow: Lead
 	const predicate = leadingRow.predicates.find(candidate => entries.some(entry => predicateOf(entry) === candidate));
 
 	return predicate ? entries.find(entry => predicateOf(entry) === predicate) : undefined;
+}
+
+/**
+ * The pinned properties a nested card has, with their values by their labels, which its collapsed
+ * header shows.
+ * @param rows The rows of the card other than its type.
+ * @param pins The pins of the node.
+ * @returns The properties, in the order of the pins.
+ */
+function _pinnedOf(rows: readonly StatementRowEntry[], pins: readonly PinnedProperty[]): { label: string; text: string }[] {
+	return pins.flatMap(pin => {
+		const property = rows.find(entry => entry.property?.predicate.term.equals(pin.predicate))?.property;
+
+		if (!property || property.values.length === 0) {
+			return [];
+		}
+
+		return [{ label: getTermLabel(property.predicate), text: property.values.map(_valueTextOf).join(', ') }];
+	});
+}
+
+/**
+ * The text a value stands for in the header of a collapsed nested card.
+ * @param view The value.
+ * @returns The text.
+ */
+function _valueTextOf(view: TermView): string {
+	if (view.term.termType === 'Literal') {
+		return view.term.value;
+	}
+
+	return view.nested || view.collection ? '[…]' : getTermLabel(view);
 }
 
 /**

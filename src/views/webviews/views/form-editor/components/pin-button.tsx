@@ -30,18 +30,18 @@ export interface PinButtonProps {
 }
 
 /**
- * The item of the pin menu for each scope a property can be pinned in.
+ * The label of the item of the pin menu for each scope a property can be pinned in.
  */
-const PIN_SCOPE_ITEMS: Readonly<Record<ScopeKey, { label: string; note: string }>> = {
-	user: { label: 'Pin for me', note: 'only you' },
-	workspace: { label: 'Pin for everyone', note: 'shared' }
+const PIN_SCOPE_LABELS: Readonly<Record<ScopeKey, string>> = {
+	user: 'Pin for me',
+	workspace: 'Pin for everyone'
 };
 
 /**
  * The pin of a row: a button whose outline glyph tells a property pinned for oneself and whose
- * filled glyph one pinned for everyone, which opens a menu with an item for each scope the
- * property can be pinned in, and Unpin while the property is pinned. The current choice is
- * checked. The menu hides itself when an item is picked or the user clicks away.
+ * filled glyph one pinned for everyone, which opens a menu of what the pin can become: an item
+ * for each other scope the property can be pinned in, and Unpin while the property is pinned. The
+ * menu hides itself when an item is picked or the user clicks away.
  * @param props The scope of the pin and what the button does.
  * @returns The button and its menu.
  */
@@ -69,15 +69,25 @@ export function PinButton({ scope, pinScopes, label, onPin }: PinButtonProps): R
 			<button type="button" className="icon-button" aria-label={title} aria-haspopup="menu" title={title} onClick={toggle}>
 				<vscode-icon name={scope === 'workspace' ? 'pinned' : 'pin'} size={14}></vscode-icon>
 			</button>
-			<vscode-context-menu
-				ref={setMenuRef}
-				data={[
-					...pinScopes.map(candidate => ({ label: PIN_SCOPE_ITEMS[candidate].label, value: candidate, keybinding: `${candidate === scope ? '✓ ' : ''}${PIN_SCOPE_ITEMS[candidate].note}` })),
-					...(scope ? [{ separator: true }, { label: 'Unpin', value: 'unpin' }] : [])
-				]}
-			></vscode-context-menu>
+			<vscode-context-menu ref={setMenuRef} data={_itemsOf(scope, pinScopes)}></vscode-context-menu>
 		</span>
 	);
+}
+
+/**
+ * The items of the menu of a pin: the scopes it is not pinned in, and Unpin while it is pinned.
+ * @param scope Who the property is pinned for, if it is pinned.
+ * @param pinScopes The settings it can be pinned in.
+ * @returns The items.
+ */
+function _itemsOf(scope: ScopeKey | undefined, pinScopes: readonly ScopeKey[]): { label?: string; value?: string; separator?: boolean }[] {
+	const pins = pinScopes.filter(candidate => candidate !== scope).map(candidate => ({ label: PIN_SCOPE_LABELS[candidate], value: candidate }));
+
+	if (!scope) {
+		return pins;
+	}
+
+	return [...pins, ...(pins.length > 0 ? [{ separator: true }] : []), { label: 'Unpin', value: 'unpin' }];
 }
 
 /**

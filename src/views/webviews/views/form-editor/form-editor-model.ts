@@ -248,7 +248,7 @@ export interface PinnedProperty {
 /**
  * The properties of a single resource, loaded on demand.
  */
-export interface ResourceDetail {
+export interface ResourceDetail extends Partial<Pick<ResourceSummary, 'pins'>> {
 	/**
 	 * The term naming the resource.
 	 */
