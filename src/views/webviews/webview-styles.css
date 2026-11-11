@@ -23,6 +23,10 @@
 
 	/* Common border */
 	--mentor-border-panel: 1px solid var(--vscode-panel-border);
+
+	/* The theme's background of an invalid input, resolved here so that an invalid
+	   text field can still read it after making its own variable transparent. */
+	--mentor-input-error-background: var(--vscode-inputValidation-errorBackground, #5a1d1d);
 }
 
 .mentor-row {
@@ -67,17 +71,17 @@ vscode-textfield .root input[type="text"] {
 	width: auto;
 }
 
-/* Fix cut-off rounded corners of input boxes. */
-vscode-textfield .root {
-	overflow: hidden !important;
-}
-
 /* The component's own invalid rule colors the :host border, but the visible
    border is drawn by the inner .root element, which reads this variable —
    overriding it shows the error border while the field is unfocused (the
-   focus border still takes over on focus). */
+   focus border still takes over on focus).
+   The component also paints the invalid background on the square input inside
+   .root, whose corners reach past the rounded border. Painting the background on
+   .root and leaving the input transparent keeps it inside the corners. */
 vscode-textfield[invalid] {
 	--vscode-settings-textInputBorder: var(--vscode-errorForeground, #be1100);
+	--vscode-settings-textInputBackground: var(--mentor-input-error-background);
+	--vscode-inputValidation-errorBackground: transparent;
 }
 
 vscode-toolbar-button {
