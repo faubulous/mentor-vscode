@@ -4,6 +4,7 @@ import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { ValueKind } from '@src/utilities/value-kind';
 import { ScopeKey } from '@src/utilities/config-scope';
 import { NamespaceInfo, PropertyView, TermView } from '../form-editor-model';
+import { ContextMenu, useContextMenu } from '../hooks/use-context-menu';
 import { useRowEditorState } from '../hooks/use-row-editor-state';
 import { StatementServices } from '../hooks/use-statement-services';
 import { FormEditorShortcuts } from '../form-editor-shortcuts';
@@ -168,6 +169,7 @@ export function StatementRow({ property, editor, services, autoFocus = false, he
 	const edited: EditedRow | undefined = editor && state && services ? { editor, state, services } : undefined;
 	const { languageFilter = LanguageFilter.ALL, pinScopes = [], languageTags, namespaces } = useFormEditorContext();
 	const rowRef = useRef<HTMLDivElement>(null);
+	const { menuRef, openOnContextMenu } = useContextMenu();
 	const cardPins = usePinnedProperties();
 	const values = _shownValues(state?.draft.values ?? property?.values.map(view => ({ kind: 'written' as const, view })) ?? [], services, languageFilter);
 	const literals = [...values.filter(entry => _kindOf(entry.view) === 'literal'), ..._missingLanguageField(edited, languageFilter)];
@@ -223,6 +225,7 @@ export function StatementRow({ property, editor, services, autoFocus = false, he
 			tabIndex={edited ? -1 : undefined}
 			onKeyDown={edited ? handleKeyDown : undefined}
 			onBlur={edited ? handleBlur : undefined}
+			onContextMenu={openOnContextMenu}
 		>
 			{header?.kind === 'type' && <span className="statement-gutter">{_chevron(header)}</span>}
 			{header
@@ -247,7 +250,7 @@ export function StatementRow({ property, editor, services, autoFocus = false, he
 				{property && <PropertyComments property={property} />}
 			</span>
 			<span className="statement-actions">
-				{!header && _rowMenuOf(predicateView, label, cardPins, pinScopes, edited)}
+				{!header && _rowMenuOf(predicateView, label, cardPins, pinScopes, edited, menuRef)}
 			</span>
 			{error && <RowError message={error} onDismiss={state?.rejection ? () => editor?.dismissRejection() : undefined} />}
 		</div>
@@ -285,9 +288,10 @@ function _collapsedSummaryOf(header: NestedCardHeader): React.JSX.Element | null
  * @param cardPins The pins of the card.
  * @param pinScopes The settings a property can be pinned in.
  * @param edited The row, where it is edited.
+ * @param menuRef Holds the menu element, which a right-click on the row opens as well.
  * @returns The menu, or nothing.
  */
-function _rowMenuOf(predicateView: TermView | undefined, label: string, cardPins: PinnedProperties, pinScopes: readonly ScopeKey[], edited: EditedRow | undefined): React.JSX.Element | null {
+function _rowMenuOf(predicateView: TermView | undefined, label: string, cardPins: PinnedProperties, pinScopes: readonly ScopeKey[], edited: EditedRow | undefined, menuRef: ContextMenu['menuRef']): React.JSX.Element | null {
 	const predicate = predicateView?.term;
 	const onPin = cardPins.onPin;
 
@@ -305,6 +309,7 @@ function _rowMenuOf(predicateView: TermView | undefined, label: string, cardPins
 			pinScopes={pinScopes}
 			onPin={pinnable ? next => onPin(predicate, next) : undefined}
 			onRemove={edited ? () => edited.editor.removeProperty() : undefined}
+			menuRef={menuRef}
 		/>
 	);
 }

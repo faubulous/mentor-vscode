@@ -91,6 +91,10 @@ export type FormEditorWebviewMessage =
 	 */
 	| { id: 'SetPin'; resource: NamedNode | BlankNode; predicate: NamedNode; scope?: ScopeKey }
 	/**
+	 * Unpin every property pinned for a resource in a scope that can be written.
+	 */
+	| { id: 'UnpinAll'; resource: NamedNode | BlankNode }
+	/**
 	 * Remove a resource with all its statements from the document, once the user confirms it.
 	 */
 	| { id: 'RemoveResource'; resource: NamedNode | BlankNode }
