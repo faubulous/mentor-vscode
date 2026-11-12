@@ -39,7 +39,7 @@ describe('StatementList', () => {
 		renderList(createSampleResourceDetail());
 
 		expect(screen.getAllByRole('group').map(row => row.getAttribute('aria-label'))).toEqual(['rdf:type', 'rdfs:label', 'rdfs:subClassOf']);
-		expect(screen.getByText('Class').closest('.value-pill')?.getAttribute('title')).toBe(OWL.Class);
+		expect(screen.getByText('Class').closest('.value-pill')?.getAttribute('data-tooltip-iri')).toBe(OWL.Class);
 		expect(screen.getByText('Tree').classList.contains('literal-text')).toBe(true);
 		expect(screen.getByText('en', { selector: '.literal-tag' })).toBeTruthy();
 		expect(screen.getByText('en', { selector: '.statement-predicate-tag' })).toBeTruthy();

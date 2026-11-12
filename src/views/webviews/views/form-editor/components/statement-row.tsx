@@ -24,7 +24,8 @@ import { getRowErrorMessage } from './row-error-message';
 import { RowError } from './row-error';
 import { StatementRowContext } from './statement-row-context';
 import { StatementValueCell } from './statement-value-cell';
-import { getTermLabel, getTermTitle } from './term-labels';
+import { getResourceTooltipAttributes } from './resource-tooltip';
+import { getTermLabel } from './term-labels';
 import { TermValue } from './term-value';
 
 /**
@@ -228,7 +229,7 @@ export function StatementRow({ property, editor, services, autoFocus = false, he
 			{header
 				? !typeless && _headerPredicateOf(header, edited, label)
 				: (
-					<span className={`statement-predicate${_isIriLabel(predicateView, label) ? ' is-iri' : ''}`} title={edited ? undefined : predicateView && getTermTitle(predicateView.term)}>
+					<span className={`statement-predicate${_isIriLabel(predicateView, label) ? ' is-iri' : ''}`} {...getResourceTooltipAttributes(edited ? undefined : predicateView?.term)}>
 						{edited ? <PredicateField editor={edited.editor} state={edited.state} label={label} autoFocus={autoFocus} /> : <span className="statement-predicate-text">{label}</span>}
 						{wholes.length > 0 && <span className="statement-predicate-count">{wholes.length}</span>}
 						<PredicateTags
@@ -395,7 +396,7 @@ function _headerLabelOf(header: RowHeader): string {
  */
 function _headerPredicateOf(header: RowHeader, edited: EditedRow | undefined, label: string): React.JSX.Element {
 	if (header.kind === 'type') {
-		return <span className="statement-predicate" title={RDF.type}>type</span>;
+		return <span className="statement-predicate" {...getResourceTooltipAttributes(RdfDataFactory.namedNode(RDF.type))}>type</span>;
 	}
 
 	return (
