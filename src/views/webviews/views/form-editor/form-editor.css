@@ -487,7 +487,7 @@ body {
 	line-height: 20px;
 }
 
-/* A card in a hover, which the host asks for; the layout of a tooltip comes with the host. */
+/* A card in its most compact density, as the tooltip of a resource shows it. */
 .resource-card[data-density="tooltip"] {
 	--card-inset: 10px;
 	--row-min-h: 20px;
@@ -2120,4 +2120,100 @@ button.statement-predicate-tag:focus-visible {
 	flex: 1 1 auto;
 	min-width: 0;
 	line-height: 1.4;
+}
+
+/* ---------- Resource tooltip ---------- */
+
+/*
+ * The tooltip of the resource the pointer rests on, placed by its element. It stands above the
+ * cards and their sticky bars, and never takes the pointer, so leaving the element hides it. A
+ * resource of the document shows its compact card, any other its IRI.
+ */
+.resource-tooltip {
+	position: fixed;
+	z-index: 100;
+	box-sizing: border-box;
+	max-width: calc(100vw - 16px);
+	border: 1px solid var(--vscode-editorHoverWidget-border, var(--vscode-widget-border));
+	border-radius: 4px;
+	background: var(--vscode-editorHoverWidget-background, var(--vscode-editorWidget-background));
+	box-shadow: 0 2px 8px var(--vscode-widget-shadow);
+	pointer-events: none;
+}
+
+/* A card sizes itself by its width, so its tooltip is as wide as the compact density allows. */
+.resource-tooltip.is-card {
+	width: min(360px, calc(100vw - 16px));
+	border: 0;
+	background: none;
+}
+
+.resource-tooltip-iri {
+	padding: 4px 8px;
+	color: var(--vscode-editorHoverWidget-foreground, var(--vscode-foreground));
+	font-family: var(--form-mono);
+	font-size: 11px;
+	overflow-wrap: anywhere;
+}
+
+/*
+ * The compact card: the title line with the types after the label, the pinned properties or the
+ * description, and the footer with the IRI and the usage count under a hairline.
+ */
+.resource-card.is-compact {
+	width: 100%;
+	box-sizing: border-box;
+}
+
+.compact-card-title {
+	display: flex;
+	align-items: baseline;
+	gap: var(--col-gap);
+	min-width: 0;
+	padding: 6px var(--card-inset) 4px;
+}
+
+.resource-card.is-compact .resource-card-kind {
+	margin: 0;
+	align-self: center;
+}
+
+.compact-card-types {
+	min-width: 0;
+	color: var(--form-muted);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.resource-card.is-compact .resource-card-description {
+	margin: 0 var(--card-inset) 6px;
+}
+
+.resource-card.is-compact .pinned-properties-list {
+	gap: 6px var(--col-gap);
+	padding: 2px 0 6px;
+	border-bottom: 0;
+}
+
+.compact-card-footer {
+	display: flex;
+	align-items: baseline;
+	gap: var(--col-gap);
+	padding: 4px var(--card-inset);
+	border-top: 1px solid var(--form-row-border);
+}
+
+/* The usage count keeps its word: nothing shows the title that tells it in a narrow card. */
+.resource-card.is-compact .card-usage-word {
+	display: inline;
+}
+
+.compact-card-iri {
+	flex: 1 1 auto;
+	min-width: 0;
+	color: var(--vscode-descriptionForeground);
+	font-family: var(--form-mono);
+	font-size: 11px;
+	overflow-wrap: anywhere;
 }

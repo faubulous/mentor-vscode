@@ -1,6 +1,7 @@
 import { KeyboardEvent, MouseEvent } from 'react';
 import { TermView } from '../form-editor-model';
-import { getTermLabel, getTermTitle } from './term-labels';
+import { getResourceTooltipAttributes } from './resource-tooltip';
+import { getTermLabel } from './term-labels';
 
 /**
  * Properties of the {@link ValuePill} component.
@@ -35,15 +36,14 @@ export interface ValuePillProps {
 
 /**
  * A resource value as a pill: a ring in the colour the definition tree gives the kind of the
- * resource, dashed for a term the document knows nothing about, and its label, with its IRI told
- * when the pointer rests on it. Where its statement is edited, the pill takes the keys of its row,
+ * resource, dashed for a term the document knows nothing about, and its label, with its prefixed
+ * name and IRI in its tooltip. Where its statement is edited, the pill takes the keys of its row,
  * and a button that takes the place of the ring while the pointer or the focus is on it removes
  * it.
  * @param props The resource and what the pill does.
  * @returns The pill.
  */
 export function ValuePill({ view, onNavigate, onRemove, onKeyDown, pillRef }: ValuePillProps): React.JSX.Element {
-	const title = getTermTitle(view.term);
 	const label = getTermLabel(view);
 
 	const handleClick = (event: MouseEvent<HTMLSpanElement>): void => {
@@ -62,7 +62,7 @@ export function ValuePill({ view, onNavigate, onRemove, onKeyDown, pillRef }: Va
 		<span
 			ref={pillRef}
 			className="value-pill"
-			title={title}
+			{...getResourceTooltipAttributes(view.term)}
 			role={onNavigate ? 'link' : undefined}
 			tabIndex={onKeyDown ? -1 : onNavigate ? 0 : undefined}
 			aria-label={onKeyDown ? label : undefined}
