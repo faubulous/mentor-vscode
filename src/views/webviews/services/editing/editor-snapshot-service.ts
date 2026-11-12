@@ -141,8 +141,7 @@ export class EditorSnapshotService {
 				problems: this._input.problems ?? [],
 				labelPredicates: context.predicates.label.map(predicate => RdfDataFactory.namedNode(predicate)),
 				descriptionPredicates: context.predicates.description.map(predicate => RdfDataFactory.namedNode(predicate)),
-				pinScopes: this._input.pinScopes,
-				dominantTypeIri: _dominantTypeOf(resources.filter(resource => !documentResource?.equals(resource.term)))
+				pinScopes: this._input.pinScopes
 			}
 		};
 	}
@@ -202,27 +201,3 @@ function _isOntology(entry: ResourceIndexEntry): boolean {
 	return entry.quads.some(quad => quad.predicate.value === RDF.type && quad.object.value === OWL.Ontology);
 }
 
-/**
- * The type most definitions have, which their entries do not repeat.
- * @param resources The definitions.
- * @returns The type IRI, or `undefined` when no definition has a type.
- */
-function _dominantTypeOf(resources: readonly ResourceSummary[]): string | undefined {
-	const counts = new Map<string, number>();
-
-	for (const resource of resources) {
-		if (resource.typeIri) {
-			counts.set(resource.typeIri, (counts.get(resource.typeIri) ?? 0) + 1);
-		}
-	}
-
-	let dominant: string | undefined;
-
-	for (const [type, count] of counts) {
-		if (dominant === undefined || count > counts.get(dominant)!) {
-			dominant = type;
-		}
-	}
-
-	return dominant;
-}

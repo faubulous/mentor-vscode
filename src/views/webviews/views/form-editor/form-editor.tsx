@@ -261,7 +261,6 @@ function FormEditor(): React.JSX.Element {
 		onRenameResource: handleRenameResource,
 		onRevealInTextEditor: handleRevealPosition,
 		revealedResource: revealed,
-		dominantTypeIri: snapshot?.dominantTypeIri,
 		filterText
 	}), [snapshot, editable, controller, languageFilter, handleRevealResource, handleOpenExternal, handleCopyAsTurtle, handleRenameResource, handleRevealPosition, handleSetPin, handleRemoveResource, revealed, filterText]);
 

@@ -180,17 +180,12 @@ describe('EditorSnapshotService', () => {
 		expect(snapshot.resources.map(resource => resource.externalDeclaration)).toEqual([true, undefined, undefined]);
 	});
 
-	it('tells the type most definitions have, the resource describing the document aside', () => {
+	it('shows a definition by the first type it asserts, past owl:NamedIndividual', () => {
 		const snapshot = snapshotOf(`
-			ex:scheme a skos:ConceptScheme .
-			ex:tools a skos:Concept ; skos:prefLabel "tools"@en .
-			ex:awl a skos:Concept ; skos:prefLabel "awl"@en .
-			ex:bindings a skos:Collection ; skos:prefLabel "bindings"@en .
-			ex:extra a skos:Concept, owl:NamedIndividual ; skos:prefLabel "extra"@en .
+			ex:extra a owl:NamedIndividual, skos:Concept ; skos:prefLabel "extra"@en .
 		`);
 		const extra = snapshot.resources.find(resource => resource.prefixedName === 'ex:extra');
 
-		expect(snapshot.dominantTypeIri).toBe(SKOS.Concept);
 		expect(extra?.typeIri).toBe(SKOS.Concept);
 	});
 

@@ -52,10 +52,10 @@ describe('ResourceCardTitleBar', () => {
 		expect(screen.getByTitle('2 usages').textContent).toBe('2 usages');
 	});
 
-	it('names the types of a collapsed card but the one most resources have, and none of an expanded one', () => {
-		const { container } = renderTitleBar(TREE, { dominantTypeIri: 'http://x/Tree' }, false);
+	it('names every type of a collapsed card, and none of an expanded one', () => {
+		const { container } = renderTitleBar(TREE, {}, false);
 
-		expect(container.querySelector('.resource-card-types')?.textContent).toBe('Plant');
+		expect(container.querySelector('.resource-card-types')?.textContent).toBe('Tree, Plant');
 		expect(screen.queryByRole('button', { name: /all nested/ })).toBeNull();
 	});
 
