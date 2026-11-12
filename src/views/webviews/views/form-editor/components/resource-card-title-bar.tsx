@@ -35,10 +35,9 @@ export interface ResourceCardTitleBarProps {
 
 /**
  * The title bar of a card, which stays in view while the card scrolls: the chevron that collapses
- * and expands the card, the types of the resource while the card is collapsed, except the type most
- * resources have, the usage count, the button that collapses or expands every nested card at once
- * while the card is expanded, and the ⋯ menu with Reveal in Editor and, where the document can be
- * written, Remove.
+ * and expands the card, every type of the resource while the card is collapsed, the usage count,
+ * the button that collapses or expands every nested card at once while the card is expanded, and
+ * the ⋯ menu with Reveal in Editor and, where the document can be written, Remove.
  * @param props The resource, the state of the card and what its buttons do.
  * @returns The title bar.
  */
