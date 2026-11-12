@@ -5,6 +5,7 @@ import { LiteralDatatypes } from '../services/statement/literal-datatypes';
 import { useFormEditorContext } from '../state/form-editor-context';
 import { LanguageFilter } from '../state/language-filter';
 import { HighlightedText } from './highlighted-text';
+import { getResourceTooltipAttributes } from './resource-tooltip';
 import { getTermLabel } from './term-labels';
 import { ValuePill } from './value-pill';
 
@@ -23,10 +24,11 @@ export interface PinnedPropertiesListProps {
 	pins: readonly PinnedProperty[];
 
 	/**
-	 * Expand the card and go to the row of a property.
+	 * Expand the card and go to the row of a property; absent where the items open nothing, as in
+	 * the compact card of a tooltip.
 	 * @param predicate The predicate of the property.
 	 */
-	onOpen: (predicate: NamedNode) => void;
+	onOpen?: (predicate: NamedNode) => void;
 }
 
 /**
@@ -57,7 +59,8 @@ interface PinnedPropertyItem {
  * nodes and lists a line that names them. A description runs the full width, cut after a few
  * lines; the description of the resource, which the card shows pinned or not, has no caption. A
  * property the resource does not have is left out, and so is the label the title of the card
- * shows. A click on an item, or Enter on it, expands the card at that property.
+ * shows. Where the card can open, a click on an item, or Enter on it, expands the card at that
+ * property.
  * @param props The statements, the pins and what opens a property.
  * @returns The items, or nothing when the resource has neither a pinned property nor a description.
  */
@@ -81,7 +84,7 @@ export function PinnedPropertiesList({ detail, pins, onOpen }: PinnedPropertiesL
 				const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
 					if (event.key === 'Enter' || event.key === ' ') {
 						event.preventDefault();
-						onOpen(predicate);
+						onOpen?.(predicate);
 					}
 				};
 
@@ -89,15 +92,14 @@ export function PinnedPropertiesList({ detail, pins, onOpen }: PinnedPropertiesL
 					<div
 						key={predicate.value}
 						className={`pinned-property${description ? ' is-description' : ''}${pin ? '' : ' is-unpinned'}`}
-						role="button"
-						tabIndex={0}
-						aria-label={`${label}: open the property`}
-						title={predicate.value}
-						onClick={() => onOpen(predicate)}
-						onKeyDown={handleKeyDown}
+						role={onOpen ? 'button' : undefined}
+						tabIndex={onOpen ? 0 : undefined}
+						aria-label={onOpen ? `${label}: open the property` : undefined}
+						onClick={onOpen ? () => onOpen(predicate) : undefined}
+						onKeyDown={onOpen ? handleKeyDown : undefined}
 					>
 						{pin && (
-							<span className="pinned-property-caption">
+							<span className="pinned-property-caption" {...getResourceTooltipAttributes(predicate)}>
 								{label}
 								{pin.scope === 'user' && <vscode-icon name="pin" size={11} title="Pinned for you"></vscode-icon>}
 							</span>

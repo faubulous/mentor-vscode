@@ -1,8 +1,6 @@
 import { KeyboardEvent } from 'react';
 import { ResourceSummary } from '../form-editor-model';
-import { useFormEditorContext } from '../state/form-editor-context';
-import { HighlightedText } from './highlighted-text';
-import { ResourceIcon } from './resource-icon';
+import { ResourceCardTitle } from './resource-card-title';
 
 /**
  * Properties of the {@link ResourceCardHeader} component.
@@ -32,7 +30,6 @@ export interface ResourceCardHeaderProps {
  * @returns The label row.
  */
 export function ResourceCardHeader({ summary, expanded, onToggle }: ResourceCardHeaderProps): React.JSX.Element {
-	const { filterText } = useFormEditorContext();
 
 	const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
 		if (event.key === 'Enter' || event.key === ' ') {
@@ -43,10 +40,7 @@ export function ResourceCardHeader({ summary, expanded, onToggle }: ResourceCard
 
 	return (
 		<div className="resource-card-header" role="button" tabIndex={0} aria-expanded={expanded} onClick={onToggle} onKeyDown={handleKeyDown}>
-			<span className="resource-card-title">
-				<span className="resource-card-kind"><ResourceIcon iconName={summary.iconName} /></span>
-				<span className={`resource-card-label${summary.hasLabel ? '' : ' is-unnamed'}`}><HighlightedText text={summary.label} query={filterText} /></span>
-			</span>
+			<ResourceCardTitle summary={summary} />
 		</div>
 	);
 }

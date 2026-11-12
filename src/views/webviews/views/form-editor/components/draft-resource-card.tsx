@@ -1,7 +1,9 @@
 import { NamedNode } from '@rdfjs/types';
 import { useState } from 'react';
 import { RDF } from '@faubulous/mentor-rdf/ontologies';
+import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { EditedRow } from './edited-row';
+import { getResourceTooltipAttributes } from './resource-tooltip';
 import { ResourceValues } from './resource-values';
 
 /**
@@ -55,7 +57,7 @@ export function DraftResourceCard({ type, index, edited }: DraftResourceCardProp
 			<div className="statement-list is-editable">
 				<div className="nested-card-header" role="group" aria-label="New blank node">
 					<span className="statement-gutter"></span>
-					<span className="statement-predicate" title={RDF.type}>type</span>
+					<span className="statement-predicate" {...getResourceTooltipAttributes(RdfDataFactory.namedNode(RDF.type))}>type</span>
 					<span className="statement-values">
 						<span className="statement-value is-adder">
 							<ResourceValues
