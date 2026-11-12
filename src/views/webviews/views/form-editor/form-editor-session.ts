@@ -26,7 +26,7 @@ import { WebviewComponentFactory } from '../../webview-component-factory';
 import { ExecuteCommandMessage } from '../../webview-messaging';
 import { ResourceIndex, ResourceIndexEntry, ResourceIndexOptions, findCardResource, getEntry, typeIrisOf } from '../../services/editing/resource-index';
 import { ResourceViewBuilder } from '../../services/editing/resource-view-builder';
-import { PinnedPropertiesService } from '../../services/editing/pinned-properties-service';
+import { PinChange, PinnedPropertiesService } from '../../services/editing/pinned-properties-service';
 import { EditorSnapshotService } from '../../services/editing/editor-snapshot-service';
 import { EditOutcome, FormEditorEditHandler } from './form-editor-edit-handler';
 import { FormEditorHostMessage, FormEditorWebviewMessage } from './form-editor-messages';
@@ -521,6 +521,9 @@ export class FormEditorSession implements vscode.Disposable {
 			case 'SetPin':
 				await this.setPin(message.resource, message.predicate, message.scope);
 				break;
+			case 'UnpinAll':
+				await this.unpinAll(message.resource);
+				break;
 			case 'RemoveResource':
 				await this.removeResource(message.resource);
 				break;
@@ -851,31 +854,53 @@ export class FormEditorSession implements vscode.Disposable {
 	 * @param scope Who to pin it for, or `undefined` to unpin it.
 	 */
 	async setPin(resource: NamedNode | BlankNode, predicate: NamedNode, scope: ScopeKey | undefined): Promise<void> {
+		const types = this._pinTypesOf(resource);
+
+		if (!types || (scope && !_pinScopes().includes(scope))) {
+			return;
+		}
+
+		await _writePins(_readPins().withPin(types.typeIris, types.pinType, predicate.value, scope));
+	}
+
+	/**
+	 * Unpin every property pinned for the types of a resource in the settings that can be written:
+	 * the user settings, and the workspace settings while a workspace folder is open. The changed
+	 * setting rebuilds the snapshot.
+	 * @param resource The resource.
+	 */
+	async unpinAll(resource: NamedNode | BlankNode): Promise<void> {
+		const types = this._pinTypesOf(resource);
+
+		if (!types) {
+			return;
+		}
+
+		const pins = _readPins();
+		const predicates = pins.pinsOf(types.typeIris).map(pin => pin.predicate);
+
+		await _writePins(pins.withoutPins(types.typeIris, predicates, _pinScopes()));
+	}
+
+	/**
+	 * The types a resource is pinned by: all it has, asserted ones first, and the one new pins are
+	 * stored under.
+	 * @param resource The resource.
+	 * @returns The types, or `undefined` for a resource that is unknown or of no known type.
+	 */
+	private _pinTypesOf(resource: NamedNode | BlankNode): { typeIris: string[]; pinType: string } | undefined {
 		const entry = this._index ? getEntry(this._index, resource) : undefined;
 		const context = this._getTokenizedContext();
 
-		if (!entry || !context || (scope && !_pinScopes().includes(scope))) {
-			return;
+		if (!entry || !context) {
+			return undefined;
 		}
 
 		const asserted = typeIrisOf(entry);
 		const inferred = this._inferredTypesOf(context.graphs, resource);
 		const pinType = PinnedPropertiesService.pinTypeOf(asserted, inferred);
 
-		if (!pinType) {
-			return;
-		}
-
-		const change = _readPins().withPin(Array.from(new Set([...asserted, ...inferred])), pinType, predicate.value, scope);
-		const configuration = getConfig('formEditor');
-
-		if (change.workspace) {
-			await configuration.update(PINNED_PROPERTIES_SETTING, change.workspace, toConfigurationTarget('workspace'));
-		}
-
-		if (change.user) {
-			await configuration.update(PINNED_PROPERTIES_SETTING, change.user, toConfigurationTarget('user'));
-		}
+		return pinType ? { typeIris: Array.from(new Set([...asserted, ...inferred])), pinType } : undefined;
 	}
 
 	/**
@@ -1126,6 +1151,22 @@ function _localPartCaseOf(types: readonly string[]): LocalPartCase | undefined {
  */
 function _readPins(): PinnedPropertiesService {
 	return PinnedPropertiesService.fromSetting(getConfig('formEditor').inspect<unknown>(PINNED_PROPERTIES_SETTING));
+}
+
+/**
+ * Write the layers of the pinned properties setting a change of pins gives.
+ * @param change The new values of the layers that change.
+ */
+async function _writePins(change: PinChange): Promise<void> {
+	const configuration = getConfig('formEditor');
+
+	if (change.workspace) {
+		await configuration.update(PINNED_PROPERTIES_SETTING, change.workspace, toConfigurationTarget('workspace'));
+	}
+
+	if (change.user) {
+		await configuration.update(PINNED_PROPERTIES_SETTING, change.user, toConfigurationTarget('user'));
+	}
 }
 
 /**

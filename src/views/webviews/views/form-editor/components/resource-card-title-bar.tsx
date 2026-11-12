@@ -1,3 +1,5 @@
+import { MutableRefObject } from 'react';
+import { VscodeContextMenu } from '@vscode-elements/elements';
 import { ResourceSummary } from '../form-editor-model';
 import { useFormEditorContext } from '../state/form-editor-context';
 import { CardUsage } from './card-usage';
@@ -31,19 +33,28 @@ export interface ResourceCardTitleBarProps {
 	 * Collapses every nested card of the card, or expands them again.
 	 */
 	onToggleNested: () => void;
+
+	/**
+	 * Holds the element of the ⋮ menu, which a right-click on the card opens as well.
+	 */
+	menuRef: MutableRefObject<VscodeContextMenu | null>;
 }
 
 /**
  * The title bar of a card, which stays in view while the card scrolls: the chevron that collapses
  * and expands the card, every type of the resource while the card is collapsed, the usage count,
  * the button that collapses or expands every nested card at once while the card is expanded, and
- * the ⋯ menu with Reveal in Editor and, where the document can be written, Remove.
+ * the ⋮ menu: Collapse or Expand, Reveal in Editor, Copy IRI for an IRI, Unpin All while a
+ * property is pinned in a scope that can be written, and, where the document can be written,
+ * Remove.
  * @param props The resource, the state of the card and what its buttons do.
  * @returns The title bar.
  */
-export function ResourceCardTitleBar({ summary, expanded, nestedCollapsed, onToggle, onToggleNested }: ResourceCardTitleBarProps): React.JSX.Element {
-	const { readOnly, onRevealInTextEditor, onRemoveResource } = useFormEditorContext();
+export function ResourceCardTitleBar({ summary, expanded, nestedCollapsed, onToggle, onToggleNested, menuRef }: ResourceCardTitleBarProps): React.JSX.Element {
+	const { readOnly, pinScopes = [], onRevealInTextEditor, onUnpinAll, onRemoveResource } = useFormEditorContext();
 	const position = summary.position;
+	const term = summary.term;
+	const unpinnable = summary.pins?.some(pin => pinScopes.includes(pin.scope)) === true;
 	const types = expanded ? [] : _typeLabelsOf(summary);
 
 	return (
@@ -61,9 +72,15 @@ export function ResourceCardTitleBar({ summary, expanded, nestedCollapsed, onTog
 			<span className="resource-card-tools">
 				<ResourceCardMenu
 					actions={{
+						onToggle,
 						onReveal: position && onRevealInTextEditor ? () => onRevealInTextEditor(position) : undefined,
-						onRemove: !readOnly && onRemoveResource ? () => onRemoveResource(summary.term) : undefined
+						onCopyIri: term.termType === 'NamedNode' ? () => void navigator.clipboard.writeText(term.value) : undefined,
+						onUnpinAll: unpinnable && onUnpinAll ? () => onUnpinAll(term) : undefined,
+						onRemove: !readOnly && onRemoveResource ? () => onRemoveResource(term) : undefined
 					}}
+					expanded={expanded}
+					prefixedName={summary.prefixedName}
+					menuRef={menuRef}
 				/>
 			</span>
 		</div>

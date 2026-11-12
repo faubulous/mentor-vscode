@@ -309,16 +309,23 @@ describe('StatementList, with a blank node', () => {
 		expect(onCopyAsTurtle).toHaveBeenCalledWith(130, 1);
 	});
 
-	it('opens the ⋯ menu on a right-click on the card, but leaves a right-click in a text field to the browser', async () => {
+	it('opens the ⋯ menu on a right-click on the header of the card, the menu of a row on a right-click on it, and leaves a right-click in a text field to the browser', async () => {
 		await renderCard();
 
 		const menu = nestedCard().querySelector('.nested-card-menu vscode-context-menu') as HTMLElement & { show?: boolean };
+		const rowMenu = nestedRowOf('rdfs:label').querySelector('.row-menu vscode-context-menu') as HTMLElement & { show?: boolean };
 
 		fireEvent.contextMenu(within(nestedRowOf('rdfs:label')).getByLabelText('Value 1'));
 
 		expect(menu.show).not.toBe(true);
+		expect(rowMenu.show).not.toBe(true);
 
 		fireEvent.contextMenu(nestedRowOf('rdfs:label'));
+
+		expect(rowMenu.show).toBe(true);
+		expect(menu.show).not.toBe(true);
+
+		fireEvent.contextMenu(within(nestedCard()).getByRole('group', { name: 'Type' }));
 
 		expect(menu.show).toBe(true);
 	});

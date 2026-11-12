@@ -1,8 +1,8 @@
 import { BlankNode, NamedNode } from '@rdfjs/types';
-import { KeyboardEvent, MouseEvent, useEffect, useRef } from 'react';
-import { VscodeContextMenu } from '@vscode-elements/elements';
+import { KeyboardEvent, useEffect } from 'react';
 import { termToString } from 'rdf-string';
 import { NestedResourceRef } from '../form-editor-model';
+import { useContextMenu } from '../hooks/use-context-menu';
 import { useResourceDetail } from '../hooks/use-resource-detail';
 import { IResourceDataService } from '../services/resource-data-service.interface';
 import { FormEditorShortcuts } from '../form-editor-shortcuts';
@@ -66,7 +66,7 @@ export interface NestedResourceCardProps {
 export function NestedResourceCard({ nested, dataService, depth, visited, actions, comments }: NestedResourceCardProps): React.JSX.Element | null {
 	const { detail, stale } = useResourceDetail(dataService, nested.term);
 	const { onSetPin } = useFormEditorContext();
-	const menuRef = useRef<VscodeContextMenu | null>(null);
+	const { menuRef, openOnContextMenu } = useContextMenu();
 
 	// The node is asked for when nothing is known of it, and again after the document changed.
 	useEffect(() => {
@@ -99,18 +99,8 @@ export function NestedResourceCard({ nested, dataService, depth, visited, action
 		actions.onRemove();
 	};
 
-	const handleContextMenu = (event: MouseEvent<HTMLDivElement>): void => {
-		if (!menuRef.current || _isTextField(event.target)) {
-			return;
-		}
-
-		event.preventDefault();
-		event.stopPropagation();
-		menuRef.current.show = true;
-	};
-
 	return (
-		<div className="resource-card is-nested" data-resource-id={termToString(nested.term)} onContextMenu={actions ? handleContextMenu : undefined} onKeyDown={actions ? handleKeyDown : undefined}>
+		<div className="resource-card is-nested" data-resource-id={termToString(nested.term)} onContextMenu={actions ? openOnContextMenu : undefined} onKeyDown={actions ? handleKeyDown : undefined}>
 			<PinnedPropertiesContext.Provider value={{ pins: detail.pins ?? [], onPin: detail.pins && onSetPin ? (predicate, scope) => onSetPin(nested.term, predicate, scope) : undefined }}>
 				<StatementList detail={detail} dataService={dataService} depth={depth} visited={[...visited, nested.term]} comments={_captionOf(comments, detail.comments)} />
 			</PinnedPropertiesContext.Provider>
@@ -132,14 +122,6 @@ function _captionOf(valueComments: string[] | undefined, nodeComments: string[] 
 	return lines.length > 0 ? lines : undefined;
 }
 
-/**
- * Indicate whether a right-click is on a text field, which keeps the menu of the browser.
- * @param target The element clicked.
- * @returns `true` within a text field or text area.
- */
-function _isTextField(target: EventTarget): boolean {
-	return target instanceof Element && target.closest('vscode-textfield, vscode-textarea, input, textarea') !== null;
-}
 
 /**
  * Indicate whether the target of an event in a nested card is in the header of that card, or in no

@@ -149,8 +149,8 @@ export class PinnedPropertiesService {
 	 * @returns The layers to write.
 	 */
 	withPin(typeIris: readonly string[], pinType: string, predicate: string, scope: ScopeKey | undefined): PinChange {
-		const workspace = this._without(typeIris, predicate, type => this._sharedOf(type), this._workspace);
-		const user = this._without(typeIris, predicate, type => this._user[type] ?? [], this._user);
+		const workspace = this._without(typeIris, [predicate], type => this._sharedOf(type), this._workspace);
+		const user = this._without(typeIris, [predicate], type => this._user[type] ?? [], this._user);
 
 		if (scope === 'workspace') {
 			workspace.layer = { ...workspace.layer, [pinType]: [...(workspace.layer[pinType] ?? this._sharedOf(pinType)), predicate] };
@@ -167,6 +167,25 @@ export class PinnedPropertiesService {
 	}
 
 	/**
+	 * The change that unpins properties of a resource in the scopes given: each leaves every type of
+	 * the resource it is pinned for in those scopes. Leaving a default writes the defaults of the
+	 * type without it.
+	 * @param typeIris The types of the resource.
+	 * @param predicates The IRIs of the predicates.
+	 * @param scopes The scopes to unpin them in.
+	 * @returns The layers to write.
+	 */
+	withoutPins(typeIris: readonly string[], predicates: readonly string[], scopes: readonly ScopeKey[]): PinChange {
+		const workspace = scopes.includes('workspace') ? this._without(typeIris, predicates, type => this._sharedOf(type), this._workspace) : undefined;
+		const user = scopes.includes('user') ? this._without(typeIris, predicates, type => this._user[type] ?? [], this._user) : undefined;
+
+		return {
+			...(workspace?.changed ? { workspace: workspace.layer } : {}),
+			...(user?.changed ? { user: user.layer } : {})
+		};
+	}
+
+	/**
 	 * The pins of a type for everyone: those of the workspace layer, or those of the default value
 	 * while it names nothing for the type.
 	 * @param type The IRI of the type.
@@ -177,22 +196,22 @@ export class PinnedPropertiesService {
 	}
 
 	/**
-	 * A layer with a predicate taken from the pins of the given types.
+	 * A layer with predicates taken from the pins of the given types.
 	 * @param typeIris The types.
-	 * @param predicate The predicate.
+	 * @param predicates The predicates.
 	 * @param pinsOf The pins of a type in the layer.
 	 * @param layer The layer.
 	 * @returns The new layer, and whether it changed.
 	 */
-	private _without(typeIris: readonly string[], predicate: string, pinsOf: (type: string) => readonly string[], layer: PinLayer): { layer: Record<string, readonly string[]>; changed: boolean } {
+	private _without(typeIris: readonly string[], predicates: readonly string[], pinsOf: (type: string) => readonly string[], layer: PinLayer): { layer: Record<string, readonly string[]>; changed: boolean } {
 		const result: Record<string, readonly string[]> = { ...layer };
 		let changed = false;
 
 		for (const type of typeIris) {
 			const pins = pinsOf(type);
 
-			if (pins.includes(predicate)) {
-				result[type] = pins.filter(candidate => candidate !== predicate);
+			if (pins.some(pin => predicates.includes(pin))) {
+				result[type] = pins.filter(candidate => !predicates.includes(candidate));
 				changed = true;
 			}
 		}

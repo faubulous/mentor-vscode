@@ -70,6 +70,12 @@ export interface FormEditorContextValue {
 	onSetPin?: (resource: NamedNode | BlankNode, predicate: NamedNode, scope: ScopeKey | undefined) => void;
 
 	/**
+	 * Unpin every property pinned for a resource in a scope that can be written.
+	 * @param resource The resource.
+	 */
+	onUnpinAll?: (resource: NamedNode | BlankNode) => void;
+
+	/**
 	 * Scroll to a resource, used by nested blank node placeholders.
 	 */
 	onRevealResource?: (resource: NamedNode | BlankNode) => void;

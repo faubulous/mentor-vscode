@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { MutableRefObject } from 'react';
 import { VscodeContextMenu } from '@vscode-elements/elements';
 import { useVscodeElementRef } from '@src/views/webviews/hooks';
 import { ScopeKey } from '@src/utilities/config-scope';
@@ -33,6 +33,11 @@ export interface RowMenuProps {
 	 * Remove the row: the property with all its values; absent where the row cannot be written.
 	 */
 	onRemove?: () => void;
+
+	/**
+	 * Holds the menu element, which a right-click on the row opens as well.
+	 */
+	menuRef: MutableRefObject<VscodeContextMenu | null>;
 }
 
 /**
@@ -48,12 +53,12 @@ const PIN_SCOPE_LABELS: Readonly<Record<ScopeKey, string>> = {
  * property can become, an item for each other scope it can be pinned in and Unpin while it is
  * pinned, then Remove, which removes the property with all its values. A pinned property shows
  * a pin before the button at all times: outline for oneself, filled for everyone. The menu hides
- * itself when an item is picked or the user clicks away. Without an item the menu is left out.
+ * itself when an item is picked or the user clicks away; a right-click on the row opens it too.
+ * Without an item the menu is left out.
  * @param props The row and what its menu does.
  * @returns The menu, or nothing.
  */
-export function RowMenu({ label, scope, pinScopes, onPin, onRemove }: RowMenuProps): React.JSX.Element | null {
-	const menuRef = useRef<VscodeContextMenu | null>(null);
+export function RowMenu({ label, scope, pinScopes, onPin, onRemove, menuRef }: RowMenuProps): React.JSX.Element | null {
 	const selectRef = useVscodeElementRef<VscodeContextMenu, { value: string }>('vsc-context-menu-select', (_element, event) => {
 		const value = event.detail.value;
 

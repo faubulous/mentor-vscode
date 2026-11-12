@@ -2,6 +2,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { act, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { renderWebview } from '@src/utilities/mocks/webview-test-utils';
 import { createResourceSummary } from '@src/utilities/mocks/resource-summary-fixtures';
 import { ResourceSummary } from '../form-editor-model';
@@ -19,16 +20,17 @@ const TREE = createResourceSummary('Tree', { usageCount: 2, position: { line: 3,
 function renderTitleBar(summary: ResourceSummary = TREE, context: Partial<FormEditorContextValue> = {}, expanded = true) {
 	const onRevealInTextEditor = vi.fn();
 	const onRemoveResource = vi.fn();
+	const onUnpinAll = vi.fn();
 	const onToggle = vi.fn();
 	const onToggleNested = vi.fn();
 
 	const { container } = renderWebview(
-		<FormEditorContext.Provider value={{ readOnly: false, namespaces: [], languageTags: {}, onRevealInTextEditor, onRemoveResource, ...context }}>
-			<ResourceCardTitleBar summary={summary} expanded={expanded} nestedCollapsed={false} onToggle={onToggle} onToggleNested={onToggleNested} />
+		<FormEditorContext.Provider value={{ readOnly: false, namespaces: [], languageTags: {}, pinScopes: ['user', 'workspace'], onRevealInTextEditor, onRemoveResource, onUnpinAll, ...context }}>
+			<ResourceCardTitleBar summary={summary} expanded={expanded} nestedCollapsed={false} onToggle={onToggle} onToggleNested={onToggleNested} menuRef={{ current: null }} />
 		</FormEditorContext.Provider>
 	);
 
-	return { container, onRevealInTextEditor, onRemoveResource, onToggle, onToggleNested };
+	return { container, onRevealInTextEditor, onRemoveResource, onUnpinAll, onToggle, onToggleNested };
 }
 
 /**
@@ -38,6 +40,13 @@ async function pick(container: HTMLElement, value: string): Promise<void> {
 	await act(async () => {
 		container.querySelector('.resource-card-menu vscode-context-menu')!.dispatchEvent(new CustomEvent('vsc-context-menu-select', { detail: { value } }));
 	});
+}
+
+/**
+ * The items of the ⋯ menu, as the menu is given them.
+ */
+function itemsOf(container: HTMLElement): unknown {
+	return (container.querySelector('.resource-card-menu vscode-context-menu') as HTMLElement & { data?: unknown }).data;
 }
 
 describe('ResourceCardTitleBar', () => {
@@ -95,9 +104,59 @@ describe('ResourceCardTitleBar', () => {
 		expect(onRevealInTextEditor).toHaveBeenCalledTimes(1);
 	});
 
-	it('leaves the ⋯ menu out where it offers nothing', () => {
-		renderTitleBar({ ...TREE, position: undefined }, { readOnly: true });
+	it('offers to collapse the card, reveal it, copy its IRI by its prefixed name and remove it, in groups', () => {
+		const { container } = renderTitleBar();
 
-		expect(screen.queryByRole('button', { name: 'More actions' })).toBeNull();
+		expect(itemsOf(container)).toEqual([
+			{ label: 'Collapse', value: 'toggle' },
+			{ separator: true },
+			{ label: 'Reveal in Editor', value: 'reveal' },
+			{ label: 'Copy IRI', value: 'copy-iri', keybinding: 'ex:Tree' },
+			{ separator: true },
+			{ label: 'Remove', value: 'remove', keybinding: expect.stringMatching(/K$/) }
+		]);
+	});
+
+	it('offers only to expand a collapsed blank node that is neither revealed nor written, and expands it from the menu', async () => {
+		const { container, onToggle } = renderTitleBar({ ...TREE, term: RdfDataFactory.blankNode('b1'), position: undefined }, { readOnly: true }, false);
+
+		expect(itemsOf(container)).toEqual([{ label: 'Expand', value: 'toggle' }]);
+
+		await pick(container, 'toggle');
+
+		expect(onToggle).toHaveBeenCalledTimes(1);
+	});
+
+	it('copies the IRI of the resource from the ⋯ menu', async () => {
+		const writeText = vi.fn().mockResolvedValue(undefined);
+
+		vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText } });
+
+		try {
+			const { container } = renderTitleBar();
+
+			await pick(container, 'copy-iri');
+
+			expect(writeText).toHaveBeenCalledWith(TREE.term.value);
+		} finally {
+			vi.unstubAllGlobals();
+		}
+	});
+
+	it('unpins all while a property is pinned in a scope that can be written', async () => {
+		const pins = [{ predicate: RdfDataFactory.namedNode('http://x/p'), scope: 'workspace' as const }];
+		const { container, onUnpinAll } = renderTitleBar({ ...TREE, pins });
+
+		await pick(container, 'unpin-all');
+
+		expect(itemsOf(container)).toContainEqual({ label: 'Unpin All', value: 'unpin-all' });
+		expect(onUnpinAll).toHaveBeenCalledWith(TREE.term);
+	});
+
+	it('offers no Unpin All while the pins are only in a scope that cannot be written', () => {
+		const pins = [{ predicate: RdfDataFactory.namedNode('http://x/p'), scope: 'workspace' as const }];
+		const { container } = renderTitleBar({ ...TREE, pins }, { pinScopes: ['user'] });
+
+		expect(itemsOf(container)).not.toContainEqual({ label: 'Unpin All', value: 'unpin-all' });
 	});
 });

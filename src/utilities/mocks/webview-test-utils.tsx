@@ -66,6 +66,11 @@ class VscodeElementStub extends HTMLElement {
 	readonly updateComplete: Promise<boolean> = Promise.resolve(true);
 
 	/**
+	 * The items of a context menu, which React hands over as a property, so tests can read them.
+	 */
+	data: unknown = undefined;
+
+	/**
 	 * Create the element and give a checkbox its click behaviour.
 	 */
 	constructor() {

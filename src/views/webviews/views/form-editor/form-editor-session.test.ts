@@ -603,6 +603,23 @@ describe('FormEditorSession', () => {
 		]);
 	});
 
+	it('unpins every property of a resource on Unpin All, for everyone and for oneself', async () => {
+		const update = vi.fn(async () => undefined);
+		const layers = { defaultValue: { [`${_OWL}Class`]: [RDFS.subClassOf] }, globalValue: { [`${_OWL}Class`]: [RDFS.comment] } };
+
+		vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({ get: (_key: string, value?: unknown) => value, inspect: () => layers, update } as unknown as vscode.WorkspaceConfiguration);
+
+		const { receive } = await createSession(`ex:A a <${_OWL}Class> ; <${RDFS.comment}> "a class" .\n`);
+
+		await receive({ id: 'Ready' });
+		await receive({ id: 'UnpinAll', resource: RdfDataFactory.namedNode(`${EX}A`) });
+
+		expect(update.mock.calls).toEqual([
+			['pinnedProperties', { [`${_OWL}Class`]: [] }, vscode.ConfigurationTarget.Workspace],
+			['pinnedProperties', { [`${_OWL}Class`]: [] }, vscode.ConfigurationTarget.Global]
+		]);
+	});
+
 	it('gives the detail of a blank node written inside a resource its pins, and pins its properties as of any resource', async () => {
 		const update = vi.fn(async () => undefined);
 		const layers = { workspaceValue: { [`${EX}Shape`]: [`${EX}q`] } };
