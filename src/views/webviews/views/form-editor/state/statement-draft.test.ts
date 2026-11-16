@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { RDF, RDFS, XSD } from '@faubulous/mentor-rdf';
-import { EXAMPLE_NAMESPACE as EX, createIriView, createLiteralView, createProperty, withAnchors, createTestResourceDetail } from '@src/utilities/mocks/statement-fixtures';
+import { EXAMPLE_NAMESPACE as EX, createIriView, createLiteralView, createProperty, withAnchors, createTestResourceStatements } from '@src/utilities/mocks/statement-fixtures';
 import { PropertyView, TermView } from '../form-editor-model';
 import { StatementDraft } from './statement-draft';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
@@ -9,7 +9,7 @@ import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
  * A property of `rdfs:label` with two literals and a resource, each with an anchor.
  */
 function createLabelProperty(): PropertyView {
-	return withAnchors(createTestResourceDetail([createProperty('rdfs:label', [createLiteralView('Tree', 'en'), createLiteralView('Baum', 'de'), createIriView('ex:Other')])])).properties[0];
+	return withAnchors(createTestResourceStatements([createProperty('rdfs:label', [createLiteralView('Tree', 'en'), createLiteralView('Baum', 'de'), createIriView('ex:Other')])])).properties[0];
 }
 
 describe('StatementDraft', () => {
@@ -71,7 +71,7 @@ describe('StatementDraft', () => {
 	it('carries a draft over to the statement as written after an edit, by term and by the place of blank nodes', () => {
 		const node: TermView = { term: RdfDataFactory.blankNode('n1'), editable: true, anchor: 1, nested: { term: RdfDataFactory.blankNode('n1'), propertyCount: 1 } };
 		const before = new StatementDraft(RDFS.label, [{ kind: 'written', view: node }, { kind: 'term', term: RdfDataFactory.literal('Oak', 'en') }, { kind: 'term', term: RdfDataFactory.literal('1', RdfDataFactory.namedNode(XSD.integer)) }]);
-		const after = withAnchors(createTestResourceDetail([createProperty('rdfs:label', [
+		const after = withAnchors(createTestResourceStatements([createProperty('rdfs:label', [
 			{ term: RdfDataFactory.blankNode('n7'), editable: true, nested: { term: RdfDataFactory.blankNode('n7'), propertyCount: 1 } },
 			createLiteralView('Oak', 'en')
 		])])).properties[0];

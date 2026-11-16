@@ -141,8 +141,8 @@ export function BlockList({ blocks, dataService, scrollElement, cardStates, pinn
 
 /**
  * Ask for the statements of every entry in and around the viewport, collapsed ones too, so an
- * entry opens with its statements at hand instead of waiting for them. The host builds a detail
- * in well under a millisecond, and the service sends each request only once.
+ * entry opens with its statements at hand instead of waiting for them. The host builds the
+ * statements about a resource in well under a millisecond, and the service sends each request only once.
  * @param dataService The data service.
  * @param blocks The blocks of the list.
  * @param startIndex The first block in the window.
@@ -157,7 +157,7 @@ function usePrefetch(dataService: IResourceDataService, blocks: FormBlock[], sta
 		for (let index = from; index <= to; index++) {
 			const block = blocks[index];
 
-			if (block?.kind === 'resource' && !dataService.get(block.resource.term)) {
+			if (block?.kind === 'resource' && !dataService.getStatements(block.resource.term)) {
 				needed.push(block.resource.term);
 			}
 		}

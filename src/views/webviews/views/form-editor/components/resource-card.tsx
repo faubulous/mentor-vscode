@@ -3,7 +3,7 @@ import { BlankNode, NamedNode } from '@rdfjs/types';
 import { termToString } from 'rdf-string';
 import { ResourceSummary } from '../form-editor-model';
 import { useContextMenu } from '../hooks/use-context-menu';
-import { useResourceDetail } from '../hooks/use-resource-detail';
+import { useResourceStatements } from '../hooks/use-resource-statements';
 import { IResourceDataService } from '../services/resource-data-service.interface';
 import { FormEditorShortcuts } from '../form-editor-shortcuts';
 import { NestedCardsCollapse, NestedCardsCollapseContext } from '../state/nested-cards-collapse-context';
@@ -67,7 +67,7 @@ export interface ResourceCardProps {
  */
 export function ResourceCard({ summary, dataService, expanded, writing = false, current, onToggle }: ResourceCardProps): React.JSX.Element {
 	const { revealedResource, filterText, readOnly, onSetPin, onRemoveResource } = useFormEditorContext();
-	const { detail, stale } = useResourceDetail(dataService, summary.term);
+	const { statements, stale } = useResourceStatements(dataService, summary.term);
 	const marked = current === true || revealedResource?.equals(summary.term) === true;
 	const toggle = useCallback((): void => onToggle(summary.term), [onToggle, summary.term]);
 	const showsStatements = expanded || writing;
@@ -85,21 +85,21 @@ export function ResourceCard({ summary, dataService, expanded, writing = false, 
 	// A card showing its statements, or the pinned ones while collapsed, holds them current,
 	// wherever the list is scrolled to.
 	useEffect(() => {
-		if ((showsStatements || showsPins) && (!detail || stale)) {
+		if ((showsStatements || showsPins) && (!statements || stale)) {
 			dataService.request([summary.term]);
 		}
-	}, [showsStatements, showsPins, detail, stale, dataService, summary.term]);
+	}, [showsStatements, showsPins, statements, stale, dataService, summary.term]);
 
 	// A pinned field opens the card at the row of its property, once the rows are there.
 	useEffect(() => {
-		const row = openedPredicate && expanded && detail ? cardRef.current?.querySelector<HTMLElement>(`.resource-card-body [data-predicate="${CSS.escape(openedPredicate.value)}"]`) : undefined;
+		const row = openedPredicate && expanded && statements ? cardRef.current?.querySelector<HTMLElement>(`.resource-card-body [data-predicate="${CSS.escape(openedPredicate.value)}"]`) : undefined;
 
 		if (row) {
 			setOpenedPredicate(undefined);
 			row.focus();
 			row.scrollIntoView({ block: 'nearest' });
 		}
-	}, [openedPredicate, expanded, detail]);
+	}, [openedPredicate, expanded, statements]);
 
 	// The shortcut of Remove removes the card while the focus is in it but in none of its rows,
 	// which remove themselves by it.
@@ -120,15 +120,15 @@ export function ResourceCard({ summary, dataService, expanded, writing = false, 
 	return (
 		<article ref={cardRef} onKeyDown={handleKeyDown} onContextMenu={openOnContextMenu} className={`resource-card${expanded ? ' is-expanded' : ''}${marked ? ' is-current' : ''}`} data-resource-id={termToString(summary.term)}>
 			<ResourceCardTitleBar summary={summary} expanded={expanded} nestedCollapsed={nestedCollapse.collapsed} onToggle={toggle} onToggleNested={toggleNested} menuRef={menuRef} />
-			{(!expanded || !detail) && <ResourceCardHeader summary={summary} expanded={expanded} onToggle={toggle} />}
-			{showsPins && detail && <PinnedPropertiesList detail={detail} pins={pins.pins} onOpen={openAt} />}
-			{!expanded && summary.description && !(showsPins && detail) && <div className="resource-card-description"><HighlightedText text={summary.description} query={filterText} /></div>}
+			{(!expanded || !statements) && <ResourceCardHeader summary={summary} expanded={expanded} onToggle={toggle} />}
+			{showsPins && statements && <PinnedPropertiesList statements={statements} pins={pins.pins} onOpen={openAt} />}
+			{!expanded && summary.description && !(showsPins && statements) && <div className="resource-card-description"><HighlightedText text={summary.description} query={filterText} /></div>}
 			{showsStatements && (
 				<PinnedPropertiesContext.Provider value={pins}>
 					<NestedCardsCollapseContext.Provider value={nestedCollapse}>
 						<div className="resource-card-body" hidden={!expanded}>
-							{detail
-								? <StatementList detail={detail} stale={stale} dataService={dataService} depth={0} visited={[summary.term]} labelRow />
+							{statements
+								? <StatementList statements={statements} stale={stale} dataService={dataService} depth={0} visited={[summary.term]} labelRow />
 								: <div className="resource-form-loading">Loading…</div>}
 						</div>
 					</NestedCardsCollapseContext.Provider>

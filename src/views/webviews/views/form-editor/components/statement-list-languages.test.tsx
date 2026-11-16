@@ -4,10 +4,10 @@ import { act, fireEvent, within } from '@testing-library/react';
 import { RDFS } from '@faubulous/mentor-rdf';
 import { createEditingHostStub } from '@src/utilities/mocks/editing-host-fixtures';
 import { createResourceDataServiceStub } from '@src/utilities/mocks/resource-data-service-fixtures';
-import { TEST_NAMESPACES, TEST_SUBJECT, createLiteralView, createProperty, createTestResourceDetail, withAnchors } from '@src/utilities/mocks/statement-fixtures';
+import { TEST_NAMESPACES, TEST_SUBJECT, createLiteralView, createProperty, createTestResourceStatements, withAnchors } from '@src/utilities/mocks/statement-fixtures';
 import { renderWebview } from '@src/utilities/mocks/webview-test-utils';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
-import { ResourceDetail } from '../form-editor-model';
+import { ResourceStatements } from '../form-editor-model';
 import { EditingController } from '../state/editing-controller';
 import { FormEditorContext, FormEditorContextValue } from '../state/form-editor-context';
 import { LanguageFilter } from '../state/language-filter';
@@ -19,25 +19,25 @@ const NAMESPACES = Object.entries(TEST_NAMESPACES).map(([prefix, iri]) => ({ pre
  * A label in English and German, and a comment without a language; the values are anchored from
  * 110 on, in this order.
  */
-const DETAIL = withAnchors(createTestResourceDetail([
+const STATEMENTS = withAnchors(createTestResourceStatements([
 	createProperty('rdfs:label', [createLiteralView('Tree', 'en'), createLiteralView('Baum', 'de')]),
 	createProperty('rdfs:comment', [createLiteralView('A plant')])
 ]));
 
 /**
- * Render the statements of a detail, edited, with the literals of one language shown.
+ * Render the statements about a resource, edited, with the literals of one language shown.
  * @param language The language shown; every language when `undefined`.
- * @param detail The detail.
+ * @param statements The statements.
  */
-function renderList(language: string | undefined, detail: ResourceDetail = DETAIL) {
+function renderList(language: string | undefined, statements: ResourceStatements = STATEMENTS) {
 	const host = createEditingHostStub();
 	const editing = new EditingController(host);
-	const dataService = createResourceDataServiceStub([detail]);
+	const dataService = createResourceDataServiceStub([statements]);
 	const context: FormEditorContextValue = { readOnly: false, editing, namespaces: NAMESPACES, languageTags: { en: 'en', de: 'de' }, languageFilter: new LanguageFilter(language), resources: [] };
 
 	renderWebview(
 		<FormEditorContext.Provider value={context}>
-			<StatementList detail={detail} stale={false} dataService={dataService} depth={0} visited={[detail.term]} />
+			<StatementList statements={statements} stale={false} dataService={dataService} depth={0} visited={[statements.subjectTerm]} />
 		</FormEditorContext.Provider>
 	);
 

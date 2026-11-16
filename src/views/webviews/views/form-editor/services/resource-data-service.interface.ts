@@ -1,5 +1,5 @@
 import { BlankNode, NamedNode } from '@rdfjs/types';
-import { ResourceDetail, ResourceSummary } from '../form-editor-model';
+import { ResourceStatements, ResourceSummary } from '../form-editor-model';
 
 /**
  * Supplies the properties of resources to the list. Abstracted so the resource components can
@@ -8,37 +8,37 @@ import { ResourceDetail, ResourceSummary } from '../form-editor-model';
  */
 export interface IResourceDataService {
 	/**
-	 * The document version the loaded details belong to, which edits built from them are based on.
+	 * The document version the loaded statements belong to, which edits built from them are based on.
 	 */
 	readonly version: number;
 
 	/**
-	 * Get the already loaded detail of a resource.
+	 * Get the statements about a resource loaded for the current snapshot.
 	 * @param resource The resource.
-	 * @returns The detail, or `undefined` when it has not been loaded yet.
+	 * @returns The statements, or `undefined` while they are not loaded.
 	 */
-	get(resource: NamedNode | BlankNode): ResourceDetail | undefined;
+	getStatements(resource: NamedNode | BlankNode): ResourceStatements | undefined;
 
 	/**
-	 * Get the detail of a resource as delivered for the previous document version, so a card can
-	 * keep showing its rows while the current version is loading. Optional: a service without
-	 * versions never has stale data.
+	 * Get the statements about a resource as delivered for the previous snapshot, so a card can keep
+	 * showing its rows while those of the current one are loading. Optional: a service without
+	 * snapshots never has stale statements.
 	 * @param resource The resource.
-	 * @returns The stale detail, or `undefined` when there is none.
+	 * @returns The stale statements, or `undefined` when there are none.
 	 */
-	getStale?(resource: NamedNode | BlankNode): ResourceDetail | undefined;
+	getStaleStatements?(resource: NamedNode | BlankNode): ResourceStatements | undefined;
 
 	/**
-	 * Get the summary of a resource that came with its detail, current or stale, as it comes for a
-	 * resource the snapshot does not list, such as one read from the store. Optional: a service of
-	 * the resources of the document has their summaries in the snapshot.
+	 * Get the summary of a resource the snapshot does not list, which the host sends along with its
+	 * statements: a blank node written inside another resource, or a resource read from the store.
+	 * Optional: a service whose resources are all listed in the snapshot has none.
 	 * @param resource The resource.
 	 * @returns The summary, or `undefined` when none came.
 	 */
 	getSummary?(resource: NamedNode | BlankNode): ResourceSummary | undefined;
 
 	/**
-	 * Ask for the detail of the given resources. Implementations are expected to coalesce
+	 * Ask for the statements about the given resources. Implementations are expected to coalesce
 	 * concurrent requests and to notify subscribers once the data arrives.
 	 * @param resources The resources to load.
 	 */
@@ -46,7 +46,7 @@ export interface IResourceDataService {
 
 	/**
 	 * Subscribe to changes of the loaded data.
-	 * @param listener Invoked whenever loaded detail changed.
+	 * @param listener Invoked whenever loaded statements changed.
 	 * @returns A function that removes the subscription.
 	 */
 	subscribe(listener: () => void): () => void;

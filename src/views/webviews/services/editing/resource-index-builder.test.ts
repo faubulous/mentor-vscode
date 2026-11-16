@@ -271,8 +271,8 @@ describe('ResourceIndexBuilder.fromStore', () => {
 
 	it('nests the blank nodes the resource refers to and collapses its lists', () => {
 		const index = ResourceIndexBuilder.fromStore(storeOf(), `${EX}Tree`, context)!;
-		const detail = new ResourceViewBuilder(index, context).buildDetail(index.entries.get(`${EX}Tree`)!);
-		const valueOf = (predicate: string) => detail.properties.find(property => property.predicate.term.value === predicate)!.values[0];
+		const statements = new ResourceViewBuilder(index, context).buildStatements(index.entries.get(`${EX}Tree`)!);
+		const valueOf = (predicate: string) => statements.properties.find(property => property.predicate.term.value === predicate)!.values[0];
 
 		expect(valueOf(RDFS.subClassOf).nested?.propertyCount).toBe(2);
 		expect(valueOf(OWL.oneOf).collection?.items.map(item => item.term.value)).toEqual([`${EX}Oak`, `${EX}Birch`]);
@@ -280,8 +280,8 @@ describe('ResourceIndexBuilder.fromStore', () => {
 
 	it('gives values that cannot be edited and have no place in a text', () => {
 		const index = ResourceIndexBuilder.fromStore(storeOf(), `${EX}Tree`, context)!;
-		const detail = new ResourceViewBuilder(index, context).buildDetail(index.entries.get(`${EX}Tree`)!);
-		const values = detail.properties.flatMap(property => [property.predicate, ...property.values]);
+		const statements = new ResourceViewBuilder(index, context).buildStatements(index.entries.get(`${EX}Tree`)!);
+		const values = statements.properties.flatMap(property => [property.predicate, ...property.values]);
 
 		expect(values.every(view => !view.editable && view.anchor === undefined)).toBe(true);
 		expect(index.summaries[0].position).toBeUndefined();

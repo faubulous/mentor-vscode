@@ -67,8 +67,8 @@ function FormEditor(): React.JSX.Element {
 		setStoredViewState((current: unknown) => PersistedViewState.read(current).with(changes).toJSON());
 	}, [setStoredViewState]);
 
-	const documentDataService = useMemo(() => new ResourceDataService(resources => messagingRef.current?.postMessage({ id: 'RequestResources', resources })), []);
-	const storeDataService = useMemo(() => new ResourceDataService(resources => messagingRef.current?.postMessage({ id: 'RequestResources', resources, source: 'store' })), []);
+	const documentDataService = useMemo(() => new ResourceDataService(resources => messagingRef.current?.postMessage({ id: 'ResourceRequest', resources })), []);
+	const storeDataService = useMemo(() => new ResourceDataService(resources => messagingRef.current?.postMessage({ id: 'ResourceRequest', resources, source: 'store' })), []);
 	const hostService = useMemo(() => new EditingHostService(message => messagingRef.current?.postMessage(message)), []);
 	const controller = useMemo(() => new EditingController(hostService), [hostService]);
 	const focusedBlockId = useFocusedBlock(scrollElement);
@@ -82,8 +82,8 @@ function FormEditor(): React.JSX.Element {
 				storeDataService.setSnapshot(message.snapshot.version, message.snapshot.revision);
 				setSnapshot(message.snapshot);
 				break;
-			case 'ResourcesLoaded':
-				(message.source === 'store' ? storeDataService : documentDataService).accept(message.revision, message.resources, message.missing, message.summaries);
+			case 'ResourceResponse':
+				(message.source === 'store' ? storeDataService : documentDataService).accept(message.revision, message.statements, message.missing, message.resources);
 				break;
 			case 'EditApplied':
 			case 'EditRejected':

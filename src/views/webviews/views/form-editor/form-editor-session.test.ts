@@ -16,7 +16,7 @@ import { createMockWebviewPanel } from '@src/utilities/mocks/vscode';
 import { EditableTextDocument, applyWorkspaceEditTo, createEditableTextDocument, createMockDocumentContext, createMockDocumentContextService, createTurtleDocument } from '@src/utilities/mocks/factories';
 import { FormEditorHostMessage, FormEditorWebviewMessage } from './form-editor-messages';
 import { FormEditorSession } from './form-editor-session';
-import { ResourceDetail } from './form-editor-model';
+import { ResourceStatements } from './form-editor-model';
 import { BlankNode, NamedNode } from '@rdfjs/types';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 
@@ -168,15 +168,23 @@ function postedOf<K extends FormEditorHostMessage['id']>(posted: FormEditorHostM
 }
 
 /**
- * Ask the session for the details of resources, as the webview does.
- * @returns The details it posted in answer.
+ * Ask the session for the statements about resources, as the webview does.
+ * @returns The statements it posted in answer.
  */
-async function requestDetails(panel: TestPanel, resources: (NamedNode | BlankNode)[]): Promise<ResourceDetail[]> {
-	await panel.receive({ id: 'RequestResources', resources });
+async function requestStatements(panel: TestPanel, resources: (NamedNode | BlankNode)[]): Promise<ResourceStatements[]> {
+	await panel.receive({ id: 'ResourceRequest', resources });
 
-	const loaded = postedOf(panel.posted, 'ResourcesLoaded');
+	return lastResponseOf(panel).statements;
+}
 
-	return loaded[loaded.length - 1].resources;
+/**
+ * The last answer the session posted to a request for resources.
+ * @returns The answer.
+ */
+function lastResponseOf(panel: TestPanel): Extract<FormEditorHostMessage, { id: 'ResourceResponse' }> {
+	const responses = postedOf(panel.posted, 'ResourceResponse');
+
+	return responses[responses.length - 1];
 }
 
 describe('FormEditorSession', () => {
@@ -215,12 +223,12 @@ describe('FormEditorSession', () => {
 		const { posted, receive } = await createSession('ex:A a ex:Class ; ex:p "x" .\n');
 
 		await receive({ id: 'Ready' });
-		await receive({ id: 'RequestResources', resources: [RdfDataFactory.namedNode(`${EX}A`), RdfDataFactory.namedNode(`${EX}missing`)] });
+		await receive({ id: 'ResourceRequest', resources: [RdfDataFactory.namedNode(`${EX}A`), RdfDataFactory.namedNode(`${EX}missing`)] });
 
-		const [message] = postedOf(posted, 'ResourcesLoaded');
+		const [message] = postedOf(posted, 'ResourceResponse');
 
-		expect(message.resources).toHaveLength(1);
-		expect(message.resources[0].properties.map(property => property.predicate.term)).toEqual([RdfDataFactory.namedNode(RDF.type), RdfDataFactory.namedNode(`${EX}p`)]);
+		expect(message.statements).toHaveLength(1);
+		expect(message.statements[0].properties.map(property => property.predicate.term)).toEqual([RdfDataFactory.namedNode(RDF.type), RdfDataFactory.namedNode(`${EX}p`)]);
 		expect(message.missing).toEqual([RdfDataFactory.namedNode(`${EX}missing`)]);
 	});
 
@@ -235,18 +243,18 @@ describe('FormEditorSession', () => {
 		const unknown = RdfDataFactory.namedNode(`${EX}Unknown`);
 
 		await receive({ id: 'Ready' });
-		await receive({ id: 'RequestResources', resources: [tree] });
-		await receive({ id: 'RequestResources', resources: [tree, unknown], source: 'store' });
+		await receive({ id: 'ResourceRequest', resources: [tree] });
+		await receive({ id: 'ResourceRequest', resources: [tree, unknown], source: 'store' });
 
-		const [fromDocument, fromStore] = postedOf(posted, 'ResourcesLoaded');
+		const [fromDocument, fromStore] = postedOf(posted, 'ResourceResponse');
 
 		expect(fromDocument.missing).toEqual([tree]);
 		expect(fromDocument.source).toBeUndefined();
 		expect(fromStore.source).toBe('store');
 		expect(fromStore.missing).toEqual([unknown]);
-		expect(fromStore.summaries?.map(summary => [summary.term, summary.typeIri])).toEqual([[tree, OWL.Class]]);
-		expect(fromStore.resources[0].properties.map(property => property.predicate.term.value)).toEqual([RDF.type, RDFS.label, RDFS.subClassOf]);
-		expect(fromStore.resources[0].properties.flatMap(property => property.values).every(value => !value.editable && value.anchor === undefined)).toBe(true);
+		expect(fromStore.resources?.map(summary => [summary.term, summary.typeIri])).toEqual([[tree, OWL.Class]]);
+		expect(fromStore.statements[0].properties.map(property => property.predicate.term.value)).toEqual([RDF.type, RDFS.label, RDFS.subClassOf]);
+		expect(fromStore.statements[0].properties.flatMap(property => property.values).every(value => !value.editable && value.anchor === undefined)).toBe(true);
 	});
 
 	it('tells the webview when the document cannot be shown', async () => {
@@ -377,10 +385,10 @@ describe('FormEditorSession', () => {
 		const [snapshot] = postedOf(posted, 'DocumentSnapshot');
 		const owner = RdfDataFactory.namedNode(`${EX}A`);
 		const labelled = snapshot.snapshot.resources.find(resource => resource.term.termType === 'BlankNode')!.term;
-		const [detail] = await requestDetails(testSession, [owner]);
-		const outer = detail.properties[0].values[0].term as BlankNode;
-		const [outerDetail] = await requestDetails(testSession, [outer]);
-		const inner = outerDetail.properties[0].values[0].term as BlankNode;
+		const [statements] = await requestStatements(testSession, [owner]);
+		const outer = statements.properties[0].values[0].term as BlankNode;
+		const [outerStatements] = await requestStatements(testSession, [outer]);
+		const inner = outerStatements.properties[0].values[0].term as BlankNode;
 
 		session.revealResource(inner);
 		session.revealResource(labelled);
@@ -458,7 +466,7 @@ describe('FormEditorSession', () => {
 		expect(snapshots[1].snapshot.activeLanguage).toBe('de');
 	});
 
-	it('numbers every snapshot it builds and delivers the details for the current one', async () => {
+	it('numbers every snapshot it builds and delivers the statements for the current one', async () => {
 		const loading = registerLoadingServices();
 		const { posted, receive, context } = await createSession('ex:A ex:p "x" .\n', undefined, loading.services);
 
@@ -467,13 +475,13 @@ describe('FormEditorSession', () => {
 		context.activeLanguageTag = 'de';
 		loading.changeLanguage();
 		await settle();
-		await receive({ id: 'RequestResources', resources: [RdfDataFactory.namedNode(`${EX}A`)] });
+		await receive({ id: 'ResourceRequest', resources: [RdfDataFactory.namedNode(`${EX}A`)] });
 
 		const [first, second] = postedOf(posted, 'DocumentSnapshot').map(message => message.snapshot);
 
 		expect(second.version).toBe(first.version);
 		expect(second.revision).toBeGreaterThan(first.revision);
-		expect(postedOf(posted, 'ResourcesLoaded')[0].revision).toBe(second.revision);
+		expect(postedOf(posted, 'ResourceResponse')[0].revision).toBe(second.revision);
 	});
 
 	it('reads the document in the language picked, built once', async () => {
@@ -631,7 +639,7 @@ describe('FormEditorSession', () => {
 		]);
 	});
 
-	it('gives the detail of a blank node written inside a resource its pins, and pins its properties as of any resource', async () => {
+	it('gives the statements of a blank node written inside a resource its pins, and pins its properties as of any resource', async () => {
 		const update = vi.fn(async () => undefined);
 		const layers = { workspaceValue: { [`${EX}Shape`]: [`${EX}q`] } };
 
@@ -641,11 +649,14 @@ describe('FormEditorSession', () => {
 
 		await testSession.receive({ id: 'Ready' });
 
-		const [detail] = await requestDetails(testSession, [RdfDataFactory.namedNode(`${EX}A`)]);
-		const node = detail.properties[0].values[0].term as BlankNode;
-		const [nodeDetail] = await requestDetails(testSession, [node]);
+		const [statements] = await requestStatements(testSession, [RdfDataFactory.namedNode(`${EX}A`)]);
+		const node = statements.properties[0].values[0].term as BlankNode;
 
-		expect(nodeDetail.pins).toEqual([{ predicate: RdfDataFactory.namedNode(`${EX}q`), scope: 'workspace' }]);
+		expect(lastResponseOf(testSession).resources).toEqual([]);
+
+		await requestStatements(testSession, [node]);
+
+		expect(lastResponseOf(testSession).resources?.map(summary => [summary.term, summary.pins])).toEqual([[node, [{ predicate: RdfDataFactory.namedNode(`${EX}q`), scope: 'workspace' }]]]);
 
 		await testSession.session.setPin(node, RdfDataFactory.namedNode(`${EX}r`), 'user');
 

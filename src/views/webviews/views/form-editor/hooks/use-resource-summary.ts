@@ -2,10 +2,10 @@ import { useEffect } from 'react';
 import { NamedNode } from '@rdfjs/types';
 import { ResourceSummary } from '../form-editor-model';
 import { IResourceDataService } from '../services/resource-data-service.interface';
-import { useDataServiceUpdates } from './use-resource-detail';
+import { useDataServiceUpdates } from './use-resource-statements';
 
 /**
- * Read the summary that comes with the detail of a resource the snapshot does not list, such as
+ * Read the summary that comes with the statements of a resource the snapshot does not list, such as
  * one read from the store, asking for it while it is not loaded for the current snapshot, and
  * re-render when it arrives.
  * @param service The data service the summary comes from.
@@ -18,7 +18,7 @@ export function useResourceSummary(service: IResourceDataService, resource: Name
 	// Asked on every render, so a new snapshot that drops the loaded summaries asks again; the
 	// service ignores what is loaded, asked or unknown already.
 	useEffect(() => {
-		if (resource && !service.get(resource)) {
+		if (resource && !service.getStatements(resource)) {
 			service.request([resource]);
 		}
 	});

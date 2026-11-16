@@ -3,7 +3,7 @@ import { userEvent } from 'vitest/browser';
 import { render, within } from '@testing-library/react';
 import { createResourceDataServiceStub } from '@src/utilities/mocks/resource-data-service-fixtures';
 import { createResourceSummary } from '@src/utilities/mocks/resource-summary-fixtures';
-import { createLiteralView, createProperty, createTestResourceDetail } from '@src/utilities/mocks/statement-fixtures';
+import { createLiteralView, createProperty, createTestResourceStatements } from '@src/utilities/mocks/statement-fixtures';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { FormEditorContext } from '../state/form-editor-context';
 import { ResourceCard } from './resource-card';
@@ -13,19 +13,19 @@ import { ResourceCard } from './resource-card';
  */
 function renderCard() {
 	const node = RdfDataFactory.blankNode('b1');
-	const nodeDetail = {
-		term: node,
-		properties: ['ex:q', 'ex:r', 'ex:s'].map(predicate => createProperty(predicate, [createLiteralView(`value of ${predicate}`)])),
-		pins: []
+	const nodeStatements = {
+		subjectTerm: node,
+		properties: ['ex:q', 'ex:r', 'ex:s'].map(predicate => createProperty(predicate, [createLiteralView(`value of ${predicate}`)]))
 	};
-	const detail = createTestResourceDetail([createProperty('ex:p', [{ term: node, editable: false, nested: { term: node, propertyCount: 3 } }])]);
-	const summary = createResourceSummary('Tree', { term: detail.term, pins: [] });
+	const nodeSummary = createResourceSummary('b1', { term: node, pins: [] });
+	const statements = createTestResourceStatements([createProperty('ex:p', [{ term: node, editable: false, nested: { term: node, propertyCount: 3 } }])]);
+	const summary = createResourceSummary('Tree', { term: statements.subjectTerm, pins: [] });
 
 	render(
 		<div className="form-editor" style={{ height: 'auto', overflow: 'visible' }}>
 			<FormEditorContext.Provider value={{ readOnly: true, namespaces: [], languageTags: {}, labelPredicates: [], pinScopes: ['user', 'workspace'], onSetPin: vi.fn() }}>
 				<div className="form-block is-resource" style={{ width: 1000 }}>
-					<ResourceCard summary={summary} dataService={createResourceDataServiceStub([detail, nodeDetail])} expanded onToggle={() => undefined} />
+					<ResourceCard summary={summary} dataService={createResourceDataServiceStub([statements, nodeStatements], [nodeSummary])} expanded onToggle={() => undefined} />
 				</div>
 			</FormEditorContext.Provider>
 		</div>

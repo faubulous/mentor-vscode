@@ -1,6 +1,6 @@
 import { BlankNode, NamedNode } from '@rdfjs/types';
 import { useCallback, useEffect, useMemo, useSyncExternalStore } from 'react';
-import { PropertyView, ResourceDetail } from '../form-editor-model';
+import { PropertyView, ResourceStatements } from '../form-editor-model';
 import { IEditingController } from '../state/editing-controller.interface';
 import { StatementRowEditor } from '../state/statement-row-editor';
 import { LeadingRow, StatementRowEntry, StatementRows } from '../state/statement-rows';
@@ -13,7 +13,7 @@ export interface StatementRowsOptions {
 	/**
 	 * The resource of the rows.
 	 */
-	detail: ResourceDetail;
+	statements: ResourceStatements;
 
 	/**
 	 * The resource of the card of the list that shows the rows: the resource itself, or the card a
@@ -27,12 +27,12 @@ export interface StatementRowsOptions {
 	leadingRow?: LeadingRow;
 
 	/**
-	 * The document version the detail belongs to.
+	 * The document version the statements belong to.
 	 */
 	version: number;
 
 	/**
-	 * Whether the detail belongs to an earlier version while the current one loads.
+	 * Whether the statements belong to an earlier version while the current one loads.
 	 */
 	stale: boolean;
 
@@ -70,7 +70,7 @@ export interface StatementRowsResult {
  * @param options What the rows are made from.
  * @returns The rows in the order they are shown, and the means to open a row for a new statement.
  */
-export function useStatementRows({ detail, card, leadingRow, version, stale, editing, services }: StatementRowsOptions): StatementRowsResult {
+export function useStatementRows({ statements, card, leadingRow, version, stale, editing, services }: StatementRowsOptions): StatementRowsResult {
 	const edited = services !== undefined;
 	const leadingKey = leadingRow ? [leadingRow.predicateText, ...leadingRow.predicates].join(' ') : '';
 
@@ -86,13 +86,13 @@ export function useStatementRows({ detail, card, leadingRow, version, stale, edi
 
 	const entries = useMemo(() => {
 		if (!rows || !services) {
-			return detail.properties.map((property, index) => ({ key: `read-${index}`, property }));
+			return statements.properties.map((property, index) => ({ key: `read-${index}`, property }));
 		}
 
-		return rows.reconcile({ subject: detail.term, card, properties: detail.properties, version, stale, reader: services.reader, predicateTextOf: property => _predicateText(property, services) });
+		return rows.reconcile({ subject: statements.subjectTerm, card, properties: statements.properties, version, stale, reader: services.reader, predicateTextOf: property => _predicateText(property, services) });
 		// The revision tells that rows opened or went outside of a render.
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [rows, detail, card, version, stale, services, revision]);
+	}, [rows, statements, card, version, stale, services, revision]);
 
 	const addRow = useMemo(() => rows ? () => rows.addRow() : undefined, [rows]);
 

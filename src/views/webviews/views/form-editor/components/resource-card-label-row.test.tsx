@@ -6,7 +6,7 @@ import { RDFS, SKOS } from '@faubulous/mentor-rdf';
 import { createEditingHostStub } from '@src/utilities/mocks/editing-host-fixtures';
 import { createResourceDataServiceStub } from '@src/utilities/mocks/resource-data-service-fixtures';
 import { createResourceSummary } from '@src/utilities/mocks/resource-summary-fixtures';
-import { TEST_NAMESPACES, TEST_SUBJECT, createIriView, createLiteralView, createProperty, createTestResourceDetail, withAnchors } from '@src/utilities/mocks/statement-fixtures';
+import { TEST_NAMESPACES, TEST_SUBJECT, createIriView, createLiteralView, createProperty, createTestResourceStatements, withAnchors } from '@src/utilities/mocks/statement-fixtures';
 import { renderWebview } from '@src/utilities/mocks/webview-test-utils';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { PropertyView } from '../form-editor-model';
@@ -25,7 +25,7 @@ const SUMMARY = createResourceSummary('Tree', { term: TEST_SUBJECT, label: 'Tree
  */
 function renderCard(properties: PropertyView[]) {
 	const host = createEditingHostStub();
-	const detail = withAnchors(createTestResourceDetail(properties));
+	const statements = withAnchors(createTestResourceStatements(properties));
 	const context: FormEditorContextValue = {
 		readOnly: false,
 		editing: new EditingController(host),
@@ -37,7 +37,7 @@ function renderCard(properties: PropertyView[]) {
 
 	renderWebview(
 		<FormEditorContext.Provider value={context}>
-			<ResourceCard summary={SUMMARY} dataService={createResourceDataServiceStub([detail])} expanded onToggle={() => undefined} />
+			<ResourceCard summary={SUMMARY} dataService={createResourceDataServiceStub([statements])} expanded onToggle={() => undefined} />
 		</FormEditorContext.Provider>
 	);
 

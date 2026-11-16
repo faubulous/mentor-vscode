@@ -81,8 +81,8 @@ export interface SnapshotInput {
 }
 
 /**
- * A snapshot together with the index it was built from, so the session can serve resource
- * detail requests without rebuilding the index.
+ * A snapshot together with the index it was built from, so the session can answer requests for
+ * the statements about resources without rebuilding the index.
  */
 export interface SnapshotResult {
 	/**

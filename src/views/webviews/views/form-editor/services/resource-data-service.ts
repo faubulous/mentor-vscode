@@ -1,6 +1,6 @@
 import { BlankNode, NamedNode } from '@rdfjs/types';
 import { termToString } from 'rdf-string';
-import { ResourceDetail, ResourceSummary } from '../form-editor-model';
+import { ResourceStatements, ResourceSummary } from '../form-editor-model';
 import { IResourceDataService } from './resource-data-service.interface';
 
 /**
@@ -9,33 +9,19 @@ import { IResourceDataService } from './resource-data-service.interface';
 const MAX_BATCH_SIZE = 100;
 
 /**
- * An entry of the cache of the service: what the host delivered for one resource, kept by the key
- * of its term until a new snapshot makes it stale.
- */
-interface LoadedResource {
-	/**
-	 * The properties of the resource, which its card shows.
-	 */
-	detail: ResourceDetail;
-
-	/**
-	 * The summary the host sends along for a resource the snapshot does not list, such as one read
-	 * from the store; absent for a resource of the document, whose summary is in the snapshot.
-	 */
-	summary?: ResourceSummary;
-}
-
-/**
- * Serves resource detail over the webview message channel. Requests are coalesced into one
- * message per frame so that scrolling does not produce a message per row. The detail is cached by
- * the `termToString` key of the resource, with the summary that came with it, and is kept as stale
- * when a new snapshot arrives until the detail of that snapshot is loaded. A resource the host
- * could not resolve is not asked for again until the next snapshot.
+ * Serves the statements about resources over the webview message channel. Requests are coalesced
+ * into one message per frame so that scrolling does not produce a message per row. The statements
+ * are cached by the `termToString` key of their subject and kept as stale when a new snapshot
+ * arrives, until those of the new snapshot are loaded. The summaries the host sends along, for
+ * resources the snapshot does not list, are kept until newer ones arrive. A resource the host could
+ * not resolve is not asked for again until the next snapshot.
  */
 export class ResourceDataService implements IResourceDataService {
-	private readonly _loaded = new Map<string, LoadedResource>();
+	private readonly _statements = new Map<string, ResourceStatements>();
 
-	private readonly _stale = new Map<string, LoadedResource>();
+	private readonly _staleStatements = new Map<string, ResourceStatements>();
+
+	private readonly _summaries = new Map<string, ResourceSummary>();
 
 	private readonly _missing = new Set<string>();
 
@@ -58,25 +44,23 @@ export class ResourceDataService implements IResourceDataService {
 	constructor(private readonly _send: (resources: (NamedNode | BlankNode)[]) => void) { }
 
 	/**
-	 * The document version the loaded detail belongs to.
+	 * The document version the loaded statements belong to.
 	 * @returns The version.
 	 */
 	get version(): number {
 		return this._version;
 	}
 
-	get(resource: NamedNode | BlankNode): ResourceDetail | undefined {
-		return this._loaded.get(termToString(resource))?.detail;
+	getStatements(resource: NamedNode | BlankNode): ResourceStatements | undefined {
+		return this._statements.get(termToString(resource));
 	}
 
-	getStale(resource: NamedNode | BlankNode): ResourceDetail | undefined {
-		return this._stale.get(termToString(resource))?.detail;
+	getStaleStatements(resource: NamedNode | BlankNode): ResourceStatements | undefined {
+		return this._staleStatements.get(termToString(resource));
 	}
 
 	getSummary(resource: NamedNode | BlankNode): ResourceSummary | undefined {
-		const key = termToString(resource);
-
-		return this._loaded.get(key)?.summary ?? this._stale.get(key)?.summary;
+		return this._summaries.get(termToString(resource));
 	}
 
 	request(resources: (NamedNode | BlankNode)[]): void {
@@ -85,7 +69,7 @@ export class ResourceDataService implements IResourceDataService {
 		for (const resource of resources) {
 			const key = termToString(resource);
 
-			if (!this._loaded.has(key) && !this._missing.has(key) && !this._requested.has(key) && !this._pending.has(key)) {
+			if (!this._statements.has(key) && !this._missing.has(key) && !this._requested.has(key) && !this._pending.has(key)) {
 				this._pending.set(key, resource);
 				added = true;
 			}
@@ -103,26 +87,27 @@ export class ResourceDataService implements IResourceDataService {
 	}
 
 	/**
-	 * Accept the detail delivered for a snapshot, ignoring anything that belongs to a snapshot that
-	 * has since been superseded.
-	 * @param revision The revision of the snapshot the detail was built for.
-	 * @param resources The delivered detail.
+	 * Accept what the host delivered for a snapshot, ignoring anything that belongs to a snapshot
+	 * that has since been superseded.
+	 * @param revision The revision of the snapshot the statements were built for.
+	 * @param statements The statements about the requested resources.
 	 * @param missing Resources the host could not resolve.
-	 * @param summaries The summaries that came with the detail, for resources the snapshot does not
-	 * list.
+	 * @param summaries The summaries of the resources the snapshot does not list.
 	 */
-	accept(revision: number, resources: ResourceDetail[], missing: (NamedNode | BlankNode)[] = [], summaries: ResourceSummary[] = []): void {
+	accept(revision: number, statements: ResourceStatements[], missing: (NamedNode | BlankNode)[] = [], summaries: ResourceSummary[] = []): void {
 		if (revision !== this._revision) {
 			return;
 		}
 
-		const summaryByKey = new Map(summaries.map(summary => [termToString(summary.term), summary]));
+		for (const summary of summaries) {
+			this._summaries.set(termToString(summary.term), summary);
+		}
 
-		for (const detail of resources) {
-			const key = termToString(detail.term);
+		for (const resource of statements) {
+			const key = termToString(resource.subjectTerm);
 
-			this._loaded.set(key, { detail, summary: summaryByKey.get(key) });
-			this._stale.delete(key);
+			this._statements.set(key, resource);
+			this._staleStatements.delete(key);
 			this._requested.delete(key);
 		}
 
@@ -133,15 +118,15 @@ export class ResourceDataService implements IResourceDataService {
 			this._missing.add(key);
 		}
 
-		if (resources.length > 0) {
+		if (statements.length > 0) {
 			this._notify();
 		}
 	}
 
 	/**
 	 * Move to a new snapshot: a new document version, or the same version built again because its
-	 * labels, the settings or the language changed. What was loaded for the previous snapshot is
-	 * kept as stale detail until the new detail arrives, so the rows of an open card do not vanish
+	 * labels, the settings or the language changed. The statements loaded for the previous snapshot
+	 * are kept as stale until those of the new one arrive, so the rows of an open card do not vanish
 	 * during the reload that follows every edit.
 	 * @param version The document version of the snapshot.
 	 * @param revision The revision of the snapshot.
@@ -154,11 +139,11 @@ export class ResourceDataService implements IResourceDataService {
 		this._version = version;
 		this._revision = revision;
 
-		for (const [key, loaded] of this._loaded) {
-			this._stale.set(key, loaded);
+		for (const [key, statements] of this._statements) {
+			this._staleStatements.set(key, statements);
 		}
 
-		this._loaded.clear();
+		this._statements.clear();
 		this._missing.clear();
 		this._requested.clear();
 		this._pending.clear();

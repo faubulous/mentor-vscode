@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { RDF, RDFS, XSD } from '@faubulous/mentor-rdf';
-import { EXAMPLE_NAMESPACE as EX, TEST_NAMESPACES, TEST_SUBJECT, createLiteralView, createProperty, withAnchors, createTestResourceDetail } from '@src/utilities/mocks/statement-fixtures';
+import { EXAMPLE_NAMESPACE as EX, TEST_NAMESPACES, TEST_SUBJECT, createLiteralView, createProperty, withAnchors, createTestResourceStatements } from '@src/utilities/mocks/statement-fixtures';
 import { PropertyView } from '../form-editor-model';
 import { TypedTermReader } from '../services/statement/typed-term-reader';
 import { EditWriter } from './edit-writer';
@@ -14,7 +14,7 @@ const reader = new TypedTermReader(TEST_NAMESPACES);
 /**
  * The label property of the tests, anchored.
  */
-const LABEL: PropertyView = withAnchors(createTestResourceDetail([{ ...createProperty('rdfs:label', [createLiteralView('Tree', 'en')]), predicate: { term: RdfDataFactory.namedNode(RDFS.label), prefixedName: 'rdfs:label', editable: true } }])).properties[0];
+const LABEL: PropertyView = withAnchors(createTestResourceStatements([{ ...createProperty('rdfs:label', [createLiteralView('Tree', 'en')]), predicate: { term: RdfDataFactory.namedNode(RDFS.label), prefixedName: 'rdfs:label', editable: true } }])).properties[0];
 
 /**
  * Make the data of a row.

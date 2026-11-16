@@ -6,7 +6,7 @@ import { renderWebview } from '@src/utilities/mocks/webview-test-utils';
 import { createResourceDataServiceStub } from '@src/utilities/mocks/resource-data-service-fixtures';
 import { createResourceSummary } from '@src/utilities/mocks/resource-summary-fixtures';
 import { RDFS } from '@faubulous/mentor-rdf';
-import { createIriView, createLiteralView, createProperty, createTestResourceDetail } from '@src/utilities/mocks/statement-fixtures';
+import { createIriView, createLiteralView, createProperty, createTestResourceStatements } from '@src/utilities/mocks/statement-fixtures';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { FormEditorContext, FormEditorContextValue } from '../state/form-editor-context';
 import { ResourceCard } from './resource-card';
@@ -18,7 +18,7 @@ const TREE = createResourceSummary('Tree', { label: 'Apple tree', description: '
  */
 function renderCard(context: Partial<FormEditorContextValue> = {}, expanded = false, summary = TREE, writing = false) {
 	const onToggle = vi.fn();
-	const dataService = createResourceDataServiceStub([createTestResourceDetail([createProperty('rdfs:label', [createLiteralView('Apple tree')]), createProperty('ex:p', [createIriView('ex:A', 'A')])])].map(detail => ({ ...detail, term: summary.term })));
+	const dataService = createResourceDataServiceStub([createTestResourceStatements([createProperty('rdfs:label', [createLiteralView('Apple tree')]), createProperty('ex:p', [createIriView('ex:A', 'A')])])].map(statements => ({ ...statements, subjectTerm: summary.term })));
 	const result = renderWebview(
 		<FormEditorContext.Provider value={{ readOnly: true, namespaces: [], languageTags: {}, labelPredicates: [RdfDataFactory.namedNode(RDFS.label)], ...context }}>
 			<ResourceCard summary={summary} dataService={dataService} expanded={expanded} writing={writing} onToggle={onToggle} />

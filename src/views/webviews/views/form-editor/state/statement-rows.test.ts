@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { OWL, RDF, RDFS, SKOS } from '@faubulous/mentor-rdf';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
-import { TEST_NAMESPACES, TEST_SUBJECT, createIriView, createLiteralView, createProperty, createSampleResourceDetail, createTestResourceDetail, withAnchors } from '@src/utilities/mocks/statement-fixtures';
+import { TEST_NAMESPACES, TEST_SUBJECT, createIriView, createLiteralView, createProperty, createSampleResourceStatements, createTestResourceStatements, withAnchors } from '@src/utilities/mocks/statement-fixtures';
 import { PropertyView } from '../form-editor-model';
 import { TypedTermReader } from '../services/statement/typed-term-reader';
 import { StatementRowEntry, StatementRows, StatementRowsData } from './statement-rows';
 
 const reader = new TypedTermReader(TEST_NAMESPACES);
-const SAMPLE = withAnchors(createSampleResourceDetail()).properties;
+const SAMPLE = withAnchors(createSampleResourceStatements()).properties;
 
 /**
  * Make the data of a card.
@@ -160,7 +160,7 @@ describe('StatementRows', () => {
 		const label = createProperty('skos:prefLabel', [createLiteralView('Tree')]);
 		const otherLabel = createProperty('rdfs:label', [createLiteralView('A tree')]);
 		const rows = new StatementRows({ requestWrite: () => undefined, flush: () => undefined }, { leadingRow: { predicates: [SKOS.prefLabel, RDFS.label], predicateText: 'skos:prefLabel' } });
-		const entries = rows.reconcile(dataOf(withAnchors(createTestResourceDetail([otherLabel, label])).properties));
+		const entries = rows.reconcile(dataOf(withAnchors(createTestResourceStatements([otherLabel, label])).properties));
 
 		expect(entries.map(entry => [entry.property?.predicate.prefixedName ?? 'new', entry.isLeading === true])).toEqual([['skos:prefLabel', true], ['rdfs:label', false]]);
 

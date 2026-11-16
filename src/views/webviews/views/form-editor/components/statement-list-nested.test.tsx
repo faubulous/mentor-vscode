@@ -5,10 +5,10 @@ import userEvent from '@testing-library/user-event';
 import { RDF, RDFS } from '@faubulous/mentor-rdf';
 import { createEditingHostStub } from '@src/utilities/mocks/editing-host-fixtures';
 import { createResourceDataServiceStub } from '@src/utilities/mocks/resource-data-service-fixtures';
-import { TEST_NAMESPACES, TEST_SUBJECT, createIriView, createLiteralView, createProperty, createTestResourceDetail, withAnchors } from '@src/utilities/mocks/statement-fixtures';
+import { TEST_NAMESPACES, TEST_SUBJECT, createIriView, createLiteralView, createProperty, createTestResourceStatements, withAnchors } from '@src/utilities/mocks/statement-fixtures';
 import { renderWebview } from '@src/utilities/mocks/webview-test-utils';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
-import { ResourceDetail, TermView } from '../form-editor-model';
+import { ResourceStatements, TermView } from '../form-editor-model';
 import { EditingController } from '../state/editing-controller';
 import { FormEditorContext, FormEditorContextValue } from '../state/form-editor-context';
 import { StatementList } from './statement-list';
@@ -25,7 +25,7 @@ const NODE_VIEW: TermView = { term: NODE, editable: true, nested: { term: NODE, 
 /**
  * The card: a label and a comment, the comment holding a blank node.
  */
-const DETAIL = withAnchors(createTestResourceDetail([
+const STATEMENTS = withAnchors(createTestResourceStatements([
 	createProperty('rdfs:label', [createLiteralView('Tree')]),
 	createProperty('rdfs:comment', [createLiteralView('A plant'), NODE_VIEW])
 ]));
@@ -33,8 +33,8 @@ const DETAIL = withAnchors(createTestResourceDetail([
 /**
  * The blank node: a label and a comment of its own.
  */
-const NODE_DETAIL: ResourceDetail = withAnchors({
-	term: NODE,
+const NODE_STATEMENTS: ResourceStatements = withAnchors({
+	subjectTerm: NODE,
 	properties: [
 		createProperty('rdfs:label', [createLiteralView('Leaf')]),
 		createProperty('rdfs:comment', [createLiteralView('Green')])
@@ -42,20 +42,20 @@ const NODE_DETAIL: ResourceDetail = withAnchors({
 });
 
 /**
- * Render the card, edited, with the details of its blank node at hand, and expand the nested card
+ * Render the card, edited, with the statements about its blank node at hand, and expand the nested card
  * of the node, which starts collapsed, unless told otherwise.
- * @param nodeDetail The details of the blank node.
+ * @param nodeStatements The statements about the blank node.
  * @param expand Whether to expand the nested card.
  */
-async function renderCard(nodeDetail: ResourceDetail = NODE_DETAIL, expand = true) {
+async function renderCard(nodeStatements: ResourceStatements = NODE_STATEMENTS, expand = true) {
 	const host = createEditingHostStub();
 	const editing = new EditingController(host);
-	const dataService = createResourceDataServiceStub([DETAIL, nodeDetail]);
+	const dataService = createResourceDataServiceStub([STATEMENTS, nodeStatements]);
 	const context: FormEditorContextValue = { readOnly: false, editing, namespaces: NAMESPACES, languageTags: {}, resources: [] };
 
 	renderWebview(
 		<FormEditorContext.Provider value={context}>
-			<StatementList detail={DETAIL} stale={false} dataService={dataService} depth={0} visited={[DETAIL.term]} />
+			<StatementList statements={STATEMENTS} stale={false} dataService={dataService} depth={0} visited={[STATEMENTS.subjectTerm]} />
 		</FormEditorContext.Provider>
 	);
 
@@ -231,7 +231,7 @@ describe('StatementList, with a blank node', () => {
 	});
 
 	it('leads the nested card with its type, collapsed to the type at first and naming the other properties, with a chevron that expands it', async () => {
-		const typed: ResourceDetail = withAnchors({ term: NODE, properties: [...NODE_DETAIL.properties, createProperty('rdf:type', [createIriView('owl:Restriction', 'Restriction')])] });
+		const typed: ResourceStatements = withAnchors({ subjectTerm: NODE, properties: [...NODE_STATEMENTS.properties, createProperty('rdf:type', [createIriView('owl:Restriction', 'Restriction')])] });
 
 		await renderCard(typed, false);
 

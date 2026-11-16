@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { ResourceSummary } from '../form-editor-model';
-import { useResourceDetail } from '../hooks/use-resource-detail';
+import { useResourceStatements } from '../hooks/use-resource-statements';
 import { IResourceDataService } from '../services/resource-data-service.interface';
 import { CardUsage } from './card-usage';
 import { PinnedPropertiesList } from './pinned-properties-list';
@@ -30,17 +30,17 @@ export interface CompactResourceCardProps {
  * @returns The card.
  */
 export function CompactResourceCard({ summary, dataService }: CompactResourceCardProps): React.JSX.Element {
-	const { detail, stale } = useResourceDetail(dataService, summary.term);
+	const { statements, stale } = useResourceStatements(dataService, summary.term);
 	const pins = summary.pins ?? [];
 	const types = getTypeLabels(summary);
 	const identifier = summary.term.termType === 'NamedNode' ? summary.term.value : `_:${summary.term.value}`;
 
 	// The pinned properties are read from the statements, which are asked for while they are not current.
 	useEffect(() => {
-		if (pins.length > 0 && (!detail || stale)) {
+		if (pins.length > 0 && (!statements || stale)) {
 			dataService.request([summary.term]);
 		}
-	}, [pins.length, detail, stale, dataService, summary.term]);
+	}, [pins.length, statements, stale, dataService, summary.term]);
 
 	return (
 		<article className="resource-card is-compact" data-density="tooltip">
@@ -48,8 +48,8 @@ export function CompactResourceCard({ summary, dataService }: CompactResourceCar
 				<ResourceCardTitle summary={summary} />
 				{types.length > 0 && <span className="compact-card-types">{types.join(', ')}</span>}
 			</div>
-			{pins.length > 0 && detail
-				? <PinnedPropertiesList detail={detail} pins={pins} />
+			{pins.length > 0 && statements
+				? <PinnedPropertiesList statements={statements} pins={pins} />
 				: summary.description && <div className="resource-card-description">{summary.description}</div>}
 			<div className="compact-card-footer">
 				<span className="compact-card-iri">{identifier}</span>

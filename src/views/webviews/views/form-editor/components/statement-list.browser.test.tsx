@@ -5,48 +5,48 @@ import { OWL, RDF, RDFS, XSD } from '@faubulous/mentor-rdf';
 import { createEditingHostStub } from '@src/utilities/mocks/editing-host-fixtures';
 import { createResourceDataServiceStub } from '@src/utilities/mocks/resource-data-service-fixtures';
 import { createResourceSummary } from '@src/utilities/mocks/resource-summary-fixtures';
-import { EXAMPLE_NAMESPACE, TEST_NAMESPACES, TEST_SUBJECT, createLiteralView, createProperty, createSampleResourceDetail, createTestResourceDetail, withAnchors } from '@src/utilities/mocks/statement-fixtures';
-import { ResourceDetail } from '../form-editor-model';
+import { EXAMPLE_NAMESPACE, TEST_NAMESPACES, TEST_SUBJECT, createLiteralView, createProperty, createSampleResourceStatements, createTestResourceStatements, withAnchors } from '@src/utilities/mocks/statement-fixtures';
+import { ResourceStatements } from '../form-editor-model';
 import { EditingController } from '../state/editing-controller';
 import { FormEditorContext } from '../state/form-editor-context';
 import { StatementList } from './statement-list';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 
 const NAMESPACES = Object.entries(TEST_NAMESPACES).map(([prefix, iri]) => ({ prefix, iri }));
-const SAMPLE = withAnchors(createSampleResourceDetail());
+const SAMPLE = withAnchors(createSampleResourceStatements());
 const RESOURCES = [createResourceSummary('Plant', { label: 'Plant' }), createResourceSummary('Shrub', { label: 'Shrub' })];
 
 /**
- * Render the edited statements of a detail in the form editor, written through a controller over
+ * Render the edited statements about a resource in the form editor, written through a controller over
  * a recording host.
- * @param detail The detail.
- * @param others The details of the blank nodes it shows.
+ * @param statements The statements.
+ * @param others The statements about the blank nodes it shows.
  * @param resources The resources of the document.
  */
-async function renderList(detail: ResourceDetail = SAMPLE, others: ResourceDetail[] = [], resources = RESOURCES, width = 1000) {
+async function renderList(statements: ResourceStatements = SAMPLE, others: ResourceStatements[] = [], resources = RESOURCES, width = 1000) {
 	const host = createEditingHostStub();
 	const editing = new EditingController(host);
-	const dataService = createResourceDataServiceStub([detail, ...others]);
-	const ui = (current: ResourceDetail) => (
+	const dataService = createResourceDataServiceStub([statements, ...others]);
+	const ui = (current: ResourceStatements) => (
 		<div className="form-editor" style={{ height: 'auto', overflow: 'visible' }}>
 			<FormEditorContext.Provider value={{ readOnly: false, editing, namespaces: NAMESPACES, languageTags: {}, resources }}>
 				<article className="resource-card is-expanded" style={{ width }}>
 					<div className="resource-card-body">
-						<StatementList detail={current} dataService={dataService} depth={0} visited={[current.term]} />
+						<StatementList statements={current} dataService={dataService} depth={0} visited={[current.subjectTerm]} />
 					</div>
 				</article>
 			</FormEditorContext.Provider>
 			<button type="button" className="outside">Outside</button>
 		</div>
 	);
-	const result = render(ui(detail));
+	const result = render(ui(statements));
 
 	await Promise.all(Array.from(result.container.querySelectorAll('vscode-textfield')).map(field => (field as unknown as { updateComplete: Promise<unknown> }).updateComplete));
 
 	/**
-	 * Deliver the detail for the next version, as the host does after an applied edit.
+	 * Deliver the statements for the next version, as the host does after an applied edit.
 	 */
-	const deliver = async (next: ResourceDetail) => {
+	const deliver = async (next: ResourceStatements) => {
 		dataService.version++;
 		await act(async () => result.rerender(ui(next)));
 	};
@@ -138,9 +138,9 @@ describe('StatementList, edited in a browser', () => {
 	});
 
 	it('offers the datatypes a number fits', async () => {
-		const detail = withAnchors(createTestResourceDetail([createProperty('ex:count', [{ term: RdfDataFactory.literal('42', RdfDataFactory.namedNode(XSD.integer)), editable: true }])]));
+		const statements = withAnchors(createTestResourceStatements([createProperty('ex:count', [{ term: RdfDataFactory.literal('42', RdfDataFactory.namedNode(XSD.integer)), editable: true }])]));
 
-		await renderList(detail);
+		await renderList(statements);
 		await userEvent.click(within(rows()[0]).getByRole('button', { name: /^Integer\./ }));
 
 		expect(Array.from(rows()[0].querySelectorAll('.combobox-option-label')).map(option => option.textContent)).toEqual([]);
@@ -151,8 +151,8 @@ describe('StatementList, edited in a browser', () => {
 	});
 
 	it('steps a whole number with the arrows', async () => {
-		const detail = withAnchors(createTestResourceDetail([createProperty('ex:count', [{ term: RdfDataFactory.literal('42', RdfDataFactory.namedNode(XSD.integer)), editable: true }])]));
-		const field = (await renderList(detail), within(rows()[0]).getByLabelText('Value 1'));
+		const statements = withAnchors(createTestResourceStatements([createProperty('ex:count', [{ term: RdfDataFactory.literal('42', RdfDataFactory.namedNode(XSD.integer)), editable: true }])]));
+		const field = (await renderList(statements), within(rows()[0]).getByLabelText('Value 1'));
 
 		await userEvent.click(field);
 		await userEvent.keyboard('{ArrowUp}{ArrowUp}{ArrowDown}');
@@ -161,8 +161,8 @@ describe('StatementList, edited in a browser', () => {
 	});
 
 	it('shows why a number does not fit its datatype in place of its tag, and writes nothing', async () => {
-		const detail = withAnchors(createTestResourceDetail([createProperty('ex:count', [{ term: RdfDataFactory.literal('42', RdfDataFactory.namedNode(XSD.integer)), editable: true }])]));
-		const { host } = await renderList(detail);
+		const statements = withAnchors(createTestResourceStatements([createProperty('ex:count', [{ term: RdfDataFactory.literal('42', RdfDataFactory.namedNode(XSD.integer)), editable: true }])]));
+		const { host } = await renderList(statements);
 
 		await userEvent.click(within(rows()[0]).getByLabelText('Value 1'));
 		await userEvent.keyboard('{End}.5{Enter}');
@@ -219,15 +219,15 @@ describe('StatementList, edited in a browser', () => {
 
 	it('offers the classes of the document as the type of an untyped blank node', async () => {
 		const node = RdfDataFactory.blankNode('b1');
-		const detail = withAnchors(createTestResourceDetail([createProperty('rdfs:comment', [{ term: node, editable: true, nested: { term: node, propertyCount: 1 } }])]));
-		const nodeDetail = withAnchors({ term: node, properties: [createProperty('rdfs:label', [createLiteralView('Leaf')])] });
+		const statements = withAnchors(createTestResourceStatements([createProperty('rdfs:comment', [{ term: node, editable: true, nested: { term: node, propertyCount: 1 } }])]));
+		const nodeStatements = withAnchors({ subjectTerm: node, properties: [createProperty('rdfs:label', [createLiteralView('Leaf')])] });
 		const resources = [
 			createResourceSummary('Plant', { label: 'Plant', typeIri: OWL.Class }),
 			createResourceSummary('Plank', { label: 'Plank' }),
 			createResourceSummary('Planter', { label: 'Planter', typeIri: RDFS.Class })
 		];
 
-		await renderList(detail, [nodeDetail], resources);
+		await renderList(statements, [nodeStatements], resources);
 
 		const header = within(document.querySelector<HTMLElement>('.resource-card.is-nested')!).getByRole('group', { name: 'Type' });
 
@@ -266,9 +266,9 @@ describe('StatementList, edited in a browser', () => {
 
 	it('opens the ⋯ menu of a nested card on its button and on a right-click, and duplicates the node from it', async () => {
 		const node = RdfDataFactory.blankNode('b1');
-		const detail = withAnchors(createTestResourceDetail([createProperty('rdfs:comment', [{ term: node, editable: true, nested: { term: node, propertyCount: 1 } }])]));
-		const nodeDetail = withAnchors({ term: node, properties: [createProperty('rdfs:label', [createLiteralView('Leaf')])] });
-		const { host } = await renderList(detail, [nodeDetail]);
+		const statements = withAnchors(createTestResourceStatements([createProperty('rdfs:comment', [{ term: node, editable: true, nested: { term: node, propertyCount: 1 } }])]));
+		const nodeStatements = withAnchors({ subjectTerm: node, properties: [createProperty('rdfs:label', [createLiteralView('Leaf')])] });
+		const { host } = await renderList(statements, [nodeStatements]);
 		const card = document.querySelector<HTMLElement>('.resource-card.is-nested')!;
 		const menu = card.querySelector('vscode-context-menu') as HTMLElement & { show: boolean };
 
@@ -294,9 +294,9 @@ describe('StatementList, edited in a browser', () => {
 
 	it('wraps a text too long for its line in an area of three lines at rest, and shows it whole while it has the focus', async () => {
 		const text = Array.from({ length: 30 }, (_, index) => `word${index}`).join(' ').repeat(4);
-		const detail = withAnchors(createTestResourceDetail([createProperty('rdfs:comment', [createLiteralView(text)]), createProperty('rdfs:label', [createLiteralView('Short')])]));
+		const statements = withAnchors(createTestResourceStatements([createProperty('rdfs:comment', [createLiteralView(text)]), createProperty('rdfs:label', [createLiteralView('Short')])]));
 
-		await renderList(detail, [], RESOURCES, 600);
+		await renderList(statements, [], RESOURCES, 600);
 
 		const long = within(rows()[0]).getByLabelText('Value 1') as HTMLElement & { rows: number };
 
@@ -311,10 +311,10 @@ describe('StatementList, edited in a browser', () => {
 
 	it('puts the chevron and the ⋮ of a collapsed nested card on one axis, and shows neither the type nor a request for one where it has none, its summary in their place', async () => {
 		const node = RdfDataFactory.blankNode('b1');
-		const detail = withAnchors(createTestResourceDetail([createProperty('rdfs:comment', [{ term: node, editable: true, nested: { term: node, propertyCount: 1 } }])]));
-		const nodeDetail = withAnchors({ term: node, properties: [createProperty('rdfs:label', [createLiteralView('Leaf')])] });
+		const statements = withAnchors(createTestResourceStatements([createProperty('rdfs:comment', [{ term: node, editable: true, nested: { term: node, propertyCount: 1 } }])]));
+		const nodeStatements = withAnchors({ subjectTerm: node, properties: [createProperty('rdfs:label', [createLiteralView('Leaf')])] });
 
-		await renderList(detail, [nodeDetail]);
+		await renderList(statements, [nodeStatements]);
 
 		const box = document.querySelector<HTMLElement>('.resource-card.is-nested')!;
 		const centreOf = (element: Element): number => Math.round(element.getBoundingClientRect().top + element.getBoundingClientRect().height / 2);
@@ -351,10 +351,10 @@ describe('StatementList, edited in a browser', () => {
 
 	it.each([1000, 500])('lets the values of a row run to the inset of the row and a nested card to the inset of its row, in a card %ipx wide', async width => {
 		const node = RdfDataFactory.blankNode('b1');
-		const detail = withAnchors(createTestResourceDetail([createProperty('rdfs:comment', [{ term: node, editable: true, nested: { term: node, propertyCount: 1 } }]), createProperty('rdfs:label', [createLiteralView('Leaf')])]));
-		const nodeDetail = withAnchors({ term: node, properties: [createProperty('rdfs:label', [createLiteralView('Leaf')])] });
+		const statements = withAnchors(createTestResourceStatements([createProperty('rdfs:comment', [{ term: node, editable: true, nested: { term: node, propertyCount: 1 } }]), createProperty('rdfs:label', [createLiteralView('Leaf')])]));
+		const nodeStatements = withAnchors({ subjectTerm: node, properties: [createProperty('rdfs:label', [createLiteralView('Leaf')])] });
 
-		await renderList(detail, [nodeDetail], RESOURCES, width);
+		await renderList(statements, [nodeStatements], RESOURCES, width);
 
 		const card = document.querySelector<HTMLElement>('.resource-card:not(.is-nested)')!;
 		const box = document.querySelector<HTMLElement>('.resource-card.is-nested')!;

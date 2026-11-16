@@ -4,7 +4,7 @@ import { render, within } from '@testing-library/react';
 import { createEditingHostStub } from '@src/utilities/mocks/editing-host-fixtures';
 import { createResourceDataServiceStub } from '@src/utilities/mocks/resource-data-service-fixtures';
 import { createResourceSummary } from '@src/utilities/mocks/resource-summary-fixtures';
-import { TEST_NAMESPACES, createLiteralView, createProperty, createTestResourceDetail, withAnchors } from '@src/utilities/mocks/statement-fixtures';
+import { TEST_NAMESPACES, createLiteralView, createProperty, createTestResourceStatements, withAnchors } from '@src/utilities/mocks/statement-fixtures';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { EditingController } from '../state/editing-controller';
 import { FormEditorContext } from '../state/form-editor-context';
@@ -24,19 +24,20 @@ type MenuElement = HTMLElement & { show: boolean };
  */
 async function renderCard(): Promise<{ card: HTMLElement; nested: HTMLElement }> {
 	const node = RdfDataFactory.blankNode('b1');
-	const nodeDetail = withAnchors({ term: node, properties: ['rdfs:label', 'rdfs:comment', 'rdfs:seeAlso'].map(predicate => createProperty(predicate, [createLiteralView(`value of ${predicate}`)])), pins: [] });
-	const detail = withAnchors(createTestResourceDetail([
+	const nodeStatements = withAnchors({ subjectTerm: node, properties: ['rdfs:label', 'rdfs:comment', 'rdfs:seeAlso'].map(predicate => createProperty(predicate, [createLiteralView(`value of ${predicate}`)])) });
+	const nodeSummary = createResourceSummary('b1', { term: node, pins: [] });
+	const statements = withAnchors(createTestResourceStatements([
 		createProperty('rdfs:label', [createLiteralView('Tree')]),
 		createProperty('rdfs:comment', [{ term: node, editable: true, nested: { term: node, propertyCount: 3 } }])
 	]));
-	const summary = createResourceSummary('Tree', { term: detail.term, pins: [] });
+	const summary = createResourceSummary('Tree', { term: statements.subjectTerm, pins: [] });
 	const editing = new EditingController(createEditingHostStub());
 
 	render(
 		<div className="form-editor" style={{ height: 'auto', overflow: 'visible' }}>
 			<FormEditorContext.Provider value={{ readOnly: false, editing, namespaces: NAMESPACES, languageTags: {}, resources: [], onRemoveResource: () => undefined }}>
 				<div className="form-block is-resource" style={{ width: 1000 }}>
-					<ResourceCard summary={summary} dataService={createResourceDataServiceStub([detail, nodeDetail])} expanded onToggle={() => undefined} />
+					<ResourceCard summary={summary} dataService={createResourceDataServiceStub([statements, nodeStatements], [nodeSummary])} expanded onToggle={() => undefined} />
 				</div>
 			</FormEditorContext.Provider>
 		</div>

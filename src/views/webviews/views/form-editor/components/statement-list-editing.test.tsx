@@ -5,9 +5,9 @@ import userEvent from '@testing-library/user-event';
 import { RDFS, XSD } from '@faubulous/mentor-rdf';
 import { createEditingHostStub, EditingHostStub } from '@src/utilities/mocks/editing-host-fixtures';
 import { createResourceDataServiceStub } from '@src/utilities/mocks/resource-data-service-fixtures';
-import { EXAMPLE_NAMESPACE, TEST_NAMESPACES, TEST_SUBJECT, createIriView, createLiteralView, createProperty, createSampleResourceDetail, createTestResourceDetail, withAnchors } from '@src/utilities/mocks/statement-fixtures';
+import { EXAMPLE_NAMESPACE, TEST_NAMESPACES, TEST_SUBJECT, createIriView, createLiteralView, createProperty, createSampleResourceStatements, createTestResourceStatements, withAnchors } from '@src/utilities/mocks/statement-fixtures';
 import { renderWebview } from '@src/utilities/mocks/webview-test-utils';
-import { PropertyView, ResourceDetail } from '../form-editor-model';
+import { PropertyView, ResourceStatements } from '../form-editor-model';
 import { EditingController } from '../state/editing-controller';
 import { FormEditorContext, FormEditorContextValue } from '../state/form-editor-context';
 import { StatementList } from './statement-list';
@@ -16,28 +16,28 @@ import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 const NAMESPACES = Object.entries(TEST_NAMESPACES).map(([prefix, iri]) => ({ prefix, iri }));
 
 /**
- * The detail the tests edit: a type, a label and a subclass statement, each value anchored.
+ * The statements the tests edit: a type, a label and a subclass statement, each value anchored.
  */
-const SAMPLE = withAnchors(createSampleResourceDetail());
+const SAMPLE = withAnchors(createSampleResourceStatements());
 
 /**
- * Render the statements of a detail, written through a controller over a recording host.
+ * Render the statements about a resource, written through a controller over a recording host.
  */
-function renderList(detail: ResourceDetail = SAMPLE) {
+function renderList(statements: ResourceStatements = SAMPLE) {
 	const host = createEditingHostStub();
 	const editing = new EditingController(host);
-	const dataService = createResourceDataServiceStub([detail]);
-	const ui = (current: ResourceDetail, stale = false) => (
+	const dataService = createResourceDataServiceStub([statements]);
+	const ui = (current: ResourceStatements, stale = false) => (
 		<FormEditorContext.Provider value={{ readOnly: false, editing, namespaces: NAMESPACES, languageTags: {}, resources: [] } satisfies FormEditorContextValue}>
-			<StatementList detail={current} stale={stale} dataService={dataService} depth={0} visited={[current.term]} />
+			<StatementList statements={current} stale={stale} dataService={dataService} depth={0} visited={[current.subjectTerm]} />
 		</FormEditorContext.Provider>
 	);
-	const result = renderWebview(ui(detail));
+	const result = renderWebview(ui(statements));
 
 	/**
-	 * Deliver the detail as the host does after an edit: for the next version, or stale.
+	 * Deliver the statements as the host does after an edit: for the next version, or stale.
 	 */
-	const deliver = async (next: ResourceDetail, options: { stale?: boolean; version?: number } = {}) => {
+	const deliver = async (next: ResourceStatements, options: { stale?: boolean; version?: number } = {}) => {
 		dataService.version = options.version ?? dataService.version;
 		await act(async () => result.rerender(ui(next, options.stale ?? false)));
 	};
@@ -87,7 +87,7 @@ async function settle(host: EditingHostStub, outcome?: Parameters<EditingHostStu
  * The sample with the values of one of its properties replaced, as the host delivers it after an
  * edit of that property.
  */
-function withValues(index: number, values: PropertyView['values']): ResourceDetail {
+function withValues(index: number, values: PropertyView['values']): ResourceStatements {
 	return { ...SAMPLE, properties: SAMPLE.properties.map((property, position) => position === index ? { ...property, values } : property) };
 }
 
@@ -169,8 +169,8 @@ describe('StatementList, edited', () => {
 	});
 
 	it('shows why a number does not fit its datatype, and puts the stored value back when the row is left', async () => {
-		const detail = withAnchors(createTestResourceDetail([createProperty('ex:count', [{ term: RdfDataFactory.literal('42', RdfDataFactory.namedNode(XSD.integer)), editable: true }])]));
-		const { host } = renderList(detail);
+		const statements = withAnchors(createTestResourceStatements([createProperty('ex:count', [{ term: RdfDataFactory.literal('42', RdfDataFactory.namedNode(XSD.integer)), editable: true }])]));
+		const { host } = renderList(statements);
 		const field = within(rows()[0]).getByLabelText('Value 1') as HTMLInputElement;
 
 		type(field, '4.5');
@@ -363,9 +363,9 @@ describe('StatementList, edited', () => {
 	});
 
 	it('reads the rows whose values cannot all be kept by their place', () => {
-		const detail = createTestResourceDetail([createProperty('ex:p', [createIriView('ex:A', 'A')])]);
+		const statements = createTestResourceStatements([createProperty('ex:p', [createIriView('ex:A', 'A')])]);
 
-		renderList(detail);
+		renderList(statements);
 
 		expect(rows()[0].classList.contains('is-editable')).toBe(false);
 		expect(rowLabels()).toEqual(['ex:p']);
@@ -373,8 +373,8 @@ describe('StatementList, edited', () => {
 	});
 
 	it('refuses a new statement of a predicate whose row only reads, rather than replacing its values', async () => {
-		const detail = createTestResourceDetail([createProperty('ex:p', [createIriView('ex:A', 'A')])]);
-		const { host } = renderList(detail);
+		const statements = createTestResourceStatements([createProperty('ex:p', [createIriView('ex:A', 'A')])]);
+		const { host } = renderList(statements);
 
 		await typeNewStatement('ex:p', 'ex:B');
 

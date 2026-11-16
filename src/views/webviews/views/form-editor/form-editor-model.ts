@@ -253,16 +253,17 @@ export interface PinnedProperty {
 }
 
 /**
- * The properties of a single resource, loaded on demand.
+ * The statements about one resource, grouped by predicate, which its card shows. They are fetched
+ * as a card needs them, while the summaries of all resources come with the snapshot.
  */
-export interface ResourceDetail extends Partial<Pick<ResourceSummary, 'pins'>> {
+export interface ResourceStatements {
 	/**
-	 * The term naming the resource.
+	 * The resource the statements are about: the subject of each of them.
 	 */
-	term: NamedNode | BlankNode;
+	subjectTerm: NamedNode | BlankNode;
 
 	/**
-	 * The properties of the resource, in document order.
+	 * The statements grouped by predicate, in document order.
 	 */
 	properties: PropertyView[];
 
@@ -328,7 +329,7 @@ export interface DocumentSnapshot {
 	/**
 	 * Which build of the snapshots of the document this one is. A snapshot is built again for the
 	 * same version when what it reads besides the text changes, such as the labels in the store,
-	 * the settings or the language, so the details of resources belong to a revision.
+	 * the settings or the language, so the statements about resources belong to a revision.
 	 */
 	revision: number;
 

@@ -11,7 +11,7 @@ import {
 	DocumentPosition,
 	NestedResourceRef,
 	PropertyView,
-	ResourceDetail,
+	ResourceStatements,
 	ResourceSummary,
 	TermView
 } from '@src/views/webviews/views/form-editor/form-editor-model';
@@ -90,13 +90,13 @@ export class ResourceViewBuilder {
 	 * order. Nested blank node objects are linked to their own entry so the webview can render
 	 * them inline or as a placeholder.
 	 * @param entry The resource.
-	 * @returns The resource detail.
+	 * @returns The statements about the resource.
 	 */
-	buildDetail(entry: ResourceIndexEntry): ResourceDetail {
+	buildStatements(entry: ResourceIndexEntry): ResourceStatements {
 		const { groups, resourceComments } = this._collectProperties(entry);
 
 		return {
-			term: entry.term,
+			subjectTerm: entry.term,
 			properties: groups.map(group => ({ ...group, valueKind: _valueKindOf(group.values) })),
 			// A resource of its own shows them above its card, where they were written; a node
 			// written inside another has no card of its own to stand outside of.

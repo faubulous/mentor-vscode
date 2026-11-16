@@ -5,10 +5,10 @@ import userEvent from '@testing-library/user-event';
 import { RDF, RDFS } from '@faubulous/mentor-rdf';
 import { createEditingHostStub } from '@src/utilities/mocks/editing-host-fixtures';
 import { createResourceDataServiceStub } from '@src/utilities/mocks/resource-data-service-fixtures';
-import { EXAMPLE_NAMESPACE, TEST_NAMESPACES, TEST_SUBJECT, createIriView, createLiteralView, createProperty, createTestResourceDetail, withAnchors } from '@src/utilities/mocks/statement-fixtures';
+import { EXAMPLE_NAMESPACE, TEST_NAMESPACES, TEST_SUBJECT, createIriView, createLiteralView, createProperty, createTestResourceStatements, withAnchors } from '@src/utilities/mocks/statement-fixtures';
 import { renderWebview } from '@src/utilities/mocks/webview-test-utils';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
-import { ResourceDetail, TermView } from '../form-editor-model';
+import { ResourceStatements, TermView } from '../form-editor-model';
 import { EditingController } from '../state/editing-controller';
 import { FormEditorContext, FormEditorContextValue } from '../state/form-editor-context';
 import { StatementList } from './statement-list';
@@ -25,7 +25,7 @@ const NODE_VIEW: TermView = { term: NODE, editable: true, nested: { term: NODE, 
 /**
  * The card: a resource it sees also, anchored at 110, and a comment that is a blank node only.
  */
-const DETAIL = withAnchors(createTestResourceDetail([
+const STATEMENTS = withAnchors(createTestResourceStatements([
 	createProperty('rdfs:seeAlso', [createIriView('ex:Plant', 'Plant')]),
 	createProperty('rdfs:comment', [NODE_VIEW])
 ]));
@@ -33,7 +33,7 @@ const DETAIL = withAnchors(createTestResourceDetail([
 /**
  * The blank node.
  */
-const NODE_DETAIL: ResourceDetail = withAnchors({ term: NODE, properties: [createProperty('rdfs:label', [createLiteralView('Leaf')])] });
+const NODE_STATEMENTS: ResourceStatements = withAnchors({ subjectTerm: NODE, properties: [createProperty('rdfs:label', [createLiteralView('Leaf')])] });
 
 /**
  * Render the card, edited.
@@ -45,7 +45,7 @@ function renderCard() {
 
 	renderWebview(
 		<FormEditorContext.Provider value={context}>
-			<StatementList detail={DETAIL} stale={false} dataService={createResourceDataServiceStub([DETAIL, NODE_DETAIL])} depth={0} visited={[DETAIL.term]} />
+			<StatementList statements={STATEMENTS} stale={false} dataService={createResourceDataServiceStub([STATEMENTS, NODE_STATEMENTS])} depth={0} visited={[STATEMENTS.subjectTerm]} />
 		</FormEditorContext.Provider>
 	);
 

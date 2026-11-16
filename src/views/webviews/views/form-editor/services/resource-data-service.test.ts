@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { NamedNode } from '@rdfjs/types';
-import { ResourceDetail } from '../form-editor-model';
+import { ResourceStatements } from '../form-editor-model';
 import { ResourceDataService } from './resource-data-service';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 
@@ -12,10 +12,10 @@ function resource(localName: string): NamedNode {
 }
 
 /**
- * Create a resource detail with no properties.
+ * Create the statements about a resource, without properties.
  */
-function detail(localName: string): ResourceDetail {
-	return { term: resource(localName), properties: [] };
+function statements(localName: string): ResourceStatements {
+	return { subjectTerm: resource(localName), properties: [] };
 }
 
 /**
@@ -64,54 +64,54 @@ describe('ResourceDataService', () => {
 		expect(send).toHaveBeenCalledTimes(1);
 	});
 
-	it('serves accepted detail and notifies subscribers', () => {
+	it('serves accepted statements and notifies subscribers', () => {
 		const { service } = createService();
 		const listener = vi.fn();
 
 		service.subscribe(listener);
-		service.accept(1, [detail('a')]);
+		service.accept(1, [statements('a')]);
 
-		expect(service.get(resource('a'))).toEqual(detail('a'));
+		expect(service.getStatements(resource('a'))).toEqual(statements('a'));
 		expect(listener).toHaveBeenCalled();
 	});
 
-	it('ignores detail delivered for a superseded version', () => {
+	it('ignores statements delivered for a superseded version', () => {
 		const { service } = createService();
 
 		service.setSnapshot(2, 2);
-		service.accept(1, [detail('a')]);
+		service.accept(1, [statements('a')]);
 
-		expect(service.get(resource('a'))).toBeUndefined();
+		expect(service.getStatements(resource('a'))).toBeUndefined();
 	});
 
-	it('loads the detail again for the same document version built anew, keeping it as stale meanwhile', () => {
+	it('loads the statements again for the same document version built anew, keeping it as stale meanwhile', () => {
 		const { service } = createService();
 
-		service.accept(1, [detail('a')]);
+		service.accept(1, [statements('a')]);
 		service.setSnapshot(1, 2);
 
 		expect(service.version).toBe(1);
-		expect(service.get(resource('a'))).toBeUndefined();
-		expect(service.getStale(resource('a'))).toEqual(detail('a'));
+		expect(service.getStatements(resource('a'))).toBeUndefined();
+		expect(service.getStaleStatements(resource('a'))).toEqual(statements('a'));
 
-		service.accept(1, [detail('a')]);
+		service.accept(1, [statements('a')]);
 
-		expect(service.get(resource('a'))).toBeUndefined();
+		expect(service.getStatements(resource('a'))).toBeUndefined();
 	});
 
-	it('keeps the detail of the previous version as stale until the new one arrives', () => {
+	it('keeps the statements of the previous version as stale until the new one arrives', () => {
 		const { service } = createService();
 
-		service.accept(1, [detail('a')]);
+		service.accept(1, [statements('a')]);
 		service.setSnapshot(2, 2);
 
-		expect(service.get(resource('a'))).toBeUndefined();
-		expect(service.getStale(resource('a'))).toEqual(detail('a'));
+		expect(service.getStatements(resource('a'))).toBeUndefined();
+		expect(service.getStaleStatements(resource('a'))).toEqual(statements('a'));
 
-		service.accept(2, [detail('a')]);
+		service.accept(2, [statements('a')]);
 
-		expect(service.get(resource('a'))).toEqual(detail('a'));
-		expect(service.getStale(resource('a'))).toBeUndefined();
+		expect(service.getStatements(resource('a'))).toEqual(statements('a'));
+		expect(service.getStaleStatements(resource('a'))).toBeUndefined();
 	});
 
 	it('allows a resource to be requested again after a version change', () => {
@@ -144,19 +144,19 @@ describe('ResourceDataService', () => {
 		expect(send).toHaveBeenCalledTimes(2);
 	});
 
-	it('keeps the summary that comes with a detail, as stale while the next snapshot loads', () => {
+	it('keeps the summary that comes with the statements about a resource the snapshot does not list, across snapshots', () => {
 		const { service } = createService();
 		const summary = { term: resource('Tree'), label: 'Tree', iconName: 'mentor-rdf-class', propertyCount: 0, hasLabel: true };
 
 		service.request([resource('Tree')]);
 		vi.runAllTimers();
-		service.accept(1, [detail('Tree')], [], [summary]);
+		service.accept(1, [statements('Tree')], [], [summary]);
 
 		expect(service.getSummary(resource('Tree'))).toEqual(summary);
 
 		service.setSnapshot(2, 2);
 
-		expect(service.get(resource('Tree'))).toBeUndefined();
+		expect(service.getStatements(resource('Tree'))).toBeUndefined();
 		expect(service.getSummary(resource('Tree'))).toEqual(summary);
 	});
 
@@ -177,7 +177,7 @@ describe('ResourceDataService', () => {
 		const unsubscribe = service.subscribe(listener);
 
 		unsubscribe();
-		service.accept(1, [detail('a')]);
+		service.accept(1, [statements('a')]);
 
 		expect(listener).not.toHaveBeenCalled();
 	});

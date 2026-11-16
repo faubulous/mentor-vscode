@@ -32,7 +32,7 @@ import { EditorSnapshotService } from '../../services/editing/editor-snapshot-se
 import { EditOutcome, FormEditorEditHandler } from './form-editor-edit-handler';
 import { FormEditorHostMessage, FormEditorWebviewMessage } from './form-editor-messages';
 import { getFormReadOnlyReason } from './form-editor-read-only';
-import { DocumentProblem, DocumentSnapshot, ReadOnlyReason, ResourceDetail, ResourceSummary } from './form-editor-model';
+import { DocumentProblem, DocumentSnapshot, ReadOnlyReason, ResourceStatements, ResourceSummary } from './form-editor-model';
 import { ScopeKey } from '@src/utilities/config-scope';
 import { QuadContextCache } from './quad-context-cache';
 import { reviveTerms } from '@src/utilities/rdf-terms';
@@ -501,7 +501,7 @@ export class FormEditorSession implements vscode.Disposable {
 				this._sentSnapshot = undefined;
 				this._publishSnapshot();
 				break;
-			case 'RequestResources':
+			case 'ResourceRequest':
 				if (message.source === 'store') {
 					this._publishStoreResources(message.resources);
 				} else {
@@ -680,7 +680,7 @@ export class FormEditorSession implements vscode.Disposable {
 
 	/**
 	 * Build the snapshot of the current document version and keep it, with the index it was built
-	 * from, for the details the webview asks for.
+	 * from, for the statements the webview asks for.
 	 * @param context The context of the document.
 	 * @param readOnly Why the document cannot be edited, if it cannot.
 	 * @param problems The problems of the document.
@@ -721,9 +721,10 @@ export class FormEditorSession implements vscode.Disposable {
 	}
 
 	/**
-	 * Post the properties of the requested resources as the document states them, editable where
-	 * the document can be written; a resource the document does not define is missing, without
-	 * falling back to the store.
+	 * Answer a request for the statements about resources as the document states them, editable
+	 * where the document can be written, with the summaries of those the snapshot does not list:
+	 * the blank nodes written inside another resource, whose cards pin by them. A resource the
+	 * document does not define is missing, without falling back to the store.
 	 * @param requested The resources.
 	 */
 	private _publishDocumentResources(requested: (NamedNode | BlankNode)[]): void {
@@ -734,26 +735,33 @@ export class FormEditorSession implements vscode.Disposable {
 		}
 
 		const views = new ResourceViewBuilder(this._index, context, this._getIndexOptions());
-		const resources: ResourceDetail[] = [];
+		const listed = new Set(this._snapshot.resources.map(resource => termToString(resource.term)));
+		const statements: ResourceStatements[] = [];
+		const resources: ResourceSummary[] = [];
 		const missing: (NamedNode | BlankNode)[] = [];
 
 		for (const resource of requested) {
 			const entry = getEntry(this._index, resource);
 
-			if (entry) {
-				resources.push({ ...views.buildDetail(entry), ...this._pinsOf(context, entry) });
-			} else {
+			if (!entry) {
 				missing.push(resource);
+				continue;
+			}
+
+			statements.push(views.buildStatements(entry));
+
+			if (!listed.has(termToString(resource))) {
+				resources.push({ ...views.buildSummary(entry), ...this._pinsOf(context, entry) });
 			}
 		}
 
-		this._postMessage({ id: 'ResourcesLoaded', revision: this._snapshot.revision, resources, missing });
+		this._postMessage({ id: 'ResourceResponse', revision: this._snapshot.revision, statements, resources, missing });
 	}
 
 	/**
-	 * Post what the store states about the requested resources, which the document does not define:
+	 * Answer a request for what the store states about resources the document does not define:
 	 * their summaries, with the usage count and the pins the snapshot adds to those of the document,
-	 * and their properties, which only read. The store is read across all its graphs, as the hover
+	 * and their statements, which only read. The store is read across all its graphs, as the hover
 	 * of the text editor reads it.
 	 * @param requested The resources.
 	 */
@@ -765,8 +773,8 @@ export class FormEditorSession implements vscode.Disposable {
 			return;
 		}
 
-		const resources: ResourceDetail[] = [];
-		const summaries: ResourceSummary[] = [];
+		const statements: ResourceStatements[] = [];
+		const resources: ResourceSummary[] = [];
 		const missing: (NamedNode | BlankNode)[] = [];
 
 		for (const resource of requested) {
@@ -779,13 +787,11 @@ export class FormEditorSession implements vscode.Disposable {
 				continue;
 			}
 
-			const pins = this._pinsOf(context, entry, undefined);
-
-			summaries.push({ ...summary, usageCount: this._countUsages(resource.value), ...pins });
-			resources.push({ ...new ResourceViewBuilder(index, context, this._getIndexOptions()).buildDetail(entry), ...pins });
+			statements.push(new ResourceViewBuilder(index, context, this._getIndexOptions()).buildStatements(entry));
+			resources.push({ ...summary, usageCount: this._countUsages(resource.value), ...this._pinsOf(context, entry, undefined) });
 		}
 
-		this._postMessage({ id: 'ResourcesLoaded', revision: this._snapshot.revision, resources, missing, source: 'store', summaries });
+		this._postMessage({ id: 'ResourceResponse', revision: this._snapshot.revision, statements, resources, missing, source: 'store' });
 	}
 
 	/**
@@ -799,7 +805,7 @@ export class FormEditorSession implements vscode.Disposable {
 	}
 
 	/**
-	 * Options for building resource details: the glyphs of the IRIs the document only mentions
+	 * Options for building the statements about resources: the glyphs of the IRIs the document only mentions
 	 * come from the store, when there is one.
 	 * @returns The options.
 	 */
@@ -924,15 +930,16 @@ export class FormEditorSession implements vscode.Disposable {
 	}
 
 	/**
-	 * The pins of a resource for the details of its card, as the snapshot holds them for the cards
-	 * of the list, so a nested card of a blank node pins too.
+	 * The pins of a resource the snapshot does not list, as the snapshot holds them for the
+	 * resources it lists, so a nested card of a blank node and the card of a resource of the store
+	 * pin too.
 	 * @param context The context of the document.
 	 * @param entry The resource.
 	 * @param graphs The graphs its inferred types are read from: those of the document, or all
 	 * graphs for a resource of the store.
-	 * @returns The fields of the detail.
+	 * @returns The fields of the summary.
 	 */
-	private _pinsOf(context: TurtleDocument, entry: ResourceIndexEntry, graphs: string[] | undefined = context.graphs): Pick<ResourceDetail, 'pins'> {
+	private _pinsOf(context: TurtleDocument, entry: ResourceIndexEntry, graphs: string[] | undefined = context.graphs): Pick<ResourceSummary, 'pins'> {
 		const pins = _readPins().resolve(typeIrisOf(entry), this._inferredTypesOf(graphs, entry.term));
 
 		return pins ? { pins } : {};

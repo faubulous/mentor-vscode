@@ -1,7 +1,7 @@
 import { OWL, RDF, RDFS, _OWL, _RDF, _RDFS, _SKOS, _XSD } from '@faubulous/mentor-rdf';
 import { NamedNode } from '@rdfjs/types';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
-import { PropertyView, ResourceDetail, TermView } from '@src/views/webviews/views/form-editor/form-editor-model';
+import { PropertyView, ResourceStatements, TermView } from '@src/views/webviews/views/form-editor/form-editor-model';
 
 /**
  * The namespace of the example resources of the webview tests.
@@ -59,20 +59,20 @@ export function createProperty(predicate: string, values: TermView[]): PropertyV
 }
 
 /**
- * Make the detail of the test subject.
+ * Make the statements of the test subject.
  * @param properties Its properties.
- * @returns The detail.
+ * @returns The statements.
  */
-export function createTestResourceDetail(properties: PropertyView[]): ResourceDetail {
-	return { term: TEST_SUBJECT, properties };
+export function createTestResourceStatements(properties: PropertyView[]): ResourceStatements {
+	return { subjectTerm: TEST_SUBJECT, properties };
 }
 
 /**
- * The detail the statement tests share: a type, a label and a subclass statement.
- * @returns The detail.
+ * The statements the statement tests share: a type, a label and a subclass statement.
+ * @returns The statements.
  */
-export function createSampleResourceDetail(): ResourceDetail {
-	return createTestResourceDetail([
+export function createSampleResourceStatements(): ResourceStatements {
+	return createTestResourceStatements([
 		{ predicate: { term: RdfDataFactory.namedNode(RDF.type), prefixedName: 'rdf:type', editable: true }, values: [{ term: RdfDataFactory.namedNode(OWL.Class), prefixedName: 'owl:Class', label: 'Class', editable: true }] },
 		{ predicate: { term: RdfDataFactory.namedNode(RDFS.label), prefixedName: 'rdfs:label', editable: true }, values: [createLiteralView('Tree', 'en')] },
 		{ predicate: { term: RdfDataFactory.namedNode(RDFS.subClassOf), prefixedName: 'rdfs:subClassOf', editable: true }, values: [{ term: RdfDataFactory.namedNode(OWL.Thing), prefixedName: 'owl:Thing', label: 'Thing', editable: true }] }
@@ -80,17 +80,18 @@ export function createSampleResourceDetail(): ResourceDetail {
 }
 
 /**
- * Give the values of a detail the anchors the host reports for written values, so its rows can
- * be edited: each value gets a distinct offset, as if written one after the other.
- * @param detail The detail.
- * @returns The detail with anchored values.
+ * Give the values of the statements about a resource the anchors the host reports for written
+ * values, so its rows can be edited: each value gets a distinct offset, as if written one after the
+ * other.
+ * @param statements The statements.
+ * @returns The statements with anchored values.
  */
-export function withAnchors(detail: ResourceDetail): ResourceDetail {
+export function withAnchors(statements: ResourceStatements): ResourceStatements {
 	let anchor = 100;
 
 	return {
-		...detail,
-		properties: detail.properties.map(property => ({
+		...statements,
+		properties: statements.properties.map(property => ({
 			...property,
 			values: property.values.map(value => ({ ...value, anchor: anchor += 10 }))
 		}))

@@ -8,7 +8,7 @@ import type { EditOperation } from '@src/services/editing/edit-operation';
 import type { EditProblem } from '@src/services/editing/edit-problem';
 import type { ExecuteCommandMessage } from '../../webview-messaging';
 import type { BlankNode, NamedNode } from '@rdfjs/types';
-import type { DocumentPosition, DocumentSnapshot, ResourceDetail, ResourceSource, ResourceSummary } from './form-editor-model';
+import type { DocumentPosition, DocumentSnapshot, ResourceStatements, ResourceSource, ResourceSummary } from './form-editor-model';
 import type { ScopeKey } from '@src/utilities/config-scope';
 
 /**
@@ -20,11 +20,12 @@ export type FormEditorHostMessage =
 	 */
 	| { id: 'DocumentSnapshot'; snapshot: DocumentSnapshot }
 	/**
-	 * The properties of the resources the webview asked for, built for the snapshot of `revision`
-	 * from the source it asked; `missing` names those the source does not describe. Resources of the
-	 * store come with their `summaries`, which the snapshot has only for those of the document.
+	 * The answer to a {@link FormEditorWebviewMessage} `ResourceRequest`, built for the snapshot of
+	 * `revision` from the source asked: the statements about the resources it describes, the
+	 * summaries of those the snapshot does not list (blank nodes written inside another resource,
+	 * resources of the store), and the resources it does not describe as `missing`.
 	 */
-	| { id: 'ResourcesLoaded'; revision: number; resources: ResourceDetail[]; missing: (NamedNode | BlankNode)[]; source?: ResourceSource; summaries?: ResourceSummary[] }
+	| { id: 'ResourceResponse'; revision: number; statements: ResourceStatements[]; resources?: ResourceSummary[]; missing: (NamedNode | BlankNode)[]; source?: ResourceSource }
 	/**
 	 * An edit of the form was applied, producing the given document version.
 	 */
@@ -60,10 +61,10 @@ export type FormEditorWebviewMessage =
 	 */
 	| { id: 'Ready' }
 	/**
-	 * The properties of the resources about to be shown, read from the document unless the store is
-	 * asked.
+	 * A request for the statements about the resources about to be shown, read from the document
+	 * unless the store is asked; the host answers with a `ResourceResponse`.
 	 */
-	| { id: 'RequestResources'; resources: (NamedNode | BlankNode)[]; source?: ResourceSource }
+	| { id: 'ResourceRequest'; resources: (NamedNode | BlankNode)[]; source?: ResourceSource }
 	/**
 	 * The operations of one user action, to apply as one undo step against `baseVersion`.
 	 */

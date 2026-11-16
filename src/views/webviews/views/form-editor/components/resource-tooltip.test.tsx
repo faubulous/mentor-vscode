@@ -7,7 +7,7 @@ import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { renderWebview } from '@src/utilities/mocks/webview-test-utils';
 import { createResourceDataServiceStub } from '@src/utilities/mocks/resource-data-service-fixtures';
 import { createResourceSummary } from '@src/utilities/mocks/resource-summary-fixtures';
-import { createLiteralView, createProperty, createTestResourceDetail } from '@src/utilities/mocks/statement-fixtures';
+import { createLiteralView, createProperty, createTestResourceStatements } from '@src/utilities/mocks/statement-fixtures';
 import { ResourceSummary } from '../form-editor-model';
 import { IResourceDataService } from '../services/resource-data-service.interface';
 import { ResourceDataService } from '../services/resource-data-service';
@@ -36,8 +36,8 @@ class FakeResizeObserver {
  * @param storeDataService Supplies the resources of the store.
  */
 function renderTooltip(tree: ResourceSummary = TREE, loaded = true, storeDataService: IResourceDataService = createResourceDataServiceStub()) {
-	const detail = { ...createTestResourceDetail([createProperty('rdfs:comment', [createLiteralView('A tree bearing apples')])]), term: tree.term };
-	const documentDataService = createResourceDataServiceStub(loaded ? [detail] : []);
+	const statements = { ...createTestResourceStatements([createProperty('rdfs:comment', [createLiteralView('A tree bearing apples')])]), term: tree.term };
+	const documentDataService = createResourceDataServiceStub(loaded ? [statements] : []);
 	const result = renderWebview(
 		<FormEditorContext.Provider value={{ readOnly: true, namespaces: [], languageTags: {}, resources: [tree], descriptionPredicates: [RdfDataFactory.namedNode(RDFS.comment)] }}>
 			<span className="tree" {...getResourceTooltipAttributes(tree.term)}>Apple tree</span>
@@ -141,7 +141,7 @@ describe('ResourceTooltip', () => {
 		expect(screen.getByRole('tooltip').textContent).toBe('http://x/y');
 
 		act(() => {
-			storeDataService.accept(1, [{ term: other.term as NamedNode, properties: [] }], [], [other]);
+			storeDataService.accept(1, [{ subjectTerm: other.term as NamedNode, properties: [] }], [], [other]);
 		});
 
 		expect(screen.getByRole('tooltip').querySelector('.resource-card-label')?.textContent).toBe('Other');

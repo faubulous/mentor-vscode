@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { RDFS } from '@faubulous/mentor-rdf';
-import { createLiteralView, createProperty, createTestResourceDetail, withAnchors } from '@src/utilities/mocks/statement-fixtures';
+import { createLiteralView, createProperty, createTestResourceStatements, withAnchors } from '@src/utilities/mocks/statement-fixtures';
 import { StatementDraft } from './statement-draft';
 import { StatementRowState } from './statement-row-state';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 
-const stored = StatementDraft.fromProperty(withAnchors(createTestResourceDetail([createProperty('rdfs:label', [createLiteralView('Tree', 'en')])])).properties[0]);
+const stored = StatementDraft.fromProperty(withAnchors(createTestResourceStatements([createProperty('rdfs:label', [createLiteralView('Tree', 'en')])])).properties[0]);
 
 describe('StatementRowState', () => {
 	it('starts clean from the stored statement', () => {
