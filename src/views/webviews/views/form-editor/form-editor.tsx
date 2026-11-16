@@ -11,6 +11,7 @@ import { SearchToolbar } from './components/search-toolbar';
 import { DocumentHeader } from './components/document-header';
 import { FormErrorBoundary } from './components/form-error-boundary';
 import { FormToolbar } from './components/form-toolbar';
+import { ResourceTooltip } from './components/resource-tooltip';
 import { EmptyState, LoadingState, ProblemState, ReadOnlyBanner } from './components/resource-list-states';
 import { DocumentPosition, DocumentProblem, DocumentSnapshot } from './form-editor-model';
 import { ScopeKey } from '@src/utilities/config-scope';
@@ -340,6 +341,7 @@ function FormEditor(): React.JSX.Element {
 							</div>
 						</FormErrorBoundary>
 					)}
+				<ResourceTooltip dataService={dataService} />
 			</div>
 		</FormEditorContext.Provider>
 	);

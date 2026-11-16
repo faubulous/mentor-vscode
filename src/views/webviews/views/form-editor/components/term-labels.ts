@@ -2,12 +2,11 @@ import { Literal, Term } from '@rdfjs/types';
 import { TermView } from '../form-editor-model';
 
 /**
- * The text a term is told by when the pointer rests on it: the IRI of a resource, `_:` and the
- * label of a blank node.
+ * The identifier a term is written by: the IRI of a resource, `_:` and the label of a blank node.
  * @param term The term.
- * @returns The text, or `undefined` for a literal.
+ * @returns The identifier, or `undefined` for a literal.
  */
-export function getTermTitle(term: Term): string | undefined {
+function _identifierOf(term: Term): string | undefined {
 	if (term.termType === 'NamedNode') {
 		return term.value;
 	}
@@ -21,7 +20,7 @@ export function getTermTitle(term: Term): string | undefined {
  * @returns The label.
  */
 export function getTermLabel(view: TermView): string {
-	return view.label || view.prefixedName || getTermTitle(view.term) || '';
+	return view.label || view.prefixedName || _identifierOf(view.term) || '';
 }
 
 /**

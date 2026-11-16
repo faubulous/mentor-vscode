@@ -4,6 +4,7 @@ import { ResourceSummary } from '../form-editor-model';
 import { useFormEditorContext } from '../state/form-editor-context';
 import { CardUsage } from './card-usage';
 import { ResourceCardMenu } from './resource-card-menu';
+import { getTypeLabels } from './resource-card-title';
 
 /**
  * Properties of the {@link ResourceCardTitleBar} component.
@@ -55,7 +56,7 @@ export function ResourceCardTitleBar({ summary, expanded, nestedCollapsed, onTog
 	const position = summary.position;
 	const term = summary.term;
 	const unpinnable = summary.pins?.some(pin => pinScopes.includes(pin.scope)) === true;
-	const types = expanded ? [] : _typeLabelsOf(summary);
+	const types = expanded ? [] : getTypeLabels(summary);
 
 	return (
 		<div className="resource-card-title-bar">
@@ -85,15 +86,4 @@ export function ResourceCardTitleBar({ summary, expanded, nestedCollapsed, onTog
 			</span>
 		</div>
 	);
-}
-
-/**
- * The types the title bar of a collapsed card names: every type of the resource.
- * @param summary The resource.
- * @returns The labels of the types, each once.
- */
-function _typeLabelsOf(summary: ResourceSummary): string[] {
-	const labels = summary.typeLabels ?? (summary.typeLabel ? [summary.typeLabel] : []);
-
-	return Array.from(new Set(labels));
 }
