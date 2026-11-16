@@ -1,7 +1,7 @@
 import { OWL, RDF, RDFS, _OWL, _RDF, _RDFS, _SKOS, _XSD } from '@faubulous/mentor-rdf';
 import { NamedNode } from '@rdfjs/types';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
-import { PropertyView, ResourceStatements, TermView } from '@src/views/webviews/views/form-editor/form-editor-model';
+import { PredicateData, ResourceCardBodyData, TermData } from '@src/views/webviews/views/form-editor/form-editor-model';
 
 /**
  * The namespace of the example resources of the webview tests.
@@ -32,7 +32,7 @@ export const TEST_SUBJECT: NamedNode = RdfDataFactory.namedNode(`${EXAMPLE_NAMES
  * @param label The label of the term.
  * @returns The view.
  */
-export function createIriView(prefixedName: string, label?: string): TermView {
+export function createIriView(prefixedName: string, label?: string): TermData {
 	const [prefix, localName] = prefixedName.split(':');
 
 	return { term: RdfDataFactory.namedNode(TEST_NAMESPACES[prefix] + localName), prefixedName, label, editable: true };
@@ -44,7 +44,7 @@ export function createIriView(prefixedName: string, label?: string): TermView {
  * @param language Its language tag.
  * @returns The view.
  */
-export function createLiteralView(value: string, language?: string): TermView {
+export function createLiteralView(value: string, language?: string): TermData {
 	return { term: RdfDataFactory.literal(value, language), editable: true };
 }
 
@@ -54,7 +54,7 @@ export function createLiteralView(value: string, language?: string): TermView {
  * @param values The values.
  * @returns The property.
  */
-export function createProperty(predicate: string, values: TermView[]): PropertyView {
+export function createProperty(predicate: string, values: TermData[]): PredicateData {
 	return { predicate: createIriView(predicate), values };
 }
 
@@ -63,16 +63,16 @@ export function createProperty(predicate: string, values: TermView[]): PropertyV
  * @param properties Its properties.
  * @returns The statements.
  */
-export function createTestResourceStatements(properties: PropertyView[]): ResourceStatements {
-	return { subjectTerm: TEST_SUBJECT, properties };
+export function createTestCardBody(properties: PredicateData[]): ResourceCardBodyData {
+	return { subject: TEST_SUBJECT, predicates: properties };
 }
 
 /**
  * The statements the statement tests share: a type, a label and a subclass statement.
  * @returns The statements.
  */
-export function createSampleResourceStatements(): ResourceStatements {
-	return createTestResourceStatements([
+export function createSampleCardBody(): ResourceCardBodyData {
+	return createTestCardBody([
 		{ predicate: { term: RdfDataFactory.namedNode(RDF.type), prefixedName: 'rdf:type', editable: true }, values: [{ term: RdfDataFactory.namedNode(OWL.Class), prefixedName: 'owl:Class', label: 'Class', editable: true }] },
 		{ predicate: { term: RdfDataFactory.namedNode(RDFS.label), prefixedName: 'rdfs:label', editable: true }, values: [createLiteralView('Tree', 'en')] },
 		{ predicate: { term: RdfDataFactory.namedNode(RDFS.subClassOf), prefixedName: 'rdfs:subClassOf', editable: true }, values: [{ term: RdfDataFactory.namedNode(OWL.Thing), prefixedName: 'owl:Thing', label: 'Thing', editable: true }] }
@@ -83,15 +83,15 @@ export function createSampleResourceStatements(): ResourceStatements {
  * Give the values of the statements about a resource the anchors the host reports for written
  * values, so its rows can be edited: each value gets a distinct offset, as if written one after the
  * other.
- * @param statements The statements.
+ * @param cardBody The statements.
  * @returns The statements with anchored values.
  */
-export function withAnchors(statements: ResourceStatements): ResourceStatements {
+export function withAnchors(cardBody: ResourceCardBodyData): ResourceCardBodyData {
 	let anchor = 100;
 
 	return {
-		...statements,
-		properties: statements.properties.map(property => ({
+		...cardBody,
+		predicates: cardBody.predicates.map(property => ({
 			...property,
 			values: property.values.map(value => ({ ...value, anchor: anchor += 10 }))
 		}))

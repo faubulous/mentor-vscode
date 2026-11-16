@@ -8,7 +8,7 @@ import type { EditOperation } from '@src/services/editing/edit-operation';
 import type { EditProblem } from '@src/services/editing/edit-problem';
 import type { ExecuteCommandMessage } from '../../webview-messaging';
 import type { BlankNode, NamedNode } from '@rdfjs/types';
-import type { DocumentPosition, DocumentSnapshot, ResourceStatements, ResourceSource, ResourceSummary } from './form-editor-model';
+import type { DocumentPosition, DocumentSnapshot, ResourceCardBodyData, ResourceSource, ResourceCardHeaderData } from './form-editor-model';
 import type { ScopeKey } from '@src/utilities/config-scope';
 
 /**
@@ -21,11 +21,11 @@ export type FormEditorHostMessage =
 	| { id: 'DocumentSnapshot'; snapshot: DocumentSnapshot }
 	/**
 	 * The answer to a {@link FormEditorWebviewMessage} `ResourceRequest`, built for the snapshot of
-	 * `revision` from the source asked: the statements about the resources it describes, the
-	 * summaries of those the snapshot does not list (blank nodes written inside another resource,
+	 * `revision` from the source asked: the card bodies of the resources it describes, the card
+	 * headers of those the snapshot does not list (blank nodes written inside another resource,
 	 * resources of the store), and the resources it does not describe as `missing`.
 	 */
-	| { id: 'ResourceResponse'; revision: number; statements: ResourceStatements[]; resources?: ResourceSummary[]; missing: (NamedNode | BlankNode)[]; source?: ResourceSource }
+	| { id: 'ResourceResponse'; revision: number; cardBodies: ResourceCardBodyData[]; cardHeaders?: ResourceCardHeaderData[]; missing: (NamedNode | BlankNode)[]; source?: ResourceSource }
 	/**
 	 * An edit of the form was applied, producing the given document version.
 	 */

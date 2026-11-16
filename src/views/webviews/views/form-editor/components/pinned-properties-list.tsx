@@ -1,6 +1,6 @@
 import { KeyboardEvent } from 'react';
 import { NamedNode } from '@rdfjs/types';
-import { PinnedProperty, PropertyView, ResourceStatements, TermView } from '../form-editor-model';
+import { PinnedProperty, PredicateData, ResourceCardBodyData, TermData } from '../form-editor-model';
 import { LiteralDatatypes } from '../services/statement/literal-datatypes';
 import { useFormEditorContext } from '../state/form-editor-context';
 import { LanguageFilter } from '../state/language-filter';
@@ -16,7 +16,7 @@ export interface PinnedPropertiesListProps {
 	/**
 	 * The statements of the resource.
 	 */
-	statements: ResourceStatements;
+	cardBody: ResourceCardBodyData;
 
 	/**
 	 * The properties pinned for the types of the resource, in order.
@@ -44,12 +44,12 @@ interface PinnedPropertyItem {
 	/**
 	 * The property.
 	 */
-	property: PropertyView;
+	property: PredicateData;
 
 	/**
 	 * The values shown, those of other languages left out.
 	 */
-	values: TermView[];
+	values: TermData[];
 }
 
 /**
@@ -64,10 +64,10 @@ interface PinnedPropertyItem {
  * @param props The statements, the pins and what opens a property.
  * @returns The items, or nothing when the resource has neither a pinned property nor a description.
  */
-export function PinnedPropertiesList({ statements, pins, onOpen }: PinnedPropertiesListProps): React.JSX.Element | null {
+export function PinnedPropertiesList({ cardBody, pins, onOpen }: PinnedPropertiesListProps): React.JSX.Element | null {
 	const { descriptionPredicates = [], labelPredicates = [], languageFilter = LanguageFilter.ALL, filterText } = useFormEditorContext();
-	const title = _titleOf(statements, labelPredicates);
-	const items = _itemsOf(statements, pins.filter(pin => !title?.equals(pin.predicate)), descriptionPredicates, languageFilter);
+	const title = _titleOf(cardBody, labelPredicates);
+	const items = _itemsOf(cardBody, pins.filter(pin => !title?.equals(pin.predicate)), descriptionPredicates, languageFilter);
 
 	if (items.length === 0) {
 		return null;
@@ -116,30 +116,30 @@ export function PinnedPropertiesList({ statements, pins, onOpen }: PinnedPropert
 
 /**
  * The label predicate the title of a card shows: the most preferred one the resource has.
- * @param statements The statements of the resource.
+ * @param cardBody The statements of the resource.
  * @param labelPredicates The label predicates, most preferred first.
  * @returns The predicate, or `undefined` for a resource without a label.
  */
-function _titleOf(statements: ResourceStatements, labelPredicates: readonly NamedNode[]): NamedNode | undefined {
-	return labelPredicates.find(predicate => statements.properties.some(property => property.predicate.term.equals(predicate)));
+function _titleOf(cardBody: ResourceCardBodyData, labelPredicates: readonly NamedNode[]): NamedNode | undefined {
+	return labelPredicates.find(predicate => cardBody.predicates.some(property => property.predicate.term.equals(predicate)));
 }
 
 /**
  * The pinned properties a resource has and its description, the most preferred description
  * predicate it has, with the values the form shows, in the order the document writes them.
- * @param statements The statements of the resource.
+ * @param cardBody The statements of the resource.
  * @param pins The pins.
  * @param descriptionPredicates The description predicates, most preferred first.
  * @param languageFilter Which literals are shown.
  * @returns The items, in document order.
  */
-function _itemsOf(statements: ResourceStatements, pins: readonly PinnedProperty[], descriptionPredicates: readonly NamedNode[], languageFilter: LanguageFilter): PinnedPropertyItem[] {
-	const shown = (property: PropertyView): TermView[] => property.values.filter(value => languageFilter.shows(value.term));
+function _itemsOf(cardBody: ResourceCardBodyData, pins: readonly PinnedProperty[], descriptionPredicates: readonly NamedNode[], languageFilter: LanguageFilter): PinnedPropertyItem[] {
+	const shown = (property: PredicateData): TermData[] => property.values.filter(value => languageFilter.shows(value.term));
 	const description = descriptionPredicates
-		.map(predicate => statements.properties.find(property => property.predicate.term.equals(predicate)))
+		.map(predicate => cardBody.predicates.find(property => property.predicate.term.equals(predicate)))
 		.find(property => property !== undefined && shown(property).length > 0);
 
-	return statements.properties.flatMap(property => {
+	return cardBody.predicates.flatMap(property => {
 		const pin = pins.find(candidate => property.predicate.term.equals(candidate.predicate));
 		const values = shown(property);
 
@@ -154,7 +154,7 @@ function _itemsOf(statements: ResourceStatements, pins: readonly PinnedProperty[
  * @param index The index of the value in the item.
  * @returns The value.
  */
-function _valueOf(view: TermView, index: number): React.JSX.Element {
+function _valueOf(view: TermData, index: number): React.JSX.Element {
 	if (view.collection) {
 		return <span key={index} className="pinned-property-value">({view.collection.items.map(item => getTermLabel(item)).join(', ')})</span>;
 	}

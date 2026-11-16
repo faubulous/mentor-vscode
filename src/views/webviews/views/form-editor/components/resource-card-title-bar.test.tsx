@@ -4,20 +4,20 @@ import { act, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { renderWebview } from '@src/utilities/mocks/webview-test-utils';
-import { createResourceSummary } from '@src/utilities/mocks/resource-summary-fixtures';
-import { ResourceSummary } from '../form-editor-model';
+import { createResourceListItem } from '@src/utilities/mocks/resource-list-item-fixtures';
+import { ResourceListItemData } from '../form-editor-model';
 import { FormEditorContext, FormEditorContextValue } from '../state/form-editor-context';
 import { ResourceCardTitleBar } from './resource-card-title-bar';
 
-const TREE = createResourceSummary('Tree', { usageCount: 2, position: { line: 3, character: 0 }, typeIri: 'http://x/Tree', typeLabel: 'Tree', typeLabels: ['Tree', 'Plant'] });
+const TREE = createResourceListItem('Tree', { usageCount: 2, position: { line: 3, character: 0 }, typeIri: 'http://x/Tree', typeLabel: 'Tree', typeLabels: ['Tree', 'Plant'] });
 
 /**
  * Render the title bar of a card, with the callbacks of the form recorded.
- * @param summary The resource.
+ * @param listItem The resource.
  * @param context What the form provides besides.
  * @param expanded Whether the card is expanded.
  */
-function renderTitleBar(summary: ResourceSummary = TREE, context: Partial<FormEditorContextValue> = {}, expanded = true) {
+function renderTitleBar(listItem: ResourceListItemData = TREE, context: Partial<FormEditorContextValue> = {}, expanded = true) {
 	const onRevealInTextEditor = vi.fn();
 	const onRemoveResource = vi.fn();
 	const onUnpinAll = vi.fn();
@@ -26,7 +26,7 @@ function renderTitleBar(summary: ResourceSummary = TREE, context: Partial<FormEd
 
 	const { container } = renderWebview(
 		<FormEditorContext.Provider value={{ readOnly: false, namespaces: [], languageTags: {}, pinScopes: ['user', 'workspace'], onRevealInTextEditor, onRemoveResource, onUnpinAll, ...context }}>
-			<ResourceCardTitleBar summary={summary} expanded={expanded} nestedCollapsed={false} onToggle={onToggle} onToggleNested={onToggleNested} menuRef={{ current: null }} />
+			<ResourceCardTitleBar cardHeader={listItem} expanded={expanded} nestedCollapsed={false} onToggle={onToggle} onToggleNested={onToggleNested} menuRef={{ current: null }} />
 		</FormEditorContext.Provider>
 	);
 
@@ -83,7 +83,7 @@ describe('ResourceCardTitleBar', () => {
 		await pick(container, 'remove');
 
 		expect(onRevealInTextEditor).toHaveBeenCalledWith({ line: 3, character: 0 });
-		expect(onRemoveResource).toHaveBeenCalledWith(TREE.term);
+		expect(onRemoveResource).toHaveBeenCalledWith(TREE.subject);
 	});
 
 	it('puts the button that folds the nested cards before the usage count, so the count stays where it is', () => {
@@ -118,7 +118,7 @@ describe('ResourceCardTitleBar', () => {
 	});
 
 	it('offers only to expand a collapsed blank node that is neither revealed nor written, and expands it from the menu', async () => {
-		const { container, onToggle } = renderTitleBar({ ...TREE, term: RdfDataFactory.blankNode('b1'), position: undefined }, { readOnly: true }, false);
+		const { container, onToggle } = renderTitleBar({ ...TREE, subject: RdfDataFactory.blankNode('b1'), position: undefined }, { readOnly: true }, false);
 
 		expect(itemsOf(container)).toEqual([{ label: 'Expand', value: 'toggle' }]);
 
@@ -137,7 +137,7 @@ describe('ResourceCardTitleBar', () => {
 
 			await pick(container, 'copy-iri');
 
-			expect(writeText).toHaveBeenCalledWith(TREE.term.value);
+			expect(writeText).toHaveBeenCalledWith(TREE.subject.value);
 		} finally {
 			vi.unstubAllGlobals();
 		}
@@ -150,7 +150,7 @@ describe('ResourceCardTitleBar', () => {
 		await pick(container, 'unpin-all');
 
 		expect(itemsOf(container)).toContainEqual({ label: 'Unpin All', value: 'unpin-all' });
-		expect(onUnpinAll).toHaveBeenCalledWith(TREE.term);
+		expect(onUnpinAll).toHaveBeenCalledWith(TREE.subject);
 	});
 
 	it('offers no Unpin All while the pins are only in a scope that cannot be written', () => {

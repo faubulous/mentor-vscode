@@ -5,7 +5,7 @@ import { termToString } from 'rdf-string';
 import { ITokenizedDocumentContext } from '@src/services/document/document-context.interface';
 import { getFileName } from '@src/utilities/uri';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
-import { DocumentProblem, DocumentSnapshot, ReadOnlyReason, ResourceSummary } from '@src/views/webviews/views/form-editor/form-editor-model';
+import { DocumentProblem, DocumentSnapshot, ReadOnlyReason, ResourceListItemData } from '@src/views/webviews/views/form-editor/form-editor-model';
 import { ExternalDeclarationDetector } from './external-declaration-detector';
 import { ScopeKey } from '@src/utilities/config-scope';
 import { PinnedPropertiesService } from './pinned-properties-service';
@@ -117,11 +117,11 @@ export class EditorSnapshotService {
 		const index = new ResourceIndexBuilder(quadContexts, context).build();
 		const externals = new ExternalDeclarationDetector(index, context.namespaces);
 		const documentResource = EditorSnapshotService._findDocumentResource(index);
-		const resources = index.summaries.map(summary => ({
-			...summary,
-			usageCount: this._countUsages(summary, index),
-			externalDeclaration: externals.isExternalDeclaration(getEntry(index, summary.term)!) || undefined,
-			...this._pinsOf(summary, getEntry(index, summary.term)!)
+		const resources = index.listItems.map(listItem => ({
+			...listItem,
+			usageCount: this._countUsages(listItem, index),
+			externalDeclaration: externals.isExternalDeclaration(getEntry(index, listItem.subject)!) || undefined,
+			...this._pinsOf(listItem, getEntry(index, listItem.subject)!)
 		}));
 
 		return {
@@ -148,12 +148,12 @@ export class EditorSnapshotService {
 
 	/**
 	 * The pins of a resource, from its asserted types and those the store infers.
-	 * @param summary The resource.
+	 * @param listItem The resource.
 	 * @param entry The entry of the resource.
 	 * @returns The pins, or none for a resource of no known type, which cannot pin.
 	 */
-	private _pinsOf(summary: ResourceSummary, entry: ResourceIndexEntry): Pick<ResourceSummary, 'pins'> {
-		const inferred = this._input.inferredTypesOf?.(summary.term) ?? [];
+	private _pinsOf(listItem: ResourceListItemData, entry: ResourceIndexEntry): Pick<ResourceListItemData, 'pins'> {
+		const inferred = this._input.inferredTypesOf?.(listItem.subject) ?? [];
 		const pins = (this._input.pins ?? new PinnedPropertiesService()).resolve(typeIrisOf(entry), inferred);
 
 		return pins ? { pins } : {};
@@ -162,16 +162,16 @@ export class EditorSnapshotService {
 	/**
 	 * How often a resource is used: across the indexed documents for an IRI, which other documents
 	 * can refer to, and within this document for a blank node, which nothing outside it can name.
-	 * @param summary The resource.
+	 * @param listItem The resource.
 	 * @param index The index of the document.
 	 * @returns The count, or `undefined` when it is not known.
 	 */
-	private _countUsages(summary: ResourceSummary, index: ResourceIndex): number | undefined {
-		if (summary.term.termType === 'NamedNode') {
-			return this._input.countUsages?.(summary.term.value);
+	private _countUsages(listItem: ResourceListItemData, index: ResourceIndex): number | undefined {
+		if (listItem.subject.termType === 'NamedNode') {
+			return this._input.countUsages?.(listItem.subject.value);
 		}
 
-		return index.referenceCounts.get(termToString(summary.term)) ?? 0;
+		return index.referenceCounts.get(termToString(listItem.subject)) ?? 0;
 	}
 
 	/**

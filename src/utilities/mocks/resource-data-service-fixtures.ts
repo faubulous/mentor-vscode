@@ -1,6 +1,6 @@
 import { BlankNode, NamedNode } from '@rdfjs/types';
 import { termToString } from 'rdf-string';
-import { ResourceStatements, ResourceSummary } from '@src/views/webviews/views/form-editor/form-editor-model';
+import { ResourceCardBodyData, ResourceCardHeaderData } from '@src/views/webviews/views/form-editor/form-editor-model';
 import { IResourceDataService } from '@src/views/webviews/views/form-editor/services/resource-data-service.interface';
 
 /**
@@ -20,20 +20,20 @@ export interface ResourceDataServiceStub extends IResourceDataService {
 
 /**
  * Make a data service that holds the given statements and loads nothing else.
- * @param statements The statements it holds.
- * @param summaries The summaries that came with them, as for resources of the store.
+ * @param cardBodies The statements it holds.
+ * @param cardHeaders The card headers that came with them, as for resources of the store.
  * @returns The service.
  */
-export function createResourceDataServiceStub(statements: readonly ResourceStatements[] = [], summaries: readonly ResourceSummary[] = []): ResourceDataServiceStub {
-	const byKey = new Map(statements.map(resource => [termToString(resource.subjectTerm), resource]));
-	const summaryByKey = new Map(summaries.map(summary => [termToString(summary.term), summary]));
+export function createResourceDataServiceStub(cardBodies: readonly ResourceCardBodyData[] = [], cardHeaders: readonly ResourceCardHeaderData[] = []): ResourceDataServiceStub {
+	const byKey = new Map(cardBodies.map(resource => [termToString(resource.subject), resource]));
+	const cardHeaderByKey = new Map(cardHeaders.map(cardHeader => [termToString(cardHeader.subject), cardHeader]));
 	const requested: (NamedNode | BlankNode)[] = [];
 
 	return {
 		version: 1,
 		requested,
-		getStatements: resource => byKey.get(termToString(resource)),
-		getSummary: resource => summaryByKey.get(termToString(resource)),
+		getCardBody: resource => byKey.get(termToString(resource)),
+		getCardHeader: resource => cardHeaderByKey.get(termToString(resource)),
 		request: resources => requested.push(...resources),
 		subscribe: () => () => undefined
 	};

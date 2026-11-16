@@ -1,5 +1,5 @@
 import { NamedNode } from '@rdfjs/types';
-import { TermView } from '../form-editor-model';
+import { TermData } from '../form-editor-model';
 
 /**
  * One value of a statement row while it is edited: a value as it is written in the document,
@@ -12,5 +12,5 @@ import { TermView } from '../form-editor-model';
  * then writes.
  */
 export type RowValue =
-	| { kind: 'written'; view: TermView }
-	| { kind: 'term'; term: TermView['term']; replaces?: TermView; node?: { type?: NamedNode; copyOf?: TermView; sent?: boolean } };
+	| { kind: 'written'; view: TermData }
+	| { kind: 'term'; term: TermData['term']; replaces?: TermData; node?: { type?: NamedNode; copyOf?: TermData; sent?: boolean } };

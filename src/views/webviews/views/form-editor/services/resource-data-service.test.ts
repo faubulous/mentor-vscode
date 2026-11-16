@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { NamedNode } from '@rdfjs/types';
-import { ResourceStatements } from '../form-editor-model';
+import { ResourceCardBodyData } from '../form-editor-model';
 import { ResourceDataService } from './resource-data-service';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 
@@ -12,10 +12,10 @@ function resource(localName: string): NamedNode {
 }
 
 /**
- * Create the statements about a resource, without properties.
+ * Create the card body of a resource, without predicates.
  */
-function statements(localName: string): ResourceStatements {
-	return { subjectTerm: resource(localName), properties: [] };
+function cardBodyOf(localName: string): ResourceCardBodyData {
+	return { subject: resource(localName), predicates: [] };
 }
 
 /**
@@ -69,9 +69,9 @@ describe('ResourceDataService', () => {
 		const listener = vi.fn();
 
 		service.subscribe(listener);
-		service.accept(1, [statements('a')]);
+		service.accept(1, [cardBodyOf('a')]);
 
-		expect(service.getStatements(resource('a'))).toEqual(statements('a'));
+		expect(service.getCardBody(resource('a'))).toEqual(cardBodyOf('a'));
 		expect(listener).toHaveBeenCalled();
 	});
 
@@ -79,39 +79,39 @@ describe('ResourceDataService', () => {
 		const { service } = createService();
 
 		service.setSnapshot(2, 2);
-		service.accept(1, [statements('a')]);
+		service.accept(1, [cardBodyOf('a')]);
 
-		expect(service.getStatements(resource('a'))).toBeUndefined();
+		expect(service.getCardBody(resource('a'))).toBeUndefined();
 	});
 
 	it('loads the statements again for the same document version built anew, keeping it as stale meanwhile', () => {
 		const { service } = createService();
 
-		service.accept(1, [statements('a')]);
+		service.accept(1, [cardBodyOf('a')]);
 		service.setSnapshot(1, 2);
 
 		expect(service.version).toBe(1);
-		expect(service.getStatements(resource('a'))).toBeUndefined();
-		expect(service.getStaleStatements(resource('a'))).toEqual(statements('a'));
+		expect(service.getCardBody(resource('a'))).toBeUndefined();
+		expect(service.getStaleCardBody(resource('a'))).toEqual(cardBodyOf('a'));
 
-		service.accept(1, [statements('a')]);
+		service.accept(1, [cardBodyOf('a')]);
 
-		expect(service.getStatements(resource('a'))).toBeUndefined();
+		expect(service.getCardBody(resource('a'))).toBeUndefined();
 	});
 
 	it('keeps the statements of the previous version as stale until the new one arrives', () => {
 		const { service } = createService();
 
-		service.accept(1, [statements('a')]);
+		service.accept(1, [cardBodyOf('a')]);
 		service.setSnapshot(2, 2);
 
-		expect(service.getStatements(resource('a'))).toBeUndefined();
-		expect(service.getStaleStatements(resource('a'))).toEqual(statements('a'));
+		expect(service.getCardBody(resource('a'))).toBeUndefined();
+		expect(service.getStaleCardBody(resource('a'))).toEqual(cardBodyOf('a'));
 
-		service.accept(2, [statements('a')]);
+		service.accept(2, [cardBodyOf('a')]);
 
-		expect(service.getStatements(resource('a'))).toEqual(statements('a'));
-		expect(service.getStaleStatements(resource('a'))).toBeUndefined();
+		expect(service.getCardBody(resource('a'))).toEqual(cardBodyOf('a'));
+		expect(service.getStaleCardBody(resource('a'))).toBeUndefined();
 	});
 
 	it('allows a resource to be requested again after a version change', () => {
@@ -144,20 +144,20 @@ describe('ResourceDataService', () => {
 		expect(send).toHaveBeenCalledTimes(2);
 	});
 
-	it('keeps the summary that comes with the statements about a resource the snapshot does not list, across snapshots', () => {
+	it('keeps the card header that comes with the card body of a resource the snapshot does not list, across snapshots', () => {
 		const { service } = createService();
-		const summary = { term: resource('Tree'), label: 'Tree', iconName: 'mentor-rdf-class', propertyCount: 0, hasLabel: true };
+		const cardHeader = { subject: resource('Tree'), label: 'Tree', iconName: 'mentor-rdf-class', propertyCount: 0, hasLabel: true };
 
 		service.request([resource('Tree')]);
 		vi.runAllTimers();
-		service.accept(1, [statements('Tree')], [], [summary]);
+		service.accept(1, [cardBodyOf('Tree')], [], [cardHeader]);
 
-		expect(service.getSummary(resource('Tree'))).toEqual(summary);
+		expect(service.getCardHeader(resource('Tree'))).toEqual(cardHeader);
 
 		service.setSnapshot(2, 2);
 
-		expect(service.getStatements(resource('Tree'))).toBeUndefined();
-		expect(service.getSummary(resource('Tree'))).toEqual(summary);
+		expect(service.getCardBody(resource('Tree'))).toBeUndefined();
+		expect(service.getCardHeader(resource('Tree'))).toEqual(cardHeader);
 	});
 
 	it('splits a large request into batches', () => {
@@ -177,7 +177,7 @@ describe('ResourceDataService', () => {
 		const unsubscribe = service.subscribe(listener);
 
 		unsubscribe();
-		service.accept(1, [statements('a')]);
+		service.accept(1, [cardBodyOf('a')]);
 
 		expect(listener).not.toHaveBeenCalled();
 	});

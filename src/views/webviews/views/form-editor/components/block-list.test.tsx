@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, screen } from '@testing-library/react';
 import { createResourceDataServiceStub } from '@src/utilities/mocks/resource-data-service-fixtures';
 import { renderWebview } from '@src/utilities/mocks/webview-test-utils';
-import { createResourceSummary } from '@src/utilities/mocks/resource-summary-fixtures';
+import { createResourceListItem } from '@src/utilities/mocks/resource-list-item-fixtures';
 import { FormEditorContext } from '../state/form-editor-context';
 import { ResourceCardStates } from '../state/resource-card-states';
 import { buildFormBlocks } from '../hooks/use-form-blocks';
@@ -38,7 +38,7 @@ function createScrollElement(height: number): HTMLDivElement {
 	return element;
 }
 
-const RESOURCES = Array.from({ length: 200 }, (_, index) => createResourceSummary(`Thing${index}`, { comments: index === 0 ? [['About the file']] : undefined }));
+const RESOURCES = Array.from({ length: 200 }, (_, index) => createResourceListItem(`Thing${index}`, { comments: index === 0 ? [['About the file']] : undefined }));
 
 describe('BlockList', () => {
 	const offsetHeight = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetHeight');
@@ -83,6 +83,6 @@ describe('BlockList', () => {
 		expect(document.querySelector('.form-block')?.getAttribute('data-block-id')).toBe(blocks[0].id);
 		expect(dataService.requested.length).toBeGreaterThan(0);
 		expect(dataService.requested.length).toBeLessThan(RESOURCES.length);
-		expect(dataService.requested[0]).toBe(RESOURCES[0].term);
+		expect(dataService.requested[0]).toBe(RESOURCES[0].subject);
 	});
 });

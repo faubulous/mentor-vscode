@@ -5,10 +5,10 @@ import userEvent from '@testing-library/user-event';
 import { RDFS, XSD } from '@faubulous/mentor-rdf';
 import { renderWebview } from '@src/utilities/mocks/webview-test-utils';
 import { createResourceDataServiceStub } from '@src/utilities/mocks/resource-data-service-fixtures';
-import { createResourceSummary } from '@src/utilities/mocks/resource-summary-fixtures';
-import { TEST_NAMESPACES, createIriView, createLiteralView, createProperty, createTestResourceStatements } from '@src/utilities/mocks/statement-fixtures';
+import { createResourceListItem } from '@src/utilities/mocks/resource-list-item-fixtures';
+import { TEST_NAMESPACES, createIriView, createLiteralView, createProperty, createTestCardBody } from '@src/utilities/mocks/statement-fixtures';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
-import { PinnedProperty, ResourceSummary } from '../form-editor-model';
+import { PinnedProperty, ResourceListItemData } from '../form-editor-model';
 import { FormEditorContext, FormEditorContextValue } from '../state/form-editor-context';
 import { ResourceCard } from './resource-card';
 
@@ -27,7 +27,7 @@ const PINS: PinnedProperty[] = [
 /**
  * The statements of the resource of the card.
  */
-const STATEMENTS = createTestResourceStatements([
+const CARD_BODY = createTestCardBody([
 	createProperty('rdfs:label', [createLiteralView('Apple tree')]),
 	createProperty('ex:p', [createIriView('ex:A', 'A')]),
 	createProperty('ex:count', [{ term: RdfDataFactory.literal('42', RdfDataFactory.namedNode(XSD.integer)), editable: true }]),
@@ -36,15 +36,15 @@ const STATEMENTS = createTestResourceStatements([
 
 /**
  * Render the card of the resource with the pins given, recording the callbacks of the form.
- * @param summary What the summary adds or replaces.
+ * @param listItem What the list item adds or replaces.
  * @param expanded Whether the card is expanded.
  * @param loaded Whether the statements of the resource are at hand.
  */
-function renderCard(summary: Partial<ResourceSummary> = {}, expanded = false, loaded = true) {
+function renderCard(listItem: Partial<ResourceListItemData> = {}, expanded = false, loaded = true) {
 	const onToggle = vi.fn();
 	const onSetPin = vi.fn();
-	const resource = createResourceSummary('Tree', { term: STATEMENTS.subjectTerm, label: 'Apple tree', description: 'A tree bearing apples', typeIri: `${EX}Tree`, pins: PINS, ...summary });
-	const dataService = createResourceDataServiceStub(loaded ? [STATEMENTS] : []);
+	const resource = createResourceListItem('Tree', { subject: CARD_BODY.subject, label: 'Apple tree', description: 'A tree bearing apples', typeIri: `${EX}Tree`, pins: PINS, ...listItem });
+	const dataService = createResourceDataServiceStub(loaded ? [CARD_BODY] : []);
 	const context: FormEditorContextValue = {
 		readOnly: true,
 		namespaces: [],
@@ -57,7 +57,7 @@ function renderCard(summary: Partial<ResourceSummary> = {}, expanded = false, lo
 
 	const result = renderWebview(
 		<FormEditorContext.Provider value={context}>
-			<ResourceCard summary={resource} dataService={dataService} expanded={expanded} onToggle={onToggle} />
+			<ResourceCard cardHeader={resource} dataService={dataService} expanded={expanded} onToggle={onToggle} />
 		</FormEditorContext.Provider>
 	);
 
@@ -68,7 +68,7 @@ describe('ResourceCard, its pins', () => {
 	it('asks for the statements of a collapsed card with pins', () => {
 		const { dataService } = renderCard({}, false, false);
 
-		expect(dataService.requested).toEqual([STATEMENTS.subjectTerm]);
+		expect(dataService.requested).toEqual([CARD_BODY.subject]);
 	});
 
 	it('shows the pinned properties a collapsed card has as fields, the description among them', () => {
@@ -84,15 +84,15 @@ describe('ResourceCard, its pins', () => {
 	});
 
 	it('shows the pinned properties and the description of a collapsed card in the order the document writes them, the description unpinned without a caption', () => {
-		const statements = createTestResourceStatements([
+		const cardBody = createTestCardBody([
 			createProperty('rdfs:comment', [createLiteralView('A tree bearing apples')]),
 			createProperty('ex:count', [{ term: RdfDataFactory.literal('42', RdfDataFactory.namedNode(XSD.integer)), editable: true }]),
 			createProperty('ex:p', [createIriView('ex:A', 'A')])
 		]);
-		const resource = createResourceSummary('Tree', { term: statements.subjectTerm, description: 'A tree bearing apples', pins: [PINS[0], PINS[1]] });
+		const resource = createResourceListItem('Tree', { subject: cardBody.subject, description: 'A tree bearing apples', pins: [PINS[0], PINS[1]] });
 		const { container } = renderWebview(
 			<FormEditorContext.Provider value={{ readOnly: true, namespaces: [], languageTags: {}, labelPredicates: [], descriptionPredicates: [RdfDataFactory.namedNode(RDFS.comment)] }}>
-				<ResourceCard summary={resource} dataService={createResourceDataServiceStub([statements])} expanded={false} onToggle={() => undefined} />
+				<ResourceCard cardHeader={resource} dataService={createResourceDataServiceStub([cardBody])} expanded={false} onToggle={() => undefined} />
 			</FormEditorContext.Provider>
 		);
 		const fields = Array.from(container.querySelectorAll<HTMLElement>('.pinned-property'));
@@ -123,7 +123,7 @@ describe('ResourceCard, its pins', () => {
 		await userEvent.click(field);
 		fireEvent.keyDown(field, { key: 'Enter' });
 
-		expect(onToggle.mock.calls).toEqual([[resource.term], [resource.term]]);
+		expect(onToggle.mock.calls).toEqual([[resource.subject], [resource.subject]]);
 	});
 
 	it('offers to pin the properties of an expanded card but its type in the ⋮ menu of their rows, marks the pinned ones, and pins and unpins them', async () => {
@@ -141,8 +141,8 @@ describe('ResourceCard, its pins', () => {
 		});
 
 		expect(onSetPin.mock.calls).toEqual([
-			[resource.term, RdfDataFactory.namedNode(`${EX}p`), 'user'],
-			[resource.term, RdfDataFactory.namedNode(`${EX}p`), undefined]
+			[resource.subject, RdfDataFactory.namedNode(`${EX}p`), 'user'],
+			[resource.subject, RdfDataFactory.namedNode(`${EX}p`), undefined]
 		]);
 	});
 
@@ -155,18 +155,18 @@ describe('ResourceCard, its pins', () => {
 	it('pins the properties of a nested card for the blank node, and names the pinned ones in its collapsed header', async () => {
 		const node = RdfDataFactory.blankNode('b1');
 		const nodeStatements = {
-			subjectTerm: node,
-			properties: [createProperty('ex:q', [createLiteralView('report date')]), createProperty('ex:r', [createLiteralView('other')])]
+			subject: node,
+			predicates: [createProperty('ex:q', [createLiteralView('report date')]), createProperty('ex:r', [createLiteralView('other')])]
 		};
-		const nodeSummary = createResourceSummary('b1', { term: node, pins: [{ predicate: RdfDataFactory.namedNode(`${EX}q`), scope: 'workspace' as const }] });
-		const statements = createTestResourceStatements([createProperty('ex:p', [{ term: node, editable: false, nested: { term: node, propertyCount: 2 } }])]);
+		const nodeSummary = createResourceListItem('b1', { subject: node, pins: [{ predicate: RdfDataFactory.namedNode(`${EX}q`), scope: 'workspace' as const }] });
+		const cardBody = createTestCardBody([createProperty('ex:p', [{ term: node, editable: false, nested: { term: node, propertyCount: 2 } }])]);
 		const onSetPin = vi.fn();
-		const resource = createResourceSummary('Tree', { term: statements.subjectTerm, pins: [] });
+		const resource = createResourceListItem('Tree', { subject: cardBody.subject, pins: [] });
 
 		// The nested card has no label row, so a label predicate pins there as any other.
 		renderWebview(
 			<FormEditorContext.Provider value={{ readOnly: true, namespaces: [], languageTags: {}, labelPredicates: [RdfDataFactory.namedNode(`${EX}q`)], pinScopes: ['user', 'workspace'], onSetPin }}>
-				<ResourceCard summary={resource} dataService={createResourceDataServiceStub([statements, nodeStatements], [nodeSummary])} expanded onToggle={() => undefined} />
+				<ResourceCard cardHeader={resource} dataService={createResourceDataServiceStub([cardBody, nodeStatements], [nodeSummary])} expanded onToggle={() => undefined} />
 			</FormEditorContext.Provider>
 		);
 
@@ -190,16 +190,16 @@ describe('ResourceCard, its pins', () => {
 	it('names the pinned properties of a collapsed nested card in the order of the document, not of the pins', () => {
 		const node = RdfDataFactory.blankNode('b1');
 		const nodeStatements = {
-			subjectTerm: node,
-			properties: [createProperty('ex:q', [createLiteralView('report date')]), createProperty('ex:r', [createLiteralView('date')])]
+			subject: node,
+			predicates: [createProperty('ex:q', [createLiteralView('report date')]), createProperty('ex:r', [createLiteralView('date')])]
 		};
-		const nodeSummary = createResourceSummary('b1', { term: node, pins: [{ predicate: RdfDataFactory.namedNode(`${EX}r`), scope: 'user' as const }, { predicate: RdfDataFactory.namedNode(`${EX}q`), scope: 'workspace' as const }] });
-		const statements = createTestResourceStatements([createProperty('ex:p', [{ term: node, editable: false, nested: { term: node, propertyCount: 2 } }])]);
-		const resource = createResourceSummary('Tree', { term: statements.subjectTerm, pins: [] });
+		const nodeSummary = createResourceListItem('b1', { subject: node, pins: [{ predicate: RdfDataFactory.namedNode(`${EX}r`), scope: 'user' as const }, { predicate: RdfDataFactory.namedNode(`${EX}q`), scope: 'workspace' as const }] });
+		const cardBody = createTestCardBody([createProperty('ex:p', [{ term: node, editable: false, nested: { term: node, propertyCount: 2 } }])]);
+		const resource = createResourceListItem('Tree', { subject: cardBody.subject, pins: [] });
 
 		renderWebview(
 			<FormEditorContext.Provider value={{ readOnly: true, namespaces: [], languageTags: {} }}>
-				<ResourceCard summary={resource} dataService={createResourceDataServiceStub([statements, nodeStatements], [nodeSummary])} expanded onToggle={() => undefined} />
+				<ResourceCard cardHeader={resource} dataService={createResourceDataServiceStub([cardBody, nodeStatements], [nodeSummary])} expanded onToggle={() => undefined} />
 			</FormEditorContext.Provider>
 		);
 

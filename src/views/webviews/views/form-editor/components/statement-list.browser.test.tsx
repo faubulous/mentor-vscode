@@ -4,49 +4,49 @@ import { act, render, within } from '@testing-library/react';
 import { OWL, RDF, RDFS, XSD } from '@faubulous/mentor-rdf';
 import { createEditingHostStub } from '@src/utilities/mocks/editing-host-fixtures';
 import { createResourceDataServiceStub } from '@src/utilities/mocks/resource-data-service-fixtures';
-import { createResourceSummary } from '@src/utilities/mocks/resource-summary-fixtures';
-import { EXAMPLE_NAMESPACE, TEST_NAMESPACES, TEST_SUBJECT, createLiteralView, createProperty, createSampleResourceStatements, createTestResourceStatements, withAnchors } from '@src/utilities/mocks/statement-fixtures';
-import { ResourceStatements } from '../form-editor-model';
+import { createResourceListItem } from '@src/utilities/mocks/resource-list-item-fixtures';
+import { EXAMPLE_NAMESPACE, TEST_NAMESPACES, TEST_SUBJECT, createLiteralView, createProperty, createSampleCardBody, createTestCardBody, withAnchors } from '@src/utilities/mocks/statement-fixtures';
+import { ResourceCardBodyData } from '../form-editor-model';
 import { EditingController } from '../state/editing-controller';
 import { FormEditorContext } from '../state/form-editor-context';
 import { StatementList } from './statement-list';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 
 const NAMESPACES = Object.entries(TEST_NAMESPACES).map(([prefix, iri]) => ({ prefix, iri }));
-const SAMPLE = withAnchors(createSampleResourceStatements());
-const RESOURCES = [createResourceSummary('Plant', { label: 'Plant' }), createResourceSummary('Shrub', { label: 'Shrub' })];
+const SAMPLE = withAnchors(createSampleCardBody());
+const RESOURCES = [createResourceListItem('Plant', { label: 'Plant' }), createResourceListItem('Shrub', { label: 'Shrub' })];
 
 /**
  * Render the edited statements about a resource in the form editor, written through a controller over
  * a recording host.
- * @param statements The statements.
+ * @param cardBody The statements.
  * @param others The statements about the blank nodes it shows.
  * @param resources The resources of the document.
  */
-async function renderList(statements: ResourceStatements = SAMPLE, others: ResourceStatements[] = [], resources = RESOURCES, width = 1000) {
+async function renderList(cardBody: ResourceCardBodyData = SAMPLE, others: ResourceCardBodyData[] = [], resources = RESOURCES, width = 1000) {
 	const host = createEditingHostStub();
 	const editing = new EditingController(host);
-	const dataService = createResourceDataServiceStub([statements, ...others]);
-	const ui = (current: ResourceStatements) => (
+	const dataService = createResourceDataServiceStub([cardBody, ...others]);
+	const ui = (current: ResourceCardBodyData) => (
 		<div className="form-editor" style={{ height: 'auto', overflow: 'visible' }}>
 			<FormEditorContext.Provider value={{ readOnly: false, editing, namespaces: NAMESPACES, languageTags: {}, resources }}>
 				<article className="resource-card is-expanded" style={{ width }}>
 					<div className="resource-card-body">
-						<StatementList statements={current} dataService={dataService} depth={0} visited={[current.subjectTerm]} />
+						<StatementList cardBody={current} dataService={dataService} depth={0} visited={[current.subject]} />
 					</div>
 				</article>
 			</FormEditorContext.Provider>
 			<button type="button" className="outside">Outside</button>
 		</div>
 	);
-	const result = render(ui(statements));
+	const result = render(ui(cardBody));
 
 	await Promise.all(Array.from(result.container.querySelectorAll('vscode-textfield')).map(field => (field as unknown as { updateComplete: Promise<unknown> }).updateComplete));
 
 	/**
 	 * Deliver the statements for the next version, as the host does after an applied edit.
 	 */
-	const deliver = async (next: ResourceStatements) => {
+	const deliver = async (next: ResourceCardBodyData) => {
 		dataService.version++;
 		await act(async () => result.rerender(ui(next)));
 	};
@@ -138,9 +138,9 @@ describe('StatementList, edited in a browser', () => {
 	});
 
 	it('offers the datatypes a number fits', async () => {
-		const statements = withAnchors(createTestResourceStatements([createProperty('ex:count', [{ term: RdfDataFactory.literal('42', RdfDataFactory.namedNode(XSD.integer)), editable: true }])]));
+		const cardBody = withAnchors(createTestCardBody([createProperty('ex:count', [{ term: RdfDataFactory.literal('42', RdfDataFactory.namedNode(XSD.integer)), editable: true }])]));
 
-		await renderList(statements);
+		await renderList(cardBody);
 		await userEvent.click(within(rows()[0]).getByRole('button', { name: /^Integer\./ }));
 
 		expect(Array.from(rows()[0].querySelectorAll('.combobox-option-label')).map(option => option.textContent)).toEqual([]);
@@ -151,8 +151,8 @@ describe('StatementList, edited in a browser', () => {
 	});
 
 	it('steps a whole number with the arrows', async () => {
-		const statements = withAnchors(createTestResourceStatements([createProperty('ex:count', [{ term: RdfDataFactory.literal('42', RdfDataFactory.namedNode(XSD.integer)), editable: true }])]));
-		const field = (await renderList(statements), within(rows()[0]).getByLabelText('Value 1'));
+		const cardBody = withAnchors(createTestCardBody([createProperty('ex:count', [{ term: RdfDataFactory.literal('42', RdfDataFactory.namedNode(XSD.integer)), editable: true }])]));
+		const field = (await renderList(cardBody), within(rows()[0]).getByLabelText('Value 1'));
 
 		await userEvent.click(field);
 		await userEvent.keyboard('{ArrowUp}{ArrowUp}{ArrowDown}');
@@ -161,8 +161,8 @@ describe('StatementList, edited in a browser', () => {
 	});
 
 	it('shows why a number does not fit its datatype in place of its tag, and writes nothing', async () => {
-		const statements = withAnchors(createTestResourceStatements([createProperty('ex:count', [{ term: RdfDataFactory.literal('42', RdfDataFactory.namedNode(XSD.integer)), editable: true }])]));
-		const { host } = await renderList(statements);
+		const cardBody = withAnchors(createTestCardBody([createProperty('ex:count', [{ term: RdfDataFactory.literal('42', RdfDataFactory.namedNode(XSD.integer)), editable: true }])]));
+		const { host } = await renderList(cardBody);
 
 		await userEvent.click(within(rows()[0]).getByLabelText('Value 1'));
 		await userEvent.keyboard('{End}.5{Enter}');
@@ -191,7 +191,7 @@ describe('StatementList, edited in a browser', () => {
 		await userEvent.keyboard('{End}s');
 		await userEvent.click(within(rows()[2]).getByLabelText('New value'));
 		await act(async () => host.settle());
-		await deliver({ ...SAMPLE, properties: SAMPLE.properties.map((property, index) => index === 1 ? { ...property, values: [{ ...property.values[0], term: RdfDataFactory.literal('Trees', 'en'), anchor: 900 }] } : property) });
+		await deliver({ ...SAMPLE, predicates: SAMPLE.predicates.map((property, index) => index === 1 ? { ...property, values: [{ ...property.values[0], term: RdfDataFactory.literal('Trees', 'en'), anchor: 900 }] } : property) });
 
 		expect(host.submitted).toHaveLength(1);
 		expect(rows()[2].contains(document.activeElement)).toBe(true);
@@ -219,15 +219,15 @@ describe('StatementList, edited in a browser', () => {
 
 	it('offers the classes of the document as the type of an untyped blank node', async () => {
 		const node = RdfDataFactory.blankNode('b1');
-		const statements = withAnchors(createTestResourceStatements([createProperty('rdfs:comment', [{ term: node, editable: true, nested: { term: node, propertyCount: 1 } }])]));
-		const nodeStatements = withAnchors({ subjectTerm: node, properties: [createProperty('rdfs:label', [createLiteralView('Leaf')])] });
+		const cardBody = withAnchors(createTestCardBody([createProperty('rdfs:comment', [{ term: node, editable: true, nested: { term: node, propertyCount: 1 } }])]));
+		const nodeCardBody = withAnchors({ subject: node, predicates: [createProperty('rdfs:label', [createLiteralView('Leaf')])] });
 		const resources = [
-			createResourceSummary('Plant', { label: 'Plant', typeIri: OWL.Class }),
-			createResourceSummary('Plank', { label: 'Plank' }),
-			createResourceSummary('Planter', { label: 'Planter', typeIri: RDFS.Class })
+			createResourceListItem('Plant', { label: 'Plant', typeIri: OWL.Class }),
+			createResourceListItem('Plank', { label: 'Plank' }),
+			createResourceListItem('Planter', { label: 'Planter', typeIri: RDFS.Class })
 		];
 
-		await renderList(statements, [nodeStatements], resources);
+		await renderList(cardBody, [nodeCardBody], resources);
 
 		const header = within(document.querySelector<HTMLElement>('.resource-card.is-nested')!).getByRole('group', { name: 'Type' });
 
@@ -266,9 +266,9 @@ describe('StatementList, edited in a browser', () => {
 
 	it('opens the ⋯ menu of a nested card on its button and on a right-click, and duplicates the node from it', async () => {
 		const node = RdfDataFactory.blankNode('b1');
-		const statements = withAnchors(createTestResourceStatements([createProperty('rdfs:comment', [{ term: node, editable: true, nested: { term: node, propertyCount: 1 } }])]));
-		const nodeStatements = withAnchors({ subjectTerm: node, properties: [createProperty('rdfs:label', [createLiteralView('Leaf')])] });
-		const { host } = await renderList(statements, [nodeStatements]);
+		const cardBody = withAnchors(createTestCardBody([createProperty('rdfs:comment', [{ term: node, editable: true, nested: { term: node, propertyCount: 1 } }])]));
+		const nodeCardBody = withAnchors({ subject: node, predicates: [createProperty('rdfs:label', [createLiteralView('Leaf')])] });
+		const { host } = await renderList(cardBody, [nodeCardBody]);
 		const card = document.querySelector<HTMLElement>('.resource-card.is-nested')!;
 		const menu = card.querySelector('vscode-context-menu') as HTMLElement & { show: boolean };
 
@@ -294,9 +294,9 @@ describe('StatementList, edited in a browser', () => {
 
 	it('wraps a text too long for its line in an area of three lines at rest, and shows it whole while it has the focus', async () => {
 		const text = Array.from({ length: 30 }, (_, index) => `word${index}`).join(' ').repeat(4);
-		const statements = withAnchors(createTestResourceStatements([createProperty('rdfs:comment', [createLiteralView(text)]), createProperty('rdfs:label', [createLiteralView('Short')])]));
+		const cardBody = withAnchors(createTestCardBody([createProperty('rdfs:comment', [createLiteralView(text)]), createProperty('rdfs:label', [createLiteralView('Short')])]));
 
-		await renderList(statements, [], RESOURCES, 600);
+		await renderList(cardBody, [], RESOURCES, 600);
 
 		const long = within(rows()[0]).getByLabelText('Value 1') as HTMLElement & { rows: number };
 
@@ -311,10 +311,10 @@ describe('StatementList, edited in a browser', () => {
 
 	it('puts the chevron and the ⋮ of a collapsed nested card on one axis, and shows neither the type nor a request for one where it has none, its summary in their place', async () => {
 		const node = RdfDataFactory.blankNode('b1');
-		const statements = withAnchors(createTestResourceStatements([createProperty('rdfs:comment', [{ term: node, editable: true, nested: { term: node, propertyCount: 1 } }])]));
-		const nodeStatements = withAnchors({ subjectTerm: node, properties: [createProperty('rdfs:label', [createLiteralView('Leaf')])] });
+		const cardBody = withAnchors(createTestCardBody([createProperty('rdfs:comment', [{ term: node, editable: true, nested: { term: node, propertyCount: 1 } }])]));
+		const nodeCardBody = withAnchors({ subject: node, predicates: [createProperty('rdfs:label', [createLiteralView('Leaf')])] });
 
-		await renderList(statements, [nodeStatements]);
+		await renderList(cardBody, [nodeCardBody]);
 
 		const box = document.querySelector<HTMLElement>('.resource-card.is-nested')!;
 		const centreOf = (element: Element): number => Math.round(element.getBoundingClientRect().top + element.getBoundingClientRect().height / 2);
@@ -351,10 +351,10 @@ describe('StatementList, edited in a browser', () => {
 
 	it.each([1000, 500])('lets the values of a row run to the inset of the row and a nested card to the inset of its row, in a card %ipx wide', async width => {
 		const node = RdfDataFactory.blankNode('b1');
-		const statements = withAnchors(createTestResourceStatements([createProperty('rdfs:comment', [{ term: node, editable: true, nested: { term: node, propertyCount: 1 } }]), createProperty('rdfs:label', [createLiteralView('Leaf')])]));
-		const nodeStatements = withAnchors({ subjectTerm: node, properties: [createProperty('rdfs:label', [createLiteralView('Leaf')])] });
+		const cardBody = withAnchors(createTestCardBody([createProperty('rdfs:comment', [{ term: node, editable: true, nested: { term: node, propertyCount: 1 } }]), createProperty('rdfs:label', [createLiteralView('Leaf')])]));
+		const nodeCardBody = withAnchors({ subject: node, predicates: [createProperty('rdfs:label', [createLiteralView('Leaf')])] });
 
-		await renderList(statements, [nodeStatements], RESOURCES, width);
+		await renderList(cardBody, [nodeCardBody], RESOURCES, width);
 
 		const card = document.querySelector<HTMLElement>('.resource-card:not(.is-nested)')!;
 		const box = document.querySelector<HTMLElement>('.resource-card.is-nested')!;

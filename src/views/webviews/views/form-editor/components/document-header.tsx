@@ -1,5 +1,5 @@
 import { Ref } from 'react';
-import { ResourceSummary } from '../form-editor-model';
+import { ResourcePillData } from '../form-editor-model';
 import { ResourceIcon } from './resource-icon';
 
 /**
@@ -14,7 +14,7 @@ export interface DocumentHeaderProps {
 	/**
 	 * The resource describing the document, such as its ontology, when there is one.
 	 */
-	documentResource?: ResourceSummary;
+	documentResource?: ResourcePillData;
 
 	/**
 	 * The title element, which the context bar appears for once it has scrolled away.
@@ -30,7 +30,7 @@ export interface DocumentHeaderProps {
  */
 export function DocumentHeader({ fileName, documentResource, titleRef }: DocumentHeaderProps): React.JSX.Element {
 	const title = documentResource?.label ?? fileName;
-	const iri = documentResource?.term.termType === 'NamedNode' ? documentResource.term.value : undefined;
+	const iri = documentResource?.subject.termType === 'NamedNode' ? documentResource.subject.value : undefined;
 
 	return (
 		<header className="document-header">

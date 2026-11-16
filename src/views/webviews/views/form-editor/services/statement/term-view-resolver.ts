@@ -1,5 +1,5 @@
 import { getPrefixedName } from '@src/utilities/prefixed-name';
-import { ResourceSummary, TermView } from '../../form-editor-model';
+import { ResourcePillData, TermData } from '../../form-editor-model';
 
 /**
  * Gives every term a row shows the view the components render it with: the view the host sent
@@ -8,7 +8,7 @@ import { ResourceSummary, TermView } from '../../form-editor-model';
  * is typed, before the host has delivered a view of it.
  */
 export class TermViewResolver {
-	private readonly _views = new Map<string, TermView>();
+	private readonly _views = new Map<string, TermData>();
 
 	/**
 	 * Create a resolver for a card.
@@ -16,10 +16,10 @@ export class TermViewResolver {
 	 * @param resources The resources of the document.
 	 * @param known The views the host sent for the terms of the card.
 	 */
-	constructor(private readonly _namespaces: Readonly<Record<string, string>>, resources: readonly ResourceSummary[], known: readonly TermView[]) {
+	constructor(private readonly _namespaces: Readonly<Record<string, string>>, resources: readonly ResourcePillData[], known: readonly TermData[]) {
 		for (const resource of resources) {
-			if (resource.term.termType === 'NamedNode') {
-				this._views.set(resource.term.value, { term: resource.term, label: resource.hasLabel ? resource.label : undefined, prefixedName: resource.prefixedName, iconName: resource.iconName, editable: false });
+			if (resource.subject.termType === 'NamedNode') {
+				this._views.set(resource.subject.value, { term: resource.subject, label: resource.hasLabel ? resource.label : undefined, prefixedName: resource.prefixedName, iconName: resource.iconName, editable: false });
 			}
 		}
 
@@ -35,7 +35,7 @@ export class TermViewResolver {
 	 * @param term The term.
 	 * @returns The view, which carries no position: it stands for the term, not for where it is written.
 	 */
-	viewOf(term: TermView['term']): TermView {
+	viewOf(term: TermData['term']): TermData {
 		if (term.termType !== 'NamedNode') {
 			return { term, editable: false };
 		}

@@ -4,24 +4,24 @@ import { act, fireEvent, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWebview } from '@src/utilities/mocks/webview-test-utils';
 import { createResourceDataServiceStub } from '@src/utilities/mocks/resource-data-service-fixtures';
-import { createResourceSummary } from '@src/utilities/mocks/resource-summary-fixtures';
+import { createResourceListItem } from '@src/utilities/mocks/resource-list-item-fixtures';
 import { RDFS } from '@faubulous/mentor-rdf';
-import { createIriView, createLiteralView, createProperty, createTestResourceStatements } from '@src/utilities/mocks/statement-fixtures';
+import { createIriView, createLiteralView, createProperty, createTestCardBody } from '@src/utilities/mocks/statement-fixtures';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { FormEditorContext, FormEditorContextValue } from '../state/form-editor-context';
 import { ResourceCard } from './resource-card';
 
-const TREE = createResourceSummary('Tree', { label: 'Apple tree', description: 'A tree bearing apples', typeIri: 'http://x/Class', typeLabel: 'Class', usageCount: 1, position: { line: 4, character: 0 } });
+const TREE = createResourceListItem('Tree', { label: 'Apple tree', description: 'A tree bearing apples', typeIri: 'http://x/Class', typeLabel: 'Class', usageCount: 1, position: { line: 4, character: 0 } });
 
 /**
  * Render a card within a context.
  */
-function renderCard(context: Partial<FormEditorContextValue> = {}, expanded = false, summary = TREE, writing = false) {
+function renderCard(context: Partial<FormEditorContextValue> = {}, expanded = false, listItem = TREE, writing = false) {
 	const onToggle = vi.fn();
-	const dataService = createResourceDataServiceStub([createTestResourceStatements([createProperty('rdfs:label', [createLiteralView('Apple tree')]), createProperty('ex:p', [createIriView('ex:A', 'A')])])].map(statements => ({ ...statements, subjectTerm: summary.term })));
+	const dataService = createResourceDataServiceStub([createTestCardBody([createProperty('rdfs:label', [createLiteralView('Apple tree')]), createProperty('ex:p', [createIriView('ex:A', 'A')])])].map(cardBody => ({ ...cardBody, subject: listItem.subject })));
 	const result = renderWebview(
 		<FormEditorContext.Provider value={{ readOnly: true, namespaces: [], languageTags: {}, labelPredicates: [RdfDataFactory.namedNode(RDFS.label)], ...context }}>
-			<ResourceCard summary={summary} dataService={dataService} expanded={expanded} writing={writing} onToggle={onToggle} />
+			<ResourceCard cardHeader={listItem} dataService={dataService} expanded={expanded} writing={writing} onToggle={onToggle} />
 		</FormEditorContext.Provider>
 	);
 
@@ -40,7 +40,7 @@ describe('ResourceCard', () => {
 		expect(within(titleBar).getByTitle('1 usage').classList.contains('card-usage')).toBe(true);
 		expect(within(titleBar).getByRole('button', { name: 'Expand' }).getAttribute('aria-expanded')).toBe('false');
 		expect(within(titleBar).queryByRole('button', { name: /all nested/ })).toBeNull();
-		expect(within(footer).getByRole('button', { name: TREE.term.value }).classList.contains('resource-card-iri-link')).toBe(true);
+		expect(within(footer).getByRole('button', { name: TREE.subject.value }).classList.contains('resource-card-iri-link')).toBe(true);
 		expect(screen.getByText('Apple tree').closest('.resource-card-header')).not.toBeNull();
 		expect(container.querySelector('.resource-card-header .statement-predicate')).toBeNull();
 		expect(container.querySelector('.resource-card-header .resource-card-kind vscode-icon')?.getAttribute('data-icon')).toBe('mentor-rdf-class');
@@ -54,12 +54,12 @@ describe('ResourceCard', () => {
 
 		expect(container.querySelector('.resource-card-types')?.textContent).toBe('Class, Named individual');
 
-		await userEvent.click(screen.getByRole('button', { name: TREE.term.value }));
+		await userEvent.click(screen.getByRole('button', { name: TREE.subject.value }));
 		await act(async () => {
 			container.querySelector('.resource-card-menu vscode-context-menu')!.dispatchEvent(new CustomEvent('vsc-context-menu-select', { detail: { value: 'reveal' } }));
 		});
 
-		expect(onOpenExternal).toHaveBeenCalledWith(TREE.term.value);
+		expect(onOpenExternal).toHaveBeenCalledWith(TREE.subject.value);
 		expect(onRevealInTextEditor).toHaveBeenCalledWith({ line: 4, character: 0 });
 	});
 
@@ -80,7 +80,7 @@ describe('ResourceCard', () => {
 		await userEvent.click(screen.getByRole('button', { name: 'Expand' }));
 
 		expect(onToggle).toHaveBeenCalledTimes(3);
-		expect(onToggle).toHaveBeenCalledWith(TREE.term);
+		expect(onToggle).toHaveBeenCalledWith(TREE.subject);
 	});
 
 	it('leads an expanded card with its label row after the title bar, whose chevron collapses the card', async () => {
@@ -97,7 +97,7 @@ describe('ResourceCard', () => {
 
 		await userEvent.click(screen.getByRole('button', { name: 'Collapse' }));
 
-		expect(onToggle).toHaveBeenCalledWith(TREE.term);
+		expect(onToggle).toHaveBeenCalledWith(TREE.subject);
 	});
 
 	it('expands and collapses every nested card of an expanded card from the title bar, the nested cards starting collapsed', async () => {
@@ -112,7 +112,7 @@ describe('ResourceCard', () => {
 	});
 
 	it('leaves out the description, the usage count and Reveal in Editor of a resource without them', () => {
-		const { container } = renderCard({ onRevealInTextEditor: vi.fn() }, false, createResourceSummary('Bare'));
+		const { container } = renderCard({ onRevealInTextEditor: vi.fn() }, false, createResourceListItem('Bare'));
 		const menu = container.querySelector('.resource-card-menu vscode-context-menu') as HTMLElement & { data?: { value?: string }[] };
 
 		expect(container.querySelector('.resource-card-description')).toBeNull();
@@ -160,11 +160,11 @@ describe('ResourceCard', () => {
 		fireEvent.keyDown(container.querySelector('.resource-card-title-bar button')!, { key: 'K', ctrlKey: true, shiftKey: true });
 		fireEvent.keyDown(container.querySelector('.statement-line')!, { key: 'K', ctrlKey: true, shiftKey: true });
 
-		expect(onRemoveResource.mock.calls).toEqual([[TREE.term]]);
+		expect(onRemoveResource.mock.calls).toEqual([[TREE.subject]]);
 	});
 
 	it('marks the revealed card', () => {
-		const { container } = renderCard({ revealedResource: TREE.term });
+		const { container } = renderCard({ revealedResource: TREE.subject });
 
 		expect(container.querySelector('.resource-card')?.classList.contains('is-current')).toBe(true);
 	});

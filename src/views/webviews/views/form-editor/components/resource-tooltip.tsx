@@ -1,9 +1,9 @@
 import { useLayoutEffect, useMemo, useRef } from 'react';
 import { Term } from '@rdfjs/types';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
-import { ResourceSummary } from '../form-editor-model';
+import { ResourceListItemData } from '../form-editor-model';
 import { useHoveredElement } from '../hooks/use-hovered-element';
-import { useResourceSummary } from '../hooks/use-resource-summary';
+import { useResourceCardHeader } from '../hooks/use-resource-card-header';
 import { IResourceDataService } from '../services/resource-data-service.interface';
 import { useFormEditorContext } from '../state/form-editor-context';
 import { CompactResourceCard } from './compact-resource-card';
@@ -39,7 +39,7 @@ export interface ResourceTooltipProps {
 	documentDataService: IResourceDataService;
 
 	/**
-	 * Supplies the summaries and statements of the resources the document does not define, read
+	 * Supplies the card headers and bodies of the resources the document does not define, read
 	 * from the store.
 	 */
 	storeDataService: IResourceDataService;
@@ -67,19 +67,19 @@ export function getResourceTooltipAttributes(term: Term | undefined, anchor?: 'e
  * under it. Any element marked with {@link getResourceTooltipAttributes} is a resource; pressing a
  * key or a button, scrolling and leaving the element hide the tooltip, which never takes the
  * pointer.
- * @param props Where the summaries and statements of the resources come from.
+ * @param props Where the card headers and bodies of the resources come from.
  * @returns The tooltip, or nothing while no resource is hovered.
  */
 export function ResourceTooltip({ documentDataService, storeDataService }: ResourceTooltipProps): React.JSX.Element | null {
 	const { resources } = useFormEditorContext();
-	const summaries = useMemo(() => _summariesByIri(resources ?? []), [resources]);
+	const listItems = useMemo(() => _listItemsByIri(resources ?? []), [resources]);
 	const element = useHoveredElement('[data-tooltip-iri]', HOVER_DELAY);
 	const tooltipRef = useRef<HTMLDivElement>(null);
 	const iri = element?.getAttribute('data-tooltip-iri') ?? undefined;
-	const documentSummary = iri ? summaries.get(iri) : undefined;
-	const storeResource = useMemo(() => iri && !documentSummary ? RdfDataFactory.namedNode(iri) : undefined, [iri, documentSummary]);
-	const storeSummary = useResourceSummary(storeDataService, storeResource);
-	const summary = documentSummary ?? storeSummary;
+	const documentListItem = iri ? listItems.get(iri) : undefined;
+	const storeResource = useMemo(() => iri && !documentListItem ? RdfDataFactory.namedNode(iri) : undefined, [iri, documentListItem]);
+	const storeCardHeader = useResourceCardHeader(storeDataService, storeResource);
+	const cardHeader = documentListItem ?? storeCardHeader;
 
 	useLayoutEffect(() => {
 		const tooltip = tooltipRef.current;
@@ -101,8 +101,8 @@ export function ResourceTooltip({ documentDataService, storeDataService }: Resou
 	}
 
 	return (
-		<div ref={tooltipRef} className={`resource-tooltip${summary ? ' is-card' : ''}`} role="tooltip">
-			{summary ? <CompactResourceCard summary={summary} dataService={documentSummary ? documentDataService : storeDataService} /> : <div className="resource-tooltip-iri">{iri}</div>}
+		<div ref={tooltipRef} className={`resource-tooltip${cardHeader ? ' is-card' : ''}`} role="tooltip">
+			{cardHeader ? <CompactResourceCard cardHeader={cardHeader} dataService={documentListItem ? documentDataService : storeDataService} /> : <div className="resource-tooltip-iri">{iri}</div>}
 		</div>
 	);
 }
@@ -112,8 +112,8 @@ export function ResourceTooltip({ documentDataService, storeDataService }: Resou
  * @param resources The resources.
  * @returns The resources with an IRI, by it.
  */
-function _summariesByIri(resources: readonly ResourceSummary[]): Map<string, ResourceSummary> {
-	return new Map(resources.flatMap(resource => resource.term.termType === 'NamedNode' ? [[resource.term.value, resource] as const] : []));
+function _listItemsByIri(resources: readonly ResourceListItemData[]): Map<string, ResourceListItemData> {
+	return new Map(resources.flatMap(resource => resource.subject.termType === 'NamedNode' ? [[resource.subject.value, resource] as const] : []));
 }
 
 /**

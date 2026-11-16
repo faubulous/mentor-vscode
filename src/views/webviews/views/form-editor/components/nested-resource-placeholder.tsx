@@ -1,4 +1,4 @@
-import { NestedResourceRef } from '../form-editor-model';
+import { NestedResourceData } from '../form-editor-model';
 import { useFormEditorContext } from '../state/form-editor-context';
 
 /**
@@ -8,7 +8,7 @@ export interface NestedResourcePlaceholderProps {
 	/**
 	 * The blank node the placeholder stands for.
 	 */
-	nested: NestedResourceRef;
+	nested: NestedResourceData;
 }
 
 /**

@@ -1,7 +1,7 @@
 import { BlankNode, NamedNode } from '@rdfjs/types';
 import { RDF } from '@faubulous/mentor-rdf/ontologies';
 import { useMemo, useState } from 'react';
-import { PinnedProperty, ResourceStatements, TermView } from '../form-editor-model';
+import { PinnedProperty, ResourceCardBodyData, TermData } from '../form-editor-model';
 import { useNestedCollapse } from '../hooks/use-nested-collapse';
 import { useStatementRows } from '../hooks/use-statement-rows';
 import { StatementServices, useStatementServices } from '../hooks/use-statement-services';
@@ -19,7 +19,7 @@ export interface StatementListProps {
 	/**
 	 * The resource with its statements.
 	 */
-	statements: ResourceStatements;
+	cardBody: ResourceCardBodyData;
 
 	/**
 	 * Whether the statements belong to an earlier document version while the current one loads.
@@ -71,16 +71,16 @@ const TYPE_ROW: LeadingRow = { predicates: [RDF.type], predicateText: 'a' };
  * @param props The resource and where the list stands.
  * @returns The rows.
  */
-export function StatementList({ statements, stale = false, dataService, depth, visited, labelRow = false, comments }: StatementListProps): React.JSX.Element {
+export function StatementList({ cardBody, stale = false, dataService, depth, visited, labelRow = false, comments }: StatementListProps): React.JSX.Element {
 	const { editing, readOnly, labelPredicates } = useFormEditorContext();
 	const { pins } = usePinnedProperties();
 	const editable = !readOnly && editing !== undefined;
 	const nested = depth > 0;
-	const services = useStatementServices(statements, editable);
+	const services = useStatementServices(cardBody, editable);
 	const leadingRow = useMemo(() => nested ? TYPE_ROW : _labelRowOf(labelRow ? labelPredicates : undefined, services), [nested, labelRow, labelPredicates, services]);
 	const { entries, addRow } = useStatementRows({
-		statements,
-		card: visited[0] ?? statements.subjectTerm,
+		cardBody,
+		card: visited[0] ?? cardBody.subject,
 		leadingRow,
 		version: dataService.version,
 		stale,
@@ -192,7 +192,7 @@ function _pinnedOf(rows: readonly StatementRowEntry[], pins: readonly PinnedProp
  * @param view The value.
  * @returns The text.
  */
-function _valueTextOf(view: TermView): string {
+function _valueTextOf(view: TermData): string {
 	if (view.term.termType === 'Literal') {
 		return view.term.value;
 	}

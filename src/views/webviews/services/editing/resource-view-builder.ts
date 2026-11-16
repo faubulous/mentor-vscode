@@ -9,11 +9,11 @@ import { getTokenPosition, hasSourcePosition } from '@src/utilities/tokens';
 import { ValueKind, ValueKindHint } from '@src/utilities/value-kind';
 import {
 	DocumentPosition,
-	NestedResourceRef,
-	PropertyView,
-	ResourceStatements,
-	ResourceSummary,
-	TermView
+	NestedResourceData,
+	PredicateData,
+	ResourceCardBodyData,
+	ResourceListItemData,
+	TermData
 } from '@src/views/webviews/views/form-editor/form-editor-model';
 import { AnnotationResolver } from './annotation-resolver';
 import { CollectionItem, ResourceIndex, ResourceIndexEntry, ResourceIndexOptions, getEntry, isCollectionChainPredicate, typeIrisOf } from './resource-index';
@@ -59,9 +59,9 @@ export class ResourceViewBuilder {
 	 * Build the list row of a resource. The row is described only with what the document states,
 	 * as looking every resource up in the store costs a rebuild of a large document dearly.
 	 * @param entry The resource.
-	 * @returns The resource summary.
+	 * @returns The list item.
 	 */
-	buildSummary(entry: ResourceIndexEntry): ResourceSummary {
+	buildListItem(entry: ResourceIndexEntry): ResourceListItemData {
 		const typeIris = typeIrisOf(entry);
 		const typeLabels = this._resolveTypeLabels(typeIris);
 		const primaryType = _primaryTypeIndex(typeIris);
@@ -69,7 +69,7 @@ export class ResourceViewBuilder {
 		const prefixedName = this._toPrefixedName(entry.term);
 
 		return {
-			term: entry.term,
+			subject: entry.term,
 			label: label.text,
 			description: this._annotations.findDescription(entry)?.text,
 			prefixedName,
@@ -92,15 +92,15 @@ export class ResourceViewBuilder {
 	 * @param entry The resource.
 	 * @returns The statements about the resource.
 	 */
-	buildStatements(entry: ResourceIndexEntry): ResourceStatements {
+	buildCardBody(entry: ResourceIndexEntry): ResourceCardBodyData {
 		const { groups, resourceComments } = this._collectProperties(entry);
 
 		return {
-			subjectTerm: entry.term,
-			properties: groups.map(group => ({ ...group, valueKind: _valueKindOf(group.values) })),
+			subject: entry.term,
+			predicates: groups.map(group => ({ ...group, valueKind: _valueKindOf(group.values) })),
 			// A resource of its own shows them above its card, where they were written; a node
 			// written inside another has no card of its own to stand outside of.
-			comments: entry.nested && resourceComments.length > 0 ? resourceComments : undefined
+			leadingComments: entry.nested && resourceComments.length > 0 ? resourceComments : undefined
 		};
 	}
 
@@ -111,8 +111,8 @@ export class ResourceViewBuilder {
 	 * @param entry The resource.
 	 * @returns The property rows and the comment lines introducing the resource.
 	 */
-	private _collectProperties(entry: ResourceIndexEntry): { groups: PropertyView[]; resourceComments: string[] } {
-		const groups = new Map<string, PropertyView>();
+	private _collectProperties(entry: ResourceIndexEntry): { groups: PredicateData[]; resourceComments: string[] } {
+		const groups = new Map<string, PredicateData>();
 		const resourceComments: string[] = [];
 		let isFirstStatement = true;
 
@@ -160,7 +160,7 @@ export class ResourceViewBuilder {
 	 * @param iri The IRI of the predicate.
 	 * @returns The view of the predicate.
 	 */
-	buildPredicateView(iri: string): TermView {
+	buildPredicateView(iri: string): TermData {
 		const term = RdfDataFactory.namedNode(iri);
 		const label = this._resolveLabel(term);
 
@@ -173,7 +173,7 @@ export class ResourceViewBuilder {
 	 * @param token The token the term is written at, which positions and anchors the view.
 	 * @returns The view.
 	 */
-	private _toTermView(term: Quad_Subject | Quad_Object, token: QuadContext['objectToken']): TermView {
+	private _toTermView(term: Quad_Subject | Quad_Object, token: QuadContext['objectToken']): TermData {
 		const value = term as NamedNode | BlankNode | Literal;
 		const label = this._resolveLabel(value);
 		const written = hasSourcePosition(token);
@@ -193,7 +193,7 @@ export class ResourceViewBuilder {
 	 * @param quad The statement.
 	 * @returns The view.
 	 */
-	private _toObjectTermView(quad: QuadContext): TermView {
+	private _toObjectTermView(quad: QuadContext): TermData {
 		return this._decorateValue(this._toTermView(quad.object, quad.objectToken), quad.object, true);
 	}
 
@@ -204,7 +204,7 @@ export class ResourceViewBuilder {
 	 * @param item The item.
 	 * @returns The view.
 	 */
-	private _toItemTermView(item: CollectionItem): TermView {
+	private _toItemTermView(item: CollectionItem): TermData {
 		return this._decorateValue(this._toTermView(item.term as Quad_Object, item.quad.objectToken), item.term, false);
 	}
 
@@ -216,7 +216,7 @@ export class ResourceViewBuilder {
 	 * @param inlineOnly Whether only a blank node written inline gets a nested form.
 	 * @returns The decorated view.
 	 */
-	private _decorateValue(view: TermView, term: Term, inlineOnly: boolean): TermView {
+	private _decorateValue(view: TermData, term: Term, inlineOnly: boolean): TermData {
 		if (term.termType === 'NamedNode') {
 			return term.value === RDF.nil ? { ...view, collection: { items: [] } } : this._withResourceMark(view, term.value);
 		}
@@ -242,7 +242,7 @@ export class ResourceViewBuilder {
 	 * @param inlineOnly Whether only a blank node written inline is referred to.
 	 * @returns The reference, or `undefined` when the node has no form of its own.
 	 */
-	private _toNestedRef(term: BlankNode, inlineOnly: boolean): NestedResourceRef | undefined {
+	private _toNestedRef(term: BlankNode, inlineOnly: boolean): NestedResourceData | undefined {
 		const nested = getEntry(this._index, term);
 
 		if (!nested || (inlineOnly && !nested.nested)) {
@@ -268,7 +268,7 @@ export class ResourceViewBuilder {
 	 * @param iri The IRI.
 	 * @returns The marked view.
 	 */
-	private _withResourceMark(view: TermView, iri: string): TermView {
+	private _withResourceMark(view: TermData, iri: string): TermData {
 		const entry = getEntry(this._index, RdfDataFactory.namedNode(iri));
 		const stated = entry ? this._resolveIconName(entry, typeIrisOf(entry)) : undefined;
 		const iconName = stated && stated !== DEFAULT_ICON ? stated : this._options.resolveObjectIcon?.(iri) ?? stated;
@@ -390,7 +390,7 @@ function _objectIriOf(entry: ResourceIndexEntry, predicateIri: string): string |
  * @param values The values of the predicate.
  * @returns The hint, or `undefined` when the predicate has no value.
  */
-function _valueKindOf(values: readonly TermView[]): ValueKindHint | undefined {
+function _valueKindOf(values: readonly TermData[]): ValueKindHint | undefined {
 	const kinds = new Set<ValueKind>(values.map(value => value.term.termType === 'Literal' ? 'literal' : 'resource'));
 
 	if (kinds.size === 0) {

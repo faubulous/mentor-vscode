@@ -1,4 +1,4 @@
-import { ResourceSummary } from '../form-editor-model';
+import { ResourceListItemData } from '../form-editor-model';
 
 /**
  * One block of the form: a resource entry, or a comment written between resources. Each run of
@@ -6,5 +6,5 @@ import { ResourceSummary } from '../form-editor-model';
  * resource stand over its entry, and those after the last resource close the document.
  */
 export type FormBlock =
-	| { kind: 'resource'; id: string; resource: ResourceSummary }
+	| { kind: 'resource'; id: string; resource: ResourceListItemData }
 	| { kind: 'comment'; id: string; text: string };

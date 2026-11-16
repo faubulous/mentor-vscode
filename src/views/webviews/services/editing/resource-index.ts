@@ -2,7 +2,7 @@ import { QuadContext } from '@faubulous/mentor-rdf-parsers';
 import { RDF } from '@faubulous/mentor-rdf';
 import { BlankNode, NamedNode, Term } from '@rdfjs/types';
 import { termToString } from 'rdf-string';
-import { NamespaceInfo, ResourceSummary } from '@src/views/webviews/views/form-editor/form-editor-model';
+import { NamespaceData, ResourceListItemData } from '@src/views/webviews/views/form-editor/form-editor-model';
 
 /**
  * A resource collected from the document, together with the statements that describe it.
@@ -49,7 +49,7 @@ export interface ResourceIndex {
 	/**
 	 * The rows shown in the resource list, excluding blank nodes rendered inside their parent.
 	 */
-	summaries: ResourceSummary[];
+	listItems: ResourceListItemData[];
 
 	/**
 	 * The resources, by the key of their term.
@@ -59,7 +59,7 @@ export interface ResourceIndex {
 	/**
 	 * The namespace declarations of the document, ordered by prefix.
 	 */
-	namespaces: NamespaceInfo[];
+	namespaces: NamespaceData[];
 
 	/**
 	 * The items of each collection, by the key of the node that heads it.

@@ -5,7 +5,7 @@ import { RDF, Store } from '@faubulous/mentor-rdf';
 import { IDocumentContext } from '@src/services/document/document-context.interface';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { createSyntheticToken, isTokenOfType } from '@src/utilities/tokens';
-import { NamespaceInfo } from '@src/views/webviews/views/form-editor/form-editor-model';
+import { NamespaceData } from '@src/views/webviews/views/form-editor/form-editor-model';
 import { CollectionItem, ResourceIndex, ResourceIndexEntry } from './resource-index';
 import { ResourceViewBuilder } from './resource-view-builder';
 import { trailingCommentRunsOf } from './statement-comments';
@@ -72,7 +72,7 @@ export class ResourceIndexBuilder {
 		}
 
 		const index: ResourceIndex = {
-			summaries: [],
+			listItems: [],
 			entries: this._entries,
 			namespaces: this._buildNamespaces(),
 			referenceCounts: this._referenceCounts,
@@ -82,9 +82,9 @@ export class ResourceIndexBuilder {
 		};
 		const views = new ResourceViewBuilder(index, this._context);
 
-		index.summaries = this._order
+		index.listItems = this._order
 			.filter(key => !this._entries.get(key)!.nested && !index.collectionNodes.has(key))
-			.map(key => views.buildSummary(this._entries.get(key)!));
+			.map(key => views.buildListItem(this._entries.get(key)!));
 
 		return index;
 	}
@@ -142,7 +142,7 @@ export class ResourceIndexBuilder {
 	 * Build the namespace list of the document, ordered by prefix.
 	 * @returns The namespaces.
 	 */
-	private _buildNamespaces(): NamespaceInfo[] {
+	private _buildNamespaces(): NamespaceData[] {
 		return Object.entries(this._context.namespaces)
 			.map(([prefix, iri]) => ({ prefix, iri }))
 			.sort((a, b) => a.prefix.localeCompare(b.prefix));

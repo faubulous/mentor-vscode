@@ -1,6 +1,6 @@
 import { BlankNode, NamedNode } from '@rdfjs/types';
 import { termToString } from 'rdf-string';
-import { ResourceStatements, ResourceSummary } from '../form-editor-model';
+import { ResourceCardBodyData, ResourceCardHeaderData } from '../form-editor-model';
 import { IResourceDataService } from './resource-data-service.interface';
 
 /**
@@ -12,16 +12,16 @@ const MAX_BATCH_SIZE = 100;
  * Serves the statements about resources over the webview message channel. Requests are coalesced
  * into one message per frame so that scrolling does not produce a message per row. The statements
  * are cached by the `termToString` key of their subject and kept as stale when a new snapshot
- * arrives, until those of the new snapshot are loaded. The summaries the host sends along, for
+ * arrives, until those of the new snapshot are loaded. The card headers the host sends along, for
  * resources the snapshot does not list, are kept until newer ones arrive. A resource the host could
  * not resolve is not asked for again until the next snapshot.
  */
 export class ResourceDataService implements IResourceDataService {
-	private readonly _statements = new Map<string, ResourceStatements>();
+	private readonly _statements = new Map<string, ResourceCardBodyData>();
 
-	private readonly _staleStatements = new Map<string, ResourceStatements>();
+	private readonly _staleStatements = new Map<string, ResourceCardBodyData>();
 
-	private readonly _summaries = new Map<string, ResourceSummary>();
+	private readonly _cardHeaders = new Map<string, ResourceCardHeaderData>();
 
 	private readonly _missing = new Set<string>();
 
@@ -51,16 +51,16 @@ export class ResourceDataService implements IResourceDataService {
 		return this._version;
 	}
 
-	getStatements(resource: NamedNode | BlankNode): ResourceStatements | undefined {
+	getCardBody(resource: NamedNode | BlankNode): ResourceCardBodyData | undefined {
 		return this._statements.get(termToString(resource));
 	}
 
-	getStaleStatements(resource: NamedNode | BlankNode): ResourceStatements | undefined {
+	getStaleCardBody(resource: NamedNode | BlankNode): ResourceCardBodyData | undefined {
 		return this._staleStatements.get(termToString(resource));
 	}
 
-	getSummary(resource: NamedNode | BlankNode): ResourceSummary | undefined {
-		return this._summaries.get(termToString(resource));
+	getCardHeader(resource: NamedNode | BlankNode): ResourceCardHeaderData | undefined {
+		return this._cardHeaders.get(termToString(resource));
 	}
 
 	request(resources: (NamedNode | BlankNode)[]): void {
@@ -90,21 +90,21 @@ export class ResourceDataService implements IResourceDataService {
 	 * Accept what the host delivered for a snapshot, ignoring anything that belongs to a snapshot
 	 * that has since been superseded.
 	 * @param revision The revision of the snapshot the statements were built for.
-	 * @param statements The statements about the requested resources.
+	 * @param cardBodies The statements about the requested resources.
 	 * @param missing Resources the host could not resolve.
-	 * @param summaries The summaries of the resources the snapshot does not list.
+	 * @param cardHeaders The card headers of the resources the snapshot does not list.
 	 */
-	accept(revision: number, statements: ResourceStatements[], missing: (NamedNode | BlankNode)[] = [], summaries: ResourceSummary[] = []): void {
+	accept(revision: number, cardBodies: ResourceCardBodyData[], missing: (NamedNode | BlankNode)[] = [], cardHeaders: ResourceCardHeaderData[] = []): void {
 		if (revision !== this._revision) {
 			return;
 		}
 
-		for (const summary of summaries) {
-			this._summaries.set(termToString(summary.term), summary);
+		for (const cardHeader of cardHeaders) {
+			this._cardHeaders.set(termToString(cardHeader.subject), cardHeader);
 		}
 
-		for (const resource of statements) {
-			const key = termToString(resource.subjectTerm);
+		for (const resource of cardBodies) {
+			const key = termToString(resource.subject);
 
 			this._statements.set(key, resource);
 			this._staleStatements.delete(key);
@@ -118,7 +118,7 @@ export class ResourceDataService implements IResourceDataService {
 			this._missing.add(key);
 		}
 
-		if (statements.length > 0) {
+		if (cardBodies.length > 0) {
 			this._notify();
 		}
 	}
@@ -139,8 +139,8 @@ export class ResourceDataService implements IResourceDataService {
 		this._version = version;
 		this._revision = revision;
 
-		for (const [key, statements] of this._statements) {
-			this._staleStatements.set(key, statements);
+		for (const [key, cardBody] of this._statements) {
+			this._staleStatements.set(key, cardBody);
 		}
 
 		this._statements.clear();

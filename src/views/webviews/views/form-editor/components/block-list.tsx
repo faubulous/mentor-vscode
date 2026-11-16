@@ -128,7 +128,7 @@ export function BlockList({ blocks, dataService, scrollElement, cardStates, pinn
 							style={{ position: 'absolute', top: item.offset, left: 0, width: '100%' }}
 						>
 							{block.kind === 'resource'
-								? <ResourceCard summary={block.resource} dataService={dataService} expanded={cardStates.stateOf(block.id).open !== 'collapsed'} writing={busyIds?.has(block.id) === true} current={block.id === currentId} onToggle={onToggle} />
+								? <ResourceCard cardHeader={block.resource} dataService={dataService} expanded={cardStates.stateOf(block.id).open !== 'collapsed'} writing={busyIds?.has(block.id) === true} current={block.id === currentId} onToggle={onToggle} />
 								: <CommentBlock text={block.text} />}
 						</div>
 					);
@@ -157,8 +157,8 @@ function usePrefetch(dataService: IResourceDataService, blocks: FormBlock[], sta
 		for (let index = from; index <= to; index++) {
 			const block = blocks[index];
 
-			if (block?.kind === 'resource' && !dataService.getStatements(block.resource.term)) {
-				needed.push(block.resource.term);
+			if (block?.kind === 'resource' && !dataService.getCardBody(block.resource.subject)) {
+				needed.push(block.resource.subject);
 			}
 		}
 
@@ -274,7 +274,7 @@ function useRevealRequest(request: RevealRequest | undefined, blocks: FormBlock[
 			return;
 		}
 
-		const index = blocks.findIndex(block => block.kind === 'resource' && block.resource.term.equals(request.resource));
+		const index = blocks.findIndex(block => block.kind === 'resource' && block.resource.subject.equals(request.resource));
 
 		// The blocks may not hold the resource yet, while a filter that left it out is being lifted.
 		if (index >= 0) {

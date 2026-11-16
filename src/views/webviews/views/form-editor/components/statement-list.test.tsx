@@ -5,10 +5,10 @@ import userEvent from '@testing-library/user-event';
 import { OWL, RDFS, XSD, _XSD } from '@faubulous/mentor-rdf';
 import { renderWebview } from '@src/utilities/mocks/webview-test-utils';
 import { createResourceDataServiceStub } from '@src/utilities/mocks/resource-data-service-fixtures';
-import { createResourceSummary } from '@src/utilities/mocks/resource-summary-fixtures';
-import { createIriView, createLiteralView, createProperty, createSampleResourceStatements, createTestResourceStatements } from '@src/utilities/mocks/statement-fixtures';
+import { createResourceListItem } from '@src/utilities/mocks/resource-list-item-fixtures';
+import { createIriView, createLiteralView, createProperty, createSampleCardBody, createTestCardBody } from '@src/utilities/mocks/statement-fixtures';
 import { EXAMPLE_NAMESPACE } from '@src/utilities/mocks/statement-fixtures';
-import { ResourceStatements, TermView } from '../form-editor-model';
+import { ResourceCardBodyData, TermData } from '../form-editor-model';
 import { FormEditorContext, FormEditorContextValue } from '../state/form-editor-context';
 import { StatementList } from './statement-list';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
@@ -16,18 +16,18 @@ import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 /**
  * The view of a blank node value with its nested node.
  */
-function createNestedView(id: string, extra: Partial<NonNullable<TermView['nested']>> = {}): TermView {
+function createNestedView(id: string, extra: Partial<NonNullable<TermData['nested']>> = {}): TermData {
 	return { term: RdfDataFactory.blankNode(id), editable: true, nested: { term: RdfDataFactory.blankNode(id), propertyCount: 1, ...extra } };
 }
 
 /**
  * Render the statements about a resource within a context, with those about others at hand.
  */
-function renderList(statements: ResourceStatements, context: Partial<FormEditorContextValue> = {}, others: ResourceStatements[] = []) {
-	const dataService = createResourceDataServiceStub([statements, ...others]);
+function renderList(cardBody: ResourceCardBodyData, context: Partial<FormEditorContextValue> = {}, others: ResourceCardBodyData[] = []) {
+	const dataService = createResourceDataServiceStub([cardBody, ...others]);
 	const result = renderWebview(
 		<FormEditorContext.Provider value={{ readOnly: true, namespaces: [{ prefix: 'xsd', iri: _XSD }], languageTags: {}, ...context }}>
-			<StatementList statements={statements} dataService={dataService} depth={0} visited={[statements.subjectTerm]} />
+			<StatementList cardBody={cardBody} dataService={dataService} depth={0} visited={[cardBody.subject]} />
 		</FormEditorContext.Provider>
 	);
 
@@ -36,7 +36,7 @@ function renderList(statements: ResourceStatements, context: Partial<FormEditorC
 
 describe('StatementList', () => {
 	it('shows each property as a row with its predicate label, resources as pills and literals as text', () => {
-		renderList(createSampleResourceStatements());
+		renderList(createSampleCardBody());
 
 		expect(screen.getAllByRole('group').map(row => row.getAttribute('aria-label'))).toEqual(['rdf:type', 'rdfs:label', 'rdfs:subClassOf']);
 		expect(screen.getByText('Class').closest('.value-pill')?.getAttribute('data-tooltip-iri')).toBe(OWL.Class);
@@ -46,23 +46,23 @@ describe('StatementList', () => {
 	});
 
 	it('shows the datatype of a literal as a tag by its prefix, and none for a plain string', () => {
-		const statements = createTestResourceStatements([createProperty('ex:p', [
+		const cardBody = createTestCardBody([createProperty('ex:p', [
 			{ term: RdfDataFactory.literal('42', RdfDataFactory.namedNode(XSD.integer)), editable: true },
 			{ term: RdfDataFactory.literal('plain', RdfDataFactory.namedNode(XSD.string)), editable: true }
 		])]);
 
-		renderList(statements);
+		renderList(cardBody);
 
 		expect(screen.getByText('xsd:integer', { selector: '.literal-tag' })).toBeTruthy();
 		expect(screen.getAllByText(/./, { selector: '.literal-tag' })).toHaveLength(1);
 	});
 
 	it('puts the comment lines of a property under its values, and those of a later value above the value', () => {
-		const statements = createTestResourceStatements([
+		const cardBody = createTestCardBody([
 			{ ...createProperty('rdfs:label', [createLiteralView('First'), { ...createLiteralView('Second'), comments: ['about the second'] }]), comments: ['what it is called', 'two lines'] }
 		]);
 
-		renderList(statements);
+		renderList(cardBody);
 
 		const comment = screen.getByText('what it is called two lines', { normalizer: text => text.replace(/\s+/g, ' ') });
 
@@ -74,9 +74,9 @@ describe('StatementList', () => {
 	it('follows a pill to the card of a resource the document describes, and out of the editor otherwise', async () => {
 		const onRevealResource = vi.fn();
 		const onOpenExternal = vi.fn();
-		const statements = createTestResourceStatements([createProperty('rdfs:subClassOf', [createIriView('ex:Plant', 'Plant'), createIriView('owl:Thing', 'Thing')])]);
+		const cardBody = createTestCardBody([createProperty('rdfs:subClassOf', [createIriView('ex:Plant', 'Plant'), createIriView('owl:Thing', 'Thing')])]);
 
-		renderList(statements, { resources: [createResourceSummary('Plant')], onRevealResource, onOpenExternal });
+		renderList(cardBody, { resources: [createResourceListItem('Plant')], onRevealResource, onOpenExternal });
 
 		await userEvent.click(screen.getByText('Plant'));
 		await userEvent.click(screen.getByText('Thing'));
@@ -86,17 +86,17 @@ describe('StatementList', () => {
 	});
 
 	it('shows the items of a list on lines of their own', () => {
-		const list: TermView = { term: RdfDataFactory.blankNode('l1'), editable: true, collection: { items: [createIriView('ex:A', 'A'), createLiteralView('b')] } };
+		const list: TermData = { term: RdfDataFactory.blankNode('l1'), editable: true, collection: { items: [createIriView('ex:A', 'A'), createLiteralView('b')] } };
 
-		renderList(createTestResourceStatements([createProperty('owl:unionOf', [list])]));
+		renderList(createTestCardBody([createProperty('owl:unionOf', [list])]));
 
 		expect(screen.getAllByRole('listitem').map(item => item.textContent)).toEqual(['A', 'b']);
 	});
 
 	it('renders the card of a blank node in place of its value, collapsed to its header with the comments above the value and the node, and asks for one it does not hold', async () => {
-		const nestedStatements: ResourceStatements = { subjectTerm: RdfDataFactory.blankNode('b1'), comments: ['the node'], properties: [createProperty('rdfs:comment', [createLiteralView('inside')])] };
-		const statements = createTestResourceStatements([createProperty('ex:has', [{ ...createNestedView('b1'), comments: ['the value'] }, createNestedView('b2')])]);
-		const { dataService } = renderList(statements, {}, [nestedStatements]);
+		const nestedCardBody: ResourceCardBodyData = { subject: RdfDataFactory.blankNode('b1'), leadingComments: ['the node'], predicates: [createProperty('rdfs:comment', [createLiteralView('inside')])] };
+		const cardBody = createTestCardBody([createProperty('ex:has', [{ ...createNestedView('b1'), comments: ['the value'] }, createNestedView('b2')])]);
+		const { dataService } = renderList(cardBody, {}, [nestedCardBody]);
 
 		expect(screen.queryByText('inside')).toBeNull();
 
@@ -115,12 +115,12 @@ describe('StatementList', () => {
 		const onRevealResource = vi.fn();
 		const deep = createNestedView('deep', { label: 'Opening hours', propertyCount: 2 });
 		const back = createNestedView(RDFS.label);
-		const statements = createTestResourceStatements([createProperty('ex:has', [deep, back])]);
-		const dataService = createResourceDataServiceStub([statements]);
+		const cardBody = createTestCardBody([createProperty('ex:has', [deep, back])]);
+		const dataService = createResourceDataServiceStub([cardBody]);
 
 		renderWebview(
 			<FormEditorContext.Provider value={{ readOnly: true, namespaces: [], languageTags: {}, onRevealResource }}>
-				<StatementList statements={statements} dataService={dataService} depth={3} visited={[statements.subjectTerm, RdfDataFactory.blankNode(RDFS.label)]} />
+				<StatementList cardBody={cardBody} dataService={dataService} depth={3} visited={[cardBody.subject, RdfDataFactory.blankNode(RDFS.label)]} />
 			</FormEditorContext.Provider>
 		);
 

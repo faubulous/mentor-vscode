@@ -2,7 +2,7 @@ import { StatementValue } from '@src/services/editing/statement-value';
 import { Literal, NamedNode } from '@rdfjs/types';
 import { RDF } from '@faubulous/mentor-rdf/ontologies';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
-import { PropertyView, TermView } from '../form-editor-model';
+import { PredicateData, TermData } from '../form-editor-model';
 import { LiteralTag } from './literal-tag';
 import { RowValue } from './row-value';
 
@@ -28,7 +28,7 @@ export class StatementDraft {
 	 * @param property The property.
 	 * @returns The draft.
 	 */
-	static fromProperty(property: PropertyView): StatementDraft {
+	static fromProperty(property: PredicateData): StatementDraft {
 		const predicate = property.predicate.term.termType === 'NamedNode' ? property.predicate.term.value : undefined;
 
 		return new StatementDraft(predicate, property.values.map(view => ({ kind: 'written', view })));
@@ -40,7 +40,7 @@ export class StatementDraft {
 	 * @param property The property.
 	 * @returns `true` when the row can be edited.
 	 */
-	static canEdit(property: PropertyView): boolean {
+	static canEdit(property: PredicateData): boolean {
 		return property.predicate.editable && property.predicate.term.termType === 'NamedNode' && property.values.every(view => view.anchor !== undefined);
 	}
 
@@ -72,7 +72,7 @@ export class StatementDraft {
 	 * @param term The term of the value.
 	 * @returns The draft with the value.
 	 */
-	withValueAppended(term: TermView['term']): StatementDraft {
+	withValueAppended(term: TermData['term']): StatementDraft {
 		return new StatementDraft(this.predicate, [...this.values, { kind: 'term', term }]);
 	}
 
@@ -221,7 +221,7 @@ export class StatementDraft {
 	 */
 	rebasedOnto(stored: StatementDraft): StatementDraft {
 		const available = stored.values.flatMap(value => value.kind === 'written' ? [value.view] : []);
-		const used = new Set<TermView>();
+		const used = new Set<TermData>();
 		let blankNodes = 0;
 
 		const values = this.values.map((value): RowValue => {
@@ -303,7 +303,7 @@ function _isUntypedNode(value: RowValue): boolean {
  * @param value The value.
  * @returns The term.
  */
-function _termOf(value: RowValue): TermView['term'] {
+function _termOf(value: RowValue): TermData['term'] {
 	return value.kind === 'written' ? value.view.term : value.term;
 }
 

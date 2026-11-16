@@ -5,9 +5,9 @@ import userEvent from '@testing-library/user-event';
 import { RDFS, XSD } from '@faubulous/mentor-rdf';
 import { createEditingHostStub, EditingHostStub } from '@src/utilities/mocks/editing-host-fixtures';
 import { createResourceDataServiceStub } from '@src/utilities/mocks/resource-data-service-fixtures';
-import { EXAMPLE_NAMESPACE, TEST_NAMESPACES, TEST_SUBJECT, createIriView, createLiteralView, createProperty, createSampleResourceStatements, createTestResourceStatements, withAnchors } from '@src/utilities/mocks/statement-fixtures';
+import { EXAMPLE_NAMESPACE, TEST_NAMESPACES, TEST_SUBJECT, createIriView, createLiteralView, createProperty, createSampleCardBody, createTestCardBody, withAnchors } from '@src/utilities/mocks/statement-fixtures';
 import { renderWebview } from '@src/utilities/mocks/webview-test-utils';
-import { PropertyView, ResourceStatements } from '../form-editor-model';
+import { PredicateData, ResourceCardBodyData } from '../form-editor-model';
 import { EditingController } from '../state/editing-controller';
 import { FormEditorContext, FormEditorContextValue } from '../state/form-editor-context';
 import { StatementList } from './statement-list';
@@ -18,26 +18,26 @@ const NAMESPACES = Object.entries(TEST_NAMESPACES).map(([prefix, iri]) => ({ pre
 /**
  * The statements the tests edit: a type, a label and a subclass statement, each value anchored.
  */
-const SAMPLE = withAnchors(createSampleResourceStatements());
+const SAMPLE = withAnchors(createSampleCardBody());
 
 /**
  * Render the statements about a resource, written through a controller over a recording host.
  */
-function renderList(statements: ResourceStatements = SAMPLE) {
+function renderList(cardBody: ResourceCardBodyData = SAMPLE) {
 	const host = createEditingHostStub();
 	const editing = new EditingController(host);
-	const dataService = createResourceDataServiceStub([statements]);
-	const ui = (current: ResourceStatements, stale = false) => (
+	const dataService = createResourceDataServiceStub([cardBody]);
+	const ui = (current: ResourceCardBodyData, stale = false) => (
 		<FormEditorContext.Provider value={{ readOnly: false, editing, namespaces: NAMESPACES, languageTags: {}, resources: [] } satisfies FormEditorContextValue}>
-			<StatementList statements={current} stale={stale} dataService={dataService} depth={0} visited={[current.subjectTerm]} />
+			<StatementList cardBody={current} stale={stale} dataService={dataService} depth={0} visited={[current.subject]} />
 		</FormEditorContext.Provider>
 	);
-	const result = renderWebview(ui(statements));
+	const result = renderWebview(ui(cardBody));
 
 	/**
 	 * Deliver the statements as the host does after an edit: for the next version, or stale.
 	 */
-	const deliver = async (next: ResourceStatements, options: { stale?: boolean; version?: number } = {}) => {
+	const deliver = async (next: ResourceCardBodyData, options: { stale?: boolean; version?: number } = {}) => {
 		dataService.version = options.version ?? dataService.version;
 		await act(async () => result.rerender(ui(next, options.stale ?? false)));
 	};
@@ -87,8 +87,8 @@ async function settle(host: EditingHostStub, outcome?: Parameters<EditingHostStu
  * The sample with the values of one of its properties replaced, as the host delivers it after an
  * edit of that property.
  */
-function withValues(index: number, values: PropertyView['values']): ResourceStatements {
-	return { ...SAMPLE, properties: SAMPLE.properties.map((property, position) => position === index ? { ...property, values } : property) };
+function withValues(index: number, values: PredicateData['values']): ResourceCardBodyData {
+	return { ...SAMPLE, predicates: SAMPLE.predicates.map((property, position) => position === index ? { ...property, values } : property) };
 }
 
 /**
@@ -169,8 +169,8 @@ describe('StatementList, edited', () => {
 	});
 
 	it('shows why a number does not fit its datatype, and puts the stored value back when the row is left', async () => {
-		const statements = withAnchors(createTestResourceStatements([createProperty('ex:count', [{ term: RdfDataFactory.literal('42', RdfDataFactory.namedNode(XSD.integer)), editable: true }])]));
-		const { host } = renderList(statements);
+		const cardBody = withAnchors(createTestCardBody([createProperty('ex:count', [{ term: RdfDataFactory.literal('42', RdfDataFactory.namedNode(XSD.integer)), editable: true }])]));
+		const { host } = renderList(cardBody);
 		const field = within(rows()[0]).getByLabelText('Value 1') as HTMLInputElement;
 
 		type(field, '4.5');
@@ -206,9 +206,9 @@ describe('StatementList, edited', () => {
 		fireEvent.focusOut(predicate, { relatedTarget: within(row).getByLabelText('New value') });
 		await settle(host);
 
-		const renamed: PropertyView = { ...SAMPLE.properties[1], predicate: { term: RdfDataFactory.namedNode(RDFS.comment), prefixedName: 'rdfs:comment', editable: true } };
+		const renamed: PredicateData = { ...SAMPLE.predicates[1], predicate: { term: RdfDataFactory.namedNode(RDFS.comment), prefixedName: 'rdfs:comment', editable: true } };
 
-		await deliver({ ...SAMPLE, properties: [SAMPLE.properties[0], renamed, SAMPLE.properties[2]] }, { version: 2 });
+		await deliver({ ...SAMPLE, predicates: [SAMPLE.predicates[0], renamed, SAMPLE.predicates[2]] }, { version: 2 });
 
 		expect(rows()[1]).toBe(row);
 		expect(row.getAttribute('aria-label')).toBe('rdfs:comment');
@@ -256,7 +256,7 @@ describe('StatementList, edited', () => {
 		expect(submitted.classList.contains('is-editable')).toBe(true);
 
 		await settle(host);
-		await deliver({ ...SAMPLE, properties: [...SAMPLE.properties, { predicate: { term: RdfDataFactory.namedNode(RDFS.comment), prefixedName: 'rdfs:comment', editable: true }, values: [{ ...createLiteralView('A tree'), anchor: 900 }] }] }, { version: 2 });
+		await deliver({ ...SAMPLE, predicates: [...SAMPLE.predicates, { predicate: { term: RdfDataFactory.namedNode(RDFS.comment), prefixedName: 'rdfs:comment', editable: true }, values: [{ ...createLiteralView('A tree'), anchor: 900 }] }] }, { version: 2 });
 
 		expect(rowLabels()).toEqual(['rdf:type', 'rdfs:label', 'rdfs:subClassOf', 'rdfs:comment']);
 		expect(rows()[3]).toBe(submitted);
@@ -271,7 +271,7 @@ describe('StatementList, edited', () => {
 			op: 'setValues',
 			subject: TEST_SUBJECT,
 			predicate: RDFS.label,
-			values: [{ kind: 'existing', anchor: SAMPLE.properties[1].values[0].anchor }, { kind: 'term', term: RdfDataFactory.literal('Baum') }]
+			values: [{ kind: 'existing', anchor: SAMPLE.predicates[1].values[0].anchor }, { kind: 'term', term: RdfDataFactory.literal('Baum') }]
 		}]);
 		expect(rowLabels()).toEqual(['rdf:type', 'rdfs:label', 'rdfs:subClassOf']);
 	});
@@ -342,7 +342,7 @@ describe('StatementList, edited', () => {
 		const field = within(rows()[1]).getByLabelText('Value 1') as HTMLInputElement;
 
 		type(field, 'Oak');
-		await deliver({ ...SAMPLE, properties: [createProperty('ex:first', [{ ...createIriView('ex:A', 'A'), anchor: 5 }]), ...SAMPLE.properties] }, { version: 2 });
+		await deliver({ ...SAMPLE, predicates: [createProperty('ex:first', [{ ...createIriView('ex:A', 'A'), anchor: 5 }]), ...SAMPLE.predicates] }, { version: 2 });
 
 		expect(rowLabels().slice(0, 3)).toEqual(['ex:first', 'rdf:type', 'rdfs:label']);
 		expect((within(rows()[2]).getByLabelText('Value 1') as HTMLInputElement).value).toBe('Oak');
@@ -363,9 +363,9 @@ describe('StatementList, edited', () => {
 	});
 
 	it('reads the rows whose values cannot all be kept by their place', () => {
-		const statements = createTestResourceStatements([createProperty('ex:p', [createIriView('ex:A', 'A')])]);
+		const cardBody = createTestCardBody([createProperty('ex:p', [createIriView('ex:A', 'A')])]);
 
-		renderList(statements);
+		renderList(cardBody);
 
 		expect(rows()[0].classList.contains('is-editable')).toBe(false);
 		expect(rowLabels()).toEqual(['ex:p']);
@@ -373,8 +373,8 @@ describe('StatementList, edited', () => {
 	});
 
 	it('refuses a new statement of a predicate whose row only reads, rather than replacing its values', async () => {
-		const statements = createTestResourceStatements([createProperty('ex:p', [createIriView('ex:A', 'A')])]);
-		const { host } = renderList(statements);
+		const cardBody = createTestCardBody([createProperty('ex:p', [createIriView('ex:A', 'A')])]);
+		const { host } = renderList(cardBody);
 
 		await typeNewStatement('ex:p', 'ex:B');
 

@@ -16,7 +16,7 @@ import { createMockWebviewPanel } from '@src/utilities/mocks/vscode';
 import { EditableTextDocument, applyWorkspaceEditTo, createEditableTextDocument, createMockDocumentContext, createMockDocumentContextService, createTurtleDocument } from '@src/utilities/mocks/factories';
 import { FormEditorHostMessage, FormEditorWebviewMessage } from './form-editor-messages';
 import { FormEditorSession } from './form-editor-session';
-import { ResourceStatements } from './form-editor-model';
+import { ResourceCardBodyData } from './form-editor-model';
 import { BlankNode, NamedNode } from '@rdfjs/types';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 
@@ -171,10 +171,10 @@ function postedOf<K extends FormEditorHostMessage['id']>(posted: FormEditorHostM
  * Ask the session for the statements about resources, as the webview does.
  * @returns The statements it posted in answer.
  */
-async function requestStatements(panel: TestPanel, resources: (NamedNode | BlankNode)[]): Promise<ResourceStatements[]> {
+async function requestStatements(panel: TestPanel, resources: (NamedNode | BlankNode)[]): Promise<ResourceCardBodyData[]> {
 	await panel.receive({ id: 'ResourceRequest', resources });
 
-	return lastResponseOf(panel).statements;
+	return lastResponseOf(panel).cardBodies;
 }
 
 /**
@@ -227,8 +227,8 @@ describe('FormEditorSession', () => {
 
 		const [message] = postedOf(posted, 'ResourceResponse');
 
-		expect(message.statements).toHaveLength(1);
-		expect(message.statements[0].properties.map(property => property.predicate.term)).toEqual([RdfDataFactory.namedNode(RDF.type), RdfDataFactory.namedNode(`${EX}p`)]);
+		expect(message.cardBodies).toHaveLength(1);
+		expect(message.cardBodies[0].predicates.map(property => property.predicate.term)).toEqual([RdfDataFactory.namedNode(RDF.type), RdfDataFactory.namedNode(`${EX}p`)]);
 		expect(message.missing).toEqual([RdfDataFactory.namedNode(`${EX}missing`)]);
 	});
 
@@ -252,9 +252,9 @@ describe('FormEditorSession', () => {
 		expect(fromDocument.source).toBeUndefined();
 		expect(fromStore.source).toBe('store');
 		expect(fromStore.missing).toEqual([unknown]);
-		expect(fromStore.resources?.map(summary => [summary.term, summary.typeIri])).toEqual([[tree, OWL.Class]]);
-		expect(fromStore.statements[0].properties.map(property => property.predicate.term.value)).toEqual([RDF.type, RDFS.label, RDFS.subClassOf]);
-		expect(fromStore.statements[0].properties.flatMap(property => property.values).every(value => !value.editable && value.anchor === undefined)).toBe(true);
+		expect(fromStore.cardHeaders?.map(cardHeader => [cardHeader.subject, cardHeader.typeIri])).toEqual([[tree, OWL.Class]]);
+		expect(fromStore.cardBodies[0].predicates.map(property => property.predicate.term.value)).toEqual([RDF.type, RDFS.label, RDFS.subClassOf]);
+		expect(fromStore.cardBodies[0].predicates.flatMap(property => property.values).every(value => !value.editable && value.anchor === undefined)).toBe(true);
 	});
 
 	it('tells the webview when the document cannot be shown', async () => {
@@ -368,7 +368,7 @@ describe('FormEditorSession', () => {
 		await testSession.receive({ id: 'Ready' });
 
 		const [snapshot] = postedOf(posted, 'DocumentSnapshot');
-		const labelled = snapshot.snapshot.resources.find(resource => resource.term.termType === 'BlankNode')!.term;
+		const labelled = snapshot.snapshot.resources.find(resource => resource.subject.termType === 'BlankNode')!.subject;
 
 		expect(session.resourceNamed(`${EX}A`)).toEqual(RdfDataFactory.namedNode(`${EX}A`));
 		expect(session.resourceNamed(labelled.value)).toEqual(labelled);
@@ -384,11 +384,11 @@ describe('FormEditorSession', () => {
 
 		const [snapshot] = postedOf(posted, 'DocumentSnapshot');
 		const owner = RdfDataFactory.namedNode(`${EX}A`);
-		const labelled = snapshot.snapshot.resources.find(resource => resource.term.termType === 'BlankNode')!.term;
-		const [statements] = await requestStatements(testSession, [owner]);
-		const outer = statements.properties[0].values[0].term as BlankNode;
-		const [outerStatements] = await requestStatements(testSession, [outer]);
-		const inner = outerStatements.properties[0].values[0].term as BlankNode;
+		const labelled = snapshot.snapshot.resources.find(resource => resource.subject.termType === 'BlankNode')!.subject;
+		const [cardBody] = await requestStatements(testSession, [owner]);
+		const outer = cardBody.predicates[0].values[0].term as BlankNode;
+		const [outerCardBody] = await requestStatements(testSession, [outer]);
+		const inner = outerCardBody.predicates[0].values[0].term as BlankNode;
 
 		session.revealResource(inner);
 		session.revealResource(labelled);
@@ -649,14 +649,14 @@ describe('FormEditorSession', () => {
 
 		await testSession.receive({ id: 'Ready' });
 
-		const [statements] = await requestStatements(testSession, [RdfDataFactory.namedNode(`${EX}A`)]);
-		const node = statements.properties[0].values[0].term as BlankNode;
+		const [cardBody] = await requestStatements(testSession, [RdfDataFactory.namedNode(`${EX}A`)]);
+		const node = cardBody.predicates[0].values[0].term as BlankNode;
 
-		expect(lastResponseOf(testSession).resources).toEqual([]);
+		expect(lastResponseOf(testSession).cardHeaders).toEqual([]);
 
 		await requestStatements(testSession, [node]);
 
-		expect(lastResponseOf(testSession).resources?.map(summary => [summary.term, summary.pins])).toEqual([[node, [{ predicate: RdfDataFactory.namedNode(`${EX}q`), scope: 'workspace' }]]]);
+		expect(lastResponseOf(testSession).cardHeaders?.map(cardHeader => [cardHeader.subject, cardHeader.pins])).toEqual([[node, [{ predicate: RdfDataFactory.namedNode(`${EX}q`), scope: 'workspace' }]]]);
 
 		await testSession.session.setPin(node, RdfDataFactory.namedNode(`${EX}r`), 'user');
 

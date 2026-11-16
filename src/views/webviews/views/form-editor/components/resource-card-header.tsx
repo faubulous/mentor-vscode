@@ -1,5 +1,5 @@
 import { KeyboardEvent } from 'react';
-import { ResourceSummary } from '../form-editor-model';
+import { ResourceCardHeaderData } from '../form-editor-model';
 import { ResourceCardTitle } from './resource-card-title';
 
 /**
@@ -9,7 +9,7 @@ export interface ResourceCardHeaderProps {
 	/**
 	 * The resource.
 	 */
-	summary: ResourceSummary;
+	cardHeader: ResourceCardHeaderData;
 
 	/**
 	 * Whether the card is expanded, as it is while its statements load.
@@ -29,7 +29,7 @@ export interface ResourceCardHeaderProps {
  * @param props The resource and how the card toggles.
  * @returns The label row.
  */
-export function ResourceCardHeader({ summary, expanded, onToggle }: ResourceCardHeaderProps): React.JSX.Element {
+export function ResourceCardHeader({ cardHeader, expanded, onToggle }: ResourceCardHeaderProps): React.JSX.Element {
 
 	const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
 		if (event.key === 'Enter' || event.key === ' ') {
@@ -40,7 +40,7 @@ export function ResourceCardHeader({ summary, expanded, onToggle }: ResourceCard
 
 	return (
 		<div className="resource-card-header" role="button" tabIndex={0} aria-expanded={expanded} onClick={onToggle} onKeyDown={handleKeyDown}>
-			<ResourceCardTitle summary={summary} />
+			<ResourceCardTitle cardHeader={cardHeader} />
 		</div>
 	);
 }

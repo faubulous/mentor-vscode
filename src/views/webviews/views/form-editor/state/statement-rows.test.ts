@@ -1,18 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import { OWL, RDF, RDFS, SKOS } from '@faubulous/mentor-rdf';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
-import { TEST_NAMESPACES, TEST_SUBJECT, createIriView, createLiteralView, createProperty, createSampleResourceStatements, createTestResourceStatements, withAnchors } from '@src/utilities/mocks/statement-fixtures';
-import { PropertyView } from '../form-editor-model';
+import { TEST_NAMESPACES, TEST_SUBJECT, createIriView, createLiteralView, createProperty, createSampleCardBody, createTestCardBody, withAnchors } from '@src/utilities/mocks/statement-fixtures';
+import { PredicateData } from '../form-editor-model';
 import { TypedTermReader } from '../services/statement/typed-term-reader';
 import { StatementRowEntry, StatementRows, StatementRowsData } from './statement-rows';
 
 const reader = new TypedTermReader(TEST_NAMESPACES);
-const SAMPLE = withAnchors(createSampleResourceStatements()).properties;
+const SAMPLE = withAnchors(createSampleCardBody()).predicates;
 
 /**
  * Make the data of a card.
  */
-function dataOf(properties: readonly PropertyView[], version = 1): StatementRowsData {
+function dataOf(properties: readonly PredicateData[], version = 1): StatementRowsData {
 	return { subject: TEST_SUBJECT, card: TEST_SUBJECT, properties, version, stale: false, reader, predicateTextOf: property => property.predicate.prefixedName ?? '' };
 }
 
@@ -160,7 +160,7 @@ describe('StatementRows', () => {
 		const label = createProperty('skos:prefLabel', [createLiteralView('Tree')]);
 		const otherLabel = createProperty('rdfs:label', [createLiteralView('A tree')]);
 		const rows = new StatementRows({ requestWrite: () => undefined, flush: () => undefined }, { leadingRow: { predicates: [SKOS.prefLabel, RDFS.label], predicateText: 'skos:prefLabel' } });
-		const entries = rows.reconcile(dataOf(withAnchors(createTestResourceStatements([otherLabel, label])).properties));
+		const entries = rows.reconcile(dataOf(withAnchors(createTestCardBody([otherLabel, label])).predicates));
 
 		expect(entries.map(entry => [entry.property?.predicate.prefixedName ?? 'new', entry.isLeading === true])).toEqual([['skos:prefLabel', true], ['rdfs:label', false]]);
 

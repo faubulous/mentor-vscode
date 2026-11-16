@@ -1,16 +1,16 @@
 import { useEffect, useState } from 'react';
 import { BlankNode, NamedNode } from '@rdfjs/types';
-import { ResourceStatements } from '../form-editor-model';
+import { ResourceCardBodyData } from '../form-editor-model';
 import { IResourceDataService } from '../services/resource-data-service.interface';
 
 /**
  * The statements about a resource together with whether they belong to a superseded snapshot.
  */
-export interface ResourceStatementsState {
+export interface ResourceCardBodyState {
 	/**
 	 * The statements, when the service has any.
 	 */
-	statements?: ResourceStatements;
+	cardBody?: ResourceCardBodyData;
 
 	/**
 	 * Whether the statements belong to the previous snapshot.
@@ -26,16 +26,16 @@ export interface ResourceStatementsState {
  * @param resource The resource.
  * @returns The statements and whether they are stale.
  */
-export function useResourceStatements(service: IResourceDataService, resource: NamedNode | BlankNode): ResourceStatementsState {
+export function useResourceCardBody(service: IResourceDataService, resource: NamedNode | BlankNode): ResourceCardBodyState {
 	useDataServiceUpdates(service);
 
-	const statements = service.getStatements(resource);
+	const cardBody = service.getCardBody(resource);
 
-	if (statements) {
-		return { statements, stale: false };
+	if (cardBody) {
+		return { cardBody, stale: false };
 	}
 
-	return { statements: service.getStaleStatements?.(resource), stale: true };
+	return { cardBody: service.getStaleCardBody?.(resource), stale: true };
 }
 
 /**

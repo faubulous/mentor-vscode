@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { RDF, RDFS, XSD } from '@faubulous/mentor-rdf';
-import { EXAMPLE_NAMESPACE as EX, TEST_NAMESPACES, TEST_SUBJECT, createLiteralView, createProperty, withAnchors, createTestResourceStatements } from '@src/utilities/mocks/statement-fixtures';
-import { PropertyView } from '../form-editor-model';
+import { EXAMPLE_NAMESPACE as EX, TEST_NAMESPACES, TEST_SUBJECT, createLiteralView, createProperty, withAnchors, createTestCardBody } from '@src/utilities/mocks/statement-fixtures';
+import { PredicateData } from '../form-editor-model';
 import { TypedTermReader } from '../services/statement/typed-term-reader';
 import { EditWriter } from './edit-writer';
 import { StatementRowData } from './statement-row-data';
@@ -14,12 +14,12 @@ const reader = new TypedTermReader(TEST_NAMESPACES);
 /**
  * The label property of the tests, anchored.
  */
-const LABEL: PropertyView = withAnchors(createTestResourceStatements([{ ...createProperty('rdfs:label', [createLiteralView('Tree', 'en')]), predicate: { term: RdfDataFactory.namedNode(RDFS.label), prefixedName: 'rdfs:label', editable: true } }])).properties[0];
+const LABEL: PredicateData = withAnchors(createTestCardBody([{ ...createProperty('rdfs:label', [createLiteralView('Tree', 'en')]), predicate: { term: RdfDataFactory.namedNode(RDFS.label), prefixedName: 'rdfs:label', editable: true } }])).predicates[0];
 
 /**
  * Make the data of a row.
  */
-function dataOf(property: PropertyView | undefined, overrides: Partial<StatementRowData> = {}): StatementRowData {
+function dataOf(property: PredicateData | undefined, overrides: Partial<StatementRowData> = {}): StatementRowData {
 	return { subject: TEST_SUBJECT, card: TEST_SUBJECT, property, predicateText: property ? 'rdfs:label' : '', version: 1, stale: false, reader, ...overrides };
 }
 
@@ -28,7 +28,7 @@ function dataOf(property: PropertyView | undefined, overrides: Partial<Statement
  * @param property The property of the row, or `'new'` for a row a new statement is typed into.
  * @param owner What the rows of the card answer.
  */
-function createEditor(property: PropertyView | 'new' = LABEL, owner: Partial<StatementRowOwner> = {}) {
+function createEditor(property: PredicateData | 'new' = LABEL, owner: Partial<StatementRowOwner> = {}) {
 	const requested: EditWriter[] = [];
 	const editor = new StatementRowEditor(1, { requestWrite: writer => requested.push(writer), flush: () => undefined }, {
 		rowOf: () => undefined,
@@ -178,7 +178,7 @@ describe('StatementRowEditor', () => {
 	});
 
 	it('puts a literal its datatype does not take back to the stored value when the row is left', () => {
-		const count: PropertyView = { ...createProperty('ex:count', [{ term: RdfDataFactory.literal('42', RdfDataFactory.namedNode(XSD.integer)), editable: true, anchor: 10 }]) };
+		const count: PredicateData = { ...createProperty('ex:count', [{ term: RdfDataFactory.literal('42', RdfDataFactory.namedNode(XSD.integer)), editable: true, anchor: 10 }]) };
 		const { editor, requested } = createEditor(count);
 
 		editor.inputLiteral(0, '4.5');

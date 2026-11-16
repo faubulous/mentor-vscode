@@ -1,9 +1,9 @@
 import { BlankNode, NamedNode } from '@rdfjs/types';
 import { KeyboardEvent, useEffect } from 'react';
 import { termToString } from 'rdf-string';
-import { NestedResourceRef } from '../form-editor-model';
+import { NestedResourceData } from '../form-editor-model';
 import { useContextMenu } from '../hooks/use-context-menu';
-import { useResourceStatements } from '../hooks/use-resource-statements';
+import { useResourceCardBody } from '../hooks/use-resource-card-body';
 import { IResourceDataService } from '../services/resource-data-service.interface';
 import { FormEditorShortcuts } from '../form-editor-shortcuts';
 import { NestedCardActions, NestedCardMenu } from './nested-card-menu';
@@ -25,7 +25,7 @@ export interface NestedResourceCardProps {
 	/**
 	 * The blank node.
 	 */
-	nested: NestedResourceRef;
+	nested: NestedResourceData;
 
 	/**
 	 * Supplies the statements of the node.
@@ -64,17 +64,17 @@ export interface NestedResourceCardProps {
  * @returns The card, or nothing for a node that holds this card already.
  */
 export function NestedResourceCard({ nested, dataService, depth, visited, actions, comments }: NestedResourceCardProps): React.JSX.Element | null {
-	const { statements, stale } = useResourceStatements(dataService, nested.term);
-	const pins = dataService.getSummary?.(nested.term)?.pins;
+	const { cardBody, stale } = useResourceCardBody(dataService, nested.term);
+	const pins = dataService.getCardHeader?.(nested.term)?.pins;
 	const { onSetPin } = useFormEditorContext();
 	const { menuRef, openOnContextMenu } = useContextMenu();
 
 	// The node is asked for when nothing is known of it, and again after the document changed.
 	useEffect(() => {
-		if (!statements || stale) {
+		if (!cardBody || stale) {
 			dataService.request([nested.term]);
 		}
-	}, [statements, stale, dataService, nested.term]);
+	}, [cardBody, stale, dataService, nested.term]);
 
 	if (visited.some(resource => resource.equals(nested.term))) {
 		return null;
@@ -84,7 +84,7 @@ export function NestedResourceCard({ nested, dataService, depth, visited, action
 		return <NestedResourcePlaceholder nested={nested} />;
 	}
 
-	if (!statements) {
+	if (!cardBody) {
 		return <div className="resource-card is-nested" data-resource-id={termToString(nested.term)}><div className="resource-form-loading">Loading…</div></div>;
 	}
 
@@ -103,7 +103,7 @@ export function NestedResourceCard({ nested, dataService, depth, visited, action
 	return (
 		<div className="resource-card is-nested" data-resource-id={termToString(nested.term)} onContextMenu={actions ? openOnContextMenu : undefined} onKeyDown={actions ? handleKeyDown : undefined}>
 			<PinnedPropertiesContext.Provider value={{ pins: pins ?? [], onPin: pins && onSetPin ? (predicate, scope) => onSetPin(nested.term, predicate, scope) : undefined }}>
-				<StatementList statements={statements} dataService={dataService} depth={depth} visited={[...visited, nested.term]} comments={_captionOf(comments, statements.comments)} />
+				<StatementList cardBody={cardBody} dataService={dataService} depth={depth} visited={[...visited, nested.term]} comments={_captionOf(comments, cardBody.leadingComments)} />
 			</PinnedPropertiesContext.Provider>
 			{actions && <NestedCardMenu actions={actions} menuRef={menuRef} />}
 		</div>

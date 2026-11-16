@@ -32,7 +32,7 @@ import { EditorSnapshotService } from '../../services/editing/editor-snapshot-se
 import { EditOutcome, FormEditorEditHandler } from './form-editor-edit-handler';
 import { FormEditorHostMessage, FormEditorWebviewMessage } from './form-editor-messages';
 import { getFormReadOnlyReason } from './form-editor-read-only';
-import { DocumentProblem, DocumentSnapshot, ReadOnlyReason, ResourceStatements, ResourceSummary } from './form-editor-model';
+import { DocumentProblem, DocumentSnapshot, ReadOnlyReason, ResourceCardBodyData, ResourceCardHeaderData } from './form-editor-model';
 import { ScopeKey } from '@src/utilities/config-scope';
 import { QuadContextCache } from './quad-context-cache';
 import { reviveTerms } from '@src/utilities/rdf-terms';
@@ -366,10 +366,10 @@ export class FormEditorSession implements vscode.Disposable {
 	 * @returns The new IRI, or `undefined` when the IRI is not made from a label or stays.
 	 */
 	private _labelIriOf(resource: NamedNode, predicate: string, values: readonly StatementValue[]): string | undefined {
-		const summary = this._snapshot?.resources.find(candidate => candidate.term.equals(resource));
+		const listItem = this._snapshot?.resources.find(candidate => candidate.subject.equals(resource));
 		const entry = this._index ? getEntry(this._index, resource) : undefined;
 		const letterCase = entry ? _localPartCaseOf(typeIrisOf(entry)) : undefined;
-		const localPart = summary?.localPart;
+		const localPart = listItem?.localPart;
 
 		if (!entry || !localPart || !letterCase) {
 			return undefined;
@@ -398,13 +398,13 @@ export class FormEditorSession implements vscode.Disposable {
 		await this._waitUntilLoaded();
 
 		const context = this._getTokenizedContext();
-		const summary = this._snapshot?.resources.find(candidate => candidate.term.equals(resource));
+		const listItem = this._snapshot?.resources.find(candidate => candidate.subject.equals(resource));
 
-		if (!context || !summary?.localPart || iri === resource.value) {
+		if (!context || !listItem?.localPart || iri === resource.value) {
 			return;
 		}
 
-		const namespace = resource.value.slice(0, resource.value.length - summary.localPart.length);
+		const namespace = resource.value.slice(0, resource.value.length - listItem.localPart.length);
 
 		if (!iri.startsWith(namespace)) {
 			void vscode.window.showErrorMessage(`${resource.value} cannot be renamed to ${iri}: only the local part after ${namespace} can change.`);
@@ -420,11 +420,11 @@ export class FormEditorSession implements vscode.Disposable {
 			return;
 		}
 
-		const position = tokensMatchText(context.tokens, this._document.getText()) ? _renamePositionOf(context, resource.value, summary.prefixedName !== undefined) : undefined;
+		const position = tokensMatchText(context.tokens, this._document.getText()) ? _renamePositionOf(context, resource.value, listItem.prefixedName !== undefined) : undefined;
 		const edit = position ? await this._renameEditAt(position, localPart) : undefined;
 
 		if (!edit || edit.size === 0 || !(await vscode.workspace.applyEdit(edit))) {
-			void vscode.window.showErrorMessage(`${summary.prefixedName ?? resource.value} could not be renamed.`);
+			void vscode.window.showErrorMessage(`${listItem.prefixedName ?? resource.value} could not be renamed.`);
 
 			return;
 		}
@@ -722,7 +722,7 @@ export class FormEditorSession implements vscode.Disposable {
 
 	/**
 	 * Answer a request for the statements about resources as the document states them, editable
-	 * where the document can be written, with the summaries of those the snapshot does not list:
+	 * where the document can be written, with the card headers of those the snapshot does not list:
 	 * the blank nodes written inside another resource, whose cards pin by them. A resource the
 	 * document does not define is missing, without falling back to the store.
 	 * @param requested The resources.
@@ -735,9 +735,9 @@ export class FormEditorSession implements vscode.Disposable {
 		}
 
 		const views = new ResourceViewBuilder(this._index, context, this._getIndexOptions());
-		const listed = new Set(this._snapshot.resources.map(resource => termToString(resource.term)));
-		const statements: ResourceStatements[] = [];
-		const resources: ResourceSummary[] = [];
+		const listed = new Set(this._snapshot.resources.map(resource => termToString(resource.subject)));
+		const cardBodies: ResourceCardBodyData[] = [];
+		const cardHeaders: ResourceCardHeaderData[] = [];
 		const missing: (NamedNode | BlankNode)[] = [];
 
 		for (const resource of requested) {
@@ -748,19 +748,19 @@ export class FormEditorSession implements vscode.Disposable {
 				continue;
 			}
 
-			statements.push(views.buildStatements(entry));
+			cardBodies.push(views.buildCardBody(entry));
 
 			if (!listed.has(termToString(resource))) {
-				resources.push({ ...views.buildSummary(entry), ...this._pinsOf(context, entry) });
+				cardHeaders.push({ ...views.buildListItem(entry), ...this._pinsOf(context, entry) });
 			}
 		}
 
-		this._postMessage({ id: 'ResourceResponse', revision: this._snapshot.revision, statements, resources, missing });
+		this._postMessage({ id: 'ResourceResponse', revision: this._snapshot.revision, cardBodies, cardHeaders, missing });
 	}
 
 	/**
 	 * Answer a request for what the store states about resources the document does not define:
-	 * their summaries, with the usage count and the pins the snapshot adds to those of the document,
+	 * their card headers, with the usage count and the pins the snapshot adds to those of the document,
 	 * and their statements, which only read. The store is read across all its graphs, as the hover
 	 * of the text editor reads it.
 	 * @param requested The resources.
@@ -773,25 +773,25 @@ export class FormEditorSession implements vscode.Disposable {
 			return;
 		}
 
-		const statements: ResourceStatements[] = [];
-		const resources: ResourceSummary[] = [];
+		const cardBodies: ResourceCardBodyData[] = [];
+		const cardHeaders: ResourceCardHeaderData[] = [];
 		const missing: (NamedNode | BlankNode)[] = [];
 
 		for (const resource of requested) {
 			const index = store && resource.termType === 'NamedNode' ? ResourceIndexBuilder.fromStore(store, resource.value, context) : undefined;
 			const entry = index ? getEntry(index, resource) : undefined;
-			const summary = index?.summaries.find(candidate => candidate.term.equals(resource));
+			const listItem = index?.listItems.find(candidate => candidate.subject.equals(resource));
 
-			if (!index || !entry || !summary) {
+			if (!index || !entry || !listItem) {
 				missing.push(resource);
 				continue;
 			}
 
-			statements.push(new ResourceViewBuilder(index, context, this._getIndexOptions()).buildStatements(entry));
-			resources.push({ ...summary, usageCount: this._countUsages(resource.value), ...this._pinsOf(context, entry, undefined) });
+			cardBodies.push(new ResourceViewBuilder(index, context, this._getIndexOptions()).buildCardBody(entry));
+			cardHeaders.push({ ...listItem, usageCount: this._countUsages(resource.value), ...this._pinsOf(context, entry, undefined) });
 		}
 
-		this._postMessage({ id: 'ResourceResponse', revision: this._snapshot.revision, statements, resources, missing, source: 'store' });
+		this._postMessage({ id: 'ResourceResponse', revision: this._snapshot.revision, cardBodies, cardHeaders, missing, source: 'store' });
 	}
 
 	/**
@@ -840,8 +840,8 @@ export class FormEditorSession implements vscode.Disposable {
 			return false;
 		}
 
-		const summary = this._snapshot?.resources.find(candidate => candidate.term.equals(resource));
-		const name = summary?.hasLabel ? summary.label : summary?.prefixedName ?? (resource.termType === 'NamedNode' ? resource.value : `_:${resource.value}`);
+		const listItem = this._snapshot?.resources.find(candidate => candidate.subject.equals(resource));
+		const name = listItem?.hasLabel ? listItem.label : listItem?.prefixedName ?? (resource.termType === 'NamedNode' ? resource.value : `_:${resource.value}`);
 		const count = entry.quads.length;
 		const answer = await vscode.window.showWarningMessage(`Remove ${name}?`, { modal: true, detail: `Its ${count} ${count === 1 ? 'statement is' : 'statements are'} removed from the document. Statements of other resources that refer to it stay.` }, 'Remove');
 
@@ -937,9 +937,9 @@ export class FormEditorSession implements vscode.Disposable {
 	 * @param entry The resource.
 	 * @param graphs The graphs its inferred types are read from: those of the document, or all
 	 * graphs for a resource of the store.
-	 * @returns The fields of the summary.
+	 * @returns The fields of the card header.
 	 */
-	private _pinsOf(context: TurtleDocument, entry: ResourceIndexEntry, graphs: string[] | undefined = context.graphs): Pick<ResourceSummary, 'pins'> {
+	private _pinsOf(context: TurtleDocument, entry: ResourceIndexEntry, graphs: string[] | undefined = context.graphs): Pick<ResourceCardHeaderData, 'pins'> {
 		const pins = _readPins().resolve(typeIrisOf(entry), this._inferredTypesOf(graphs, entry.term));
 
 		return pins ? { pins } : {};

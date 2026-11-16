@@ -1,4 +1,4 @@
-import { PropertyView } from '../form-editor-model';
+import { PredicateData } from '../form-editor-model';
 
 /**
  * Properties of the {@link PropertyComments} component.
@@ -7,7 +7,7 @@ export interface PropertyCommentsProps {
 	/**
 	 * The property.
 	 */
-	property: PropertyView;
+	property: PredicateData;
 }
 
 /**

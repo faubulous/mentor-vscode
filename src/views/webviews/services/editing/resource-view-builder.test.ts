@@ -4,7 +4,7 @@ vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 
 import { RDFS, _OWL, _RDFS, _SH, _XSD } from '@faubulous/mentor-rdf';
 import { ResolvingDocumentContextOptions, createResolvingDocumentContext, readTurtleQuadContexts } from '@src/utilities/mocks/factories';
-import { ResourceStatements } from '@src/views/webviews/views/form-editor/form-editor-model';
+import { ResourceCardBodyData } from '@src/views/webviews/views/form-editor/form-editor-model';
 import { ResourceIndexOptions, getEntry } from './resource-index';
 import { ResourceIndexBuilder } from './resource-index-builder';
 import { ResourceViewBuilder } from './resource-view-builder';
@@ -17,52 +17,52 @@ const PREAMBLE = Object.entries(NAMESPACES).map(([prefix, iri]) => `@prefix ${pr
 /**
  * Build the statements of the first resource of a Turtle body written after the prefix declarations.
  */
-function detailOf(body: string, context: ResolvingDocumentContextOptions = {}, options: ResourceIndexOptions = {}): ResourceStatements {
+function detailOf(body: string, context: ResolvingDocumentContextOptions = {}, options: ResourceIndexOptions = {}): ResourceCardBodyData {
 	const documentContext = createResolvingDocumentContext({ namespaces: NAMESPACES, ...context });
 	const index = new ResourceIndexBuilder(readTurtleQuadContexts(PREAMBLE + body), documentContext).build();
-	const entry = getEntry(index, index.summaries[0].term)!;
+	const entry = getEntry(index, index.listItems[0].subject)!;
 
-	return new ResourceViewBuilder(index, documentContext, options).buildStatements(entry);
+	return new ResourceViewBuilder(index, documentContext, options).buildCardBody(entry);
 }
 
 /**
  * Build the statements of the nested node held by the first value of the first resource.
  */
-function nestedDetailOf(body: string): ResourceStatements {
+function nestedDetailOf(body: string): ResourceCardBodyData {
 	const documentContext = createResolvingDocumentContext({ namespaces: NAMESPACES });
 	const index = new ResourceIndexBuilder(readTurtleQuadContexts(PREAMBLE + body), documentContext).build();
 	const views = new ResourceViewBuilder(index, documentContext);
-	const parent = views.buildStatements(getEntry(index, index.summaries[0].term)!);
+	const parent = views.buildCardBody(getEntry(index, index.listItems[0].subject)!);
 
-	return views.buildStatements(getEntry(index, parent.properties[0].values[0].nested!.term)!);
+	return views.buildCardBody(getEntry(index, parent.predicates[0].values[0].nested!.term)!);
 }
 
 describe('ResourceViewBuilder.buildStatements', () => {
 	it('groups values under their predicate in document order', () => {
-		const statements = detailOf('ex:Thing a ex:Class ;\n    rdfs:label "First" , "Second" .\n');
+		const cardBody = detailOf('ex:Thing a ex:Class ;\n    rdfs:label "First" , "Second" .\n');
 
-		expect(statements.properties).toHaveLength(2);
-		expect(statements.properties[1].values.map(value => value.term)).toEqual([
+		expect(cardBody.predicates).toHaveLength(2);
+		expect(cardBody.predicates[1].values.map(value => value.term)).toEqual([
 			RdfDataFactory.literal('First'),
 			RdfDataFactory.literal('Second')
 		]);
 	});
 
 	it('preserves language tags on literal values', () => {
-		const statements = detailOf('ex:Thing rdfs:label "Ding"@de , "Thing"@en .\n');
+		const cardBody = detailOf('ex:Thing rdfs:label "Ding"@de , "Thing"@en .\n');
 
-		expect(statements.properties[0].values.map(value => value.term.termType === 'Literal' ? value.term.language : undefined)).toEqual(['de', 'en']);
+		expect(cardBody.predicates[0].values.map(value => value.term.termType === 'Literal' ? value.term.language : undefined)).toEqual(['de', 'en']);
 	});
 
 	it('names the predicates the way the document writes them', () => {
-		const statements = detailOf('ex:Thing rdfs:label "x" .\n', { labels: { [RDFS.label]: 'label' } });
+		const cardBody = detailOf('ex:Thing rdfs:label "x" .\n', { labels: { [RDFS.label]: 'label' } });
 
-		expect(statements.properties[0].predicate).toMatchObject({ term: RdfDataFactory.namedNode(RDFS.label), label: 'label', prefixedName: 'rdfs:label', editable: true });
+		expect(cardBody.predicates[0].predicate).toMatchObject({ term: RdfDataFactory.namedNode(RDFS.label), label: 'label', prefixedName: 'rdfs:label', editable: true });
 	});
 
 	it('links a nested blank node object to its own resource', () => {
-		const statements = detailOf('ex:Shape sh:property [ sh:path ex:name ; sh:minCount 1 ] .\n');
-		const nested = statements.properties[0].values[0].nested;
+		const cardBody = detailOf('ex:Shape sh:property [ sh:path ex:name ; sh:minCount 1 ] .\n');
+		const nested = cardBody.predicates[0].values[0].nested;
 
 		expect(nested).toBeDefined();
 		expect(nested?.propertyCount).toBe(2);
@@ -71,66 +71,66 @@ describe('ResourceViewBuilder.buildStatements', () => {
 	it('names a blank node the way the definition tree does', () => {
 		// A property shape is named by the path it constrains: `sh:path` is one of the label
 		// predicates, so the resolver returns it for the blank node.
-		const statements = detailOf('ex:Shape sh:property [ sh:path ex:name ; sh:minCount 1 ] .\n', { blankNodeLabel: 'name' });
+		const cardBody = detailOf('ex:Shape sh:property [ sh:path ex:name ; sh:minCount 1 ] .\n', { blankNodeLabel: 'name' });
 
-		expect(statements.properties[0].values[0].nested?.label).toBe('name');
+		expect(cardBody.predicates[0].values[0].nested?.label).toBe('name');
 	});
 
 	it('leaves a blank node unnamed rather than showing its parser identifier', () => {
-		const statements = detailOf('ex:Shape sh:property [ sh:minCount 1 ] .\n');
+		const cardBody = detailOf('ex:Shape sh:property [ sh:minCount 1 ] .\n');
 
-		expect(statements.properties[0].values[0].nested?.label).toBeUndefined();
+		expect(cardBody.predicates[0].values[0].nested?.label).toBeUndefined();
 	});
 
 	it('names the type of a nested node', () => {
-		const statements = detailOf('ex:Shape sh:property [ a sh:PropertyShape ; sh:path ex:name ] .\n');
+		const cardBody = detailOf('ex:Shape sh:property [ a sh:PropertyShape ; sh:path ex:name ] .\n');
 
-		expect(statements.properties[0].values[0].nested?.typeLabel).toBe('sh:PropertyShape');
+		expect(cardBody.predicates[0].values[0].nested?.typeLabel).toBe('sh:PropertyShape');
 	});
 
 	it('does not link a labelled blank node, which has a row of its own', () => {
-		const statements = detailOf('ex:Thing ex:related _:node .\n_:node ex:label "I stand alone" .\n');
+		const cardBody = detailOf('ex:Thing ex:related _:node .\n_:node ex:label "I stand alone" .\n');
 
-		expect(statements.properties[0].values[0].nested).toBeUndefined();
+		expect(cardBody.predicates[0].values[0].nested).toBeUndefined();
 	});
 
 	it('anchors the values of an inline blank node so they can be edited', () => {
-		const statements = nestedDetailOf('ex:Thing ex:shape [ ex:name "inner" ] .\n');
+		const cardBody = nestedDetailOf('ex:Thing ex:shape [ ex:name "inner" ] .\n');
 
-		expect(statements.properties[0].values[0].anchor).toBe(PREAMBLE.length + 28);
-		expect(statements.properties[0].values[0].editable).toBe(true);
+		expect(cardBody.predicates[0].values[0].anchor).toBe(PREAMBLE.length + 28);
+		expect(cardBody.predicates[0].values[0].editable).toBe(true);
 	});
 
 	it('shows a collection as its items, in order', () => {
-		const statements = detailOf('ex:Thing ex:steps ( ex:first ex:second ex:third ) .\n');
+		const cardBody = detailOf('ex:Thing ex:steps ( ex:first ex:second ex:third ) .\n');
 
-		expect(statements.properties[0].values[0].collection?.items.map(item => item.prefixedName)).toEqual(['ex:first', 'ex:second', 'ex:third']);
+		expect(cardBody.predicates[0].values[0].collection?.items.map(item => item.prefixedName)).toEqual(['ex:first', 'ex:second', 'ex:third']);
 	});
 
 	it('anchors the items of a collection at their own tokens so they can be edited', () => {
-		const statements = detailOf('ex:Thing ex:steps ( ex:first ex:second ) .\n');
-		const items = statements.properties[0].values[0].collection?.items ?? [];
+		const cardBody = detailOf('ex:Thing ex:steps ( ex:first ex:second ) .\n');
+		const items = cardBody.predicates[0].values[0].collection?.items ?? [];
 
 		expect(items.map(item => item.anchor)).toEqual([PREAMBLE.length + 20, PREAMBLE.length + 29]);
 		expect(items.every(item => item.editable)).toBe(true);
 	});
 
 	it('hides the statements that chain a collection', () => {
-		const statements = detailOf('ex:Thing ex:steps ( ex:first ex:second ) .\n');
+		const cardBody = detailOf('ex:Thing ex:steps ( ex:first ex:second ) .\n');
 
-		expect(statements.properties.map(property => property.predicate.term)).toEqual([RdfDataFactory.namedNode(`${EX}steps`)]);
+		expect(cardBody.predicates.map(property => property.predicate.term)).toEqual([RdfDataFactory.namedNode(`${EX}steps`)]);
 	});
 
 	it('reads an empty collection as a list with no items', () => {
-		const statements = detailOf('ex:Thing ex:steps () .\n');
+		const cardBody = detailOf('ex:Thing ex:steps () .\n');
 
-		expect(statements.properties[0].values[0].collection?.items).toEqual([]);
+		expect(cardBody.predicates[0].values[0].collection?.items).toEqual([]);
 	});
 
 	it('carries the items of a collection of blank nodes', () => {
 		// How SHACL writes alternatives: a list whose members are shapes.
-		const statements = detailOf('ex:Shape sh:or ( [ sh:path ex:a ] [ sh:path ex:b ; sh:minCount 1 ] ) .\n');
-		const items = statements.properties[0].values[0].collection?.items ?? [];
+		const cardBody = detailOf('ex:Shape sh:or ( [ sh:path ex:a ] [ sh:path ex:b ; sh:minCount 1 ] ) .\n');
+		const items = cardBody.predicates[0].values[0].collection?.items ?? [];
 
 		expect(items).toHaveLength(2);
 		expect(items.every(item => item.nested !== undefined)).toBe(true);
@@ -140,8 +140,8 @@ describe('ResourceViewBuilder.buildStatements', () => {
 
 describe('ResourceViewBuilder value kinds', () => {
 	it('tells the kind of values a predicate takes from the values it has', () => {
-		const statements = detailOf('ex:Thing rdfs:label "First" ; ex:knows ex:Other , [ ex:p "x" ] ; ex:mixed "text" , ex:Other ; ex:steps ( ex:a ) .\n');
-		const kinds = Object.fromEntries(statements.properties.map(property => [property.predicate.prefixedName, property.valueKind]));
+		const cardBody = detailOf('ex:Thing rdfs:label "First" ; ex:knows ex:Other , [ ex:p "x" ] ; ex:mixed "text" , ex:Other ; ex:steps ( ex:a ) .\n');
+		const kinds = Object.fromEntries(cardBody.predicates.map(property => [property.predicate.prefixedName, property.valueKind]));
 
 		expect(kinds).toEqual({
 			'rdfs:label': { kind: 'literal', source: 'usage' },
@@ -154,10 +154,10 @@ describe('ResourceViewBuilder value kinds', () => {
 
 describe('ResourceViewBuilder resource marks', () => {
 	it('marks IRI values with the glyph of the resource', () => {
-		const statements = detailOf('ex:Thing ex:knows ex:Other ; ex:type ex:Kind ; ex:label "text" .\nex:Kind a owl:Class .\n', {}, {
+		const cardBody = detailOf('ex:Thing ex:knows ex:Other ; ex:type ex:Kind ; ex:label "text" .\nex:Kind a owl:Class .\n', {}, {
 			resolveObjectIcon: iri => iri === `${EX}Other` ? 'mentor-rdf-individual' : undefined
 		});
-		const [knows, type, label] = statements.properties;
+		const [knows, type, label] = cardBody.predicates;
 
 		// Not described in the document: the resolver decides.
 		expect(knows.values[0]).toMatchObject({ iconName: 'mentor-rdf-individual' });
@@ -167,14 +167,14 @@ describe('ResourceViewBuilder resource marks', () => {
 	});
 
 	it('takes the glyph of a resource the document only mentions from the store', () => {
-		const statements = detailOf('ex:A rdfs:subClassOf ex:B .\nex:B rdfs:label "B" .\n', {}, { resolveObjectIcon: () => 'mentor-rdf-class' });
+		const cardBody = detailOf('ex:A rdfs:subClassOf ex:B .\nex:B rdfs:label "B" .\n', {}, { resolveObjectIcon: () => 'mentor-rdf-class' });
 
-		expect(statements.properties[0].values[0].iconName).toBe('mentor-rdf-class');
+		expect(cardBody.predicates[0].values[0].iconName).toBe('mentor-rdf-class');
 	});
 
 	it('marks the IRI items of a collection', () => {
-		const statements = detailOf('ex:Thing ex:steps ( ex:A "b" ) .\n', {}, { resolveObjectIcon: () => 'symbol-constant' });
-		const items = statements.properties[0].values[0].collection!.items;
+		const cardBody = detailOf('ex:Thing ex:steps ( ex:A "b" ) .\n', {}, { resolveObjectIcon: () => 'symbol-constant' });
+		const items = cardBody.predicates[0].values[0].collection!.items;
 
 		expect(items[0].iconName).toBe('symbol-constant');
 		expect(items[1].iconName).toBeUndefined();
@@ -198,7 +198,7 @@ describe('ResourceViewBuilder.buildPredicateView', () => {
 
 describe('ResourceViewBuilder comments', () => {
 	it('carries the comments of a document to the things they were written about', () => {
-		const statements = detailOf(`
+		const cardBody = detailOf(`
 			# The thing itself.
 			# Written over two lines.
 			ex:Thing a ex:Class ;
@@ -207,10 +207,10 @@ describe('ResourceViewBuilder comments', () => {
 			                    # about the second one
 			                    "Second" .
 		`);
-		const [type, label] = statements.properties;
+		const [type, label] = cardBody.predicates;
 
-		// What introduces a resource stands outside its card, so the summary carries it, not the statements.
-		expect(statements.comments).toBeUndefined();
+		// What introduces a resource stands outside its card, so its list item carries it, not its card body.
+		expect(cardBody.leadingComments).toBeUndefined();
 		expect(type.comments).toBeUndefined();
 		expect(label.comments).toEqual(['what it is called']);
 		expect(label.values[0].comments).toBeUndefined();
@@ -218,7 +218,7 @@ describe('ResourceViewBuilder comments', () => {
 	});
 
 	it('gives a comment above a statement whose value is a blank node to that value, first or not', () => {
-		const statements = detailOf(`
+		const cardBody = detailOf(`
 			ex:Shape a sh:NodeShape ;
 			    # the first one
 			    sh:property [ sh:path ex:a ] ;
@@ -227,7 +227,7 @@ describe('ResourceViewBuilder comments', () => {
 			    # about the class
 			    sh:class ex:Thing .
 		`);
-		const [, property, cls] = statements.properties;
+		const [, property, cls] = cardBody.predicates;
 
 		expect(property.comments).toBeUndefined();
 		expect(property.values[0].comments).toEqual(['the first one']);
@@ -243,6 +243,6 @@ describe('ResourceViewBuilder comments', () => {
 			] .
 		`);
 
-		expect(nested.comments).toEqual(['what the node is for']);
+		expect(nested.leadingComments).toEqual(['what the node is for']);
 	});
 });

@@ -1,4 +1,4 @@
-import { ResourceSummary } from '../form-editor-model';
+import { ResourceCardHeaderData } from '../form-editor-model';
 import { useFormEditorContext } from '../state/form-editor-context';
 import { HighlightedText } from './highlighted-text';
 import { ResourceIcon } from './resource-icon';
@@ -10,7 +10,7 @@ export interface ResourceCardTitleProps {
 	/**
 	 * The resource.
 	 */
-	summary: ResourceSummary;
+	cardHeader: ResourceCardHeaderData;
 }
 
 /**
@@ -19,24 +19,24 @@ export interface ResourceCardTitleProps {
  * @param props The resource.
  * @returns The title.
  */
-export function ResourceCardTitle({ summary }: ResourceCardTitleProps): React.JSX.Element {
+export function ResourceCardTitle({ cardHeader }: ResourceCardTitleProps): React.JSX.Element {
 	const { filterText } = useFormEditorContext();
 
 	return (
 		<span className="resource-card-title">
-			<span className="resource-card-kind"><ResourceIcon iconName={summary.iconName} /></span>
-			<span className={`resource-card-label${summary.hasLabel ? '' : ' is-unnamed'}`}><HighlightedText text={summary.label} query={filterText} /></span>
+			<span className="resource-card-kind"><ResourceIcon iconName={cardHeader.iconName} /></span>
+			<span className={`resource-card-label${cardHeader.hasLabel ? '' : ' is-unnamed'}`}><HighlightedText text={cardHeader.label} query={filterText} /></span>
 		</span>
 	);
 }
 
 /**
  * The labels of the types a card names for its resource: every type it asserts, each once.
- * @param summary The resource.
+ * @param cardHeader The resource.
  * @returns The labels, in the order asserted.
  */
-export function getTypeLabels(summary: ResourceSummary): string[] {
-	const labels = summary.typeLabels ?? (summary.typeLabel ? [summary.typeLabel] : []);
+export function getTypeLabels(cardHeader: ResourceCardHeaderData): string[] {
+	const labels = cardHeader.typeLabels ?? (cardHeader.typeLabel ? [cardHeader.typeLabel] : []);
 
 	return Array.from(new Set(labels));
 }

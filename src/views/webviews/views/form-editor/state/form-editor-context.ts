@@ -1,6 +1,6 @@
 import { createContext, useContext } from 'react';
 import { BlankNode, NamedNode } from '@rdfjs/types';
-import { DocumentPosition, NamespaceInfo, ResourceSummary } from '../form-editor-model';
+import { DocumentPosition, NamespaceData, ResourceListItemData } from '../form-editor-model';
 import { ScopeKey } from '@src/utilities/config-scope';
 import { IEditingController } from './editing-controller.interface';
 import { LanguageFilter } from './language-filter';
@@ -24,7 +24,7 @@ export interface FormEditorContextValue {
 	/**
 	 * The namespace declarations of the document.
 	 */
-	namespaces: NamespaceInfo[];
+	namespaces: NamespaceData[];
 
 	/**
 	 * The spelling of each language tag the document writes, by its lower case form, which
@@ -41,7 +41,7 @@ export interface FormEditorContextValue {
 	/**
 	 * The resources of the document, which the lines complete and label local terms from.
 	 */
-	resources?: ResourceSummary[];
+	resources?: ResourceListItemData[];
 
 	/**
 	 * The label predicates Mentor is configured with, most preferred first: the label row of a card

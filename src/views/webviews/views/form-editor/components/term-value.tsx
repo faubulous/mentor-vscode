@@ -1,4 +1,4 @@
-import { TermView } from '../form-editor-model';
+import { TermData } from '../form-editor-model';
 import { useIriNavigation } from '../hooks/use-iri-navigation';
 import { LiteralValue } from './literal-value';
 import { NestedCardActions } from './nested-card-menu';
@@ -13,7 +13,7 @@ export interface TermValueProps extends StatementRowContext {
 	/**
 	 * The value.
 	 */
-	view: TermView;
+	view: TermData;
 
 	/**
 	 * What the row can do with a blank node shown as a nested card; absent where the row only reads.
