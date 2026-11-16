@@ -496,20 +496,6 @@ describe('FormEditorSession', () => {
 		expect(postedOf(posted, 'DocumentSnapshot')).toHaveLength(1);
 	});
 
-	it('puts the text of a blank node on the clipboard, for the version it was read from only', async () => {
-		const { receive, document } = await createSession('ex:A ex:p [ ex:q "x" ; ex:r [ ex:s 1 ] ] .\n');
-		const writeText = vi.spyOn(vscode.env.clipboard, 'writeText');
-		const anchor = document.getText().indexOf('[');
-
-		await receive({ id: 'CopyAsTurtle', anchor, version: document.version + 1 });
-
-		expect(writeText).not.toHaveBeenCalled();
-
-		await receive({ id: 'CopyAsTurtle', anchor, version: document.version });
-
-		expect(writeText).toHaveBeenCalledWith('[ ex:q "x" ; ex:r [ ex:s 1 ] ]');
-	});
-
 	it('renames a resource as F2 does, at a prefixed name of it, and tells the webview and the status bar', async () => {
 		const { posted, receive, document } = await createSession('ex:A a ex:Class .\nex:B ex:p ex:A .\n');
 		const edit = new vscode.WorkspaceEdit();
@@ -600,6 +586,23 @@ describe('FormEditorSession', () => {
 			['pinnedProperties', { [`${_OWL}Class`]: [RDFS.comment] }, vscode.ConfigurationTarget.Global],
 			['pinnedProperties', { [`${_OWL}Class`]: [RDFS.subClassOf, RDFS.comment] }, vscode.ConfigurationTarget.Workspace],
 			['pinnedProperties', { [`${_OWL}Class`]: [RDFS.subClassOf] }, vscode.ConfigurationTarget.Workspace]
+		]);
+	});
+
+	it('unpins every property of a resource on Unpin All, for everyone and for oneself', async () => {
+		const update = vi.fn(async () => undefined);
+		const layers = { defaultValue: { [`${_OWL}Class`]: [RDFS.subClassOf] }, globalValue: { [`${_OWL}Class`]: [RDFS.comment] } };
+
+		vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({ get: (_key: string, value?: unknown) => value, inspect: () => layers, update } as unknown as vscode.WorkspaceConfiguration);
+
+		const { receive } = await createSession(`ex:A a <${_OWL}Class> ; <${RDFS.comment}> "a class" .\n`);
+
+		await receive({ id: 'Ready' });
+		await receive({ id: 'UnpinAll', resource: RdfDataFactory.namedNode(`${EX}A`) });
+
+		expect(update.mock.calls).toEqual([
+			['pinnedProperties', { [`${_OWL}Class`]: [] }, vscode.ConfigurationTarget.Workspace],
+			['pinnedProperties', { [`${_OWL}Class`]: [] }, vscode.ConfigurationTarget.Global]
 		]);
 	});
 

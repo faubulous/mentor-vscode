@@ -70,6 +70,12 @@ export interface FormEditorContextValue {
 	onSetPin?: (resource: NamedNode | BlankNode, predicate: NamedNode, scope: ScopeKey | undefined) => void;
 
 	/**
+	 * Unpin every property pinned for a resource in a scope that can be written.
+	 * @param resource The resource.
+	 */
+	onUnpinAll?: (resource: NamedNode | BlankNode) => void;
+
+	/**
 	 * Scroll to a resource, used by nested blank node placeholders.
 	 */
 	onRevealResource?: (resource: NamedNode | BlankNode) => void;
@@ -78,13 +84,6 @@ export interface FormEditorContextValue {
 	 * Open an IRI the document does not describe outside the editor.
 	 */
 	onOpenExternal?: (iri: string) => void;
-
-	/**
-	 * Put the text of a blank node written in place on the clipboard, as Turtle.
-	 * @param anchor The offset the node starts at.
-	 * @param version The document version the offset belongs to.
-	 */
-	onCopyAsTurtle?: (anchor: number, version: number) => void;
 
 	/**
 	 * Rename a resource as F2 does: give it another IRI in its namespace, wherever the workspace

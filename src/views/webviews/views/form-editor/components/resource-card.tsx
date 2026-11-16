@@ -2,6 +2,7 @@ import { KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from
 import { BlankNode, NamedNode } from '@rdfjs/types';
 import { termToString } from 'rdf-string';
 import { ResourceSummary } from '../form-editor-model';
+import { useContextMenu } from '../hooks/use-context-menu';
 import { useResourceDetail } from '../hooks/use-resource-detail';
 import { IResourceDataService } from '../services/resource-data-service.interface';
 import { FormEditorShortcuts } from '../form-editor-shortcuts';
@@ -59,7 +60,8 @@ export interface ResourceCardProps {
  * description follow as fields in the order the document writes them, which open the card at their
  * property. Expanded, the card is its statements, led by the label row, whose rows pin their
  * properties, and ends with the link that adds a property. The title bar asks the nested cards of
- * the card to collapse or expand all at once.
+ * the card to collapse or expand all at once. A right-click on the card opens its ⋮ menu, unless a
+ * row or a nested card under the pointer opens its own.
  * @param props The resource and its state.
  * @returns The card.
  */
@@ -78,6 +80,7 @@ export function ResourceCard({ summary, dataService, expanded, writing = false, 
 	const showsPins = !expanded && pins.pins.length > 0;
 	const [openedPredicate, setOpenedPredicate] = useState<NamedNode>();
 	const cardRef = useRef<HTMLElement>(null);
+	const { menuRef, openOnContextMenu } = useContextMenu();
 
 	// A card showing its statements, or the pinned ones while collapsed, holds them current,
 	// wherever the list is scrolled to.
@@ -115,8 +118,8 @@ export function ResourceCard({ summary, dataService, expanded, writing = false, 
 	}, [onToggle, summary.term]);
 
 	return (
-		<article ref={cardRef} onKeyDown={handleKeyDown} className={`resource-card${expanded ? ' is-expanded' : ''}${marked ? ' is-current' : ''}`} data-resource-id={termToString(summary.term)}>
-			<ResourceCardTitleBar summary={summary} expanded={expanded} nestedCollapsed={nestedCollapse.collapsed} onToggle={toggle} onToggleNested={toggleNested} />
+		<article ref={cardRef} onKeyDown={handleKeyDown} onContextMenu={openOnContextMenu} className={`resource-card${expanded ? ' is-expanded' : ''}${marked ? ' is-current' : ''}`} data-resource-id={termToString(summary.term)}>
+			<ResourceCardTitleBar summary={summary} expanded={expanded} nestedCollapsed={nestedCollapse.collapsed} onToggle={toggle} onToggleNested={toggleNested} menuRef={menuRef} />
 			{(!expanded || !detail) && <ResourceCardHeader summary={summary} expanded={expanded} onToggle={toggle} />}
 			{showsPins && detail && <PinnedPropertiesList detail={detail} pins={pins.pins} onOpen={openAt} />}
 			{!expanded && summary.description && !(showsPins && detail) && <div className="resource-card-description"><HighlightedText text={summary.description} query={filterText} /></div>}

@@ -111,12 +111,46 @@ describe('ResourceCard', () => {
 		expect(screen.getByRole('button', { name: 'Collapse all nested' })).toBeTruthy();
 	});
 
-	it('leaves out the description, the usage count and the reveal button of a resource without them', () => {
+	it('leaves out the description, the usage count and Reveal in Editor of a resource without them', () => {
 		const { container } = renderCard({ onRevealInTextEditor: vi.fn() }, false, createResourceSummary('Bare'));
+		const menu = container.querySelector('.resource-card-menu vscode-context-menu') as HTMLElement & { data?: { value?: string }[] };
 
 		expect(container.querySelector('.resource-card-description')).toBeNull();
 		expect(container.querySelector('.card-usage')).toBeNull();
-		expect(screen.queryByRole('button', { name: 'More actions' })).toBeNull();
+		expect(menu.data?.map(item => item.value)).not.toContain('reveal');
+	});
+
+	it('opens its ⋯ menu on a right-click on the card, and leaves a right-click in a row to the menu of the row', () => {
+		const { container } = renderCard({ readOnly: false, onSetPin: vi.fn(), pinScopes: ['user'] }, true, { ...TREE, pins: [] });
+		const menu = container.querySelector('.resource-card-menu vscode-context-menu') as HTMLElement & { show?: boolean };
+		const row = Array.from(container.querySelectorAll<HTMLElement>('.statement-line')).find(line => line.querySelector('.row-menu'))!;
+		const rowMenu = row.querySelector('.row-menu vscode-context-menu') as HTMLElement & { show?: boolean };
+
+		fireEvent.contextMenu(row);
+
+		expect(rowMenu.show).toBe(true);
+		expect(menu.show).not.toBe(true);
+
+		fireEvent.contextMenu(container.querySelector('.resource-card-title-bar')!);
+
+		expect(menu.show).toBe(true);
+	});
+
+	it('opens its ⋯ menu at the pointer on a right-click, and under the ⋯ button on a click on it', () => {
+		const { container } = renderCard({ readOnly: false }, true, { ...TREE, pins: [] });
+		const menu = container.querySelector('.resource-card-menu vscode-context-menu') as HTMLElement & { show?: boolean };
+
+		fireEvent.contextMenu(container.querySelector('.resource-card-title-bar')!, { clientX: 40, clientY: 25 });
+
+		expect(menu.style.left).toBe('40px');
+		expect(menu.style.top).toBe('25px');
+
+		fireEvent.click(container.querySelector('.resource-card-menu .icon-button')!);
+		fireEvent.click(container.querySelector('.resource-card-menu .icon-button')!);
+
+		expect(menu.show).toBe(true);
+		expect(menu.style.left).toBe('');
+		expect(menu.style.top).toBe('');
 	});
 
 	it('removes the card by Ctrl+Shift+K from its title bar, and not from a row', async () => {

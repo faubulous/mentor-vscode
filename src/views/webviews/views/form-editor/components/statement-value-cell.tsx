@@ -1,6 +1,5 @@
 import { TermView } from '../form-editor-model';
 import { RowValue } from '../state/row-value';
-import { useFormEditorContext } from '../state/form-editor-context';
 import { DraftResourceCard } from './draft-resource-card';
 import { LiteralValueField } from './literal-value-field';
 import { NestedCardActions } from './nested-card-menu';
@@ -42,14 +41,13 @@ export interface StatementValueCellProps extends StatementRowContext {
  * @returns The value.
  */
 export function StatementValueCell({ value, view, index, edited, ...context }: StatementValueCellProps): React.JSX.Element {
-	const { onCopyAsTurtle } = useFormEditorContext();
 	const comments = value.kind === 'written' ? value.view.comments : undefined;
 	const isNode = view.nested !== undefined || (value.kind === 'term' && value.node !== undefined);
 
 	return (
 		<span className={`statement-value${isNode ? ' is-node' : ''}`}>
 			{comments && !view.nested && <span className="statement-comment statement-value-comment">{comments.join('\n')}</span>}
-			{edited ? _editedValue(value, view, index, edited, context, onCopyAsTurtle) : <TermValue view={view} comments={comments} {...context} />}
+			{edited ? _editedValue(value, view, index, edited, context) : <TermValue view={view} comments={comments} {...context} />}
 		</span>
 	);
 }
@@ -63,10 +61,9 @@ export function StatementValueCell({ value, view, index, edited, ...context }: S
  * @param index The index of the value.
  * @param edited The row.
  * @param context Where the row stands.
- * @param onCopyAsTurtle Puts the text of a blank node on the clipboard, where the host can.
  * @returns The value.
  */
-function _editedValue(value: RowValue, view: TermView, index: number, edited: EditedRow, context: StatementRowContext, onCopyAsTurtle?: (anchor: number, version: number) => void): React.JSX.Element {
+function _editedValue(value: RowValue, view: TermView, index: number, edited: EditedRow, context: StatementRowContext): React.JSX.Element {
 	if (value.kind === 'term' && value.node?.copyOf) {
 		return <TermValue view={view} {...context} />;
 	}
@@ -80,7 +77,7 @@ function _editedValue(value: RowValue, view: TermView, index: number, edited: Ed
 	}
 
 	if (view.nested) {
-		return <TermValue view={view} comments={value.kind === 'written' ? value.view.comments : undefined} {...context} nestedActions={_nestedActionsOf(view, index, edited, onCopyAsTurtle)} />;
+		return <TermValue view={view} comments={value.kind === 'written' ? value.view.comments : undefined} {...context} nestedActions={_nestedActionsOf(index, edited)} />;
 	}
 
 	return (
@@ -95,18 +92,13 @@ function _editedValue(value: RowValue, view: TermView, index: number, edited: Ed
 
 /**
  * What the ⋯ menu of the nested card of a blank node does in its row.
- * @param view The view of the node.
  * @param index The index of the node among the values of the row.
  * @param edited The row.
- * @param onCopyAsTurtle Puts the text of a blank node on the clipboard, where the host can.
  * @returns The actions.
  */
-function _nestedActionsOf(view: TermView, index: number, edited: EditedRow, onCopyAsTurtle?: (anchor: number, version: number) => void): NestedCardActions {
-	const anchor = view.anchor;
-
+function _nestedActionsOf(index: number, edited: EditedRow): NestedCardActions {
 	return {
 		onDuplicate: () => edited.editor.duplicateValue(index),
-		onCopyAsTurtle: onCopyAsTurtle && anchor !== undefined ? () => onCopyAsTurtle(anchor, edited.editor.version) : undefined,
 		onRemove: () => {
 			edited.editor.removeValue(index);
 			edited.editor.confirm();

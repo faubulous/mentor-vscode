@@ -101,6 +101,21 @@ describe('PinnedPropertiesService', () => {
 		expect(pins.resolve([], [])).toBeUndefined();
 	});
 
+	it('unpins several properties at once in the scopes given, writing the defaults of a type without them', () => {
+		const pins = pinsFrom({}, { [OWL.Class]: [RDFS.comment, RDFS.seeAlso] });
+
+		expect(pins.withoutPins([OWL.Class], [RDFS.subClassOf, RDFS.comment, RDFS.seeAlso], ['user', 'workspace'])).toEqual({
+			workspace: { [OWL.Class]: [] },
+			user: { [OWL.Class]: [] }
+		});
+	});
+
+	it('leaves the workspace settings alone when only the user settings can be written', () => {
+		const pins = pinsFrom({}, { [OWL.Class]: [RDFS.comment] });
+
+		expect(pins.withoutPins([OWL.Class], [RDFS.subClassOf, RDFS.comment], ['user'])).toEqual({ user: { [OWL.Class]: [] } });
+	});
+
 	it('writes nothing to unpin a property that is not pinned', () => {
 		expect(pinsFrom({}, {}).withPin([OWL.Class], OWL.Class, RDFS.comment, undefined)).toEqual({});
 	});

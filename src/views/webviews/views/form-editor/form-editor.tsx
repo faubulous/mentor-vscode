@@ -184,10 +184,10 @@ function FormEditor(): React.JSX.Element {
 	const handleRevealInTextEditor = useCallback((line: number, character: number) => post({ id: 'RevealInTextEditor', position: { line, character } }), [post]);
 	const handleOpenTextEditor = useCallback(() => post({ id: 'ExecuteCommand', command: 'mentor.command.openTextEditor' }), [post]);
 	const handleOpenExternal = useCallback((iri: string) => post({ id: 'ExecuteCommand', command: 'vscode.open', args: [iri] }), [post]);
-	const handleCopyAsTurtle = useCallback((anchor: number, version: number) => post({ id: 'CopyAsTurtle', anchor, version }), [post]);
 	const handleRenameResource = useCallback((resource: NamedNode, iri: string) => post({ id: 'RenameResource', resource, iri }), [post]);
 	const handleRemoveResource = useCallback((resource: NamedNode | BlankNode) => post({ id: 'RemoveResource', resource }), [post]);
 	const handleSetPin = useCallback((resource: NamedNode | BlankNode, predicate: NamedNode, scope: ScopeKey | undefined) => post({ id: 'SetPin', resource, predicate, scope }), [post]);
+	const handleUnpinAll = useCallback((resource: NamedNode | BlankNode) => post({ id: 'UnpinAll', resource }), [post]);
 	const handleRevealProblem = useCallback((problem: DocumentProblem) => handleRevealInTextEditor(problem.line, problem.character), [handleRevealInTextEditor]);
 	const handleRevealPosition = useCallback((position: DocumentPosition) => handleRevealInTextEditor(position.line, position.character), [handleRevealInTextEditor]);
 
@@ -254,15 +254,15 @@ function FormEditor(): React.JSX.Element {
 		descriptionPredicates: snapshot?.descriptionPredicates,
 		pinScopes: snapshot?.pinScopes,
 		onSetPin: handleSetPin,
+		onUnpinAll: handleUnpinAll,
 		onRemoveResource: handleRemoveResource,
 		onRevealResource: handleRevealResource,
 		onOpenExternal: handleOpenExternal,
-		onCopyAsTurtle: handleCopyAsTurtle,
 		onRenameResource: handleRenameResource,
 		onRevealInTextEditor: handleRevealPosition,
 		revealedResource: revealed,
 		filterText
-	}), [snapshot, editable, controller, languageFilter, handleRevealResource, handleOpenExternal, handleCopyAsTurtle, handleRenameResource, handleRevealPosition, handleSetPin, handleRemoveResource, revealed, filterText]);
+	}), [snapshot, editable, controller, languageFilter, handleRevealResource, handleOpenExternal, handleRenameResource, handleRevealPosition, handleSetPin, handleUnpinAll, handleRemoveResource, revealed, filterText]);
 
 	if (!snapshot) {
 		return (
