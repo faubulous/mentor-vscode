@@ -86,13 +86,6 @@ export interface FormEditorContextValue {
 	onOpenExternal?: (iri: string) => void;
 
 	/**
-	 * Put the text of a blank node written in place on the clipboard, as Turtle.
-	 * @param anchor The offset the node starts at.
-	 * @param version The document version the offset belongs to.
-	 */
-	onCopyAsTurtle?: (anchor: number, version: number) => void;
-
-	/**
 	 * Rename a resource as F2 does: give it another IRI in its namespace, wherever the workspace
 	 * writes it.
 	 * @param resource The resource.

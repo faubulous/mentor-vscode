@@ -496,20 +496,6 @@ describe('FormEditorSession', () => {
 		expect(postedOf(posted, 'DocumentSnapshot')).toHaveLength(1);
 	});
 
-	it('puts the text of a blank node on the clipboard, for the version it was read from only', async () => {
-		const { receive, document } = await createSession('ex:A ex:p [ ex:q "x" ; ex:r [ ex:s 1 ] ] .\n');
-		const writeText = vi.spyOn(vscode.env.clipboard, 'writeText');
-		const anchor = document.getText().indexOf('[');
-
-		await receive({ id: 'CopyAsTurtle', anchor, version: document.version + 1 });
-
-		expect(writeText).not.toHaveBeenCalled();
-
-		await receive({ id: 'CopyAsTurtle', anchor, version: document.version });
-
-		expect(writeText).toHaveBeenCalledWith('[ ex:q "x" ; ex:r [ ex:s 1 ] ]');
-	});
-
 	it('renames a resource as F2 does, at a prefixed name of it, and tells the webview and the status bar', async () => {
 		const { posted, receive, document } = await createSession('ex:A a ex:Class .\nex:B ex:p ex:A .\n');
 		const edit = new vscode.WorkspaceEdit();

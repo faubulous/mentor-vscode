@@ -76,11 +76,6 @@ export type FormEditorWebviewMessage =
 	 */
 	| { id: 'PickLanguage'; allLanguages: boolean }
 	/**
-	 * Put the text of a blank node written in place on the clipboard, as Turtle; `anchor` is the
-	 * offset it starts at in the document version `version`.
-	 */
-	| { id: 'CopyAsTurtle'; anchor: number; version: number }
-	/**
 	 * Rename a resource as F2 does: give it another IRI in its namespace, wherever the workspace
 	 * writes it.
 	 */

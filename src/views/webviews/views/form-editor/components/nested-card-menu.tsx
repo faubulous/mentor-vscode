@@ -14,11 +14,6 @@ export interface NestedCardActions {
 	onDuplicate: () => void;
 
 	/**
-	 * Put the text of the node on the clipboard, as Turtle; absent where its text cannot be found.
-	 */
-	onCopyAsTurtle?: () => void;
-
-	/**
 	 * Remove the node from its row and write the row.
 	 */
 	onRemove: () => void;
@@ -40,8 +35,7 @@ export interface NestedCardMenuProps {
 }
 
 /**
- * The ⋮ button of the nested card of a blank node and its menu: Duplicate, Copy as Turtle and
- * Remove. The menu hides itself when an item is picked or the user clicks away, so its visibility
+ * The ⋮ button of the nested card of a blank node and its menu: Duplicate and Remove. The menu hides itself when an item is picked or the user clicks away, so its visibility
  * is left to the element.
  * @param props What the menu offers and where its element is kept.
  * @returns The button and the menu.
@@ -51,9 +45,6 @@ export function NestedCardMenu({ actions, menuRef }: NestedCardMenuProps): React
 		switch (event.detail.value) {
 			case 'duplicate':
 				actions.onDuplicate();
-				break;
-			case 'copy':
-				actions.onCopyAsTurtle?.();
 				break;
 			case 'remove':
 				actions.onRemove();
@@ -77,7 +68,6 @@ export function NestedCardMenu({ actions, menuRef }: NestedCardMenuProps): React
 				ref={setMenuRef}
 				data={[
 					{ label: 'Duplicate', value: 'duplicate' },
-					...(actions.onCopyAsTurtle ? [{ label: 'Copy as Turtle', value: 'copy' }] : []),
 					{ separator: true },
 					{ label: 'Remove', value: 'remove', keybinding: FormEditorShortcuts.Remove.label }
 				]}

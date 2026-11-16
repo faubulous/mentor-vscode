@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { act, fireEvent, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { RDF, RDFS } from '@faubulous/mentor-rdf';
@@ -51,8 +51,7 @@ async function renderCard(nodeDetail: ResourceDetail = NODE_DETAIL, expand = tru
 	const host = createEditingHostStub();
 	const editing = new EditingController(host);
 	const dataService = createResourceDataServiceStub([DETAIL, nodeDetail]);
-	const onCopyAsTurtle = vi.fn();
-	const context: FormEditorContextValue = { readOnly: false, editing, namespaces: NAMESPACES, languageTags: {}, resources: [], onCopyAsTurtle };
+	const context: FormEditorContextValue = { readOnly: false, editing, namespaces: NAMESPACES, languageTags: {}, resources: [] };
 
 	renderWebview(
 		<FormEditorContext.Provider value={context}>
@@ -64,7 +63,7 @@ async function renderCard(nodeDetail: ResourceDetail = NODE_DETAIL, expand = tru
 		await userEvent.click(within(nestedCard()).getByRole('button', { name: 'Expand' }));
 	}
 
-	return { host, editing, onCopyAsTurtle };
+	return { host, editing };
 }
 
 /**
@@ -299,14 +298,6 @@ describe('StatementList, with a blank node', () => {
 		await pick('remove');
 
 		expect(host.submitted.map(record => record.operations)).toEqual([[{ op: 'setValues', subject: TEST_SUBJECT, predicate: RDFS.comment, values: [{ kind: 'existing', anchor: 120 }] }]]);
-	});
-
-	it('copies the blank node as Turtle from the ⋯ menu of its card, by where it is written', async () => {
-		const { onCopyAsTurtle } = await renderCard();
-
-		await pick('copy');
-
-		expect(onCopyAsTurtle).toHaveBeenCalledWith(130, 1);
 	});
 
 	it('opens the ⋯ menu on a right-click on the header of the card, the menu of a row on a right-click on it, and leaves a right-click in a text field to the browser', async () => {
