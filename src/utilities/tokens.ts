@@ -411,6 +411,25 @@ export function isTypeAssertionObject(tokens: IToken[], tokenIndex: number, pref
 	}
 }
 /**
+ * Create a token without a source position, as the readers emit for quads that have no direct
+ * representation in the source text, and as statements read from the store carry.
+ * @returns The token, which {@link hasSourcePosition} rejects.
+ */
+export function createSyntheticToken(): IToken {
+	return {
+		image: '',
+		startOffset: Infinity,
+		endOffset: Infinity,
+		startLine: Infinity,
+		endLine: Infinity,
+		startColumn: Infinity,
+		endColumn: Infinity,
+		tokenType: { name: 'SYNTHETIC' },
+		tokenTypeIdx: -1
+	} as IToken;
+}
+
+/**
  * Indicate whether a token carries a real source position. Readers emit synthetic tokens
  * with infinite offsets for quads that have no direct representation in the source text,
  * such as the inner triples of an object-position blank node property list.

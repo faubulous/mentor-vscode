@@ -1,7 +1,9 @@
 import { useLayoutEffect, useMemo, useRef } from 'react';
 import { Term } from '@rdfjs/types';
+import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { ResourceSummary } from '../form-editor-model';
 import { useHoveredElement } from '../hooks/use-hovered-element';
+import { useResourceSummary } from '../hooks/use-resource-summary';
 import { IResourceDataService } from '../services/resource-data-service.interface';
 import { useFormEditorContext } from '../state/form-editor-context';
 import { CompactResourceCard } from './compact-resource-card';
@@ -32,9 +34,15 @@ export interface ResourceTooltipAttributes {
  */
 export interface ResourceTooltipProps {
 	/**
-	 * Supplies the statements of the resources, which their compact cards show.
+	 * Supplies the statements of the resources of the document, which their compact cards show.
 	 */
-	dataService: IResourceDataService;
+	documentDataService: IResourceDataService;
+
+	/**
+	 * Supplies the summaries and statements of the resources the document does not define, read
+	 * from the store.
+	 */
+	storeDataService: IResourceDataService;
 }
 
 /**
@@ -52,22 +60,26 @@ export function getResourceTooltipAttributes(term: Term | undefined, anchor?: 'e
 }
 
 /**
- * The tooltip of the resource the pointer rests on: the compact card of a resource of the
- * document, else the IRI. It stands under the element, at least as wide, from its left edge or,
+ * The tooltip of the resource the pointer rests on: its compact card, from the document where the
+ * document defines it, else from the store, and the IRI while the store has not answered or knows
+ * nothing about it. It stands under the element, at least as wide, from its left edge or,
  * where the element asks for it, its right edge, and above the element where the view has no room
  * under it. Any element marked with {@link getResourceTooltipAttributes} is a resource; pressing a
  * key or a button, scrolling and leaving the element hide the tooltip, which never takes the
  * pointer.
- * @param props Where the statements of the resources come from.
+ * @param props Where the summaries and statements of the resources come from.
  * @returns The tooltip, or nothing while no resource is hovered.
  */
-export function ResourceTooltip({ dataService }: ResourceTooltipProps): React.JSX.Element | null {
+export function ResourceTooltip({ documentDataService, storeDataService }: ResourceTooltipProps): React.JSX.Element | null {
 	const { resources } = useFormEditorContext();
 	const summaries = useMemo(() => _summariesByIri(resources ?? []), [resources]);
 	const element = useHoveredElement('[data-tooltip-iri]', HOVER_DELAY);
 	const tooltipRef = useRef<HTMLDivElement>(null);
 	const iri = element?.getAttribute('data-tooltip-iri') ?? undefined;
-	const summary = iri ? summaries.get(iri) : undefined;
+	const documentSummary = iri ? summaries.get(iri) : undefined;
+	const storeResource = useMemo(() => iri && !documentSummary ? RdfDataFactory.namedNode(iri) : undefined, [iri, documentSummary]);
+	const storeSummary = useResourceSummary(storeDataService, storeResource);
+	const summary = documentSummary ?? storeSummary;
 
 	useLayoutEffect(() => {
 		const tooltip = tooltipRef.current;
@@ -90,7 +102,7 @@ export function ResourceTooltip({ dataService }: ResourceTooltipProps): React.JS
 
 	return (
 		<div ref={tooltipRef} className={`resource-tooltip${summary ? ' is-card' : ''}`} role="tooltip">
-			{summary ? <CompactResourceCard summary={summary} dataService={dataService} /> : <div className="resource-tooltip-iri">{iri}</div>}
+			{summary ? <CompactResourceCard summary={summary} dataService={documentSummary ? documentDataService : storeDataService} /> : <div className="resource-tooltip-iri">{iri}</div>}
 		</div>
 	);
 }

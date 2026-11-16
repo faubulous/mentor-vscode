@@ -6,7 +6,7 @@ import 'reflect-metadata';
 
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
-import { RDF, RDFS, _OWL, _RDFS } from '@faubulous/mentor-rdf';
+import { OWL, RDF, RDFS, Store, _OWL, _RDFS } from '@faubulous/mentor-rdf';
 import { RdfSyntax } from '@faubulous/mentor-rdf-parsers';
 import { ServiceToken } from '@src/services/tokens';
 import { IDocumentContext } from '@src/services/document/document-context.interface';
@@ -222,6 +222,31 @@ describe('FormEditorSession', () => {
 		expect(message.resources).toHaveLength(1);
 		expect(message.resources[0].properties.map(property => property.predicate.term)).toEqual([RdfDataFactory.namedNode(RDF.type), RdfDataFactory.namedNode(`${EX}p`)]);
 		expect(message.missing).toEqual([RdfDataFactory.namedNode(`${EX}missing`)]);
+	});
+
+	it('serves what the store states about resources the document does not define, as read-only cards, only when asked', async () => {
+		const store = new Store();
+
+		store.loadTurtle(`@prefix owl: <${_OWL}> .\n@prefix rdfs: <${_RDFS}> .\n<${EX}Tree> a owl:Class ; rdfs:label "Tree" ; rdfs:subClassOf <${EX}Plant> .\n`, 'http://example.org/vocabulary', false);
+		container.registerInstance(ServiceToken.VocabularyRepository, { store } as never);
+
+		const { posted, receive } = await createSession('ex:A a ex:Class .\n');
+		const tree = RdfDataFactory.namedNode(`${EX}Tree`);
+		const unknown = RdfDataFactory.namedNode(`${EX}Unknown`);
+
+		await receive({ id: 'Ready' });
+		await receive({ id: 'RequestResources', resources: [tree] });
+		await receive({ id: 'RequestResources', resources: [tree, unknown], source: 'store' });
+
+		const [fromDocument, fromStore] = postedOf(posted, 'ResourcesLoaded');
+
+		expect(fromDocument.missing).toEqual([tree]);
+		expect(fromDocument.source).toBeUndefined();
+		expect(fromStore.source).toBe('store');
+		expect(fromStore.missing).toEqual([unknown]);
+		expect(fromStore.summaries?.map(summary => [summary.term, summary.typeIri])).toEqual([[tree, OWL.Class]]);
+		expect(fromStore.resources[0].properties.map(property => property.predicate.term.value)).toEqual([RDF.type, RDFS.label, RDFS.subClassOf]);
+		expect(fromStore.resources[0].properties.flatMap(property => property.values).every(value => !value.editable && value.anchor === undefined)).toBe(true);
 	});
 
 	it('tells the webview when the document cannot be shown', async () => {

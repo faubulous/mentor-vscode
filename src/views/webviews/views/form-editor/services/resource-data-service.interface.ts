@@ -1,5 +1,5 @@
 import { BlankNode, NamedNode } from '@rdfjs/types';
-import { ResourceDetail } from '../form-editor-model';
+import { ResourceDetail, ResourceSummary } from '../form-editor-model';
 
 /**
  * Supplies the properties of resources to the list. Abstracted so the resource components can
@@ -27,6 +27,15 @@ export interface IResourceDataService {
 	 * @returns The stale detail, or `undefined` when there is none.
 	 */
 	getStale?(resource: NamedNode | BlankNode): ResourceDetail | undefined;
+
+	/**
+	 * Get the summary of a resource that came with its detail, current or stale, as it comes for a
+	 * resource the snapshot does not list, such as one read from the store. Optional: a service of
+	 * the resources of the document has their summaries in the snapshot.
+	 * @param resource The resource.
+	 * @returns The summary, or `undefined` when none came.
+	 */
+	getSummary?(resource: NamedNode | BlankNode): ResourceSummary | undefined;
 
 	/**
 	 * Ask for the detail of the given resources. Implementations are expected to coalesce

@@ -230,6 +230,13 @@ export interface ResourceSummary {
 }
 
 /**
+ * Where the statements of a resource are read from: the document, which they can be edited in, or
+ * the store, which holds the other documents of the workspace and the vocabularies Mentor ships
+ * with, and whose statements only read.
+ */
+export type ResourceSource = 'document' | 'store';
+
+/**
  * A property pinned on the cards of a resource.
  */
 export interface PinnedProperty {

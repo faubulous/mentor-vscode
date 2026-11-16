@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { NamedNode } from '@rdfjs/types';
 import { act, fireEvent, screen } from '@testing-library/react';
 import { RDFS } from '@faubulous/mentor-rdf';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
@@ -8,6 +9,8 @@ import { createResourceDataServiceStub } from '@src/utilities/mocks/resource-dat
 import { createResourceSummary } from '@src/utilities/mocks/resource-summary-fixtures';
 import { createLiteralView, createProperty, createTestResourceDetail } from '@src/utilities/mocks/statement-fixtures';
 import { ResourceSummary } from '../form-editor-model';
+import { IResourceDataService } from '../services/resource-data-service.interface';
+import { ResourceDataService } from '../services/resource-data-service';
 import { FormEditorContext } from '../state/form-editor-context';
 import { getResourceTooltipAttributes, ResourceTooltip } from './resource-tooltip';
 
@@ -30,20 +33,21 @@ class FakeResizeObserver {
  * end, and a blank node.
  * @param tree The summary of the resource of the document.
  * @param loaded Whether the statements of the resource are at hand.
+ * @param storeDataService Supplies the resources of the store.
  */
-function renderTooltip(tree: ResourceSummary = TREE, loaded = true) {
+function renderTooltip(tree: ResourceSummary = TREE, loaded = true, storeDataService: IResourceDataService = createResourceDataServiceStub()) {
 	const detail = { ...createTestResourceDetail([createProperty('rdfs:comment', [createLiteralView('A tree bearing apples')])]), term: tree.term };
-	const dataService = createResourceDataServiceStub(loaded ? [detail] : []);
+	const documentDataService = createResourceDataServiceStub(loaded ? [detail] : []);
 	const result = renderWebview(
 		<FormEditorContext.Provider value={{ readOnly: true, namespaces: [], languageTags: {}, resources: [tree], descriptionPredicates: [RdfDataFactory.namedNode(RDFS.comment)] }}>
 			<span className="tree" {...getResourceTooltipAttributes(tree.term)}>Apple tree</span>
 			<span className="other" {...getResourceTooltipAttributes(RdfDataFactory.namedNode('http://x/y'), 'end')}>y</span>
 			<span className="node" {...getResourceTooltipAttributes(RdfDataFactory.blankNode('b1'))}>node</span>
-			<ResourceTooltip dataService={dataService} />
+			<ResourceTooltip documentDataService={documentDataService} storeDataService={storeDataService} />
 		</FormEditorContext.Provider>
 	);
 
-	return { ...result, dataService };
+	return { ...result, documentDataService };
 }
 
 /**
@@ -93,19 +97,19 @@ describe('ResourceTooltip', () => {
 	});
 
 	it('asks for no statements of a resource without pins', () => {
-		const { container, dataService } = renderTooltip({ ...TREE, pins: [] }, false);
+		const { container, documentDataService } = renderTooltip({ ...TREE, pins: [] }, false);
 
 		hover(container.querySelector('.tree')!);
 
-		expect(dataService.requested).toEqual([]);
+		expect(documentDataService.requested).toEqual([]);
 	});
 
 	it('asks for the statements its pinned properties are read from', () => {
-		const { container, dataService } = renderTooltip({ ...TREE, pins: [{ predicate: RdfDataFactory.namedNode(RDFS.comment), scope: 'workspace' }] }, false);
+		const { container, documentDataService } = renderTooltip({ ...TREE, pins: [{ predicate: RdfDataFactory.namedNode(RDFS.comment), scope: 'workspace' }] }, false);
 
 		hover(container.querySelector('.tree')!);
 
-		expect(dataService.requested).toEqual([TREE.term]);
+		expect(documentDataService.requested).toEqual([TREE.term]);
 	});
 
 	it('shows the pinned properties of a resource as items that open nothing', () => {
@@ -119,7 +123,41 @@ describe('ResourceTooltip', () => {
 		expect(item.getAttribute('role')).toBeNull();
 	});
 
-	it('shows only the IRI of a resource the document does not describe', () => {
+	it('asks the store for a resource the document does not define, and shows its card once it comes', () => {
+		const send = vi.fn();
+		const storeDataService = new ResourceDataService(send);
+		const other = createResourceSummary('y', { term: RdfDataFactory.namedNode('http://x/y'), label: 'Other', typeLabels: ['Property'] });
+
+		storeDataService.setSnapshot(1, 1);
+
+		const { container } = renderTooltip(TREE, true, storeDataService);
+
+		hover(container.querySelector('.other')!);
+		act(() => {
+			vi.advanceTimersByTime(50);
+		});
+
+		expect(send).toHaveBeenCalledWith([other.term]);
+		expect(screen.getByRole('tooltip').textContent).toBe('http://x/y');
+
+		act(() => {
+			storeDataService.accept(1, [{ term: other.term as NamedNode, properties: [] }], [], [other]);
+		});
+
+		expect(screen.getByRole('tooltip').querySelector('.resource-card-label')?.textContent).toBe('Other');
+		expect(screen.getByRole('tooltip').querySelector('.compact-card-types')?.textContent).toBe('Property');
+	});
+
+	it('never asks the store for a resource of the document', () => {
+		const storeDataService = createResourceDataServiceStub();
+		const { container } = renderTooltip(TREE, true, storeDataService);
+
+		hover(container.querySelector('.tree')!);
+
+		expect(storeDataService.requested).toEqual([]);
+	});
+
+	it('shows only the IRI of a resource neither the document nor the store describes', () => {
 		const { container } = renderTooltip();
 
 		hover(container.querySelector('.other')!);

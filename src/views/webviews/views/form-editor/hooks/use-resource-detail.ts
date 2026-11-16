@@ -27,9 +27,7 @@ export interface ResourceDetailState {
  * @returns The detail and whether it is stale.
  */
 export function useResourceDetail(service: IResourceDataService, resource: NamedNode | BlankNode): ResourceDetailState {
-	const [, setRevision] = useState(0);
-
-	useEffect(() => service.subscribe(() => setRevision(revision => revision + 1)), [service]);
+	useDataServiceUpdates(service);
 
 	const detail = service.get(resource);
 
@@ -38,4 +36,14 @@ export function useResourceDetail(service: IResourceDataService, resource: Named
 	}
 
 	return { detail: service.getStale?.(resource), stale: true };
+}
+
+/**
+ * Re-render whenever a data service loads new data.
+ * @param service The data service.
+ */
+export function useDataServiceUpdates(service: IResourceDataService): void {
+	const [, setRevision] = useState(0);
+
+	useEffect(() => service.subscribe(() => setRevision(revision => revision + 1)), [service]);
 }

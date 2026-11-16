@@ -37,6 +37,7 @@ import {
 	getTokenBeforePosition,
 	isPrefixTokenAtPosition,
 	getTokenRange,
+	createSyntheticToken,
 	hasSourcePosition,
 	tokensMatchText,
 } from '@src/utilities/tokens';
@@ -522,6 +523,10 @@ describe('hasSourcePosition', () => {
 		} as unknown as IToken;
 
 		expect(hasSourcePosition(token)).toBe(false);
+	});
+
+	it('creates a synthetic token without a source position', () => {
+		expect(hasSourcePosition(createSyntheticToken())).toBe(false);
 	});
 
 	it('rejects a token whose offsets are infinite even without the synthetic token type', () => {
