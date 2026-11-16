@@ -3,6 +3,7 @@ import { VscodeContextMenu } from '@vscode-elements/elements';
 import { useVscodeElementRef } from '@src/views/webviews/hooks';
 import { ScopeKey } from '@src/utilities/config-scope';
 import { FormEditorShortcuts } from '../form-editor-shortcuts';
+import { toggleMenuAtButton } from '../hooks/use-context-menu';
 
 /**
  * Properties of the {@link RowMenu} component.
@@ -80,16 +81,10 @@ export function RowMenu({ label, scope, pinScopes, onPin, onRemove, menuRef }: R
 		selectRef(element);
 	};
 
-	const toggle = (): void => {
-		if (menuRef.current) {
-			menuRef.current.show = !menuRef.current.show;
-		}
-	};
-
 	return (
 		<span className={`row-menu${scope ? ' is-pinned' : ''}`}>
 			{scope && onPin && <vscode-icon className="row-menu-pin" name={scope === 'workspace' ? 'pinned' : 'pin'} size={13} title={scope === 'workspace' ? 'Pinned for everyone' : 'Pinned for you'}></vscode-icon>}
-			<button type="button" className="icon-button" aria-label={`More actions for ${label}`} aria-haspopup="menu" title="More actions" onClick={toggle}>
+			<button type="button" className="icon-button" aria-label={`More actions for ${label}`} aria-haspopup="menu" title="More actions" onClick={() => toggleMenuAtButton(menuRef.current)}>
 				<vscode-icon name="kebab-vertical" size={14}></vscode-icon>
 			</button>
 			<vscode-context-menu ref={setMenuRef} data={items}></vscode-context-menu>

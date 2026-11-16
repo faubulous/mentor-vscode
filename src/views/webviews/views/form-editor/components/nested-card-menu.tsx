@@ -2,6 +2,7 @@ import { MutableRefObject } from 'react';
 import { VscodeContextMenu } from '@vscode-elements/elements';
 import { useVscodeElementRef } from '@src/views/webviews/hooks';
 import { FormEditorShortcuts } from '../form-editor-shortcuts';
+import { toggleMenuAtButton } from '../hooks/use-context-menu';
 
 /**
  * What the row holding the nested card of a blank node can do with the node.
@@ -67,15 +68,9 @@ export function NestedCardMenu({ actions, menuRef }: NestedCardMenuProps): React
 		selectRef(element);
 	};
 
-	const toggle = (): void => {
-		if (menuRef.current) {
-			menuRef.current.show = !menuRef.current.show;
-		}
-	};
-
 	return (
 		<span className="nested-card-menu">
-			<button type="button" className="nested-card-more" aria-label="More actions" aria-haspopup="menu" title="More actions" onClick={toggle}>
+			<button type="button" className="nested-card-more" aria-label="More actions" aria-haspopup="menu" title="More actions" onClick={() => toggleMenuAtButton(menuRef.current)}>
 				<vscode-icon name="kebab-vertical" size={14}></vscode-icon>
 			</button>
 			<vscode-context-menu

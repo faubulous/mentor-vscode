@@ -2,6 +2,7 @@ import { MutableRefObject } from 'react';
 import { VscodeContextMenu } from '@vscode-elements/elements';
 import { useVscodeElementRef } from '@src/views/webviews/hooks';
 import { FormEditorShortcuts } from '../form-editor-shortcuts';
+import { toggleMenuAtButton } from '../hooks/use-context-menu';
 
 /**
  * What the ⋮ menu of a card does; an action that is absent is left out of the menu.
@@ -98,15 +99,9 @@ export function ResourceCardMenu({ actions, expanded, prefixedName, menuRef }: R
 		selectRef(element);
 	};
 
-	const toggle = (): void => {
-		if (menuRef.current) {
-			menuRef.current.show = !menuRef.current.show;
-		}
-	};
-
 	return (
 		<span className="resource-card-menu">
-			<button type="button" className="icon-button" aria-label="More actions" aria-haspopup="menu" title="More actions" onClick={toggle}>
+			<button type="button" className="icon-button" aria-label="More actions" aria-haspopup="menu" title="More actions" onClick={() => toggleMenuAtButton(menuRef.current)}>
 				<vscode-icon name="kebab-vertical" size={14}></vscode-icon>
 			</button>
 			<vscode-context-menu ref={setMenuRef} data={_itemsOf(actions, expanded, prefixedName)}></vscode-context-menu>
