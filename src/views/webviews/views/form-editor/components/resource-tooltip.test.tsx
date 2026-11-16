@@ -33,21 +33,21 @@ class FakeResizeObserver {
  * end, and a blank node.
  * @param tree The summary of the resource of the document.
  * @param loaded Whether the statements of the resource are at hand.
- * @param storeService Supplies the resources of the store.
+ * @param storeDataService Supplies the resources of the store.
  */
-function renderTooltip(tree: ResourceSummary = TREE, loaded = true, storeService: IResourceDataService = createResourceDataServiceStub()) {
+function renderTooltip(tree: ResourceSummary = TREE, loaded = true, storeDataService: IResourceDataService = createResourceDataServiceStub()) {
 	const detail = { ...createTestResourceDetail([createProperty('rdfs:comment', [createLiteralView('A tree bearing apples')])]), term: tree.term };
-	const dataService = createResourceDataServiceStub(loaded ? [detail] : []);
+	const documentDataService = createResourceDataServiceStub(loaded ? [detail] : []);
 	const result = renderWebview(
 		<FormEditorContext.Provider value={{ readOnly: true, namespaces: [], languageTags: {}, resources: [tree], descriptionPredicates: [RdfDataFactory.namedNode(RDFS.comment)] }}>
 			<span className="tree" {...getResourceTooltipAttributes(tree.term)}>Apple tree</span>
 			<span className="other" {...getResourceTooltipAttributes(RdfDataFactory.namedNode('http://x/y'), 'end')}>y</span>
 			<span className="node" {...getResourceTooltipAttributes(RdfDataFactory.blankNode('b1'))}>node</span>
-			<ResourceTooltip dataService={dataService} storeService={storeService} />
+			<ResourceTooltip documentDataService={documentDataService} storeDataService={storeDataService} />
 		</FormEditorContext.Provider>
 	);
 
-	return { ...result, dataService };
+	return { ...result, documentDataService };
 }
 
 /**
@@ -97,19 +97,19 @@ describe('ResourceTooltip', () => {
 	});
 
 	it('asks for no statements of a resource without pins', () => {
-		const { container, dataService } = renderTooltip({ ...TREE, pins: [] }, false);
+		const { container, documentDataService } = renderTooltip({ ...TREE, pins: [] }, false);
 
 		hover(container.querySelector('.tree')!);
 
-		expect(dataService.requested).toEqual([]);
+		expect(documentDataService.requested).toEqual([]);
 	});
 
 	it('asks for the statements its pinned properties are read from', () => {
-		const { container, dataService } = renderTooltip({ ...TREE, pins: [{ predicate: RdfDataFactory.namedNode(RDFS.comment), scope: 'workspace' }] }, false);
+		const { container, documentDataService } = renderTooltip({ ...TREE, pins: [{ predicate: RdfDataFactory.namedNode(RDFS.comment), scope: 'workspace' }] }, false);
 
 		hover(container.querySelector('.tree')!);
 
-		expect(dataService.requested).toEqual([TREE.term]);
+		expect(documentDataService.requested).toEqual([TREE.term]);
 	});
 
 	it('shows the pinned properties of a resource as items that open nothing', () => {
@@ -125,12 +125,12 @@ describe('ResourceTooltip', () => {
 
 	it('asks the store for a resource the document does not define, and shows its card once it comes', () => {
 		const send = vi.fn();
-		const storeService = new ResourceDataService(send);
+		const storeDataService = new ResourceDataService(send);
 		const other = createResourceSummary('y', { term: RdfDataFactory.namedNode('http://x/y'), label: 'Other', typeLabels: ['Property'] });
 
-		storeService.setSnapshot(1, 1);
+		storeDataService.setSnapshot(1, 1);
 
-		const { container } = renderTooltip(TREE, true, storeService);
+		const { container } = renderTooltip(TREE, true, storeDataService);
 
 		hover(container.querySelector('.other')!);
 		act(() => {
@@ -141,7 +141,7 @@ describe('ResourceTooltip', () => {
 		expect(screen.getByRole('tooltip').textContent).toBe('http://x/y');
 
 		act(() => {
-			storeService.accept(1, [{ term: other.term as NamedNode, properties: [] }], [], [other]);
+			storeDataService.accept(1, [{ term: other.term as NamedNode, properties: [] }], [], [other]);
 		});
 
 		expect(screen.getByRole('tooltip').querySelector('.resource-card-label')?.textContent).toBe('Other');
@@ -149,12 +149,12 @@ describe('ResourceTooltip', () => {
 	});
 
 	it('never asks the store for a resource of the document', () => {
-		const storeService = createResourceDataServiceStub();
-		const { container } = renderTooltip(TREE, true, storeService);
+		const storeDataService = createResourceDataServiceStub();
+		const { container } = renderTooltip(TREE, true, storeDataService);
 
 		hover(container.querySelector('.tree')!);
 
-		expect(storeService.requested).toEqual([]);
+		expect(storeDataService.requested).toEqual([]);
 	});
 
 	it('shows only the IRI of a resource neither the document nor the store describes', () => {

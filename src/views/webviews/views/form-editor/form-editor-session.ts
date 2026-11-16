@@ -505,7 +505,7 @@ export class FormEditorSession implements vscode.Disposable {
 				if (message.source === 'store') {
 					this._publishStoreResources(message.resources);
 				} else {
-					this._publishResources(message.resources);
+					this._publishDocumentResources(message.resources);
 				}
 				break;
 			case 'ApplyEdit':
@@ -721,10 +721,12 @@ export class FormEditorSession implements vscode.Disposable {
 	}
 
 	/**
-	 * Post the properties of the requested resources.
+	 * Post the properties of the requested resources as the document states them, editable where
+	 * the document can be written; a resource the document does not define is missing, without
+	 * falling back to the store.
 	 * @param requested The resources.
 	 */
-	private _publishResources(requested: (NamedNode | BlankNode)[]): void {
+	private _publishDocumentResources(requested: (NamedNode | BlankNode)[]): void {
 		const context = this._getTokenizedContext();
 
 		if (!this._index || !this._snapshot || !context) {

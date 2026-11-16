@@ -9,16 +9,18 @@ import { IResourceDataService } from './resource-data-service.interface';
 const MAX_BATCH_SIZE = 100;
 
 /**
- * The detail of a resource as it was delivered, with its summary where one came with it.
+ * An entry of the cache of the service: what the host delivered for one resource, kept by the key
+ * of its term until a new snapshot makes it stale.
  */
 interface LoadedResource {
 	/**
-	 * The detail.
+	 * The properties of the resource, which its card shows.
 	 */
 	detail: ResourceDetail;
 
 	/**
-	 * The summary, for a resource the snapshot does not list.
+	 * The summary the host sends along for a resource the snapshot does not list, such as one read
+	 * from the store; absent for a resource of the document, whose summary is in the snapshot.
 	 */
 	summary?: ResourceSummary;
 }

@@ -16,7 +16,7 @@ function renderResources(): { top: HTMLElement; bottom: HTMLElement } {
 			<FormEditorContext.Provider value={{ readOnly: true, namespaces: [], languageTags: {} }}>
 				<span className="top" style={{ position: 'fixed', top: 40, left: 40 }} {...getResourceTooltipAttributes(RdfDataFactory.namedNode('http://example.org/top'))}>top</span>
 				<span className="bottom" style={{ position: 'fixed', bottom: 0, left: 40 }} {...getResourceTooltipAttributes(RdfDataFactory.namedNode('http://example.org/bottom'))}>bottom</span>
-				<ResourceTooltip dataService={createResourceDataServiceStub()} storeService={createResourceDataServiceStub()} />
+				<ResourceTooltip documentDataService={createResourceDataServiceStub()} storeDataService={createResourceDataServiceStub()} />
 			</FormEditorContext.Provider>
 		</div>
 	);

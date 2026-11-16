@@ -36,13 +36,13 @@ export interface ResourceTooltipProps {
 	/**
 	 * Supplies the statements of the resources of the document, which their compact cards show.
 	 */
-	dataService: IResourceDataService;
+	documentDataService: IResourceDataService;
 
 	/**
 	 * Supplies the summaries and statements of the resources the document does not define, read
 	 * from the store.
 	 */
-	storeService: IResourceDataService;
+	storeDataService: IResourceDataService;
 }
 
 /**
@@ -70,7 +70,7 @@ export function getResourceTooltipAttributes(term: Term | undefined, anchor?: 'e
  * @param props Where the summaries and statements of the resources come from.
  * @returns The tooltip, or nothing while no resource is hovered.
  */
-export function ResourceTooltip({ dataService, storeService }: ResourceTooltipProps): React.JSX.Element | null {
+export function ResourceTooltip({ documentDataService, storeDataService }: ResourceTooltipProps): React.JSX.Element | null {
 	const { resources } = useFormEditorContext();
 	const summaries = useMemo(() => _summariesByIri(resources ?? []), [resources]);
 	const element = useHoveredElement('[data-tooltip-iri]', HOVER_DELAY);
@@ -78,7 +78,7 @@ export function ResourceTooltip({ dataService, storeService }: ResourceTooltipPr
 	const iri = element?.getAttribute('data-tooltip-iri') ?? undefined;
 	const documentSummary = iri ? summaries.get(iri) : undefined;
 	const storeResource = useMemo(() => iri && !documentSummary ? RdfDataFactory.namedNode(iri) : undefined, [iri, documentSummary]);
-	const storeSummary = useResourceSummary(storeService, storeResource);
+	const storeSummary = useResourceSummary(storeDataService, storeResource);
 	const summary = documentSummary ?? storeSummary;
 
 	useLayoutEffect(() => {
@@ -102,7 +102,7 @@ export function ResourceTooltip({ dataService, storeService }: ResourceTooltipPr
 
 	return (
 		<div ref={tooltipRef} className={`resource-tooltip${summary ? ' is-card' : ''}`} role="tooltip">
-			{summary ? <CompactResourceCard summary={summary} dataService={documentSummary ? dataService : storeService} /> : <div className="resource-tooltip-iri">{iri}</div>}
+			{summary ? <CompactResourceCard summary={summary} dataService={documentSummary ? documentDataService : storeDataService} /> : <div className="resource-tooltip-iri">{iri}</div>}
 		</div>
 	);
 }

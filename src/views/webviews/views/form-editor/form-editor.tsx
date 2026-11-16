@@ -67,8 +67,8 @@ function FormEditor(): React.JSX.Element {
 		setStoredViewState((current: unknown) => PersistedViewState.read(current).with(changes).toJSON());
 	}, [setStoredViewState]);
 
-	const dataService = useMemo(() => new ResourceDataService(resources => messagingRef.current?.postMessage({ id: 'RequestResources', resources })), []);
-	const storeService = useMemo(() => new ResourceDataService(resources => messagingRef.current?.postMessage({ id: 'RequestResources', resources, source: 'store' })), []);
+	const documentDataService = useMemo(() => new ResourceDataService(resources => messagingRef.current?.postMessage({ id: 'RequestResources', resources })), []);
+	const storeDataService = useMemo(() => new ResourceDataService(resources => messagingRef.current?.postMessage({ id: 'RequestResources', resources, source: 'store' })), []);
 	const hostService = useMemo(() => new EditingHostService(message => messagingRef.current?.postMessage(message)), []);
 	const controller = useMemo(() => new EditingController(hostService), [hostService]);
 	const focusedBlockId = useFocusedBlock(scrollElement);
@@ -78,12 +78,12 @@ function FormEditor(): React.JSX.Element {
 	const onMessage = useCallback((message: FormEditorMessages) => {
 		switch (message.id) {
 			case 'DocumentSnapshot':
-				dataService.setSnapshot(message.snapshot.version, message.snapshot.revision);
-				storeService.setSnapshot(message.snapshot.version, message.snapshot.revision);
+				documentDataService.setSnapshot(message.snapshot.version, message.snapshot.revision);
+				storeDataService.setSnapshot(message.snapshot.version, message.snapshot.revision);
 				setSnapshot(message.snapshot);
 				break;
 			case 'ResourcesLoaded':
-				(message.source === 'store' ? storeService : dataService).accept(message.revision, message.resources, message.missing, message.summaries);
+				(message.source === 'store' ? storeDataService : documentDataService).accept(message.revision, message.resources, message.missing, message.summaries);
 				break;
 			case 'EditApplied':
 			case 'EditRejected':
@@ -105,7 +105,7 @@ function FormEditor(): React.JSX.Element {
 			default:
 				break;
 		}
-	}, [dataService, storeService, hostService, updateViewState]);
+	}, [documentDataService, storeDataService, hostService, updateViewState]);
 
 	const messaging = useWebviewMessaging<FormEditorMessages>(onMessage);
 
@@ -142,12 +142,12 @@ function FormEditor(): React.JSX.Element {
 		const key = termToString(resource);
 
 		if (cardStates.stateOf(key).open === 'collapsed') {
-			dataService.request([resource]);
+			documentDataService.request([resource]);
 		}
 
 		setRevealed(undefined);
 		setCardStates(current => current.toggle(key));
-	}, [cardStates, dataService]);
+	}, [cardStates, documentDataService]);
 
 	const declarationsHidden = viewState.hideExternalDeclarations === true;
 	const listFilter = useMemo(() => new ResourceListFilter({ text: filterText, type: typeFilter, hideExternalDeclarations: declarationsHidden }), [filterText, typeFilter, declarationsHidden]);
@@ -326,7 +326,7 @@ function FormEditor(): React.JSX.Element {
 											: (
 												<BlockList
 													blocks={blocks}
-													dataService={dataService}
+													dataService={documentDataService}
 													scrollElement={scrollElement}
 													cardStates={cardStates}
 													pinnedIds={pinnedIds}
@@ -343,7 +343,7 @@ function FormEditor(): React.JSX.Element {
 							</div>
 						</FormErrorBoundary>
 					)}
-				<ResourceTooltip dataService={dataService} storeService={storeService} />
+				<ResourceTooltip documentDataService={documentDataService} storeDataService={storeDataService} />
 			</div>
 		</FormEditorContext.Provider>
 	);
