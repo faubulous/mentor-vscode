@@ -1,4 +1,4 @@
-import { MouseEvent, MutableRefObject, useCallback, useRef } from 'react';
+import { MouseEvent, MutableRefObject, useCallback, useEffect, useRef } from 'react';
 import { VscodeContextMenu } from '@vscode-elements/elements';
 
 /**
@@ -27,11 +27,28 @@ export interface ContextMenu {
 /**
  * Let a right-click open the menu of the ⋮ button of what is under the pointer, at the pointer: the
  * innermost element with a menu takes the click, so a nested card goes before its row and a row
- * before its card.
+ * before its card. Only one menu is open at a time: a right-click outside the menu closes it, as a
+ * click outside it does, before another menu opens.
  * @returns The ref of the menu and the handler of the right-click.
  */
 export function useContextMenu(): ContextMenu {
 	const menuRef = useRef<VscodeContextMenu | null>(null);
+
+	// The menu closes itself on a click outside it, but a right-click is no click; the listener
+	// runs before the right-click reaches the element that opens a menu.
+	useEffect(() => {
+		const closeOnContextMenu = (event: Event): void => {
+			const menu = menuRef.current;
+
+			if (menu?.show && !event.composedPath().includes(menu)) {
+				_close(menu);
+			}
+		};
+
+		document.addEventListener('contextmenu', closeOnContextMenu, { capture: true });
+
+		return () => document.removeEventListener('contextmenu', closeOnContextMenu, { capture: true });
+	}, []);
 
 	const openOnContextMenu = useCallback((event: MouseEvent<Element>): void => {
 		const menu = menuRef.current;
@@ -66,6 +83,16 @@ export function toggleMenuAtButton(menu: VscodeContextMenu | null): void {
 	menu.style.removeProperty('top');
 	menu.style.removeProperty('right');
 	menu.show = !menu.show;
+}
+
+/**
+ * Close an open menu as Escape does, which also stops it from waiting for a click outside it: a
+ * menu closed by only hiding it would still close itself on that click, even when its ⋮ button
+ * opens it again by the click.
+ * @param menu The menu element.
+ */
+function _close(menu: VscodeContextMenu): void {
+	menu.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
 }
 
 /**

@@ -52,6 +52,30 @@ async function renderCard(): Promise<{ card: HTMLElement; nested: HTMLElement }>
 }
 
 /**
+ * Click an element, found by an id of its own, as the text a locator would go by changes with the
+ * menus that open.
+ * @param target The element.
+ * @param options The button and the point within the element.
+ */
+async function clickOn(target: HTMLElement, options: { button?: 'left' | 'right'; position?: { x: number; y: number } } = {}): Promise<void> {
+	target.dataset.testid = 'click-target';
+
+	try {
+		await page.getByTestId('click-target').click(options);
+	} finally {
+		delete target.dataset.testid;
+	}
+}
+
+/**
+ * The menus that are open.
+ * @returns The menus.
+ */
+function openMenus(): MenuElement[] {
+	return Array.from(document.querySelectorAll<MenuElement>('vscode-context-menu')).filter(menu => menu.show);
+}
+
+/**
  * Right-click an element at a point within it, after closing every menu, and tell where the
  * pointer was, as the right-click reports it, and where the visible box of the menu that opened is
  * once the page has settled.
@@ -74,23 +98,18 @@ async function rightClick(target: HTMLElement, x: number, y: number): Promise<{ 
 		pointer = { x: event.clientX, y: event.clientY };
 	};
 
-	// The target is found by an id of its own, as the text a locator would go by changes with the menu.
-	target.dataset.testid = 'right-click-target';
 	document.addEventListener('contextmenu', record, { capture: true });
 
 	try {
-		await page.getByTestId('right-click-target').click({ button: 'right', position: { x, y } });
+		await clickOn(target, { button: 'right', position: { x, y } });
 	} finally {
 		document.removeEventListener('contextmenu', record, { capture: true });
-		delete target.dataset.testid;
 	}
 
-	const open = () => menus.filter(menu => menu.show);
-
-	await expect.poll(() => open().length).toBe(1);
+	await expect.poll(() => openMenus().length).toBe(1);
 	await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
 
-	return { pointer, menu: open()[0].shadowRoot!.querySelector('.context-menu')!.getBoundingClientRect() };
+	return { pointer, menu: openMenus()[0].shadowRoot!.querySelector('.context-menu')!.getBoundingClientRect() };
 }
 
 /**
@@ -145,5 +164,46 @@ describe('useContextMenu, in a browser', () => {
 
 		expect(menu.right).toBeLessThanOrEqual(width);
 		expect(Math.abs(menu.right - pointer.x)).toBeLessThanOrEqual(1);
+	});
+
+	it('keeps one menu open: a right-click elsewhere closes the menu its ⋮ button opened', async () => {
+		const { card, nested } = await renderCard();
+		const cardMenu = card.querySelector<MenuElement>('.resource-card-menu vscode-context-menu')!;
+
+		await clickOn(card.querySelector<HTMLElement>('.resource-card-menu .icon-button')!);
+		await expect.poll(() => openMenus()).toEqual([cardMenu]);
+
+		await clickOn(nested.querySelector<HTMLElement>('.statement-line.is-card-header')!, { button: 'right', position: { x: 60, y: 8 } });
+
+		await expect.poll(() => openMenus()).toEqual([nested.querySelector('.nested-card-menu vscode-context-menu')]);
+	});
+
+	it('closes the open menu on a right-click in a text field, which keeps the menu of the browser', async () => {
+		const { card, nested } = await renderCard();
+
+		await clickOn(card.querySelector<HTMLElement>('.resource-card-menu .icon-button')!);
+		await expect.poll(() => openMenus().length).toBe(1);
+
+		await clickOn(within(_ownRowsOf(nested)[1]).getByLabelText('Value 1'), { button: 'right' });
+
+		await expect.poll(() => openMenus().length).toBe(0);
+	});
+
+	it('opens a menu from its ⋮ button at once after a right-click closed it', async () => {
+		const { card, nested } = await renderCard();
+		const cardMenu = card.querySelector<MenuElement>('.resource-card-menu vscode-context-menu')!;
+		const button = card.querySelector<HTMLElement>('.resource-card-menu .icon-button')!;
+
+		await clickOn(button);
+		await expect.poll(() => openMenus()).toEqual([cardMenu]);
+
+		await clickOn(nested.querySelector<HTMLElement>('.statement-line.is-card-header')!, { button: 'right', position: { x: 60, y: 8 } });
+		await expect.poll(() => openMenus()).toEqual([nested.querySelector('.nested-card-menu vscode-context-menu')]);
+
+		await clickOn(button);
+
+		await expect.poll(() => openMenus()).toEqual([cardMenu]);
+		await new Promise(resolve => setTimeout(resolve, 200));
+		expect(openMenus()).toEqual([cardMenu]);
 	});
 });
