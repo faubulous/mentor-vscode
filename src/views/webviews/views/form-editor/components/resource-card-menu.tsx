@@ -5,9 +5,20 @@ import { FormEditorShortcuts } from '../form-editor-shortcuts';
 import { toggleMenuAtButton } from '../hooks/use-context-menu';
 
 /**
- * What the ⋮ menu of a card does; an action that is absent is left out of the menu.
+ * The state of the card the ⋮ menu of a card shows and what its items do; an action that is absent
+ * is left out of the menu.
  */
-export interface ResourceCardActions {
+export interface ResourceCardMenuState {
+	/**
+	 * Whether the card is expanded, which names the item that toggles it.
+	 */
+	expanded: boolean;
+
+	/**
+	 * The prefixed name of the resource, which Copy IRI shows beside it.
+	 */
+	prefixedName?: string;
+
 	/**
 	 * Expand the card, or collapse it again.
 	 */
@@ -39,19 +50,9 @@ export interface ResourceCardActions {
  */
 export interface ResourceCardMenuProps {
 	/**
-	 * What the menu offers.
+	 * The state of the card and what the menu offers.
 	 */
-	actions: ResourceCardActions;
-
-	/**
-	 * Whether the card is expanded, which names the item that toggles it.
-	 */
-	expanded: boolean;
-
-	/**
-	 * The prefixed name of the resource, which Copy IRI shows beside it.
-	 */
-	prefixedName?: string;
+	state: ResourceCardMenuState;
 
 	/**
 	 * Holds the menu element, which a right-click on the card opens as well.
@@ -68,26 +69,26 @@ type MenuItem = { label?: string; value?: string; keybinding?: string; separator
  * The ⋮ button of the title bar of a card and its menu: Collapse or Expand; Reveal in Editor and
  * Copy IRI; Unpin All; and Remove, each group after a separator. The menu hides itself when an
  * item is picked or the user clicks away; a right-click on the card opens it too.
- * @param props What the menu offers and where its element is kept.
+ * @param props The state of the card, what the menu offers and where its element is kept.
  * @returns The button and the menu.
  */
-export function ResourceCardMenu({ actions, expanded, prefixedName, menuRef }: ResourceCardMenuProps): React.JSX.Element {
+export function ResourceCardMenu({ state, menuRef }: ResourceCardMenuProps): React.JSX.Element {
 	const selectRef = useVscodeElementRef<VscodeContextMenu, { value: string }>('vsc-context-menu-select', (_element, event) => {
 		switch (event.detail.value) {
 			case 'toggle':
-				actions.onToggle();
+				state.onToggle();
 				break;
 			case 'reveal':
-				actions.onReveal?.();
+				state.onReveal?.();
 				break;
 			case 'copy-iri':
-				actions.onCopyIri?.();
+				state.onCopyIri?.();
 				break;
 			case 'unpin-all':
-				actions.onUnpinAll?.();
+				state.onUnpinAll?.();
 				break;
 			case 'remove':
-				actions.onRemove?.();
+				state.onRemove?.();
 				break;
 			default:
 				break;
@@ -104,7 +105,7 @@ export function ResourceCardMenu({ actions, expanded, prefixedName, menuRef }: R
 			<button type="button" className="icon-button" aria-label="More actions" aria-haspopup="menu" title="More actions" onClick={() => toggleMenuAtButton(menuRef.current)}>
 				<vscode-icon name="kebab-vertical" size={14}></vscode-icon>
 			</button>
-			<vscode-context-menu ref={setMenuRef} data={_itemsOf(actions, expanded, prefixedName)}></vscode-context-menu>
+			<vscode-context-menu ref={setMenuRef} data={_itemsOf(state)}></vscode-context-menu>
 		</span>
 	);
 }
@@ -112,20 +113,18 @@ export function ResourceCardMenu({ actions, expanded, prefixedName, menuRef }: R
 /**
  * The items of the menu of a card, in groups divided by separators, leaving out the absent actions
  * and the empty groups.
- * @param actions What the menu offers.
- * @param expanded Whether the card is expanded.
- * @param prefixedName The prefixed name of the resource, if it has one.
+ * @param state The state of the card and what the menu offers.
  * @returns The items.
  */
-function _itemsOf(actions: ResourceCardActions, expanded: boolean, prefixedName: string | undefined): MenuItem[] {
+function _itemsOf(state: ResourceCardMenuState): MenuItem[] {
 	const groups: MenuItem[][] = [
-		[{ label: expanded ? 'Collapse' : 'Expand', value: 'toggle' }],
+		[{ label: state.expanded ? 'Collapse' : 'Expand', value: 'toggle' }],
 		[
-			...(actions.onReveal ? [{ label: 'Reveal in Editor', value: 'reveal' }] : []),
-			...(actions.onCopyIri ? [{ label: 'Copy IRI', value: 'copy-iri', keybinding: prefixedName }] : [])
+			...(state.onReveal ? [{ label: 'Reveal in Editor', value: 'reveal' }] : []),
+			...(state.onCopyIri ? [{ label: 'Copy IRI', value: 'copy-iri', keybinding: state.prefixedName }] : [])
 		],
-		actions.onUnpinAll ? [{ label: 'Unpin All', value: 'unpin-all' }] : [],
-		actions.onRemove ? [{ label: 'Remove', value: 'remove', keybinding: FormEditorShortcuts.Remove.label }] : []
+		state.onUnpinAll ? [{ label: 'Unpin All', value: 'unpin-all' }] : [],
+		state.onRemove ? [{ label: 'Remove', value: 'remove', keybinding: FormEditorShortcuts.Remove.label }] : []
 	];
 
 	return groups.filter(group => group.length > 0).flatMap((group, index) => index > 0 ? [{ separator: true }, ...group] : group);

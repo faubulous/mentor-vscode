@@ -71,15 +71,15 @@ export function ResourceCardTitleBar({ summary, expanded, nestedCollapsed, onTog
 			{summary.usageCount !== undefined && <CardUsage count={summary.usageCount} />}
 			<span className="resource-card-tools">
 				<ResourceCardMenu
-					actions={{
+					state={{
+						expanded,
+						prefixedName: summary.prefixedName,
 						onToggle,
 						onReveal: position && onRevealInTextEditor ? () => onRevealInTextEditor(position) : undefined,
 						onCopyIri: term.termType === 'NamedNode' ? () => void navigator.clipboard.writeText(term.value) : undefined,
 						onUnpinAll: unpinnable && onUnpinAll ? () => onUnpinAll(term) : undefined,
 						onRemove: !readOnly && onRemoveResource ? () => onRemoveResource(term) : undefined
 					}}
-					expanded={expanded}
-					prefixedName={summary.prefixedName}
 					menuRef={menuRef}
 				/>
 			</span>
