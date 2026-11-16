@@ -305,6 +305,18 @@ export class StatementRowEditor implements EditWriter {
 	}
 
 	/**
+	 * Move a value to another place among the values and write the new order, as dropping a dragged
+	 * pill or moving one by the keyboard does: a move is done once made, and a dragged pill need not
+	 * hold the focus that leaving the row writes by.
+	 * @param from The index of the value.
+	 * @param to The index the value has afterwards.
+	 */
+	moveValue(from: number, to: number): void {
+		this._update(this._state.withValueMoved(from, to));
+		this._requestValues();
+	}
+
+	/**
 	 * Add values after the others and write them, as a new statement of the predicate of the row
 	 * does.
 	 * @param values The values.

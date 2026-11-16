@@ -119,6 +119,16 @@ export class StatementRowState {
 	}
 
 	/**
+	 * Move a value to another place among the values.
+	 * @param from The index of the value.
+	 * @param to The index the value has afterwards.
+	 * @returns The next state.
+	 */
+	withValueMoved(from: number, to: number): StatementRowState {
+		return this.withDraft(this.draft.withValueMoved(from, to));
+	}
+
+	/**
 	 * Replace the edited statement, as leaving the row with values that cannot be written does.
 	 * @param draft The statement.
 	 * @returns The next state.

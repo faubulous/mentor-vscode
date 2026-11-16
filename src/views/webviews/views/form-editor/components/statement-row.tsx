@@ -481,6 +481,7 @@ function _resourceBox(edited: EditedRow, resources: readonly ShownValue[], prope
 				onPick={term => editor.addValue(term)}
 				onCreate={() => editor.commitPending()}
 				onRemove={index => editor.removeValue(index)}
+				onMove={(from, to) => editor.moveValue(from, to)}
 				onStartNode={!header && range !== 'literal' ? () => editor.addNode() : undefined}
 				autoFocus={autoFocus}
 			/>
