@@ -1,5 +1,5 @@
 /**
- * Whether the card of a resource shows only its summary or all its statements. The statements
+ * Whether the card of a resource shows only its header or all its statements. The statements
  * are edited where the document can be written, and read otherwise.
  */
 type ResourceCardOpenState = 'collapsed' | 'open';
@@ -15,7 +15,7 @@ export interface ResourceCardState {
 }
 
 /**
- * The state of a card showing only its summary.
+ * The state of a card showing only its header.
  */
 const COLLAPSED_CARD: ResourceCardState = { open: 'collapsed' };
 

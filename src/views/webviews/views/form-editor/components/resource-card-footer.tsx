@@ -1,5 +1,5 @@
 import { NamedNode } from '@rdfjs/types';
-import { ResourceSummary } from '../form-editor-model';
+import { ResourceCardHeaderData } from '../form-editor-model';
 import { useFormEditorContext } from '../state/form-editor-context';
 import { IriField } from './iri-field';
 
@@ -10,7 +10,7 @@ export interface ResourceCardFooterProps {
 	/**
 	 * The resource.
 	 */
-	summary: ResourceSummary;
+	cardHeader: ResourceCardHeaderData;
 
 	/**
 	 * Whether the card is expanded.
@@ -27,11 +27,11 @@ export interface ResourceCardFooterProps {
  * @param props The resource and the state of the card.
  * @returns The footer.
  */
-export function ResourceCardFooter({ summary, expanded }: ResourceCardFooterProps): React.JSX.Element {
+export function ResourceCardFooter({ cardHeader, expanded }: ResourceCardFooterProps): React.JSX.Element {
 	const { readOnly, onOpenExternal, onRenameResource } = useFormEditorContext();
-	const named = summary.term.termType === 'NamedNode' ? summary.term : undefined;
-	const written = named?.value ?? `_:${summary.term.value}`;
-	const localPart = summary.localPart;
+	const named = cardHeader.subject.termType === 'NamedNode' ? cardHeader.subject : undefined;
+	const written = named?.value ?? `_:${cardHeader.subject.value}`;
+	const localPart = cardHeader.localPart;
 	const renamed = named && expanded && !readOnly && localPart !== undefined ? onRenameResource : undefined;
 	const opened = named && !expanded ? onOpenExternal : undefined;
 

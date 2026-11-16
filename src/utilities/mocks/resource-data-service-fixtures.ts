@@ -1,14 +1,14 @@
 import { BlankNode, NamedNode } from '@rdfjs/types';
 import { termToString } from 'rdf-string';
-import { ResourceDetail, ResourceSummary } from '@src/views/webviews/views/form-editor/form-editor-model';
+import { ResourceCardBodyData, ResourceCardHeaderData } from '@src/views/webviews/views/form-editor/form-editor-model';
 import { IResourceDataService } from '@src/views/webviews/views/form-editor/services/resource-data-service.interface';
 
 /**
- * A data service holding given details, which remembers what was asked of it.
+ * A data service holding given statements, which remembers what was asked of it.
  */
 export interface ResourceDataServiceStub extends IResourceDataService {
 	/**
-	 * The document version the details belong to, which a test moves on as the host would.
+	 * The document version the statements belong to, which a test moves on as the host would.
 	 */
 	version: number;
 
@@ -19,21 +19,21 @@ export interface ResourceDataServiceStub extends IResourceDataService {
 }
 
 /**
- * Make a data service that holds the given details and loads nothing else.
- * @param details The details it holds.
- * @param summaries The summaries that came with them, as for resources of the store.
+ * Make a data service that holds the given statements and loads nothing else.
+ * @param cardBodies The statements it holds.
+ * @param cardHeaders The card headers that came with them, as for resources of the store.
  * @returns The service.
  */
-export function createResourceDataServiceStub(details: readonly ResourceDetail[] = [], summaries: readonly ResourceSummary[] = []): ResourceDataServiceStub {
-	const byKey = new Map(details.map(detail => [termToString(detail.term), detail]));
-	const summaryByKey = new Map(summaries.map(summary => [termToString(summary.term), summary]));
+export function createResourceDataServiceStub(cardBodies: readonly ResourceCardBodyData[] = [], cardHeaders: readonly ResourceCardHeaderData[] = []): ResourceDataServiceStub {
+	const byKey = new Map(cardBodies.map(resource => [termToString(resource.subject), resource]));
+	const cardHeaderByKey = new Map(cardHeaders.map(cardHeader => [termToString(cardHeader.subject), cardHeader]));
 	const requested: (NamedNode | BlankNode)[] = [];
 
 	return {
 		version: 1,
 		requested,
-		get: resource => byKey.get(termToString(resource)),
-		getSummary: resource => summaryByKey.get(termToString(resource)),
+		getCardBody: resource => byKey.get(termToString(resource)),
+		getCardHeader: resource => cardHeaderByKey.get(termToString(resource)),
 		request: resources => requested.push(...resources),
 		subscribe: () => () => undefined
 	};

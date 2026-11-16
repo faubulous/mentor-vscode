@@ -5,10 +5,10 @@ import userEvent from '@testing-library/user-event';
 import { RDF, RDFS } from '@faubulous/mentor-rdf';
 import { createEditingHostStub } from '@src/utilities/mocks/editing-host-fixtures';
 import { createResourceDataServiceStub } from '@src/utilities/mocks/resource-data-service-fixtures';
-import { EXAMPLE_NAMESPACE, TEST_NAMESPACES, TEST_SUBJECT, createIriView, createLiteralView, createProperty, createTestResourceDetail, withAnchors } from '@src/utilities/mocks/statement-fixtures';
+import { EXAMPLE_NAMESPACE, TEST_NAMESPACES, TEST_SUBJECT, createIriView, createLiteralView, createProperty, createTestCardBody, withAnchors } from '@src/utilities/mocks/statement-fixtures';
 import { renderWebview } from '@src/utilities/mocks/webview-test-utils';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
-import { ResourceDetail, TermView } from '../form-editor-model';
+import { ResourceCardBodyData, TermData } from '../form-editor-model';
 import { EditingController } from '../state/editing-controller';
 import { FormEditorContext, FormEditorContextValue } from '../state/form-editor-context';
 import { StatementList } from './statement-list';
@@ -20,12 +20,12 @@ const NODE = RdfDataFactory.blankNode('b1');
 /**
  * The blank node value of the card, which shows the node in a nested card.
  */
-const NODE_VIEW: TermView = { term: NODE, editable: true, nested: { term: NODE, propertyCount: 1 } };
+const NODE_VIEW: TermData = { term: NODE, editable: true, nested: { term: NODE, propertyCount: 1 } };
 
 /**
  * The card: a resource it sees also, anchored at 110, and a comment that is a blank node only.
  */
-const DETAIL = withAnchors(createTestResourceDetail([
+const CARD_BODY = withAnchors(createTestCardBody([
 	createProperty('rdfs:seeAlso', [createIriView('ex:Plant', 'Plant')]),
 	createProperty('rdfs:comment', [NODE_VIEW])
 ]));
@@ -33,7 +33,7 @@ const DETAIL = withAnchors(createTestResourceDetail([
 /**
  * The blank node.
  */
-const NODE_DETAIL: ResourceDetail = withAnchors({ term: NODE, properties: [createProperty('rdfs:label', [createLiteralView('Leaf')])] });
+const NODE_CARD_BODY: ResourceCardBodyData = withAnchors({ subject: NODE, predicates: [createProperty('rdfs:label', [createLiteralView('Leaf')])] });
 
 /**
  * Render the card, edited.
@@ -45,7 +45,7 @@ function renderCard() {
 
 	renderWebview(
 		<FormEditorContext.Provider value={context}>
-			<StatementList detail={DETAIL} stale={false} dataService={createResourceDataServiceStub([DETAIL, NODE_DETAIL])} depth={0} visited={[DETAIL.term]} />
+			<StatementList cardBody={CARD_BODY} stale={false} dataService={createResourceDataServiceStub([CARD_BODY, NODE_CARD_BODY])} depth={0} visited={[CARD_BODY.subject]} />
 		</FormEditorContext.Provider>
 	);
 

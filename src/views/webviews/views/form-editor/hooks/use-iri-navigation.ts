@@ -13,7 +13,7 @@ export function useIriNavigation(): (iri: string) => void {
 	return useCallback((iri: string) => {
 		const resource = RdfDataFactory.namedNode(iri);
 
-		if (resources?.some(summary => summary.term.equals(resource))) {
+		if (resources?.some(listItem => listItem.subject.equals(resource))) {
 			onRevealResource?.(resource);
 		} else {
 			onOpenExternal?.(iri);

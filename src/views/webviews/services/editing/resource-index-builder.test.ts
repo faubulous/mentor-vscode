@@ -47,7 +47,7 @@ describe('ResourceIndexBuilder', () => {
 	it('lists subjects in document order', () => {
 		const index = indexOf('ex:Zebra a ex:Animal .\nex:Ant a ex:Animal .\nex:Moose a ex:Animal .\n');
 
-		expect(index.summaries.map(summary => summary.term)).toEqual([
+		expect(index.listItems.map(listItem => listItem.subject)).toEqual([
 			RdfDataFactory.namedNode(`${EX}Zebra`),
 			RdfDataFactory.namedNode(`${EX}Ant`),
 			RdfDataFactory.namedNode(`${EX}Moose`)
@@ -58,7 +58,7 @@ describe('ResourceIndexBuilder', () => {
 		const index = indexOf('ex:Thing a ex:Class .\nex:Other a ex:Class .\nex:Thing ex:label "second block" .\n');
 
 		expect(index.entries.get(`${EX}Thing`)?.quads).toHaveLength(2);
-		expect(index.summaries).toHaveLength(2);
+		expect(index.listItems).toHaveLength(2);
 	});
 
 	it('keeps duplicate statements distinguishable', () => {
@@ -72,66 +72,66 @@ describe('ResourceIndexBuilder', () => {
 		const nested = Array.from(index.entries.values()).filter(entry => entry.nested);
 
 		expect(nested).toHaveLength(1);
-		expect(index.summaries).toHaveLength(1);
-		expect(index.summaries[0].term).toEqual(RdfDataFactory.namedNode(`${EX}Shape`));
+		expect(index.listItems).toHaveLength(1);
+		expect(index.listItems[0].subject).toEqual(RdfDataFactory.namedNode(`${EX}Shape`));
 	});
 
 	it('treats a labelled blank node as a top level resource', () => {
 		const index = indexOf('ex:Thing ex:related _:node .\n_:node ex:label "I stand alone" .\n');
 
-		expect(index.summaries.map(summary => summary.term.termType)).toContain('BlankNode');
+		expect(index.listItems.map(listItem => listItem.subject.termType)).toContain('BlankNode');
 	});
 
 	it('counts how often a blank node is referred to', () => {
 		const index = indexOf('_:shared a owl:Class .\nex:A rdfs:subClassOf _:shared .\nex:B rdfs:subClassOf _:shared .\n');
-		const shared = index.summaries.find(summary => summary.term.termType === 'BlankNode')!;
+		const shared = index.listItems.find(listItem => listItem.subject.termType === 'BlankNode')!;
 
-		expect(index.referenceCounts.get(termToString(shared.term))).toBe(2);
+		expect(index.referenceCounts.get(termToString(shared.subject))).toBe(2);
 	});
 
 	it('counts the properties, not the values', () => {
 		const index = indexOf('ex:Thing ex:note "a" , "b" , "c" ;\n    ex:other "x" .\n');
 
-		expect(index.summaries[0].propertyCount).toBe(2);
+		expect(index.listItems[0].propertyCount).toBe(2);
 	});
 
 	it('prefers a resolved label over the local part', () => {
 		const index = indexOf('ex:Thing a ex:Class .\n', { labels: { [`${EX}Thing`]: 'A Nice Thing' } });
 
-		expect(index.summaries[0].label).toBe('A Nice Thing');
+		expect(index.listItems[0].label).toBe('A Nice Thing');
 	});
 
 	it('falls back to the prefixed name when no label is defined', () => {
 		const index = indexOf('ex:Thing a ex:Class .\n');
 
-		expect(index.summaries[0].label).toBe('ex:Thing');
-		expect(index.summaries[0].prefixedName).toBe('ex:Thing');
+		expect(index.listItems[0].label).toBe('ex:Thing');
+		expect(index.listItems[0].prefixedName).toBe('ex:Thing');
 	});
 
 	it('falls back to the local part of an IRI without a declared prefix', () => {
 		const index = indexOf('<http://other.org/vocab#Thing> a ex:Class .\n');
 
-		expect(index.summaries[0].label).toBe('Thing');
-		expect(index.summaries[0].prefixedName).toBeUndefined();
+		expect(index.listItems[0].label).toBe('Thing');
+		expect(index.listItems[0].prefixedName).toBeUndefined();
 	});
 
-	it('describes a summary only with what the document states', () => {
+	it('describes a list item only with what the document states', () => {
 		const stated = indexOf('ex:Thing a ex:Class ; rdfs:comment "Stated." .\n', { predicates: { label: [], description: [RDFS.comment] } });
 		const stored = indexOf('ex:Thing a ex:Class .\n', { descriptions: { [`${EX}Thing`]: 'From the store.' } });
 
-		expect(stated.summaries[0].description).toBe('Stated.');
-		expect(stored.summaries[0].description).toBeUndefined();
+		expect(stated.listItems[0].description).toBe('Stated.');
+		expect(stored.listItems[0].description).toBeUndefined();
 	});
 
 	it('tells whether the document labels a resource', () => {
 		const index = indexOf('ex:A a ex:Class ; rdfs:label "A" .\nex:B a ex:Class .\n', { predicates: { label: [RDFS.label], description: [] } });
 
-		expect(index.summaries.map(summary => summary.hasLabel)).toEqual([true, false]);
+		expect(index.listItems.map(listItem => listItem.hasLabel)).toEqual([true, false]);
 	});
 
 	it('names the types of a resource and the one it is shown by, passing over owl:NamedIndividual', () => {
 		const index = indexOf('ex:A a owl:Class , rdfs:Class .\nex:B a owl:NamedIndividual , skos:Concept .\nex:C ex:p "x" .\n');
-		const [a, b, c] = index.summaries;
+		const [a, b, c] = index.listItems;
 
 		expect(a.typeIri).toBe(OWL.Class);
 		expect(a.typeLabel).toBe('owl:Class');
@@ -143,7 +143,7 @@ describe('ResourceIndexBuilder', () => {
 	it('marks a resource with the icon of the kind of thing it is', () => {
 		const index = indexOf('ex:onto a owl:Ontology .\nex:scheme a skos:ConceptScheme .\nex:thing ex:p "x" .\n');
 
-		expect(index.summaries.map(summary => summary.iconName)).toEqual(['mentor-rdf-ontology', 'mentor-rdf-concept-scheme', 'mentor-rdf-individual']);
+		expect(index.listItems.map(listItem => listItem.iconName)).toEqual(['mentor-rdf-ontology', 'mentor-rdf-concept-scheme', 'mentor-rdf-individual']);
 	});
 
 	it('lists the declared namespaces sorted by prefix', () => {
@@ -155,7 +155,7 @@ describe('ResourceIndexBuilder', () => {
 	it('keeps the list nodes of a collection out of the resource list', () => {
 		const index = indexOf('ex:Thing ex:steps ( ex:a ex:b ex:c ) .\n');
 
-		expect(index.summaries).toHaveLength(1);
+		expect(index.listItems).toHaveLength(1);
 		expect(index.collectionNodes.size).toBe(3);
 		expect(index.collections.size).toBe(1);
 	});
@@ -169,7 +169,7 @@ describe('ResourceIndexBuilder', () => {
 });
 
 describe('ResourceIndexBuilder comments', () => {
-	it('carries the runs of comments above a resource on its summary', () => {
+	it('carries the runs of comments above a resource on its list item', () => {
 		const index = indexOf(`
 			# About the file.
 
@@ -178,7 +178,7 @@ describe('ResourceIndexBuilder comments', () => {
 			ex:Thing a ex:Class .
 		`);
 
-		expect(index.summaries[0].comments).toEqual([['About the file.'], ['The thing itself.', 'Written over two lines.']]);
+		expect(index.listItems[0].comments).toEqual([['About the file.'], ['The thing itself.', 'Written over two lines.']]);
 	});
 
 	it('keeps the comments closing a document apart from the last resource', () => {
@@ -191,14 +191,14 @@ describe('ResourceIndexBuilder comments', () => {
 			# Postscript.
 		`);
 
-		expect(index.summaries[0].comments).toBeUndefined();
+		expect(index.listItems[0].comments).toBeUndefined();
 		expect(index.trailingComments).toEqual([['That is all.', 'Really.'], ['Postscript.']]);
 	});
 
 	it('leaves a resource without comments unmarked', () => {
 		const index = indexOf('ex:Thing a ex:Class .\n');
 
-		expect(index.summaries[0].comments).toBeUndefined();
+		expect(index.listItems[0].comments).toBeUndefined();
 		expect(index.trailingComments).toEqual([]);
 	});
 });
@@ -228,7 +228,7 @@ describe('ResourceIndexBuilder on an open document', () => {
 		const index = documentIndexOf('ex:s ex:p [ ex:q [ ex:r 1 ] ] ; ex:l ( [ ex:q 2 ] ) .\n_:x ex:p 2 .\n');
 		const owner = RdfDataFactory.namedNode(`${EX}s`);
 		const nested = Array.from(index.entries.values()).filter(entry => entry.nested).map(entry => entry.term);
-		const labelled = index.summaries[1].term;
+		const labelled = index.listItems[1].subject;
 
 		expect(nested.length).toBeGreaterThan(2);
 		expect(nested.map(term => findCardResource(index, term))).toEqual(nested.map(() => owner));
@@ -265,14 +265,14 @@ describe('ResourceIndexBuilder.fromStore', () => {
 		const index = ResourceIndexBuilder.fromStore(storeOf(), `${EX}Tree`, context)!;
 		const entry = index.entries.get(`${EX}Tree`)!;
 
-		expect(index.summaries.map(summary => summary.term.value)).toEqual([`${EX}Tree`]);
+		expect(index.listItems.map(listItem => listItem.subject.value)).toEqual([`${EX}Tree`]);
 		expect(entry.quads.map(quad => quad.predicate.value)).toEqual([RDF.type, RDFS.label, RDFS.comment, RDFS.subClassOf, OWL.oneOf]);
 	});
 
 	it('nests the blank nodes the resource refers to and collapses its lists', () => {
 		const index = ResourceIndexBuilder.fromStore(storeOf(), `${EX}Tree`, context)!;
-		const detail = new ResourceViewBuilder(index, context).buildDetail(index.entries.get(`${EX}Tree`)!);
-		const valueOf = (predicate: string) => detail.properties.find(property => property.predicate.term.value === predicate)!.values[0];
+		const cardBody = new ResourceViewBuilder(index, context).buildCardBody(index.entries.get(`${EX}Tree`)!);
+		const valueOf = (predicate: string) => cardBody.predicates.find(property => property.predicate.term.value === predicate)!.values[0];
 
 		expect(valueOf(RDFS.subClassOf).nested?.propertyCount).toBe(2);
 		expect(valueOf(OWL.oneOf).collection?.items.map(item => item.term.value)).toEqual([`${EX}Oak`, `${EX}Birch`]);
@@ -280,11 +280,11 @@ describe('ResourceIndexBuilder.fromStore', () => {
 
 	it('gives values that cannot be edited and have no place in a text', () => {
 		const index = ResourceIndexBuilder.fromStore(storeOf(), `${EX}Tree`, context)!;
-		const detail = new ResourceViewBuilder(index, context).buildDetail(index.entries.get(`${EX}Tree`)!);
-		const values = detail.properties.flatMap(property => [property.predicate, ...property.values]);
+		const cardBody = new ResourceViewBuilder(index, context).buildCardBody(index.entries.get(`${EX}Tree`)!);
+		const values = cardBody.predicates.flatMap(property => [property.predicate, ...property.values]);
 
 		expect(values.every(view => !view.editable && view.anchor === undefined)).toBe(true);
-		expect(index.summaries[0].position).toBeUndefined();
+		expect(index.listItems[0].position).toBeUndefined();
 	});
 
 	it('indexes nothing for a resource the store states nothing about', () => {

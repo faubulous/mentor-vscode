@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { OWL, RDFS } from '@faubulous/mentor-rdf/ontologies';
-import { ResourceDetail, ResourceSummary, TermView } from '../form-editor-model';
+import { ResourceCardBodyData, ResourceListItemData, TermData } from '../form-editor-model';
 import { TermViewResolver } from '../services/statement/term-view-resolver';
 import { TypedTermReader } from '../services/statement/typed-term-reader';
 import { useFormEditorContext } from '../state/form-editor-context';
@@ -28,24 +28,24 @@ export interface StatementServices {
 	/**
 	 * The resources of the document, which the rows offer as values.
 	 */
-	resources: readonly ResourceSummary[];
+	resources: readonly ResourceListItemData[];
 
 	/**
 	 * The classes the document declares, typed as an OWL or RDFS class, which the type of a blank
 	 * node is chosen from.
 	 */
-	classes: readonly ResourceSummary[];
+	classes: readonly ResourceListItemData[];
 }
 
 /**
  * Build the services of the statement rows of a card from the prefixes and resources of the
  * document and the views the host sent for the terms of the card, with the languages of the card.
  * A card that only reads needs none, and is spared building them.
- * @param detail The resource of the card.
+ * @param cardBody The resource of the card.
  * @param enabled Whether the rows of the card are edited.
  * @returns The services, or `undefined` when the rows are not edited.
  */
-export function useStatementServices(detail: ResourceDetail, enabled: boolean): StatementServices | undefined {
+export function useStatementServices(cardBody: ResourceCardBodyData, enabled: boolean): StatementServices | undefined {
 	const { namespaces, resources, languageTags } = useFormEditorContext();
 
 	return useMemo(() => {
@@ -57,12 +57,12 @@ export function useStatementServices(detail: ResourceDetail, enabled: boolean): 
 
 		return {
 			reader: new TypedTermReader(prefixes),
-			resolver: new TermViewResolver(prefixes, resources ?? [], _viewsOf(detail)),
-			languages: _languagesOf(detail).map(language => languageTags[language] ?? language),
+			resolver: new TermViewResolver(prefixes, resources ?? [], _viewsOf(cardBody)),
+			languages: _languagesOf(cardBody).map(language => languageTags[language] ?? language),
 			resources: resources ?? [],
 			classes: _classesOf(resources ?? [])
 		};
-	}, [enabled, namespaces, resources, languageTags, detail]);
+	}, [enabled, namespaces, resources, languageTags, cardBody]);
 }
 
 /**
@@ -70,19 +70,19 @@ export function useStatementServices(detail: ResourceDetail, enabled: boolean): 
  * @param resources The resources of the document.
  * @returns The classes, in the order of the resources.
  */
-function _classesOf(resources: readonly ResourceSummary[]): ResourceSummary[] {
+function _classesOf(resources: readonly ResourceListItemData[]): ResourceListItemData[] {
 	return resources.filter(resource => resource.typeIri === OWL.Class || resource.typeIri === RDFS.Class);
 }
 
 /**
  * The languages the literals of a resource are tagged with, each once, in the order met.
- * @param detail The resource.
+ * @param cardBody The resource.
  * @returns The languages.
  */
-function _languagesOf(detail: ResourceDetail): string[] {
+function _languagesOf(cardBody: ResourceCardBodyData): string[] {
 	const languages = new Set<string>();
 
-	for (const property of detail.properties) {
+	for (const property of cardBody.predicates) {
 		for (const value of property.values) {
 			if (value.term.termType === 'Literal' && value.term.language) {
 				languages.add(value.term.language);
@@ -95,9 +95,9 @@ function _languagesOf(detail: ResourceDetail): string[] {
 
 /**
  * The views of the predicates and values of a resource.
- * @param detail The resource.
+ * @param cardBody The resource.
  * @returns The views.
  */
-function _viewsOf(detail: ResourceDetail): TermView[] {
-	return detail.properties.flatMap(property => [property.predicate, ...property.values]);
+function _viewsOf(cardBody: ResourceCardBodyData): TermData[] {
+	return cardBody.predicates.flatMap(property => [property.predicate, ...property.values]);
 }

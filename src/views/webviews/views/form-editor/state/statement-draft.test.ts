@@ -1,15 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { RDF, RDFS, XSD } from '@faubulous/mentor-rdf';
-import { EXAMPLE_NAMESPACE as EX, createIriView, createLiteralView, createProperty, withAnchors, createTestResourceDetail } from '@src/utilities/mocks/statement-fixtures';
-import { PropertyView, TermView } from '../form-editor-model';
+import { EXAMPLE_NAMESPACE as EX, createIriView, createLiteralView, createProperty, withAnchors, createTestCardBody } from '@src/utilities/mocks/statement-fixtures';
+import { PredicateData, TermData } from '../form-editor-model';
 import { StatementDraft } from './statement-draft';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 
 /**
  * A property of `rdfs:label` with two literals and a resource, each with an anchor.
  */
-function createLabelProperty(): PropertyView {
-	return withAnchors(createTestResourceDetail([createProperty('rdfs:label', [createLiteralView('Tree', 'en'), createLiteralView('Baum', 'de'), createIriView('ex:Other')])])).properties[0];
+function createLabelProperty(): PredicateData {
+	return withAnchors(createTestCardBody([createProperty('rdfs:label', [createLiteralView('Tree', 'en'), createLiteralView('Baum', 'de'), createIriView('ex:Other')])])).predicates[0];
 }
 
 describe('StatementDraft', () => {
@@ -69,12 +69,12 @@ describe('StatementDraft', () => {
 	});
 
 	it('carries a draft over to the statement as written after an edit, by term and by the place of blank nodes', () => {
-		const node: TermView = { term: RdfDataFactory.blankNode('n1'), editable: true, anchor: 1, nested: { term: RdfDataFactory.blankNode('n1'), propertyCount: 1 } };
+		const node: TermData = { term: RdfDataFactory.blankNode('n1'), editable: true, anchor: 1, nested: { term: RdfDataFactory.blankNode('n1'), propertyCount: 1 } };
 		const before = new StatementDraft(RDFS.label, [{ kind: 'written', view: node }, { kind: 'term', term: RdfDataFactory.literal('Oak', 'en') }, { kind: 'term', term: RdfDataFactory.literal('1', RdfDataFactory.namedNode(XSD.integer)) }]);
-		const after = withAnchors(createTestResourceDetail([createProperty('rdfs:label', [
+		const after = withAnchors(createTestCardBody([createProperty('rdfs:label', [
 			{ term: RdfDataFactory.blankNode('n7'), editable: true, nested: { term: RdfDataFactory.blankNode('n7'), propertyCount: 1 } },
 			createLiteralView('Oak', 'en')
-		])])).properties[0];
+		])])).predicates[0];
 		const rebased = before.rebasedOnto(StatementDraft.fromProperty(after));
 
 		expect(rebased.values.map(value => value.kind)).toEqual(['written', 'written', 'term']);
@@ -101,7 +101,7 @@ describe('StatementDraft', () => {
 	});
 
 	it('keeps a new blank node as it is when carried over, until an edit writing it was sent, and then finds it among the blank nodes', () => {
-		const node: TermView = { term: RdfDataFactory.blankNode('b0'), editable: true, anchor: 140 };
+		const node: TermData = { term: RdfDataFactory.blankNode('b0'), editable: true, anchor: 140 };
 		const typed = new StatementDraft(RDFS.label, []).withNodeAppended().withNodeType(0, RdfDataFactory.namedNode(`${EX}Leaf`));
 		const written = new StatementDraft(RDFS.label, [{ kind: 'written', view: node }]);
 
@@ -111,8 +111,8 @@ describe('StatementDraft', () => {
 	});
 
 	it('adds a copy of a written value after it, written as a copy of its text and found among the blank nodes once sent', () => {
-		const node: TermView = { term: RdfDataFactory.blankNode('b0'), editable: true, anchor: 140 };
-		const copied: TermView = { term: RdfDataFactory.blankNode('b1'), editable: true, anchor: 160 };
+		const node: TermData = { term: RdfDataFactory.blankNode('b0'), editable: true, anchor: 140 };
+		const copied: TermData = { term: RdfDataFactory.blankNode('b1'), editable: true, anchor: 160 };
 		const draft = new StatementDraft(RDFS.label, [{ kind: 'written', view: node }]).withValueCopied(0);
 
 		expect(draft.toStatementValues()).toEqual([{ kind: 'existing', anchor: 140 }, { kind: 'copy', anchor: 140 }]);

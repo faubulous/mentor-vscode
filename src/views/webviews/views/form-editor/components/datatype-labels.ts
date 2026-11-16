@@ -1,7 +1,7 @@
 import { Literal, NamedNode } from '@rdfjs/types';
 import { XSD } from '@faubulous/mentor-rdf/ontologies';
 import { getLocalPartAndQuery } from '@src/utilities/uri';
-import { NamespaceInfo } from '../form-editor-model';
+import { NamespaceData } from '../form-editor-model';
 import { MARKDOWN_DATATYPE } from '../services/statement/literal-datatypes';
 import { getLanguageTagLabel } from './term-labels';
 
@@ -72,7 +72,7 @@ export function getLiteralFieldTag(term: Literal, languageTags: Readonly<Record<
  * @param namespaces The namespace declarations of the document.
  * @returns The tag, or `undefined` for a plain string.
  */
-export function getLiteralTag(term: Literal, languageTags: Readonly<Record<string, string>>, namespaces: readonly NamespaceInfo[]): string | undefined {
+export function getLiteralTag(term: Literal, languageTags: Readonly<Record<string, string>>, namespaces: readonly NamespaceData[]): string | undefined {
 	const language = getLanguageTagLabel(term, languageTags);
 	const datatype = term.datatype.value;
 

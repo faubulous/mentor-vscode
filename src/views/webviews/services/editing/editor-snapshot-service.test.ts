@@ -137,7 +137,7 @@ describe('EditorSnapshotService', () => {
 			ex:B rdfs:subClassOf _:shared .
 		`);
 
-		expect(snapshot.resources.find(resource => resource.term.termType === 'BlankNode')?.usageCount).toBe(2);
+		expect(snapshot.resources.find(resource => resource.subject.termType === 'BlankNode')?.usageCount).toBe(2);
 	});
 
 	it('heads a vocabulary with its concept scheme', () => {

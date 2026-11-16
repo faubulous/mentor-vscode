@@ -3,7 +3,7 @@ import { RDF } from '@faubulous/mentor-rdf/ontologies';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { ValueKind } from '@src/utilities/value-kind';
 import { ScopeKey } from '@src/utilities/config-scope';
-import { NamespaceInfo, PropertyView, TermView } from '../form-editor-model';
+import { NamespaceData, PredicateData, TermData } from '../form-editor-model';
 import { ContextMenu, useContextMenu } from '../hooks/use-context-menu';
 import { useRowEditorState } from '../hooks/use-row-editor-state';
 import { StatementServices } from '../hooks/use-statement-services';
@@ -103,7 +103,7 @@ export interface StatementRowProps extends StatementRowContext {
 	/**
 	 * The property the row shows, or none for a row a new statement is typed into.
 	 */
-	property?: PropertyView;
+	property?: PredicateData;
 
 	/**
 	 * Edits the row; absent for a row that only reads.
@@ -139,7 +139,7 @@ interface ShownValue {
 	/**
 	 * The view of the value.
 	 */
-	view: TermView;
+	view: TermData;
 
 	/**
 	 * The index of the value among the values of the statement.
@@ -292,7 +292,7 @@ function _collapsedSummaryOf(header: NestedCardHeader): React.JSX.Element | null
  * @param menuRef Holds the menu element, which a right-click on the row opens as well.
  * @returns The menu, or nothing.
  */
-function _rowMenuOf(predicateView: TermView | undefined, label: string, cardPins: PinnedProperties, pinScopes: readonly ScopeKey[], edited: EditedRow | undefined, menuRef: ContextMenu['menuRef']): React.JSX.Element | null {
+function _rowMenuOf(predicateView: TermData | undefined, label: string, cardPins: PinnedProperties, pinScopes: readonly ScopeKey[], edited: EditedRow | undefined, menuRef: ContextMenu['menuRef']): React.JSX.Element | null {
 	const predicate = predicateView?.term;
 	const onPin = cardPins.onPin;
 
@@ -320,7 +320,7 @@ function _rowMenuOf(predicateView: TermView | undefined, label: string, cardPins
  * @param predicateView The predicate, once the row names one.
  * @returns The IRI, or `undefined`.
  */
-function _predicateIriOf(predicateView: TermView | undefined): string | undefined {
+function _predicateIriOf(predicateView: TermData | undefined): string | undefined {
 	return predicateView?.term.termType === 'NamedNode' ? predicateView.term.value : undefined;
 }
 
@@ -333,7 +333,7 @@ function _predicateIriOf(predicateView: TermView | undefined): string | undefine
  * @param namespaces The namespace declarations of the document.
  * @returns The tags, by the index of their values.
  */
-function _tagsOf(literals: readonly ShownValue[], edited: EditedRow | undefined, languageTags: Readonly<Record<string, string>>, namespaces: readonly NamespaceInfo[]): { index: number; tag: string }[] {
+function _tagsOf(literals: readonly ShownValue[], edited: EditedRow | undefined, languageTags: Readonly<Record<string, string>>, namespaces: readonly NamespaceData[]): { index: number; tag: string }[] {
 	return literals.flatMap(({ view, index }) => {
 		if (view.term.termType !== 'Literal') {
 			return [];
@@ -354,7 +354,7 @@ function _tagsOf(literals: readonly ShownValue[], edited: EditedRow | undefined,
  * @param label The label the row shows.
  * @returns `true` when the label is the IRI.
  */
-function _isIriLabel(predicateView: TermView | undefined, label: string): boolean {
+function _isIriLabel(predicateView: TermData | undefined, label: string): boolean {
 	return predicateView?.term.termType === 'NamedNode' && label === predicateView.term.value;
 }
 
@@ -460,7 +460,7 @@ function _addLinkOf(edited: EditedRow, header: RowHeader | undefined, literals: 
  * of the predicate, which the input of an empty row asks to add a value for.
  * @returns The box.
  */
-function _resourceBox(edited: EditedRow, resources: readonly ShownValue[], property: PropertyView | undefined, options: { header?: RowHeader['kind']; autoFocus: boolean; label: string }): React.JSX.Element {
+function _resourceBox(edited: EditedRow, resources: readonly ShownValue[], property: PredicateData | undefined, options: { header?: RowHeader['kind']; autoFocus: boolean; label: string }): React.JSX.Element {
 	const { header, autoFocus, label } = options;
 	const isType = header === 'type';
 	const { editor, state, services } = edited;
@@ -495,7 +495,7 @@ function _resourceBox(edited: EditedRow, resources: readonly ShownValue[], prope
  * @param property The property of the row.
  * @returns The kind of values.
  */
-function _rangeOf(header: RowHeader['kind'] | undefined, property: PropertyView | undefined): ValueKind {
+function _rangeOf(header: RowHeader['kind'] | undefined, property: PredicateData | undefined): ValueKind {
 	if (header) {
 		return header === 'type' ? 'resource' : 'literal';
 	}
@@ -603,7 +603,7 @@ function _missingLanguageField(edited: EditedRow | undefined, languageFilter: La
  * @param view The view of the value.
  * @returns The kind.
  */
-function _kindOf(view: TermView): 'literal' | 'resource' | 'whole' {
+function _kindOf(view: TermData): 'literal' | 'resource' | 'whole' {
 	if (view.collection || view.term.termType === 'BlankNode') {
 		return 'whole';
 	}
@@ -617,6 +617,6 @@ function _kindOf(view: TermView): 'literal' | 'resource' | 'whole' {
  * @param services Gives the predicate its label.
  * @returns The view, or `undefined` while the row names no predicate.
  */
-function _editedPredicateView(state: StatementRowState, services: StatementServices): TermView | undefined {
+function _editedPredicateView(state: StatementRowState, services: StatementServices): TermData | undefined {
 	return state.draft.predicate ? services.resolver.viewOf(RdfDataFactory.namedNode(state.draft.predicate)) : undefined;
 }

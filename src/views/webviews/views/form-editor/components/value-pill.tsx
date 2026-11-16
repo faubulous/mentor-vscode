@@ -1,5 +1,5 @@
 import { KeyboardEvent, MouseEvent } from 'react';
-import { TermView } from '../form-editor-model';
+import { TermData } from '../form-editor-model';
 import { getResourceTooltipAttributes } from './resource-tooltip';
 import { getTermLabel } from './term-labels';
 
@@ -10,7 +10,7 @@ export interface ValuePillProps {
 	/**
 	 * The resource the pill stands for.
 	 */
-	view: TermView;
+	view: TermData;
 
 	/**
 	 * Follows the pill to the resource; the pill is a link when given.

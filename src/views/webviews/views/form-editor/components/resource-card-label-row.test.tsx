@@ -5,27 +5,27 @@ import userEvent from '@testing-library/user-event';
 import { RDFS, SKOS } from '@faubulous/mentor-rdf';
 import { createEditingHostStub } from '@src/utilities/mocks/editing-host-fixtures';
 import { createResourceDataServiceStub } from '@src/utilities/mocks/resource-data-service-fixtures';
-import { createResourceSummary } from '@src/utilities/mocks/resource-summary-fixtures';
-import { TEST_NAMESPACES, TEST_SUBJECT, createIriView, createLiteralView, createProperty, createTestResourceDetail, withAnchors } from '@src/utilities/mocks/statement-fixtures';
+import { createResourceListItem } from '@src/utilities/mocks/resource-list-item-fixtures';
+import { TEST_NAMESPACES, TEST_SUBJECT, createIriView, createLiteralView, createProperty, createTestCardBody, withAnchors } from '@src/utilities/mocks/statement-fixtures';
 import { renderWebview } from '@src/utilities/mocks/webview-test-utils';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
-import { PropertyView } from '../form-editor-model';
+import { PredicateData } from '../form-editor-model';
 import { EditingController } from '../state/editing-controller';
 import { FormEditorContext, FormEditorContextValue } from '../state/form-editor-context';
 import { ResourceCard } from './resource-card';
 
 const NAMESPACES = Object.entries(TEST_NAMESPACES).map(([prefix, iri]) => ({ prefix, iri }));
 
-const SUMMARY = createResourceSummary('Tree', { term: TEST_SUBJECT, label: 'Tree', usageCount: 3 });
+const LIST_ITEM = createResourceListItem('Tree', { subject: TEST_SUBJECT, label: 'Tree', usageCount: 3 });
 
 /**
  * Render the expanded card of a resource with the given properties, edited, with `rdfs:label` and
  * `skos:prefLabel` as the label predicates.
  * @param properties The properties of the resource.
  */
-function renderCard(properties: PropertyView[]) {
+function renderCard(properties: PredicateData[]) {
 	const host = createEditingHostStub();
-	const detail = withAnchors(createTestResourceDetail(properties));
+	const cardBody = withAnchors(createTestCardBody(properties));
 	const context: FormEditorContextValue = {
 		readOnly: false,
 		editing: new EditingController(host),
@@ -37,7 +37,7 @@ function renderCard(properties: PropertyView[]) {
 
 	renderWebview(
 		<FormEditorContext.Provider value={context}>
-			<ResourceCard summary={SUMMARY} dataService={createResourceDataServiceStub([detail])} expanded onToggle={() => undefined} />
+			<ResourceCard cardHeader={LIST_ITEM} dataService={createResourceDataServiceStub([cardBody])} expanded onToggle={() => undefined} />
 		</FormEditorContext.Provider>
 	);
 

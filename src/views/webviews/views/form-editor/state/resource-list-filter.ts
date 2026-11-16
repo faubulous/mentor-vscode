@@ -1,5 +1,5 @@
 import { termToString } from 'rdf-string';
-import { ResourceSummary } from '../form-editor-model';
+import { ResourceListItemData } from '../form-editor-model';
 
 /**
  * A narrowing of the list to the resources the definition tree lists under a node, such as the
@@ -66,7 +66,7 @@ export class ResourceListFilter {
 	 * @param resource The resource to test.
 	 * @returns `true` when it passes.
 	 */
-	matches(resource: ResourceSummary): boolean {
+	matches(resource: ResourceListItemData): boolean {
 		return this._matchesText(resource) && this._matchesType(resource) && !(this._criteria.hideExternalDeclarations && resource.externalDeclaration);
 	}
 
@@ -75,7 +75,7 @@ export class ResourceListFilter {
 	 * @param resources The resources of the document.
 	 * @returns The resources to show, the same array when nothing narrows the list.
 	 */
-	apply(resources: ResourceSummary[]): ResourceSummary[] {
+	apply(resources: ResourceListItemData[]): ResourceListItemData[] {
 		if (!this.hasText && !this._criteria.type && !this._criteria.hideExternalDeclarations) {
 			return resources;
 		}
@@ -88,12 +88,12 @@ export class ResourceListFilter {
 	 * @param resource The resource to test.
 	 * @returns `true` when it matches.
 	 */
-	private _matchesText(resource: ResourceSummary): boolean {
+	private _matchesText(resource: ResourceListItemData): boolean {
 		if (!this.hasText) {
 			return true;
 		}
 
-		return [resource.term.value, resource.prefixedName ?? '', resource.label, resource.description ?? ''].join(' ').toLowerCase().includes(this._needle);
+		return [resource.subject.value, resource.prefixedName ?? '', resource.label, resource.description ?? ''].join(' ').toLowerCase().includes(this._needle);
 	}
 
 	/**
@@ -102,7 +102,7 @@ export class ResourceListFilter {
 	 * @param resource The resource to test.
 	 * @returns `true` when it does.
 	 */
-	private _matchesType(resource: ResourceSummary): boolean {
-		return this._criteria.type === undefined || this._criteria.type.resourceKeys.has(termToString(resource.term));
+	private _matchesType(resource: ResourceListItemData): boolean {
+		return this._criteria.type === undefined || this._criteria.type.resourceKeys.has(termToString(resource.subject));
 	}
 }

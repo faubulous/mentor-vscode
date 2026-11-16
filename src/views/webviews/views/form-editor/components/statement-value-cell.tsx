@@ -1,4 +1,4 @@
-import { TermView } from '../form-editor-model';
+import { TermData } from '../form-editor-model';
 import { RowValue } from '../state/row-value';
 import { DraftResourceCard } from './draft-resource-card';
 import { LiteralValueField } from './literal-value-field';
@@ -19,7 +19,7 @@ export interface StatementValueCellProps extends StatementRowContext {
 	/**
 	 * The view the value is shown with.
 	 */
-	view: TermView;
+	view: TermData;
 
 	/**
 	 * The index of the value among the values of its statement.
@@ -63,7 +63,7 @@ export function StatementValueCell({ value, view, index, edited, ...context }: S
  * @param context Where the row stands.
  * @returns The value.
  */
-function _editedValue(value: RowValue, view: TermView, index: number, edited: EditedRow, context: StatementRowContext): React.JSX.Element {
+function _editedValue(value: RowValue, view: TermData, index: number, edited: EditedRow, context: StatementRowContext): React.JSX.Element {
 	if (value.kind === 'term' && value.node?.copyOf) {
 		return <TermValue view={view} {...context} />;
 	}

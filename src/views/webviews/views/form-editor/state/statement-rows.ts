@@ -1,5 +1,5 @@
 import { BlankNode, NamedNode } from '@rdfjs/types';
-import { PropertyView } from '../form-editor-model';
+import { PredicateData } from '../form-editor-model';
 import { TypedTermReader } from '../services/statement/typed-term-reader';
 import { IEditingController } from './editing-controller.interface';
 import { StatementDraft } from './statement-draft';
@@ -20,7 +20,7 @@ export interface StatementRowEntry {
 	/**
 	 * The property the row shows, or none for a row a new statement is typed into.
 	 */
-	property?: PropertyView;
+	property?: PredicateData;
 
 	/**
 	 * Edits the row; absent for a property the row only reads.
@@ -52,7 +52,7 @@ export interface StatementRowsData {
 	/**
 	 * The properties of the resource, in document order.
 	 */
-	properties: readonly PropertyView[];
+	properties: readonly PredicateData[];
 
 	/**
 	 * The document version the properties belong to.
@@ -72,7 +72,7 @@ export interface StatementRowsData {
 	/**
 	 * Tells how the predicate of a property is written in its field.
 	 */
-	predicateTextOf: (property: PropertyView) => string;
+	predicateTextOf: (property: PredicateData) => string;
 }
 
 /**
@@ -263,7 +263,7 @@ export class StatementRows implements StatementRowOwner {
 	 * @param properties The properties of the resource.
 	 * @returns The IRI of the predicate, or `undefined` when no row leads or the resource has none.
 	 */
-	private _leadingPredicateOf(properties: readonly PropertyView[]): string | undefined {
+	private _leadingPredicateOf(properties: readonly PredicateData[]): string | undefined {
 		const predicates = new Set(properties.flatMap(property => property.predicate.term.termType === 'NamedNode' ? [property.predicate.term.value] : []));
 
 		return this._options.leadingRow?.predicates.find(predicate => predicates.has(predicate));

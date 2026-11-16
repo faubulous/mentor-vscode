@@ -27,7 +27,7 @@ export interface DocumentPosition {
 /**
  * A term together with everything the webview needs to render it without a round trip.
  */
-export interface TermView {
+export interface TermData {
 	/**
 	 * The term itself.
 	 */
@@ -51,12 +51,12 @@ export interface TermView {
 	/**
 	 * Set when the object is a blank node that has its own form.
 	 */
-	nested?: NestedResourceRef;
+	nested?: NestedResourceData;
 
 	/**
 	 * Set when the object is an RDF collection, whose items replace it.
 	 */
-	collection?: CollectionView;
+	collection?: CollectionData;
 
 	/**
 	 * The source offset of the term's token, which pins the value to exactly the statement the
@@ -78,7 +78,7 @@ export interface TermView {
 /**
  * Reference from an object position to the blank node resource it denotes.
  */
-export interface NestedResourceRef {
+export interface NestedResourceData {
 	/**
 	 * The blank node naming the nested resource.
 	 */
@@ -104,26 +104,26 @@ export interface NestedResourceRef {
  * An RDF collection, written `( a b c )`. Its items have a defined order, unlike the several
  * values a predicate may simply carry.
  */
-interface CollectionView {
+interface CollectionData {
 	/**
 	 * The items of the collection, in order.
 	 */
-	items: TermView[];
+	items: TermData[];
 }
 
 /**
  * A predicate and its object list, in document order.
  */
-export interface PropertyView {
+export interface PredicateData {
 	/**
 	 * The predicate of the property.
 	 */
-	predicate: TermView;
+	predicate: TermData;
 
 	/**
 	 * The values of the predicate, in document order.
 	 */
-	values: TermView[];
+	values: TermData[];
 
 	/**
 	 * What kind of values the predicate takes, when the host could tell.
@@ -137,15 +137,16 @@ export interface PropertyView {
 }
 
 /**
- * One row of the resource list. Deliberately small: the index for a whole document is held
- * in the webview at once, so it must stay cheap for thousands of resources.
+ * The data of a resource as a value shows it, as a pill, an option of the resource picker or an
+ * entry of the class list: the resource, its label and its kind. Every resource of the snapshot
+ * and every header the host sends along carries it.
  */
-export interface ResourceSummary {
+export interface ResourcePillData {
 	/**
 	 * The term naming the resource. A blank node keeps its identifier across versions of the
 	 * document, as the parser names an anonymous node by where it is written.
 	 */
-	term: NamedNode | BlankNode;
+	subject: NamedNode | BlankNode;
 
 	/**
 	 * The human readable label, resolved from the configured label predicates.
@@ -153,9 +154,9 @@ export interface ResourceSummary {
 	label: string;
 
 	/**
-	 * Human readable description, resolved from the configured description predicates.
+	 * Whether the document names the resource with one of the configured label predicates.
 	 */
-	description?: string;
+	hasLabel: boolean;
 
 	/**
 	 * The prefixed name of an IRI resource, when a prefix is declared for its namespace.
@@ -163,17 +164,19 @@ export interface ResourceSummary {
 	prefixedName?: string;
 
 	/**
-	 * The local part of the IRI of the resource, which renaming it changes as F2 does: what follows
-	 * the prefix of its prefixed name, else what follows the namespace of the IRI, up to its last
-	 * `#` or `/`. Absent for a blank node and an IRI without a local part.
-	 */
-	localPart?: string;
-
-	/**
 	 * The glyph that marks what kind of resource this is.
 	 */
 	iconName: string;
+}
 
+/**
+ * The data a card shows above its statements: the title with the types, the description or the
+ * pinned properties, the usage count, the actions of the title bar and the IRI in the footer. The
+ * compact card of a tooltip shows nothing else. The host sends it along with the statements of a
+ * resource the snapshot does not list, such as a blank node written inside another resource or a
+ * resource read from the store.
+ */
+export interface ResourceCardHeaderData extends ResourcePillData {
 	/**
 	 * The type the definition is shown and pinned by: the first it asserts, past `owl:NamedIndividual`.
 	 */
@@ -190,9 +193,47 @@ export interface ResourceSummary {
 	typeLabels?: string[];
 
 	/**
+	 * Human readable description, resolved from the configured description predicates.
+	 */
+	description?: string;
+
+	/**
+	 * The properties pinned for the types of the resource, asserted or inferred, which its
+	 * collapsed card shows: empty when none is pinned, and absent for a resource of no known type,
+	 * whose properties cannot be pinned since pins are stored per type.
+	 */
+	pins?: PinnedProperty[];
+
+	/**
+	 * How often other statements refer to the resource, across the indexed documents. IRIs only.
+	 */
+	usageCount?: number;
+
+	/**
 	 * Where the resource is first written in the document, which a text editor reveals.
 	 */
 	position?: DocumentPosition;
+
+	/**
+	 * The local part of the IRI of the resource, which renaming it changes as F2 does: what follows
+	 * the prefix of its prefixed name, else what follows the namespace of the IRI, up to its last
+	 * `#` or `/`. Absent for a blank node and an IRI without a local part.
+	 */
+	localPart?: string;
+}
+
+/**
+ * The data of one entry of the resource list, which the snapshot holds for every resource of the
+ * document: its card header, the comments that stand above its card and what the list filters by.
+ * Deliberately small, as the list of a whole document is held in the webview at once and must stay
+ * cheap for thousands of resources.
+ */
+export interface ResourceListItemData extends ResourceCardHeaderData {
+	/**
+	 * The comments written above the resource in the document, which stand over its card: the
+	 * lines of each run of comments, the runs being separated by blank lines.
+	 */
+	comments?: string[][];
 
 	/**
 	 * Set for a term of another vocabulary that the document only declares, with its type and
@@ -201,32 +242,9 @@ export interface ResourceSummary {
 	externalDeclaration?: boolean;
 
 	/**
-	 * How often other statements refer to the resource, across the indexed documents. IRIs only.
-	 */
-	usageCount?: number;
-
-	/**
 	 * How many properties the resource has.
 	 */
 	propertyCount: number;
-
-	/**
-	 * Whether the document names the resource with one of the configured label predicates.
-	 */
-	hasLabel: boolean;
-
-	/**
-	 * The comments written above the resource in the document, which stand over its card: the
-	 * lines of each run of comments, the runs being separated by blank lines.
-	 */
-	comments?: string[][];
-
-	/**
-	 * The properties pinned for the types of the resource, asserted or inferred, which its
-	 * collapsed card shows: empty when none is pinned, and absent for a resource of no known type,
-	 * whose properties cannot be pinned since pins are stored per type.
-	 */
-	pins?: PinnedProperty[];
 }
 
 /**
@@ -253,31 +271,33 @@ export interface PinnedProperty {
 }
 
 /**
- * The properties of a single resource, loaded on demand.
+ * The data of the body of a card: the statements about one resource, grouped by predicate, which
+ * its rows show. It is fetched as a card needs it, while the list items of all resources come
+ * with the snapshot.
  */
-export interface ResourceDetail extends Partial<Pick<ResourceSummary, 'pins'>> {
+export interface ResourceCardBodyData {
 	/**
-	 * The term naming the resource.
+	 * The resource the statements are about: the subject of each of them.
 	 */
-	term: NamedNode | BlankNode;
+	subject: NamedNode | BlankNode;
 
 	/**
-	 * The properties of the resource, in document order.
+	 * The statements grouped by predicate, in document order.
 	 */
-	properties: PropertyView[];
+	predicates: PredicateData[];
 
 	/**
 	 * The comment lines written above the resource, for a node written inside another. A resource
-	 * of its own carries them on its summary instead, so they stand where they were written:
+	 * of its own carries them on its list item instead, so they stand where they were written:
 	 * outside its card rather than within it.
 	 */
-	comments?: string[];
+	leadingComments?: string[];
 }
 
 /**
  * A namespace declaration in the document.
  */
-export interface NamespaceInfo {
+export interface NamespaceData {
 	/**
 	 * The declared prefix.
 	 */
@@ -328,7 +348,7 @@ export interface DocumentSnapshot {
 	/**
 	 * Which build of the snapshots of the document this one is. A snapshot is built again for the
 	 * same version when what it reads besides the text changes, such as the labels in the store,
-	 * the settings or the language, so the details of resources belong to a revision.
+	 * the settings or the language, so the statements about resources belong to a revision.
 	 */
 	revision: number;
 
@@ -345,12 +365,12 @@ export interface DocumentSnapshot {
 	/**
 	 * The namespace declarations of the document.
 	 */
-	namespaces: NamespaceInfo[];
+	namespaces: NamespaceData[];
 
 	/**
 	 * The resources of the document, in document order.
 	 */
-	resources: ResourceSummary[];
+	resources: ResourceListItemData[];
 
 	/**
 	 * The resource describing the document, such as its ontology, which heads the form.

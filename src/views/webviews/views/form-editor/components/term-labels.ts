@@ -1,5 +1,5 @@
 import { Literal, Term } from '@rdfjs/types';
-import { TermView } from '../form-editor-model';
+import { TermData } from '../form-editor-model';
 
 /**
  * The identifier a term is written by: the IRI of a resource, `_:` and the label of a blank node.
@@ -19,7 +19,7 @@ function _identifierOf(term: Term): string | undefined {
  * @param view The view of the term.
  * @returns The label.
  */
-export function getTermLabel(view: TermView): string {
+export function getTermLabel(view: TermData): string {
 	return view.label || view.prefixedName || _identifierOf(view.term) || '';
 }
 

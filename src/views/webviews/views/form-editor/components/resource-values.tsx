@@ -2,7 +2,7 @@ import { KeyboardEvent, MouseEvent, useEffect, useMemo, useRef } from 'react';
 import { VscodeTextfield } from '@vscode-elements/elements';
 import { ValueKind } from '@src/utilities/value-kind';
 import { BlankNode, NamedNode } from '@rdfjs/types';
-import { ResourceSummary, TermView } from '../form-editor-model';
+import { ResourcePillData, TermData } from '../form-editor-model';
 import { StatementServices } from '../hooks/use-statement-services';
 import { Combobox, ComboboxOption } from './combobox';
 import { ValuePill } from './value-pill';
@@ -14,7 +14,7 @@ interface ResourceValueEntry {
 	/**
 	 * The view of the resource.
 	 */
-	view: TermView;
+	view: TermData;
 
 	/**
 	 * The index of the value among the values of the statement.
@@ -34,7 +34,7 @@ export interface ResourceValuesProps {
 	/**
 	 * The resources of the document, which the input offers.
 	 */
-	documentResources: readonly ResourceSummary[];
+	documentResources: readonly ResourcePillData[];
 
 	/**
 	 * What the predicate takes, which decides how typed text is read.
@@ -213,16 +213,16 @@ export function ResourceValues(props: ResourceValuesProps): React.JSX.Element {
  * @param services Names the resources by their prefixed names.
  * @returns The options.
  */
-function _optionsOf(documentResources: readonly ResourceSummary[], resources: readonly ResourceValueEntry[], services: StatementServices): ComboboxOption<NamedNode | BlankNode>[] {
+function _optionsOf(documentResources: readonly ResourcePillData[], resources: readonly ResourceValueEntry[], services: StatementServices): ComboboxOption<NamedNode | BlankNode>[] {
 	const present = new Set(resources.flatMap(({ view }) => view.term.termType === 'NamedNode' ? [view.term.value] : []));
 
 	return documentResources.flatMap(resource => {
-		if (resource.term.termType !== 'NamedNode' || present.has(resource.term.value)) {
+		if (resource.subject.termType !== 'NamedNode' || present.has(resource.subject.value)) {
 			return [];
 		}
 
-		const prefixedName = resource.prefixedName ?? services.resolver.viewOf(resource.term).prefixedName;
+		const prefixedName = resource.prefixedName ?? services.resolver.viewOf(resource.subject).prefixedName;
 
-		return [{ label: resource.label, detail: prefixedName ? `${prefixedName}\n${resource.term.value}` : resource.term.value, keywords: prefixedName, value: resource.term }];
+		return [{ label: resource.label, detail: prefixedName ? `${prefixedName}\n${resource.subject.value}` : resource.subject.value, keywords: prefixedName, value: resource.subject }];
 	});
 }

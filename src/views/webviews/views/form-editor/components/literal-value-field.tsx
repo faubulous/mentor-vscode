@@ -1,5 +1,5 @@
 import { XSD } from '@faubulous/mentor-rdf/ontologies';
-import { TermView } from '../form-editor-model';
+import { TermData } from '../form-editor-model';
 import { LiteralDatatypes } from '../services/statement/literal-datatypes';
 import { getDatatypeHint, getLiteralFieldTag } from './datatype-labels';
 import { EditedRow } from './edited-row';
@@ -14,7 +14,7 @@ export interface LiteralValueFieldProps {
 	/**
 	 * The view of the value.
 	 */
-	view: TermView;
+	view: TermData;
 
 	/**
 	 * The index of the value among the values of its statement.

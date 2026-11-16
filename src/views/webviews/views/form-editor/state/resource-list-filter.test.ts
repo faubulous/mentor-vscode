@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { ResourceSummary } from '../form-editor-model';
+import { ResourceListItemData } from '../form-editor-model';
 import { ResourceListFilter } from './resource-list-filter';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 
 /**
- * Build a resource summary.
+ * Build a list item.
  */
-function summaryOf(iri: string, label: string, options: { prefixedName?: string; description?: string; externalDeclaration?: boolean } = {}): ResourceSummary {
-	return { term: RdfDataFactory.namedNode(iri), label, iconName: '', propertyCount: 1, hasLabel: false, ...options };
+function summaryOf(iri: string, label: string, options: { prefixedName?: string; description?: string; externalDeclaration?: boolean } = {}): ResourceListItemData {
+	return { subject: RdfDataFactory.namedNode(iri), label, iconName: '', propertyCount: 1, hasLabel: false, ...options };
 }
 
 const TREE = summaryOf('http://example.org/Tree', 'Tree', { prefixedName: 'ex:Tree', description: 'A woody plant.' });
@@ -23,7 +23,7 @@ describe('ResourceListFilter', () => {
 	});
 
 	it('matches the label, the description, the prefixed name and the IRI, ignoring case', () => {
-		const matches = (text: string, resource: ResourceSummary) => new ResourceListFilter({ text }).matches(resource);
+		const matches = (text: string, resource: ResourceListItemData) => new ResourceListFilter({ text }).matches(resource);
 
 		expect(matches('blatt', LEAF)).toBe(true);
 		expect(matches('EX:LEAF', LEAF)).toBe(true);
@@ -34,7 +34,7 @@ describe('ResourceListFilter', () => {
 	});
 
 	it('keeps the resources the tree lists under the node, in document order', () => {
-		const filter = new ResourceListFilter({ type: { label: 'Plants', resourceKeys: new Set([LEAF.term.value, TREE.term.value]) } });
+		const filter = new ResourceListFilter({ type: { label: 'Plants', resourceKeys: new Set([LEAF.subject.value, TREE.subject.value]) } });
 
 		expect(filter.apply(RESOURCES)).toEqual([TREE, LEAF]);
 	});
@@ -44,7 +44,7 @@ describe('ResourceListFilter', () => {
 	});
 
 	it('narrows by every criterion at once', () => {
-		const filter = new ResourceListFilter({ text: 'e', type: { label: 'Plants', resourceKeys: new Set([TREE.term.value, THING.term.value]) }, hideExternalDeclarations: true });
+		const filter = new ResourceListFilter({ text: 'e', type: { label: 'Plants', resourceKeys: new Set([TREE.subject.value, THING.subject.value]) }, hideExternalDeclarations: true });
 
 		expect(filter.apply(RESOURCES)).toEqual([TREE]);
 	});

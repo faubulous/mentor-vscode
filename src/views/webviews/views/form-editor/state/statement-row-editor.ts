@@ -1,7 +1,7 @@
 import { EditOperation } from '@src/services/editing/edit-operation';
 import { BlankNode, NamedNode } from '@rdfjs/types';
 import { ValueKind } from '@src/utilities/value-kind';
-import { PropertyView, TermView } from '../form-editor-model';
+import { PredicateData, TermData } from '../form-editor-model';
 import { EditOutcome } from '../services/editing-host-service.interface';
 import { LiteralDatatypes } from '../services/statement/literal-datatypes';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
@@ -93,7 +93,7 @@ export class StatementRowEditor implements EditWriter {
 	/**
 	 * The property the row shows, or none for a row a new statement is typed into.
 	 */
-	get property(): PropertyView | undefined {
+	get property(): PredicateData | undefined {
 		return this._data.property;
 	}
 
@@ -279,7 +279,7 @@ export class StatementRowEditor implements EditWriter {
 	 * Add a value picked or typed for the field of a new value, and empty the field.
 	 * @param term The term.
 	 */
-	addValue(term: TermView['term']): void {
+	addValue(term: TermData['term']): void {
 		this._update(this._state.withValueAppended(term));
 	}
 

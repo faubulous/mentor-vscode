@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { createResourceSummary } from '@src/utilities/mocks/resource-summary-fixtures';
+import { createResourceListItem } from '@src/utilities/mocks/resource-list-item-fixtures';
 import { EXAMPLE_NAMESPACE } from '@src/utilities/mocks/statement-fixtures';
 import { DOCUMENT_COMMENT_BLOCK_ID, buildFormBlocks } from './use-form-blocks';
 
-const RESOURCES = [createResourceSummary('A', { comments: [['About the file'], ['Above A', 'second line']] }), createResourceSummary('B')];
+const RESOURCES = [createResourceListItem('A', { comments: [['About the file'], ['Above A', 'second line']] }), createResourceListItem('B')];
 
 describe('buildFormBlocks', () => {
 	it('places each run of comments above a resource in a block of its own before its entry', () => {

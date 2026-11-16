@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { termToString } from 'rdf-string';
-import { ResourceSummary } from '../form-editor-model';
+import { ResourceListItemData } from '../form-editor-model';
 import { FormBlock } from '../state/form-block';
 
 /**
@@ -16,7 +16,7 @@ export const DOCUMENT_COMMENT_BLOCK_ID = 'comment:document';
  * @param filtering Whether a filter narrows the list.
  * @returns The blocks, in document order.
  */
-export function buildFormBlocks(resources: readonly ResourceSummary[], trailingComments: readonly string[][], filtering: boolean): FormBlock[] {
+export function buildFormBlocks(resources: readonly ResourceListItemData[], trailingComments: readonly string[][], filtering: boolean): FormBlock[] {
 	const blocks: FormBlock[] = [];
 
 	for (const resource of resources) {
@@ -24,7 +24,7 @@ export function buildFormBlocks(resources: readonly ResourceSummary[], trailingC
 			(resource.comments ?? []).forEach((lines, run) => blocks.push(_resourceCommentBlock(resource, lines, run)));
 		}
 
-		blocks.push({ kind: 'resource', id: termToString(resource.term), resource });
+		blocks.push({ kind: 'resource', id: termToString(resource.subject), resource });
 	}
 
 	if (!filtering) {
@@ -41,7 +41,7 @@ export function buildFormBlocks(resources: readonly ResourceSummary[], trailingC
  * @param filtering Whether a filter narrows the list.
  * @returns The blocks, in document order.
  */
-export function useFormBlocks(resources: readonly ResourceSummary[], trailingComments: readonly string[][], filtering: boolean): FormBlock[] {
+export function useFormBlocks(resources: readonly ResourceListItemData[], trailingComments: readonly string[][], filtering: boolean): FormBlock[] {
 	return useMemo(() => buildFormBlocks(resources, trailingComments, filtering), [resources, trailingComments, filtering]);
 }
 
@@ -52,8 +52,8 @@ export function useFormBlocks(resources: readonly ResourceSummary[], trailingCom
  * @param run The index of the run among the runs above the resource.
  * @returns The block.
  */
-function _resourceCommentBlock(resource: ResourceSummary, lines: string[], run: number): FormBlock {
-	return { kind: 'comment', id: `comment:${termToString(resource.term)}:${run}`, text: lines.join('\n') };
+function _resourceCommentBlock(resource: ResourceListItemData, lines: string[], run: number): FormBlock {
+	return { kind: 'comment', id: `comment:${termToString(resource.subject)}:${run}`, text: lines.join('\n') };
 }
 
 /**

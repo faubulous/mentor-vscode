@@ -1,5 +1,5 @@
 import { BlankNode, NamedNode } from '@rdfjs/types';
-import { PropertyView } from '../form-editor-model';
+import { PredicateData } from '../form-editor-model';
 import { TypedTermReader } from '../services/statement/typed-term-reader';
 
 /**
@@ -21,7 +21,7 @@ export interface StatementRowData {
 	/**
 	 * The property, or none for a row a new statement is typed into.
 	 */
-	property?: PropertyView;
+	property?: PredicateData;
 
 	/**
 	 * How the predicate of the property is written in its field.

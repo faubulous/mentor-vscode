@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { createResourceSummary } from '@src/utilities/mocks/resource-summary-fixtures';
+import { createResourceListItem } from '@src/utilities/mocks/resource-list-item-fixtures';
 import { EXAMPLE_NAMESPACE, TEST_NAMESPACES, createIriView } from '@src/utilities/mocks/statement-fixtures';
 import { TermViewResolver } from './term-view-resolver';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 
 describe('TermViewResolver', () => {
-	const resolver = new TermViewResolver(TEST_NAMESPACES, [createResourceSummary('Tree', { label: 'Apple tree', iconName: 'mentor-rdf-class' })], [createIriView('ex:Plant', 'Plant')]);
+	const resolver = new TermViewResolver(TEST_NAMESPACES, [createResourceListItem('Tree', { label: 'Apple tree', iconName: 'mentor-rdf-class' })], [createIriView('ex:Plant', 'Plant')]);
 
 	it('gives a term the view the card knows, else that of a resource of the document', () => {
 		expect(resolver.viewOf(RdfDataFactory.namedNode(`${EXAMPLE_NAMESPACE}Plant`))).toMatchObject({ label: 'Plant', prefixedName: 'ex:Plant' });

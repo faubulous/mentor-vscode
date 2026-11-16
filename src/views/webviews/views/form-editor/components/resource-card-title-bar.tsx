@@ -1,6 +1,6 @@
 import { MutableRefObject } from 'react';
 import { VscodeContextMenu } from '@vscode-elements/elements';
-import { ResourceSummary } from '../form-editor-model';
+import { ResourceCardHeaderData } from '../form-editor-model';
 import { useFormEditorContext } from '../state/form-editor-context';
 import { CardUsage } from './card-usage';
 import { ResourceCardMenu } from './resource-card-menu';
@@ -13,7 +13,7 @@ export interface ResourceCardTitleBarProps {
 	/**
 	 * The resource.
 	 */
-	summary: ResourceSummary;
+	cardHeader: ResourceCardHeaderData;
 
 	/**
 	 * Whether the card is expanded.
@@ -51,12 +51,12 @@ export interface ResourceCardTitleBarProps {
  * @param props The resource, the state of the card and what its buttons do.
  * @returns The title bar.
  */
-export function ResourceCardTitleBar({ summary, expanded, nestedCollapsed, onToggle, onToggleNested, menuRef }: ResourceCardTitleBarProps): React.JSX.Element {
+export function ResourceCardTitleBar({ cardHeader, expanded, nestedCollapsed, onToggle, onToggleNested, menuRef }: ResourceCardTitleBarProps): React.JSX.Element {
 	const { readOnly, pinScopes = [], onRevealInTextEditor, onUnpinAll, onRemoveResource } = useFormEditorContext();
-	const position = summary.position;
-	const term = summary.term;
-	const unpinnable = summary.pins?.some(pin => pinScopes.includes(pin.scope)) === true;
-	const types = expanded ? [] : getTypeLabels(summary);
+	const position = cardHeader.position;
+	const term = cardHeader.subject;
+	const unpinnable = cardHeader.pins?.some(pin => pinScopes.includes(pin.scope)) === true;
+	const types = expanded ? [] : getTypeLabels(cardHeader);
 
 	return (
 		<div className="resource-card-title-bar">
@@ -69,12 +69,12 @@ export function ResourceCardTitleBar({ summary, expanded, nestedCollapsed, onTog
 					<vscode-icon name={nestedCollapsed ? 'expand-all' : 'collapse-all'} size={15}></vscode-icon>
 				</button>
 			)}
-			{summary.usageCount !== undefined && <CardUsage count={summary.usageCount} />}
+			{cardHeader.usageCount !== undefined && <CardUsage count={cardHeader.usageCount} />}
 			<span className="resource-card-tools">
 				<ResourceCardMenu
 					state={{
 						expanded,
-						prefixedName: summary.prefixedName,
+						prefixedName: cardHeader.prefixedName,
 						onToggle,
 						onReveal: position && onRevealInTextEditor ? () => onRevealInTextEditor(position) : undefined,
 						onCopyIri: term.termType === 'NamedNode' ? () => void navigator.clipboard.writeText(term.value) : undefined,

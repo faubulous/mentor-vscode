@@ -67,8 +67,8 @@ function FormEditor(): React.JSX.Element {
 		setStoredViewState((current: unknown) => PersistedViewState.read(current).with(changes).toJSON());
 	}, [setStoredViewState]);
 
-	const documentDataService = useMemo(() => new ResourceDataService(resources => messagingRef.current?.postMessage({ id: 'RequestResources', resources })), []);
-	const storeDataService = useMemo(() => new ResourceDataService(resources => messagingRef.current?.postMessage({ id: 'RequestResources', resources, source: 'store' })), []);
+	const documentDataService = useMemo(() => new ResourceDataService(resources => messagingRef.current?.postMessage({ id: 'ResourceRequest', resources })), []);
+	const storeDataService = useMemo(() => new ResourceDataService(resources => messagingRef.current?.postMessage({ id: 'ResourceRequest', resources, source: 'store' })), []);
 	const hostService = useMemo(() => new EditingHostService(message => messagingRef.current?.postMessage(message)), []);
 	const controller = useMemo(() => new EditingController(hostService), [hostService]);
 	const focusedBlockId = useFocusedBlock(scrollElement);
@@ -82,8 +82,8 @@ function FormEditor(): React.JSX.Element {
 				storeDataService.setSnapshot(message.snapshot.version, message.snapshot.revision);
 				setSnapshot(message.snapshot);
 				break;
-			case 'ResourcesLoaded':
-				(message.source === 'store' ? storeDataService : documentDataService).accept(message.revision, message.resources, message.missing, message.summaries);
+			case 'ResourceResponse':
+				(message.source === 'store' ? storeDataService : documentDataService).accept(message.revision, message.cardBodies, message.missing, message.cardHeaders);
 				break;
 			case 'EditApplied':
 			case 'EditRejected':
@@ -154,10 +154,10 @@ function FormEditor(): React.JSX.Element {
 	const filtering = listFilter.hasText || typeFilter !== undefined;
 	const visibleResources = useMemo(() => listFilter.apply(snapshot?.resources ?? []), [listFilter, snapshot?.resources]);
 	const documentTerm = snapshot?.documentResource;
-	const documentResource = useMemo(() => snapshot?.resources.find(resource => documentTerm?.equals(resource.term)), [snapshot?.resources, documentTerm]);
+	const documentResource = useMemo(() => snapshot?.resources.find(resource => documentTerm?.equals(resource.subject)), [snapshot?.resources, documentTerm]);
 
 	// The resource describing the document heads the form; every other resource is a card.
-	const listed = useMemo(() => visibleResources.filter(resource => !documentTerm?.equals(resource.term)), [visibleResources, documentTerm]);
+	const listed = useMemo(() => visibleResources.filter(resource => !documentTerm?.equals(resource.subject)), [visibleResources, documentTerm]);
 	const blocks = useFormBlocks(listed, snapshot?.trailingComments ?? [], filtering);
 
 	const handleToggleExternalDeclarations = useCallback(() => {
@@ -166,7 +166,7 @@ function FormEditor(): React.JSX.Element {
 
 	const handleRevealResource = useCallback((resource: NamedNode | BlankNode) => {
 		// A resource the filter leaves out is revealed among all of them, hidden declarations included.
-		if (!visibleResources.some(visible => visible.term.equals(resource))) {
+		if (!visibleResources.some(visible => visible.subject.equals(resource))) {
 			setTypeFilter(undefined);
 			setFilterText('');
 			updateViewState({ hideExternalDeclarations: undefined });
@@ -214,7 +214,7 @@ function FormEditor(): React.JSX.Element {
 		const next = matchIndex === undefined ? (step > 0 ? 0 : listed.length - 1) : (matchIndex + step + listed.length) % listed.length;
 
 		setMatchIndex(next);
-		handleRevealResource(listed[next].term);
+		handleRevealResource(listed[next].subject);
 	}, [listed, matchIndex, handleRevealResource]);
 
 	const handleCloseFind = useCallback(() => {
@@ -276,7 +276,7 @@ function FormEditor(): React.JSX.Element {
 	}
 
 	const blocking = snapshot.readOnly !== undefined && snapshot.resources.length === 0;
-	const current = currentId ? listed.find(resource => termToString(resource.term) === currentId) : undefined;
+	const current = currentId ? listed.find(resource => termToString(resource.subject) === currentId) : undefined;
 
 	return (
 		<FormEditorContext.Provider value={context}>

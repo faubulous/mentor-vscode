@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
-import { ResourceSummary } from '../form-editor-model';
-import { useResourceDetail } from '../hooks/use-resource-detail';
+import { ResourceCardHeaderData } from '../form-editor-model';
+import { useResourceCardBody } from '../hooks/use-resource-card-body';
 import { IResourceDataService } from '../services/resource-data-service.interface';
 import { CardUsage } from './card-usage';
 import { PinnedPropertiesList } from './pinned-properties-list';
@@ -13,7 +13,7 @@ export interface CompactResourceCardProps {
 	/**
 	 * The resource.
 	 */
-	summary: ResourceSummary;
+	cardHeader: ResourceCardHeaderData;
 
 	/**
 	 * Supplies the statements of the resource, which its pinned properties are read from.
@@ -29,31 +29,31 @@ export interface CompactResourceCardProps {
  * @param props The resource and where its statements come from.
  * @returns The card.
  */
-export function CompactResourceCard({ summary, dataService }: CompactResourceCardProps): React.JSX.Element {
-	const { detail, stale } = useResourceDetail(dataService, summary.term);
-	const pins = summary.pins ?? [];
-	const types = getTypeLabels(summary);
-	const identifier = summary.term.termType === 'NamedNode' ? summary.term.value : `_:${summary.term.value}`;
+export function CompactResourceCard({ cardHeader, dataService }: CompactResourceCardProps): React.JSX.Element {
+	const { cardBody, stale } = useResourceCardBody(dataService, cardHeader.subject);
+	const pins = cardHeader.pins ?? [];
+	const types = getTypeLabels(cardHeader);
+	const identifier = cardHeader.subject.termType === 'NamedNode' ? cardHeader.subject.value : `_:${cardHeader.subject.value}`;
 
 	// The pinned properties are read from the statements, which are asked for while they are not current.
 	useEffect(() => {
-		if (pins.length > 0 && (!detail || stale)) {
-			dataService.request([summary.term]);
+		if (pins.length > 0 && (!cardBody || stale)) {
+			dataService.request([cardHeader.subject]);
 		}
-	}, [pins.length, detail, stale, dataService, summary.term]);
+	}, [pins.length, cardBody, stale, dataService, cardHeader.subject]);
 
 	return (
 		<article className="resource-card is-compact" data-density="tooltip">
 			<div className="compact-card-title">
-				<ResourceCardTitle summary={summary} />
+				<ResourceCardTitle cardHeader={cardHeader} />
 				{types.length > 0 && <span className="compact-card-types">{types.join(', ')}</span>}
 			</div>
-			{pins.length > 0 && detail
-				? <PinnedPropertiesList detail={detail} pins={pins} />
-				: summary.description && <div className="resource-card-description">{summary.description}</div>}
+			{pins.length > 0 && cardBody
+				? <PinnedPropertiesList cardBody={cardBody} pins={pins} />
+				: cardHeader.description && <div className="resource-card-description">{cardHeader.description}</div>}
 			<div className="compact-card-footer">
 				<span className="compact-card-iri">{identifier}</span>
-				{summary.usageCount !== undefined && <CardUsage count={summary.usageCount} />}
+				{cardHeader.usageCount !== undefined && <CardUsage count={cardHeader.usageCount} />}
 			</div>
 		</article>
 	);
