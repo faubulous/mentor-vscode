@@ -126,7 +126,7 @@ describe('ResourceDataService', () => {
 		expect(send).toHaveBeenCalledTimes(2);
 	});
 
-	it('stops tracking resources the host could not resolve', () => {
+	it('asks for a resource the host could not resolve again only for the next snapshot', () => {
 		const { service, send } = createService();
 
 		service.request([resource('gone')]);
@@ -135,7 +135,29 @@ describe('ResourceDataService', () => {
 		service.request([resource('gone')]);
 		vi.runAllTimers();
 
+		expect(send).toHaveBeenCalledTimes(1);
+
+		service.setSnapshot(2, 2);
+		service.request([resource('gone')]);
+		vi.runAllTimers();
+
 		expect(send).toHaveBeenCalledTimes(2);
+	});
+
+	it('keeps the summary that comes with a detail, as stale while the next snapshot loads', () => {
+		const { service } = createService();
+		const summary = { term: resource('Tree'), label: 'Tree', iconName: 'mentor-rdf-class', propertyCount: 0, hasLabel: true };
+
+		service.request([resource('Tree')]);
+		vi.runAllTimers();
+		service.accept(1, [detail('Tree')], [], [summary]);
+
+		expect(service.getSummary(resource('Tree'))).toEqual(summary);
+
+		service.setSnapshot(2, 2);
+
+		expect(service.get(resource('Tree'))).toBeUndefined();
+		expect(service.getSummary(resource('Tree'))).toEqual(summary);
 	});
 
 	it('splits a large request into batches', () => {

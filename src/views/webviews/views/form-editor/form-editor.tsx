@@ -68,6 +68,7 @@ function FormEditor(): React.JSX.Element {
 	}, [setStoredViewState]);
 
 	const dataService = useMemo(() => new ResourceDataService(resources => messagingRef.current?.postMessage({ id: 'RequestResources', resources })), []);
+	const storeService = useMemo(() => new ResourceDataService(resources => messagingRef.current?.postMessage({ id: 'RequestResources', resources, source: 'store' })), []);
 	const hostService = useMemo(() => new EditingHostService(message => messagingRef.current?.postMessage(message)), []);
 	const controller = useMemo(() => new EditingController(hostService), [hostService]);
 	const focusedBlockId = useFocusedBlock(scrollElement);
@@ -78,10 +79,11 @@ function FormEditor(): React.JSX.Element {
 		switch (message.id) {
 			case 'DocumentSnapshot':
 				dataService.setSnapshot(message.snapshot.version, message.snapshot.revision);
+				storeService.setSnapshot(message.snapshot.version, message.snapshot.revision);
 				setSnapshot(message.snapshot);
 				break;
 			case 'ResourcesLoaded':
-				dataService.accept(message.revision, message.resources, message.missing);
+				(message.source === 'store' ? storeService : dataService).accept(message.revision, message.resources, message.missing, message.summaries);
 				break;
 			case 'EditApplied':
 			case 'EditRejected':
@@ -103,7 +105,7 @@ function FormEditor(): React.JSX.Element {
 			default:
 				break;
 		}
-	}, [dataService, hostService, updateViewState]);
+	}, [dataService, storeService, hostService, updateViewState]);
 
 	const messaging = useWebviewMessaging<FormEditorMessages>(onMessage);
 
@@ -341,7 +343,7 @@ function FormEditor(): React.JSX.Element {
 							</div>
 						</FormErrorBoundary>
 					)}
-				<ResourceTooltip dataService={dataService} />
+				<ResourceTooltip dataService={dataService} storeService={storeService} />
 			</div>
 		</FormEditorContext.Provider>
 	);

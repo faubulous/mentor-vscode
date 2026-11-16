@@ -25,13 +25,14 @@ import { DocumentSyntaxError } from '@src/services/document/document-syntax-erro
 import { WebviewComponentFactory } from '../../webview-component-factory';
 import { ExecuteCommandMessage } from '../../webview-messaging';
 import { ResourceIndex, ResourceIndexEntry, ResourceIndexOptions, findCardResource, getEntry, typeIrisOf } from '../../services/editing/resource-index';
+import { ResourceIndexBuilder } from '../../services/editing/resource-index-builder';
 import { ResourceViewBuilder } from '../../services/editing/resource-view-builder';
 import { PinChange, PinnedPropertiesService } from '../../services/editing/pinned-properties-service';
 import { EditorSnapshotService } from '../../services/editing/editor-snapshot-service';
 import { EditOutcome, FormEditorEditHandler } from './form-editor-edit-handler';
 import { FormEditorHostMessage, FormEditorWebviewMessage } from './form-editor-messages';
 import { getFormReadOnlyReason } from './form-editor-read-only';
-import { DocumentProblem, DocumentSnapshot, ReadOnlyReason, ResourceDetail } from './form-editor-model';
+import { DocumentProblem, DocumentSnapshot, ReadOnlyReason, ResourceDetail, ResourceSummary } from './form-editor-model';
 import { ScopeKey } from '@src/utilities/config-scope';
 import { QuadContextCache } from './quad-context-cache';
 import { reviveTerms } from '@src/utilities/rdf-terms';
@@ -501,7 +502,11 @@ export class FormEditorSession implements vscode.Disposable {
 				this._publishSnapshot();
 				break;
 			case 'RequestResources':
-				this._publishResources(message.resources);
+				if (message.source === 'store') {
+					this._publishStoreResources(message.resources);
+				} else {
+					this._publishResources(message.resources);
+				}
 				break;
 			case 'ApplyEdit':
 				await this.applyEdit(message.editId, message.baseVersion, message.operations);
@@ -744,6 +749,44 @@ export class FormEditorSession implements vscode.Disposable {
 	}
 
 	/**
+	 * Post what the store states about the requested resources, which the document does not define:
+	 * their summaries, with the usage count and the pins the snapshot adds to those of the document,
+	 * and their properties, which only read. The store is read across all its graphs, as the hover
+	 * of the text editor reads it.
+	 * @param requested The resources.
+	 */
+	private _publishStoreResources(requested: (NamedNode | BlankNode)[]): void {
+		const context = this._getTokenizedContext();
+		const store = this._getVocabulary()?.store;
+
+		if (!this._snapshot || !context) {
+			return;
+		}
+
+		const resources: ResourceDetail[] = [];
+		const summaries: ResourceSummary[] = [];
+		const missing: (NamedNode | BlankNode)[] = [];
+
+		for (const resource of requested) {
+			const index = store && resource.termType === 'NamedNode' ? ResourceIndexBuilder.fromStore(store, resource.value, context) : undefined;
+			const entry = index ? getEntry(index, resource) : undefined;
+			const summary = index?.summaries.find(candidate => candidate.term.equals(resource));
+
+			if (!index || !entry || !summary) {
+				missing.push(resource);
+				continue;
+			}
+
+			const pins = this._pinsOf(context, entry, undefined);
+
+			summaries.push({ ...summary, usageCount: this._countUsages(resource.value), ...pins });
+			resources.push({ ...new ResourceViewBuilder(index, context, this._getIndexOptions()).buildDetail(entry), ...pins });
+		}
+
+		this._postMessage({ id: 'ResourcesLoaded', revision: this._snapshot.revision, resources, missing, source: 'store', summaries });
+	}
+
+	/**
 	 * How often a resource is referred to across the indexed documents, not counting the statement
 	 * that defines it, as the usage code lens counts.
 	 * @param iri The IRI of the resource.
@@ -883,10 +926,12 @@ export class FormEditorSession implements vscode.Disposable {
 	 * of the list, so a nested card of a blank node pins too.
 	 * @param context The context of the document.
 	 * @param entry The resource.
+	 * @param graphs The graphs its inferred types are read from: those of the document, or all
+	 * graphs for a resource of the store.
 	 * @returns The fields of the detail.
 	 */
-	private _pinsOf(context: TurtleDocument, entry: ResourceIndexEntry): Pick<ResourceDetail, 'pins'> {
-		const pins = _readPins().resolve(typeIrisOf(entry), this._inferredTypesOf(context.graphs, entry.term));
+	private _pinsOf(context: TurtleDocument, entry: ResourceIndexEntry, graphs: string[] | undefined = context.graphs): Pick<ResourceDetail, 'pins'> {
+		const pins = _readPins().resolve(typeIrisOf(entry), this._inferredTypesOf(graphs, entry.term));
 
 		return pins ? { pins } : {};
 	}
@@ -894,11 +939,11 @@ export class FormEditorSession implements vscode.Disposable {
 	/**
 	 * The types of a resource the store knows, inferred ones included, which an untyped blank node
 	 * of a shape gets from the reasoner. Memoized until the store changes.
-	 * @param graphs The graphs of the document.
+	 * @param graphs The graphs to read: those of the document, or all graphs when absent.
 	 * @param resource The resource.
 	 * @returns The type IRIs, none when there is no store.
 	 */
-	private _inferredTypesOf(graphs: string[], resource: NamedNode | BlankNode): readonly string[] {
+	private _inferredTypesOf(graphs: string[] | undefined, resource: NamedNode | BlankNode): readonly string[] {
 		const store = this._getVocabulary()?.store;
 
 		if (!store) {
@@ -909,7 +954,7 @@ export class FormEditorSession implements vscode.Disposable {
 			this._inferredTypes = { version: store.version, types: new Map() };
 		}
 
-		const key = termToString(resource);
+		const key = `${graphs?.join(' ') ?? '*'}|${termToString(resource)}`;
 		const known = this._inferredTypes.types.get(key);
 
 		if (known) {

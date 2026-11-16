@@ -1,13 +1,20 @@
-import { QuadContext, RdfToken } from '@faubulous/mentor-rdf-parsers';
-import { BlankNode, NamedNode, Term } from '@rdfjs/types';
+import { QuadContext, RdfToken, toQuadContext } from '@faubulous/mentor-rdf-parsers';
+import { BlankNode, NamedNode, Quad, Term } from '@rdfjs/types';
 import { termToString } from 'rdf-string';
-import { RDF } from '@faubulous/mentor-rdf';
+import { RDF, Store } from '@faubulous/mentor-rdf';
 import { IDocumentContext } from '@src/services/document/document-context.interface';
-import { isTokenOfType } from '@src/utilities/tokens';
+import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
+import { createSyntheticToken, isTokenOfType } from '@src/utilities/tokens';
 import { NamespaceInfo } from '@src/views/webviews/views/form-editor/form-editor-model';
 import { CollectionItem, ResourceIndex, ResourceIndexEntry } from './resource-index';
 import { ResourceViewBuilder } from './resource-view-builder';
 import { trailingCommentRunsOf } from './statement-comments';
+
+/**
+ * How deep the blank nodes a resource of the store refers to are followed, which bounds what is
+ * read for it, as the form bounds how deep it nests their cards.
+ */
+const MAX_STORE_NESTING_DEPTH = 3;
 
 /**
  * Builds the resource index of a document from its quad contexts. The quad contexts are used
@@ -32,6 +39,22 @@ export class ResourceIndexBuilder {
 	 * @param _context The document context, used to resolve labels and prefixes.
 	 */
 	constructor(private readonly _quadContexts: readonly QuadContext[], private readonly _context: IDocumentContext) { }
+
+	/**
+	 * Build the index of what the store states about a resource the document does not define, as
+	 * a document would state it: its statements from every graph that is not inferred, and those of
+	 * the blank nodes it refers to, read from the graph that refers to them. The statements carry
+	 * synthetic tokens, so their values cannot be edited and have no position in a text.
+	 * @param store The store.
+	 * @param iri The IRI of the resource.
+	 * @param context The document context, used to resolve labels and prefixes.
+	 * @returns The index, or `undefined` when the store states nothing about the resource.
+	 */
+	static fromStore(store: Store, iri: string, context: IDocumentContext): ResourceIndex | undefined {
+		const quads = _storeQuadsOf(store, RdfDataFactory.namedNode(iri));
+
+		return quads.length > 0 ? new ResourceIndexBuilder(quads, context).build() : undefined;
+	}
 
 	/**
 	 * Build the index.
@@ -191,4 +214,44 @@ export class ResourceIndexBuilder {
 	}
 }
 
+/**
+ * Read the statements of the store about a resource and about the blank nodes it refers to, each
+ * statement once however many graphs state it, as quad contexts with synthetic tokens.
+ * @param store The store.
+ * @param subject The resource.
+ * @returns The statements, those of each blank node after the statement that refers to it.
+ */
+function _storeQuadsOf(store: Store, subject: NamedNode): QuadContext[] {
+	const quads: QuadContext[] = [];
+	const seen = new Set<string>();
 
+	const visit = (node: NamedNode | BlankNode, graph: string | undefined, depth: number): void => {
+		for (const quad of store.matchAll(graph, node, null, null, false)) {
+			const key = _statementKeyOf(quad);
+
+			if (seen.has(key)) {
+				continue;
+			}
+
+			seen.add(key);
+			quads.push(toQuadContext(quad.subject, createSyntheticToken(), quad.predicate, createSyntheticToken(), quad.object, createSyntheticToken()));
+
+			if (quad.object.termType === 'BlankNode' && depth < MAX_STORE_NESTING_DEPTH) {
+				visit(quad.object, quad.graph.termType === 'NamedNode' ? quad.graph.value : undefined, depth + 1);
+			}
+		}
+	};
+
+	visit(subject, undefined, 0);
+
+	return quads;
+}
+
+/**
+ * The key of a statement regardless of its graph.
+ * @param quad The statement.
+ * @returns The key.
+ */
+function _statementKeyOf(quad: Quad): string {
+	return `${termToString(quad.subject)} ${termToString(quad.predicate)} ${termToString(quad.object)}`;
+}

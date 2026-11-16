@@ -1,6 +1,6 @@
 import { BlankNode, NamedNode } from '@rdfjs/types';
 import { termToString } from 'rdf-string';
-import { ResourceDetail } from '@src/views/webviews/views/form-editor/form-editor-model';
+import { ResourceDetail, ResourceSummary } from '@src/views/webviews/views/form-editor/form-editor-model';
 import { IResourceDataService } from '@src/views/webviews/views/form-editor/services/resource-data-service.interface';
 
 /**
@@ -21,16 +21,19 @@ export interface ResourceDataServiceStub extends IResourceDataService {
 /**
  * Make a data service that holds the given details and loads nothing else.
  * @param details The details it holds.
+ * @param summaries The summaries that came with them, as for resources of the store.
  * @returns The service.
  */
-export function createResourceDataServiceStub(details: readonly ResourceDetail[] = []): ResourceDataServiceStub {
+export function createResourceDataServiceStub(details: readonly ResourceDetail[] = [], summaries: readonly ResourceSummary[] = []): ResourceDataServiceStub {
 	const byKey = new Map(details.map(detail => [termToString(detail.term), detail]));
+	const summaryByKey = new Map(summaries.map(summary => [termToString(summary.term), summary]));
 	const requested: (NamedNode | BlankNode)[] = [];
 
 	return {
 		version: 1,
 		requested,
 		get: resource => byKey.get(termToString(resource)),
+		getSummary: resource => summaryByKey.get(termToString(resource)),
 		request: resources => requested.push(...resources),
 		subscribe: () => () => undefined
 	};

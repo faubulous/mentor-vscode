@@ -1,6 +1,6 @@
 import { BlankNode, NamedNode } from '@rdfjs/types';
 import { termToString } from 'rdf-string';
-import { ResourceDetail } from '../form-editor-model';
+import { ResourceDetail, ResourceSummary } from '../form-editor-model';
 import { IResourceDataService } from './resource-data-service.interface';
 
 /**
@@ -9,15 +9,33 @@ import { IResourceDataService } from './resource-data-service.interface';
 const MAX_BATCH_SIZE = 100;
 
 /**
+ * The detail of a resource as it was delivered, with its summary where one came with it.
+ */
+interface LoadedResource {
+	/**
+	 * The detail.
+	 */
+	detail: ResourceDetail;
+
+	/**
+	 * The summary, for a resource the snapshot does not list.
+	 */
+	summary?: ResourceSummary;
+}
+
+/**
  * Serves resource detail over the webview message channel. Requests are coalesced into one
  * message per frame so that scrolling does not produce a message per row. The detail is cached by
- * the `termToString` key of the resource, and is kept as stale when a new snapshot arrives until
- * the detail of that snapshot is loaded.
+ * the `termToString` key of the resource, with the summary that came with it, and is kept as stale
+ * when a new snapshot arrives until the detail of that snapshot is loaded. A resource the host
+ * could not resolve is not asked for again until the next snapshot.
  */
 export class ResourceDataService implements IResourceDataService {
-	private readonly _loaded = new Map<string, ResourceDetail>();
+	private readonly _loaded = new Map<string, LoadedResource>();
 
-	private readonly _stale = new Map<string, ResourceDetail>();
+	private readonly _stale = new Map<string, LoadedResource>();
+
+	private readonly _missing = new Set<string>();
 
 	private readonly _listeners = new Set<() => void>();
 
@@ -46,11 +64,17 @@ export class ResourceDataService implements IResourceDataService {
 	}
 
 	get(resource: NamedNode | BlankNode): ResourceDetail | undefined {
-		return this._loaded.get(termToString(resource));
+		return this._loaded.get(termToString(resource))?.detail;
 	}
 
 	getStale(resource: NamedNode | BlankNode): ResourceDetail | undefined {
-		return this._stale.get(termToString(resource));
+		return this._stale.get(termToString(resource))?.detail;
+	}
+
+	getSummary(resource: NamedNode | BlankNode): ResourceSummary | undefined {
+		const key = termToString(resource);
+
+		return this._loaded.get(key)?.summary ?? this._stale.get(key)?.summary;
 	}
 
 	request(resources: (NamedNode | BlankNode)[]): void {
@@ -59,7 +83,7 @@ export class ResourceDataService implements IResourceDataService {
 		for (const resource of resources) {
 			const key = termToString(resource);
 
-			if (!this._loaded.has(key) && !this._requested.has(key) && !this._pending.has(key)) {
+			if (!this._loaded.has(key) && !this._missing.has(key) && !this._requested.has(key) && !this._pending.has(key)) {
 				this._pending.set(key, resource);
 				added = true;
 			}
@@ -82,22 +106,29 @@ export class ResourceDataService implements IResourceDataService {
 	 * @param revision The revision of the snapshot the detail was built for.
 	 * @param resources The delivered detail.
 	 * @param missing Resources the host could not resolve.
+	 * @param summaries The summaries that came with the detail, for resources the snapshot does not
+	 * list.
 	 */
-	accept(revision: number, resources: ResourceDetail[], missing: (NamedNode | BlankNode)[] = []): void {
+	accept(revision: number, resources: ResourceDetail[], missing: (NamedNode | BlankNode)[] = [], summaries: ResourceSummary[] = []): void {
 		if (revision !== this._revision) {
 			return;
 		}
 
-		for (const resource of resources) {
-			const key = termToString(resource.term);
+		const summaryByKey = new Map(summaries.map(summary => [termToString(summary.term), summary]));
 
-			this._loaded.set(key, resource);
+		for (const detail of resources) {
+			const key = termToString(detail.term);
+
+			this._loaded.set(key, { detail, summary: summaryByKey.get(key) });
 			this._stale.delete(key);
 			this._requested.delete(key);
 		}
 
 		for (const resource of missing) {
-			this._requested.delete(termToString(resource));
+			const key = termToString(resource);
+
+			this._requested.delete(key);
+			this._missing.add(key);
 		}
 
 		if (resources.length > 0) {
@@ -121,11 +152,12 @@ export class ResourceDataService implements IResourceDataService {
 		this._version = version;
 		this._revision = revision;
 
-		for (const [key, detail] of this._loaded) {
-			this._stale.set(key, detail);
+		for (const [key, loaded] of this._loaded) {
+			this._stale.set(key, loaded);
 		}
 
 		this._loaded.clear();
+		this._missing.clear();
 		this._requested.clear();
 		this._pending.clear();
 		this._notify();

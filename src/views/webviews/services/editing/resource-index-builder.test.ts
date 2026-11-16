@@ -2,12 +2,13 @@ import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 
-import { OWL, RDFS, SKOS, _OWL, _RDFS, _SH, _SKOS, _XSD } from '@faubulous/mentor-rdf';
+import { OWL, RDF, RDFS, SKOS, Store, _OWL, _RDFS, _SH, _SKOS, _XSD } from '@faubulous/mentor-rdf';
 import { RdfSyntax } from '@faubulous/mentor-rdf-parsers';
 import { ResolvingDocumentContextOptions, createResolvingDocumentContext, createTurtleDocument, readTurtleQuadContexts } from '@src/utilities/mocks/factories';
 import { termToString } from 'rdf-string';
 import { ResourceIndex, findCardResource } from './resource-index';
 import { ResourceIndexBuilder } from './resource-index-builder';
+import { ResourceViewBuilder } from './resource-view-builder';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 
 const EX = 'http://example.org/';
@@ -233,5 +234,60 @@ describe('ResourceIndexBuilder on an open document', () => {
 		expect(nested.map(term => findCardResource(index, term))).toEqual(nested.map(() => owner));
 		expect(findCardResource(index, labelled)).toEqual(labelled);
 		expect(findCardResource(index, RdfDataFactory.blankNode('unknown'))).toBeUndefined();
+	});
+});
+
+/**
+ * A store of two graphs: a vocabulary that defines a class with a blank node and a list, and another
+ * graph that states a label of its own about a blank node of the same name.
+ */
+function storeOf(): Store {
+	const store = new Store();
+
+	store.loadTurtle(`${PREAMBLE}
+		ex:Tree a owl:Class ;
+			rdfs:label "Tree"@en ;
+			rdfs:comment "A woody plant."@en ;
+			rdfs:subClassOf [ a owl:Restriction ; owl:onProperty ex:hasLeaf ] ;
+			owl:oneOf ( ex:Oak ex:Birch ) .
+	`, 'http://example.org/vocabulary', false);
+	store.loadTurtle(`${PREAMBLE}
+		ex:Tree rdfs:label "Tree"@en .
+	`, 'http://example.org/copy', false);
+
+	return store;
+}
+
+describe('ResourceIndexBuilder.fromStore', () => {
+	const context = createResolvingDocumentContext({ namespaces: NAMESPACES });
+
+	it('indexes what the store states about a resource as a document would state it, each statement once', () => {
+		const index = ResourceIndexBuilder.fromStore(storeOf(), `${EX}Tree`, context)!;
+		const entry = index.entries.get(`${EX}Tree`)!;
+
+		expect(index.summaries.map(summary => summary.term.value)).toEqual([`${EX}Tree`]);
+		expect(entry.quads.map(quad => quad.predicate.value)).toEqual([RDF.type, RDFS.label, RDFS.comment, RDFS.subClassOf, OWL.oneOf]);
+	});
+
+	it('nests the blank nodes the resource refers to and collapses its lists', () => {
+		const index = ResourceIndexBuilder.fromStore(storeOf(), `${EX}Tree`, context)!;
+		const detail = new ResourceViewBuilder(index, context).buildDetail(index.entries.get(`${EX}Tree`)!);
+		const valueOf = (predicate: string) => detail.properties.find(property => property.predicate.term.value === predicate)!.values[0];
+
+		expect(valueOf(RDFS.subClassOf).nested?.propertyCount).toBe(2);
+		expect(valueOf(OWL.oneOf).collection?.items.map(item => item.term.value)).toEqual([`${EX}Oak`, `${EX}Birch`]);
+	});
+
+	it('gives values that cannot be edited and have no place in a text', () => {
+		const index = ResourceIndexBuilder.fromStore(storeOf(), `${EX}Tree`, context)!;
+		const detail = new ResourceViewBuilder(index, context).buildDetail(index.entries.get(`${EX}Tree`)!);
+		const values = detail.properties.flatMap(property => [property.predicate, ...property.values]);
+
+		expect(values.every(view => !view.editable && view.anchor === undefined)).toBe(true);
+		expect(index.summaries[0].position).toBeUndefined();
+	});
+
+	it('indexes nothing for a resource the store states nothing about', () => {
+		expect(ResourceIndexBuilder.fromStore(storeOf(), `${EX}Unknown`, context)).toBeUndefined();
 	});
 });
