@@ -12,16 +12,6 @@ import { CompactResourceCard } from './compact-resource-card';
 const HOVER_DELAY = 400;
 
 /**
- * The gap between the tooltip and the element it belongs to, in pixels.
- */
-const TOOLTIP_GAP = 2;
-
-/**
- * The least room the tooltip keeps from the edges of the view, in pixels.
- */
-const VIEW_MARGIN = 8;
-
-/**
  * The attributes that mark an element as a resource the tooltip tells.
  */
 export interface ResourceTooltipAttributes {
@@ -116,21 +106,35 @@ function _summariesByIri(resources: readonly ResourceSummary[]): Map<string, Res
 
 /**
  * Place the tooltip by its element: under it, or above it where the view has no room under it,
- * from its left edge, or its right edge where the element asks for it, inside the view.
+ * from its left edge, or its right edge where the element asks for it, inside the view. The gap to
+ * the element and the room kept from the edges of the view come from the stylesheet.
  * @param tooltip The tooltip.
  * @param element The element it belongs to.
  */
 function _place(tooltip: HTMLElement, element: Element): void {
+	const style = getComputedStyle(tooltip);
+	const gap = _lengthOf(style, '--tooltip-gap');
+	const margin = _lengthOf(style, '--tooltip-view-margin');
 	const bounds = element.getBoundingClientRect();
 	const viewWidth = document.documentElement.clientWidth;
 	const viewHeight = document.documentElement.clientHeight;
 	const width = tooltip.offsetWidth;
 	const height = tooltip.offsetHeight;
 	const preferredLeft = element.getAttribute('data-tooltip-anchor') === 'end' ? bounds.right - Math.max(width, bounds.width) : bounds.left;
-	const below = bounds.bottom + TOOLTIP_GAP;
-	const fitsBelow = below + height <= viewHeight - VIEW_MARGIN || bounds.top - TOOLTIP_GAP - height < VIEW_MARGIN;
+	const below = bounds.bottom + gap;
+	const fitsBelow = below + height <= viewHeight - margin || bounds.top - gap - height < margin;
 
 	tooltip.style.minWidth = `${bounds.width}px`;
-	tooltip.style.top = `${fitsBelow ? below : bounds.top - TOOLTIP_GAP - height}px`;
-	tooltip.style.left = `${Math.max(VIEW_MARGIN, Math.min(preferredLeft, viewWidth - VIEW_MARGIN - width))}px`;
+	tooltip.style.top = `${fitsBelow ? below : bounds.top - gap - height}px`;
+	tooltip.style.left = `${Math.max(margin, Math.min(preferredLeft, viewWidth - margin - width))}px`;
+}
+
+/**
+ * Read a length the stylesheet gives the tooltip in a custom property.
+ * @param style The computed style of the tooltip.
+ * @param property The custom property.
+ * @returns The length in pixels, zero where the stylesheet gives none.
+ */
+function _lengthOf(style: CSSStyleDeclaration, property: string): number {
+	return parseFloat(style.getPropertyValue(property)) || 0;
 }

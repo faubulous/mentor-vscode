@@ -2130,10 +2130,13 @@ button.statement-predicate-tag:focus-visible {
  * resource of the document shows its compact card, any other its IRI.
  */
 .resource-tooltip {
+	/* The gap to the element it belongs to and the least room it keeps from the edges of the view, which its placement reads. */
+	--tooltip-gap: 2px;
+	--tooltip-view-margin: 8px;
 	position: fixed;
 	z-index: 100;
 	box-sizing: border-box;
-	max-width: calc(100vw - 16px);
+	max-width: calc(100vw - 2 * var(--tooltip-view-margin));
 	border: 1px solid var(--vscode-editorHoverWidget-border, var(--vscode-widget-border));
 	border-radius: 4px;
 	background: var(--vscode-editorHoverWidget-background, var(--vscode-editorWidget-background));
@@ -2143,7 +2146,7 @@ button.statement-predicate-tag:focus-visible {
 
 /* A card sizes itself by its width, so its tooltip is as wide as the compact density allows. */
 .resource-tooltip.is-card {
-	width: min(360px, calc(100vw - 16px));
+	width: min(360px, calc(100vw - 2 * var(--tooltip-view-margin)));
 	border: 0;
 	background: none;
 }
