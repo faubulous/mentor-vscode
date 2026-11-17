@@ -23,9 +23,10 @@ interface ResourceValueEntry {
 }
 
 /**
- * A pill being dragged.
+ * The state of a pill being dragged, from the start of the drag to the drop: which pill it is and
+ * where it would drop.
  */
-interface PillDrag {
+interface PillDragState {
 	/**
 	 * The place of the pill among the pills.
 	 */
@@ -127,7 +128,7 @@ export function ResourceValues(props: ResourceValuesProps): React.JSX.Element {
 	const pills = useRef<(HTMLElement | null)[]>([]);
 	const fieldRef = useRef<VscodeTextfield>(null);
 	const [focusRequest, setFocusRequest] = useState<number>();
-	const [drag, setDrag] = useState<PillDrag>();
+	const [drag, setDrag] = useState<PillDragState>();
 	const options = useMemo(() => range === 'literal' ? [] : _optionsOf(documentResources, resources, services), [range, documentResources, resources, services]);
 
 	// The input takes the focus once it has rendered the field it hands the focus to.
@@ -359,7 +360,7 @@ function _moveStepOf(event: KeyboardEvent<HTMLElement>): number {
  * @param count The number of pills.
  * @returns The class, or `undefined`.
  */
-function _dropClassOf(drag: PillDrag | undefined, position: number, count: number): string | undefined {
+function _dropClassOf(drag: PillDragState | undefined, position: number, count: number): string | undefined {
 	if (!drag || drag.slot === undefined || drag.slot === drag.position || drag.slot === drag.position + 1) {
 		return undefined;
 	}
