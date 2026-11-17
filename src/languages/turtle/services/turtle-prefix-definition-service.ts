@@ -5,6 +5,7 @@ import { isUpperCaseToken, getFirstTokenOfType, getLastTokenOfType } from '@faub
 import { DocumentContextService } from '@src/services/document/document-context-service';
 import { PrefixLookupService } from '@src/services/document/prefix-lookup-service';
 import { getIriFromIriReference, getContentStartOffset } from '@src/utilities';
+import { getPrefixDeclaration } from '@src/utilities/prefixed-name';
 import { TurtleDocument } from '@src/languages';
 import { TurtleFeatureProvider } from '@src/languages/turtle/turtle-feature-provider';
 import { getConfig } from '@src/utilities/vscode/config';
@@ -268,9 +269,9 @@ export class TurtlePrefixDefinitionService extends TurtleFeatureProvider {
 	 */
 	protected getPrefixDefinition(tokenType: TokenType, upperCase: boolean, prefix: string, namespaceIri: string): string {
 		if (tokenType.name === RdfToken.PREFIX.name) {
-			return `${upperCase ? 'PREFIX' : 'prefix'} ${prefix}: <${namespaceIri}>`;
+			return getPrefixDeclaration(upperCase ? 'PREFIX' : 'prefix', prefix, namespaceIri);
 		} else if (tokenType.name === RdfToken.TTL_PREFIX.name) {
-			return `@prefix ${prefix}: <${namespaceIri}> .`;
+			return getPrefixDeclaration('@prefix', prefix, namespaceIri);
 		} else {
 			throw new Error(`Unsupported token type for prefix definition: ${tokenType}`);
 		}

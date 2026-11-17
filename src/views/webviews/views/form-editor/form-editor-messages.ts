@@ -8,7 +8,7 @@ import type { EditOperation } from '@src/services/editing/edit-operation';
 import type { EditProblem } from '@src/services/editing/edit-problem';
 import type { ExecuteCommandMessage } from '../../webview-messaging';
 import type { BlankNode, NamedNode } from '@rdfjs/types';
-import type { DocumentPosition, DocumentSnapshot, ResourceCardBodyData, ResourceSource, ResourceCardHeaderData } from './form-editor-model';
+import type { DocumentPosition, DocumentSnapshot, ResourceCardBodyData, ResourceSource, ResourceCardHeaderData, ResourceOptionData, TermSearchKind } from './form-editor-model';
 import type { ScopeKey } from '@src/utilities/config-scope';
 
 /**
@@ -50,7 +50,11 @@ export type FormEditorHostMessage =
 	/**
 	 * A resource was renamed: its IRI is now `renamed`.
 	 */
-	| { id: 'ResourceRenamed'; resource: NamedNode; renamed: NamedNode };
+	| { id: 'ResourceRenamed'; resource: NamedNode; renamed: NamedNode }
+	/**
+	 * The answer to a {@link FormEditorWebviewMessage} `TermSearch`: the terms that match, best first.
+	 */
+	| { id: 'TermSearchResult'; requestId: number; options: ResourceOptionData[] };
 
 /**
  * Messages sent from the webview to the extension host.
@@ -96,6 +100,11 @@ export type FormEditorWebviewMessage =
 	 * Remove a resource with all its statements from the document, once the user confirms it.
 	 */
 	| { id: 'RemoveResource'; resource: NamedNode | BlankNode }
+	/**
+	 * Search the terms of a kind the workspace knows for typed text, at most `limit` of them; the
+	 * host answers with a `TermSearchResult` of the same `requestId`.
+	 */
+	| { id: 'TermSearch'; requestId: number; kind: TermSearchKind; text: string; limit: number }
 	| ExecuteCommandMessage;
 
 /**

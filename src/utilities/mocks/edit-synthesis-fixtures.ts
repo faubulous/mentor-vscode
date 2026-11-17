@@ -1,5 +1,5 @@
 import { _RDFS, _XSD } from '@faubulous/mentor-rdf';
-import { QuadContext, RdfSyntax, TurtleReader, assignBlankNodeIds } from '@faubulous/mentor-rdf-parsers';
+import { IToken, QuadContext, RdfSyntax, TurtleReader, assignBlankNodeIds } from '@faubulous/mentor-rdf-parsers';
 import { ParserFactory } from '@src/languages/parser-factory';
 import { EditOperation } from '@src/services/editing/edit-operation';
 import { EditPlan } from '@src/services/editing/edit-plan';
@@ -9,6 +9,7 @@ import { EditVerifier } from '@src/services/editing/edit-verifier';
 import { StyleFallback } from '@src/services/editing/local-style';
 import { SynthesisInput } from '@src/services/editing/synthesis-context';
 import { applyTextEdits } from '@src/utilities/text-edits';
+import { getNamespaceDefinition } from '@src/utilities/tokens';
 
 /**
  * The namespace of the example resources of the synthesis tests.
@@ -33,6 +34,12 @@ export interface SynthesisFixtureOptions {
 	 * The editor settings the style falls back to.
 	 */
 	style?: Partial<StyleFallback>;
+
+	/**
+	 * The prefix declarations the document starts with, in place of those a Turtle or TriG test
+	 * document starts with.
+	 */
+	preamble?: string;
 }
 
 /**
@@ -75,15 +82,44 @@ function _read(text: string, syntax: RdfSyntax): Pick<SynthesisInput, 'tokens' |
  */
 export function createSynthesisInput(body: string, options: SynthesisFixtureOptions = {}): SynthesisInput {
 	const syntax = options.syntax ?? RdfSyntax.Turtle;
-	const text = _hasPrefixes(syntax) ? PREAMBLE + body : body;
+	const text = _preambleOf(options) + body;
+	const read = _read(text, syntax);
 
 	return {
 		text,
-		..._read(text, syntax),
-		namespaces: _hasPrefixes(syntax) ? { ex: EX, rdfs: _RDFS, xsd: _XSD } : {},
+		...read,
+		namespaces: _namespacesOf(read.tokens),
 		syntax,
 		style: { tabSize: 4, insertSpaces: true, ...options.style }
 	};
+}
+
+/**
+ * The prefix declarations a test document starts with.
+ * @param options How the document is written.
+ * @returns The declarations: those given, else those of {@link PREAMBLE} for Turtle and TriG.
+ */
+function _preambleOf(options: SynthesisFixtureOptions): string {
+	return options.preamble ?? (_hasPrefixes(options.syntax ?? RdfSyntax.Turtle) ? PREAMBLE : '');
+}
+
+/**
+ * The namespaces a document declares.
+ * @param tokens The tokens of the document.
+ * @returns The namespace IRIs by prefix.
+ */
+function _namespacesOf(tokens: IToken[]): Record<string, string> {
+	const namespaces: Record<string, string> = {};
+
+	for (const token of tokens) {
+		const definition = getNamespaceDefinition(tokens, token);
+
+		if (definition) {
+			namespaces[definition.prefix] = definition.uri;
+		}
+	}
+
+	return namespaces;
 }
 
 /**
@@ -94,7 +130,29 @@ export function createSynthesisInput(body: string, options: SynthesisFixtureOpti
  * @returns The edited body, or `rejected:<problem kind>` or `unverified:<message>`.
  */
 export function synthesizeEdit(body: string, operations: EditOperation[], options: SynthesisFixtureOptions = {}): string {
-	const input = createSynthesisInput(body, options);
+	return _synthesize(createSynthesisInput(body, options), operations, _preambleOf(options).length);
+}
+
+/**
+ * Synthesize and verify operations on a test document, for edits outside its body, such as of its
+ * prefix declarations.
+ * @param body The statements of the document.
+ * @param operations The operations.
+ * @param options How the document is written.
+ * @returns The whole edited document, or `rejected:<problem kind>` or `unverified:<message>`.
+ */
+export function synthesizeDocument(body: string, operations: EditOperation[], options: SynthesisFixtureOptions = {}): string {
+	return _synthesize(createSynthesisInput(body, options), operations, 0);
+}
+
+/**
+ * Synthesize and verify operations on a document.
+ * @param input The document.
+ * @param operations The operations.
+ * @param from The offset of the edited text the result starts at.
+ * @returns The edited text from the offset, or `rejected:<problem kind>` or `unverified:<message>`.
+ */
+function _synthesize(input: SynthesisInput, operations: EditOperation[], from: number): string {
 	const plan = new EditSynthesizer(input).synthesize(operations);
 
 	if (isEditRejection(plan)) {
@@ -107,7 +165,7 @@ export function synthesizeEdit(body: string, operations: EditOperation[], option
 		return `unverified:${verification.message}`;
 	}
 
-	return applyTextEdits(input.text, plan.edits).slice(input.text.length - body.length);
+	return applyTextEdits(input.text, plan.edits).slice(from);
 }
 
 /**
@@ -139,7 +197,7 @@ export function synthesizePlan(body: string, operations: EditOperation[], option
  * @throws {Error} If the text does not occur so often.
  */
 export function anchorOf(body: string, needle: string, options: SynthesisFixtureOptions = {}, occurrence = 1): number {
-	const preamble = _hasPrefixes(options.syntax ?? RdfSyntax.Turtle) ? PREAMBLE.length : 0;
+	const preamble = _preambleOf(options).length;
 	let index = -1;
 
 	for (let count = 0; count < occurrence; count++) {

@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { RDFS } from '@faubulous/mentor-rdf';
 import { TEST_NAMESPACES } from './mocks/statement-fixtures';
 import {
+	getPrefixDeclaration,
+	isValidPrefix,
 	isPlainLocalName,
 	getIriFromPrefixedName,
 	getIriFromText,
@@ -113,5 +115,23 @@ describe('isPlainLocalName', () => {
 
 	it('refuses an empty local name, one ending in a dot, and one with other characters', () => {
 		expect(['', 'oak.', '2oak', 'oak tree', 'oak/tree', 'oak#tree', 'oak:tree'].some(isPlainLocalName)).toBe(false);
+	});
+});
+
+describe('isValidPrefix', () => {
+	it('accepts the empty prefix and a letter followed by letters, digits, _, - and inner dots', () => {
+		expect(['', 'ex', 'dc.terms', 'skos-xl', 'v_2'].every(isValidPrefix)).toBe(true);
+	});
+
+	it('refuses a prefix starting with another character, ending in a dot or holding other characters', () => {
+		expect(['1x', '_x', 'x.', 'a b', 'a:b'].some(isValidPrefix)).toBe(false);
+	});
+});
+
+describe('getPrefixDeclaration', () => {
+	it('writes the Turtle form with its period and the SPARQL form in the case given', () => {
+		expect(getPrefixDeclaration('@prefix', 'ex', 'http://example.org/')).toBe('@prefix ex: <http://example.org/> .');
+		expect(getPrefixDeclaration('PREFIX', 'ex', 'http://example.org/')).toBe('PREFIX ex: <http://example.org/>');
+		expect(getPrefixDeclaration('prefix', '', 'http://example.org/')).toBe('prefix : <http://example.org/>');
 	});
 });
