@@ -5,6 +5,7 @@ import { ValueKind } from '@src/utilities/value-kind';
 import { ScopeKey } from '@src/utilities/config-scope';
 import { NamespaceData, PredicateData, TermData } from '../form-editor-model';
 import { ContextMenu, useContextMenu } from '../hooks/use-context-menu';
+import { RowReorder } from '../hooks/use-row-reorder';
 import { useRowEditorState } from '../hooks/use-row-editor-state';
 import { StatementServices } from '../hooks/use-statement-services';
 import { FormEditorShortcuts } from '../form-editor-shortcuts';
@@ -16,6 +17,7 @@ import { StatementRowState } from '../state/statement-row-state';
 import { PinnedProperties, usePinnedProperties } from '../state/pinned-properties-context';
 import { getLiteralFieldTag, getLiteralTag } from './datatype-labels';
 import { EditedRow } from './edited-row';
+import { RowGrip } from './row-grip';
 import { RowMenu } from './row-menu';
 import { PredicateField } from './predicate-field';
 import { PredicateTags } from './predicate-tags';
@@ -125,6 +127,11 @@ export interface StatementRowProps extends StatementRowContext {
 	 * The header the row is, where it leads its card.
 	 */
 	header?: RowHeader;
+
+	/**
+	 * How the row moves among the rows of its card, where it takes part.
+	 */
+	reorder?: RowReorder;
 }
 
 /**
@@ -155,8 +162,8 @@ interface ShownValue {
  * row shows the same layout as fields that are plain at rest and draw their box on intent: the
  * predicate field, a field per literal with the label of its language tag or datatype after the
  * text, the input of the next value after the last pill, and a button that removes each value. Its
- * ⋮ menu pins the property and removes it with all its values, as its shortcut does in the row. A
- * header row without a value
+ * ⋮ menu pins the property and removes it with all its values, as its shortcut does in the row, and
+ * the grip before it moves it among the rows of its card. A header row without a value
  * asks for it with a link that turns into the input in place. The row is written when the focus
  * leaves it or Enter is pressed in a literal; Escape gives up what was typed. Keys pressed in the
  * rows of a blank node shown in the row are theirs. While the form shows one language, the
@@ -165,7 +172,7 @@ interface ShownValue {
  * @param props The statement, its editor and where the row stands.
  * @returns The row.
  */
-export function StatementRow({ property, editor, services, autoFocus = false, header, ...context }: StatementRowProps): React.JSX.Element {
+export function StatementRow({ property, editor, services, autoFocus = false, header, reorder, ...context }: StatementRowProps): React.JSX.Element {
 	const state = useRowEditorState(editor);
 	const edited: EditedRow | undefined = editor && state && services ? { editor, state, services } : undefined;
 	const { languageFilter = LanguageFilter.ALL, pinScopes = [], languageTags, namespaces } = useFormEditorContext();
@@ -219,7 +226,7 @@ export function StatementRow({ property, editor, services, autoFocus = false, he
 	return (
 		<div
 			ref={rowRef}
-			className={`statement-line is-${rowKind}-row${edited ? ' is-editable' : ''}${editor?.isNew && !header ? ' is-draft' : ''}${_headerClassOf(header)}${typeless ? ' is-typeless' : ''}`}
+			className={`statement-line is-${rowKind}-row${edited ? ' is-editable' : ''}${editor?.isNew && !header ? ' is-draft' : ''}${_headerClassOf(header)}${typeless ? ' is-typeless' : ''}${reorder?.dragged ? ' is-dragged' : ''}${reorder?.dropPlacement ? ` is-drop-${reorder.dropPlacement}` : ''}`}
 			role="group"
 			aria-label={header ? _headerLabelOf(header) : editor?.isNew ? 'New statement' : label}
 			data-predicate={_predicateIriOf(predicateView)}
@@ -228,6 +235,7 @@ export function StatementRow({ property, editor, services, autoFocus = false, he
 			onBlur={edited ? handleBlur : undefined}
 			onContextMenu={openOnContextMenu}
 		>
+			{reorder?.grip && <RowGrip label={label} {...reorder.grip} />}
 			{header?.kind === 'type' && <span className="statement-gutter">{_chevron(header)}</span>}
 			{header
 				? !typeless && _headerPredicateOf(header, edited, label)

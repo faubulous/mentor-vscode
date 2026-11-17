@@ -49,6 +49,11 @@ export type EditProblem =
 	 */
 	| { kind: 'commentsBetweenValues' }
 	/**
+	 * A property is written in more than one place, or apart from the property it is to move next
+	 * to, so the order of the two cannot change.
+	 */
+	| { kind: 'separateBlocks' }
+	/**
 	 * The statement the edit continues is not ended by a period.
 	 */
 	| { kind: 'statementNotEnded' }

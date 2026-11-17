@@ -27,6 +27,26 @@ interface QueuedWrites {
 	 * Whether the values are to be written.
 	 */
 	values: boolean;
+
+	/**
+	 * Where the property is to be written among the properties of the subject.
+	 */
+	move?: PropertyMove;
+}
+
+/**
+ * A place among the properties of a subject: before or after the statement of another predicate.
+ */
+export interface PropertyMove {
+	/**
+	 * The IRI of the predicate the property moves next to.
+	 */
+	target: string;
+
+	/**
+	 * Whether the property moves before or after it.
+	 */
+	placement: 'before' | 'after';
 }
 
 /**
@@ -139,7 +159,7 @@ export class StatementRowEditor implements EditWriter {
 	}
 
 	get wantsToWrite(): boolean {
-		return this._writes.predicate || this._writes.values;
+		return this._writes.predicate || this._writes.values || this._writes.move !== undefined;
 	}
 
 	/**
@@ -317,6 +337,20 @@ export class StatementRowEditor implements EditWriter {
 	}
 
 	/**
+	 * Write the property of the row before or after the property of another row, as dragging the
+	 * grip of the row or moving it by the keyboard does.
+	 * @param move The place.
+	 */
+	moveProperty(move: PropertyMove): void {
+		if (this.isNew) {
+			return;
+		}
+
+		this._writes.move = move;
+		this._editing.requestWrite(this);
+	}
+
+	/**
 	 * Add values after the others and write them, as a new statement of the predicate of the row
 	 * does.
 	 * @param values The values.
@@ -424,6 +458,11 @@ export class StatementRowEditor implements EditWriter {
 			operation = this._valuesEdit();
 		}
 
+		if (!operation && this._writes.move) {
+			operation = this._moveEdit(this._writes.move);
+			this._writes.move = undefined;
+		}
+
 		if (!operation) {
 			return undefined;
 		}
@@ -479,7 +518,7 @@ export class StatementRowEditor implements EditWriter {
 	 * Queue a write and hand the row to the controller.
 	 * @param write The write.
 	 */
-	private _request(write: keyof QueuedWrites): void {
+	private _request(write: 'predicate' | 'values'): void {
 		this._writes[write] = true;
 		this._editing.requestWrite(this);
 	}
@@ -499,6 +538,17 @@ export class StatementRowEditor implements EditWriter {
 		this._claimedPredicate = reading.term.value;
 
 		return { op: 'setPredicate', subject: this._data.subject, predicate, newPredicate: reading.term.value };
+	}
+
+	/**
+	 * Build the edit that moves the property of the row, now that it can be sent.
+	 * @param move The place the property moves to.
+	 * @returns The operation, or `undefined` while the row has no stored predicate.
+	 */
+	private _moveEdit(move: PropertyMove): EditOperation | undefined {
+		const predicate = this._state.stored.predicate;
+
+		return predicate ? { op: 'moveProperty', subject: this._data.subject, predicate, ...move } : undefined;
 	}
 
 	/**

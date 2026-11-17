@@ -23,6 +23,8 @@ body {
 	--form-toolbar-height: 28px;
 	/* The box of one line of text: a field, the predicate, the IRI. */
 	--form-field-height: 26px;
+	/* The inset of the text in a field, which plain text in its place takes too, so the two line up. */
+	--form-field-text-inset: 5px;
 	/* The corners: pills and chips take the middle radius of the webviews, fields the large one, icon buttons and floating widgets their own. */
 	--form-radius-pill: var(--mentor-radius-md);
 	--form-radius-field: var(--mentor-radius-lg);
@@ -456,16 +458,22 @@ body {
  * Each card is a bordered box with square corners on a surface a step above the editor, and lays
  * itself out by its own width in one of three densities: wide in the form editor, narrow in a
  * side panel, and the tooltip density a host asks for with `data-density`. The tokens of the
- * density size the title bar, the rows, the label column, the chips and the title;
- * every row, the title and the IRI start at the inset of the card.
+ * density size the title bar, the rows, the label column, the chips and the title.
+ * The text of the rows starts past the column of the grips of the rows, and the IRI of an expanded
+ * card starts with it.
  */
 .resource-card {
 	container: card / inline-size;
 	--card-head-h: 36px;
 	--card-head-pad-x: 8px;
 	--card-head-gap: 6px;
-	/* The rows start under the left edge of the kind icon, which stands under the chevron. */
+	/* The room at the edges of the card: the label row of a collapsed card starts under the left edge of the kind icon, which stands under the chevron, and the rows end here. */
 	--card-inset: 10px;
+	--card-chevron: 20px;
+	/* The column before the rows that holds their grips, as wide as a grip. */
+	--row-grip: 16px;
+	/* Where the text of the rows starts: past the column of the grips, after the inset of the text of a field. */
+	--row-text-start: calc(var(--row-grip) + var(--form-field-text-inset));
 	--row-min-h: 32px;
 	--row-pad-y: 6px;
 	--label-min: 120px;
@@ -539,8 +547,8 @@ body {
 }
 
 .icon-button.resource-card-chevron {
-	width: 20px;
-	height: 20px;
+	width: var(--card-chevron);
+	height: var(--card-chevron);
 }
 
 /* The buttons of the title bar and the headers: an icon in a square that tints on hover. */
@@ -592,7 +600,7 @@ body {
 
 .resource-card-iri-text {
 	min-width: 0;
-	padding: 0 5px;
+	padding: 0 var(--form-field-text-inset);
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
@@ -659,15 +667,20 @@ body {
 }
 
 /*
- * The footer of a card holds the IRI, whose text starts where the title and the types start. While
+ * The footer of a card holds the IRI, whose text starts where the title and the types of a
+ * collapsed card start, and where the text of the rows starts while the card is expanded. While
  * the card is expanded it stays at the bottom of the view as the card scrolls past it.
  */
 .resource-card-footer {
 	display: flex;
 	align-items: center;
 	min-height: 28px;
-	padding: 0 var(--card-head-pad-x) 0 calc(var(--card-head-pad-x) + 20px + var(--card-head-gap));
+	padding: 0 var(--card-head-pad-x) 0 calc(var(--card-head-pad-x) + var(--card-chevron) + var(--card-head-gap));
 	border-top: 1px solid var(--form-row-border);
+}
+
+.resource-card-footer.is-expanded {
+	padding-left: var(--row-grip);
 }
 
 .resource-card-footer.is-expanded {
@@ -823,14 +836,15 @@ body {
 
 /*
  * The rows of a card share one grid: the label column as wide as its longest label, at least the
- * label token and at most 40% of the card, and the values. The grid starts at the inset of the card,
- * so the labels and the lines under the rows start there too.
+ * label token and at most 40% of the card, and the values. The grid starts where the text of the
+ * rows starts, so the labels and the lines under the rows start there too, and the grips of the
+ * rows stand before it.
  */
 .statement-list {
 	display: grid;
 	grid-template-columns: fit-content(40%) minmax(0, 1fr);
 	column-gap: var(--col-gap);
-	padding: 0 var(--card-inset) 4px;
+	padding: 0 var(--card-inset) 4px var(--row-text-start);
 }
 
 /*
@@ -894,6 +908,11 @@ body {
 
 .statement-predicate:not(:has(.input-field)) {
 	padding: 3px 0;
+}
+
+/* The predicate field starts before its column, so its box is not cut at the edge of the column. */
+.statement-predicate:has(.input-field) {
+	overflow: visible;
 }
 
 /* A predicate named by its IRI is cut at its start, so its local name stays in view. */
@@ -1198,6 +1217,17 @@ button.statement-predicate-tag:focus-visible {
 	padding: var(--row-field-pad) 0;
 }
 
+/* The grip of a nested row sits at its vertical centre, in the room before the labels of the card, up to the box of the predicate field. */
+.resource-card.is-nested .statement-line > .row-grip-area {
+	left: auto;
+	right: calc(100% + var(--form-field-text-inset));
+}
+
+.resource-card.is-nested .statement-line > .row-grip-area > .row-grip {
+	top: 50%;
+	margin-top: calc(var(--icon-btn) / -2);
+}
+
 .resource-card.is-nested .statement-line.is-resource-row > .statement-values {
 	padding: calc((var(--row-min-h) - var(--chip-h) - 1px) / 2) 0;
 }
@@ -1368,6 +1398,66 @@ button.statement-predicate-tag:focus-visible {
 	font-size: 0.84em;
 	text-overflow: ellipsis;
 	white-space: nowrap;
+}
+
+/*
+ * The grip of a row stands before the row, in the column of the grips, on the first line of the
+ * values: hidden until the pointer or the focus is in the row. The area of the grip beside the row
+ * belongs to the row, so pointing at the place of the grip shows it. A line along the top or the
+ * bottom of the row marks where the dragged row drops, over the rows next to it, which would
+ * otherwise cover the half of it that reaches into them.
+ */
+.statement-line > .row-grip-area {
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	left: calc(-1 * var(--row-text-start));
+	width: var(--row-grip);
+}
+
+.row-grip-area > .row-grip {
+	position: absolute;
+	top: calc((var(--row-min-h) - var(--icon-btn)) / 2);
+	left: 0;
+	width: 100%;
+	visibility: hidden;
+	cursor: grab;
+}
+
+/* The grip has no background, not even on hover, where its dots only brighten. */
+.row-grip-area > .row-grip:hover {
+	background: transparent;
+}
+
+.statement-line:hover > .row-grip-area > .row-grip,
+.statement-line:focus-within > .row-grip-area > .row-grip {
+	visibility: visible;
+}
+
+/* Pressing the grip focuses it, but the grip of the dragged row shows no focus ring while it is dragged. */
+.statement-line.is-dragged > .row-grip-area > .row-grip {
+	outline: none;
+}
+
+.statement-line.is-drop-before::before,
+.statement-line.is-drop-after::after {
+	content: '';
+	position: absolute;
+	z-index: 2;
+	left: 0;
+	right: 0;
+	height: 2px;
+	border-radius: 1px;
+	background: var(--vscode-focusBorder);
+	pointer-events: none;
+}
+
+.statement-line.is-drop-before::before {
+	top: -1px;
+}
+
+.statement-line.is-drop-after::after {
+	bottom: -1px;
 }
 
 /*
@@ -1655,16 +1745,21 @@ button.statement-predicate-tag:focus-visible {
 	--vscode-settings-textInputBorder: transparent;
 }
 
+/*
+ * The field paints its background itself, rounded as its box: the input inside the box is square,
+ * and its background would cover the corners of the border.
+ */
 .input-field:hover,
 .input-field:focus-within {
-	--vscode-settings-textInputBackground: var(--form-field-background);
 	--vscode-settings-textInputBorder: var(--form-field-border);
+	border-radius: 4px;
+	background-color: var(--form-field-background);
 }
 
 /* The predicate field starts before its column by the inset of its text, so the text lines up with the column. */
 .input-field.is-predicate {
-	width: calc(100% + 5px);
-	margin-left: -5px;
+	width: calc(100% + var(--form-field-text-inset));
+	margin-left: calc(-1 * var(--form-field-text-inset));
 	--vscode-settings-textInputForeground: var(--vscode-descriptionForeground);
 }
 
@@ -1679,7 +1774,7 @@ button.statement-predicate-tag:focus-visible {
 .statement-predicate-sizer {
 	display: block;
 	height: 0;
-	padding: 0 5px;
+	padding: 0 var(--form-field-text-inset);
 	overflow: hidden;
 	visibility: hidden;
 	white-space: nowrap;

@@ -27,6 +27,13 @@ export type EditOperation =
 	 */
 	| { op: 'setPredicate'; subject: NamedNode | BlankNode; predicate: string; newPredicate: string }
 	/**
+	 * Write the statement of a predicate of the subject before or after the statement of another
+	 * of its predicates, with the comments written above it and the comment ending its line. Both
+	 * predicates must be written once, in the same block; the separators and line breaks of the
+	 * block stay where they are.
+	 */
+	| { op: 'moveProperty'; subject: NamedNode | BlankNode; predicate: string; target: string; placement: 'before' | 'after' }
+	/**
 	 * Remove a resource described at the top level of the document: every block of statements about
 	 * it goes as a whole, with the blank nodes written in it and the comments directly above it.
 	 * Statements of other resources that refer to it stay.

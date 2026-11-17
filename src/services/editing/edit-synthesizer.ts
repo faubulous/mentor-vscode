@@ -83,6 +83,8 @@ export class EditSynthesizer {
 				return new ValueListOperations(context).setValues(operation);
 			case 'setPredicate':
 				return new PropertyOperations(context).setPredicate(operation);
+			case 'moveProperty':
+				return new PropertyOperations(context).moveProperty(operation);
 			case 'removeResource':
 				return new ResourceOperations(context).removeResource(operation);
 			default:

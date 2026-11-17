@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { RDFS, XSD } from '@faubulous/mentor-rdf';
+import { RDF, RDFS, XSD } from '@faubulous/mentor-rdf';
 import { createEditingHostStub, EditingHostStub } from '@src/utilities/mocks/editing-host-fixtures';
 import { createResourceDataServiceStub } from '@src/utilities/mocks/resource-data-service-fixtures';
 import { EXAMPLE_NAMESPACE, TEST_NAMESPACES, TEST_SUBJECT, createIriView, createLiteralView, createProperty, createSampleCardBody, createTestCardBody, withAnchors } from '@src/utilities/mocks/statement-fixtures';
@@ -412,5 +412,110 @@ describe('StatementList, edited', () => {
 
 		expect(host.submitted).toEqual([]);
 		expect(within(rows()[1]).getByRole('alert').textContent).toMatch(/cannot edit/);
+	});
+});
+
+describe('StatementList, moving rows', () => {
+	/**
+	 * A data transfer as jsdom lacks one: it takes what a drag sets and ignores it.
+	 */
+	const dataTransfer = { effectAllowed: '', dropEffect: '', setData: () => undefined, setDragImage: () => undefined };
+
+	/**
+	 * The grip of a row.
+	 */
+	function gripOf(row: HTMLElement): HTMLElement {
+		return within(row).getByRole('button', { name: /^Move / });
+	}
+
+	/**
+	 * Press a key on the grip of a row.
+	 */
+	async function pressOnGrip(row: HTMLElement, key: string): Promise<void> {
+		await act(async () => {
+			fireEvent.keyDown(gripOf(row), { key });
+		});
+	}
+
+	it('moves a row one place up or down by the arrows on its grip, and nowhere past the ends', async () => {
+		const up = renderList();
+
+		await pressOnGrip(rows()[2], 'ArrowUp');
+
+		expect(up.host.submitted[0].operations).toEqual([{ op: 'moveProperty', subject: TEST_SUBJECT, predicate: RDFS.subClassOf, target: RDFS.label, placement: 'before' }]);
+
+		up.unmount();
+
+		const down = renderList();
+
+		await pressOnGrip(rows()[0], 'ArrowDown');
+		await pressOnGrip(rows()[0], 'ArrowUp');
+
+		expect(down.host.submitted.map(request => request.operations)).toEqual([[{ op: 'moveProperty', subject: TEST_SUBJECT, predicate: RDF.type, target: RDFS.label, placement: 'after' }]]);
+	});
+
+	it('gives the focus back to the grip once the moved row stands in its new place', async () => {
+		const { host, deliver } = renderList();
+
+		gripOf(rows()[2]).focus();
+		await pressOnGrip(rows()[2], 'ArrowUp');
+		await settle(host);
+		await deliver({ ...SAMPLE, predicates: [SAMPLE.predicates[0], SAMPLE.predicates[2], SAMPLE.predicates[1]] }, { version: 2 });
+
+		expect(rowLabels()).toEqual(['rdf:type', 'rdfs:subClassOf', 'rdfs:label']);
+		expect(document.activeElement).toBe(gripOf(rows()[1]));
+	});
+
+	it('drops a dragged row into the gap nearest the pointer, marks the place, and writes nothing for a drop where it stands', async () => {
+		const { host } = renderList();
+		const setDragImage = vi.fn();
+		const list = document.querySelector<HTMLElement>('.statement-list')!;
+
+		fireEvent.dragStart(gripOf(rows()[0]), { dataTransfer: { ...dataTransfer, setDragImage } });
+
+		// Nothing follows the pointer: the image of the drag is an empty element.
+		expect(setDragImage).toHaveBeenCalledWith(expect.any(HTMLElement), 0, 0);
+		expect((setDragImage.mock.calls[0][0] as HTMLElement).childNodes.length).toBe(0);
+
+		// Without a layout in jsdom, every height falls into the gap before the first row, where the first row stands.
+		fireEvent.dragOver(rows()[2], { dataTransfer });
+
+		expect(document.querySelector('.is-drop-before, .is-drop-after')).toBeNull();
+
+		fireEvent.dragEnd(gripOf(rows()[0]), { dataTransfer });
+		fireEvent.dragStart(gripOf(rows()[2]), { dataTransfer });
+		fireEvent.dragOver(rows()[1], { dataTransfer });
+
+		expect(rows()[0].classList.contains('is-drop-before')).toBe(true);
+
+		fireEvent.dragLeave(list, { dataTransfer, relatedTarget: document.body });
+
+		expect(rows()[0].classList.contains('is-drop-before')).toBe(false);
+
+		fireEvent.dragOver(rows()[1], { dataTransfer });
+		await act(async () => {
+			fireEvent.drop(rows()[1], { dataTransfer });
+		});
+
+		expect(host.submitted[0].operations).toEqual([{ op: 'moveProperty', subject: TEST_SUBJECT, predicate: RDFS.subClassOf, target: RDF.type, placement: 'before' }]);
+		expect(document.querySelector('.is-drop-before, .is-drop-after')).toBeNull();
+	});
+
+	it('shows why the host did not move a row', async () => {
+		const { host } = renderList();
+
+		await pressOnGrip(rows()[2], 'ArrowUp');
+		await settle(host, { ok: false, problem: { kind: 'separateBlocks' }, version: 1 });
+
+		expect(within(rows()[2]).getByRole('alert').textContent).toMatch(/separate blocks/);
+	});
+
+	it('has no grip in a row of a new statement', async () => {
+		renderList();
+
+		await userEvent.click(screen.getByRole('button', { name: 'Add property' }));
+
+		expect(within(rows()[3]).queryByRole('button', { name: /^Move / })).toBeNull();
+		expect(rows().slice(0, 3).every(row => within(row).queryByRole('button', { name: /^Move / }) !== null)).toBe(true);
 	});
 });

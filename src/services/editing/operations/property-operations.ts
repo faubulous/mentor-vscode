@@ -3,6 +3,7 @@ import { BlankNode, NamedNode } from '@rdfjs/types';
 import { EditPlan, createPlan, netExpectedChanges } from '../edit-plan';
 import { EditRejectionError } from '../edit-rejection';
 import { PredicateGroup, SubjectBlock } from '../statement-model';
+import { PropertyOrderWriter } from './property-order-writer';
 import { ValueOperations } from './value-operations';
 import { StatementLocator } from '../statement-locator';
 import { SynthesisContext } from '../synthesis-context';
@@ -13,6 +14,11 @@ import { tokenEnd } from '@src/utilities/tokens';
  * The `setPredicate` operation of the edit contract.
  */
 type SetPredicateOperation = Extract<EditOperation, { op: 'setPredicate' }>;
+
+/**
+ * The `moveProperty` operation of the edit contract.
+ */
+type MovePropertyOperation = Extract<EditOperation, { op: 'moveProperty' }>;
 
 /**
  * Adds, renames and deletes the predicates of a subject.
@@ -87,6 +93,51 @@ export class PropertyOperations {
 				{ subject, predicate: operation.newPredicate, object: object.quad.object, graph: object.quad.graph, delta: 1 }
 			]))
 		});
+	}
+
+	/**
+	 * Write the statement of a predicate before or after the statement of another predicate of the
+	 * subject, with its comments, as {@link PropertyOrderWriter} writes it. The statements stay
+	 * the same, so the plan expects no change of them.
+	 * @param operation The predicate, the predicate it moves next to and on which side.
+	 * @returns The plan, or an empty plan when the order stays.
+	 * @throws {EditRejectionError} If the subject does not carry either predicate, or either is written more than once or both not in the same block.
+	 */
+	moveProperty(operation: MovePropertyOperation): EditPlan {
+		if (operation.predicate === operation.target) {
+			return createPlan({});
+		}
+
+		const moved = this._onlyGroupOf(operation.subject, operation.predicate);
+		const target = this._onlyGroupOf(operation.subject, operation.target);
+
+		if (moved.block !== target.block) {
+			throw new EditRejectionError({ kind: 'separateBlocks' });
+		}
+
+		const order = moved.block.groups.filter(group => group !== moved.group);
+		const index = order.indexOf(target.group) + (operation.placement === 'after' ? 1 : 0);
+
+		order.splice(index, 0, moved.group);
+
+		return createPlan({ edits: new PropertyOrderWriter(this._context, moved.block).write(order) });
+	}
+
+	/**
+	 * Find the one group of a predicate of a subject.
+	 * @param subject The subject.
+	 * @param predicate The predicate.
+	 * @returns The group with the block holding it.
+	 * @throws {EditRejectionError} If the subject does not carry the predicate, or writes it more than once.
+	 */
+	private _onlyGroupOf(subject: NamedNode | BlankNode, predicate: string): { block: SubjectBlock; group: PredicateGroup } {
+		const found = this.findPredicateGroups(subject, predicate);
+
+		if (found.length > 1) {
+			throw new EditRejectionError({ kind: 'separateBlocks' });
+		}
+
+		return found[0];
 	}
 
 	/**

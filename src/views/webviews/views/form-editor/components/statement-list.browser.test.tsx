@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { userEvent } from 'vitest/browser';
-import { act, render, within } from '@testing-library/react';
+import { act, fireEvent, render, within } from '@testing-library/react';
 import { OWL, RDF, RDFS, XSD } from '@faubulous/mentor-rdf';
 import { createEditingHostStub } from '@src/utilities/mocks/editing-host-fixtures';
 import { createResourceDataServiceStub } from '@src/utilities/mocks/resource-data-service-fixtures';
@@ -9,6 +9,7 @@ import { EXAMPLE_NAMESPACE, TEST_NAMESPACES, TEST_SUBJECT, createIriView, create
 import { ResourceCardBodyData } from '../form-editor-model';
 import { EditingController } from '../state/editing-controller';
 import { FormEditorContext } from '../state/form-editor-context';
+import { ResourceCardFooter } from './resource-card-footer';
 import { StatementList } from './statement-list';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 
@@ -23,17 +24,18 @@ const RESOURCES = [createResourceListItem('Plant', { label: 'Plant' }), createRe
  * @param others The statements about the blank nodes it shows.
  * @param resources The resources of the document.
  */
-async function renderList(cardBody: ResourceCardBodyData = SAMPLE, others: ResourceCardBodyData[] = [], resources = RESOURCES, width = 1000) {
+async function renderList(cardBody: ResourceCardBodyData = SAMPLE, others: ResourceCardBodyData[] = [], resources = RESOURCES, width = 1000, labelRow = false) {
 	const host = createEditingHostStub();
 	const editing = new EditingController(host);
 	const dataService = createResourceDataServiceStub([cardBody, ...others]);
 	const ui = (current: ResourceCardBodyData) => (
 		<div className="form-editor" style={{ height: 'auto', overflow: 'visible' }}>
-			<FormEditorContext.Provider value={{ readOnly: false, editing, namespaces: NAMESPACES, languageTags: {}, resources }}>
+			<FormEditorContext.Provider value={{ readOnly: false, editing, namespaces: NAMESPACES, languageTags: {}, resources, labelPredicates: labelRow ? [RdfDataFactory.namedNode(RDFS.label)] : undefined }}>
 				<article className="resource-card is-expanded" style={{ width }}>
 					<div className="resource-card-body">
-						<StatementList cardBody={current} dataService={dataService} depth={0} visited={[current.subject]} />
+						<StatementList cardBody={current} dataService={dataService} depth={0} visited={[current.subject]} labelRow={labelRow} />
 					</div>
+					<ResourceCardFooter cardHeader={createResourceListItem('Tree', { subject: current.subject })} expanded />
 				</article>
 			</FormEditorContext.Provider>
 			<button type="button" className="outside">Outside</button>
@@ -59,6 +61,17 @@ async function renderList(cardBody: ResourceCardBodyData = SAMPLE, others: Resou
  */
 async function leaveList(): Promise<void> {
 	await act(async () => userEvent.click(document.querySelector<HTMLElement>(".outside")!));
+}
+
+/**
+ * Where the text of the IRI in the footer of a card starts, from the inside of the border of the card.
+ * @param card The card.
+ * @returns The offset.
+ */
+function iriTextOf(card: HTMLElement): number {
+	const text = card.querySelector('.resource-card-iri-text')!;
+
+	return Math.round(text.getBoundingClientRect().left + parseFloat(getComputedStyle(text).paddingLeft) - card.getBoundingClientRect().left - card.clientLeft);
 }
 
 /**
@@ -331,7 +344,7 @@ describe('StatementList, edited in a browser', () => {
 		expect(rows().map(row => Math.round(row.getBoundingClientRect().height))).toEqual([32, 32, 32]);
 	});
 
-	it('starts the labels at the inset of a narrow card and the values after a label column as wide as the longest label, at least the label token, and puts the tag of a literal under its label', async () => {
+	it('starts the labels of a narrow card where the text of its IRI starts and the values after a label column as wide as the longest label, at least the label token, and puts the tag of a literal under its label', async () => {
 		await renderList(SAMPLE, [], RESOURCES, 500);
 
 		const card = document.querySelector<HTMLElement>('.resource-card')!;
@@ -342,9 +355,11 @@ describe('StatementList, edited in a browser', () => {
 		const column = Math.round(rows()[2].querySelector('.statement-predicate')!.getBoundingClientRect().width);
 		const widest = Math.max(...rows().map(row => Math.ceil(row.querySelector('.statement-predicate-sizer')!.scrollWidth)));
 
-		expect(xOf(rows()[0])).toBe(10);
+		// Past the column of the grips, after the inset of the text of a field.
+		expect(xOf(rows()[0])).toBe(16 + 5);
+		expect(xOf(rows()[0])).toBe(iriTextOf(card));
 		expect(column).toBe(Math.max(88, widest));
-		expect(xOf(rows()[2].querySelector('.statement-values'))).toBe(10 + column + 12);
+		expect(xOf(rows()[2].querySelector('.statement-values'))).toBe(21 + column + 12);
 		expect(getComputedStyle(within(label).getByText('en', { selector: '.literal-field-tag' })).display).toBe('none');
 		expect(within(label).getByRole('button', { name: 'en' }).getBoundingClientRect().top).toBeGreaterThan(label.querySelector('.statement-predicate vscode-textfield')!.getBoundingClientRect().bottom - 1);
 	});
@@ -366,15 +381,16 @@ describe('StatementList, edited in a browser', () => {
 		const labelRow = within(card).getAllByRole('group', { name: 'rdfs:label' }).find(row => !box.contains(row))!;
 
 		const inset = 10;
+		const textStart = 21;
 
 		// The values of a row end where the room its actions keep begins, in the card and in the nested card.
 		expect(rightOf(card) - card.clientLeft - rightOf(labelRow.querySelector('.statement-values')!)).toBe(inset + 44);
 		expect(rightOf(box) - rightOf(within(box).getByRole('group', { name: 'rdfs:label' }).querySelector('.statement-values')!)).toBe(45);
-		// A narrow card gives the nested card the whole row from the inset, a wide one the value column.
-		expect(leftOf(box) - leftOf(card) - card.clientLeft).toBe(width < 560 ? inset : inset + 120 + 24);
+		// A narrow card gives the nested card the whole row from the start of the text of the rows, a wide one the value column.
+		expect(leftOf(box) - leftOf(card) - card.clientLeft).toBe(width < 560 ? textStart : textStart + 120 + 24);
 	});
 
-	it('puts the predicates at the inset of a wide card, under the kind icon, and the pills and the text of a literal in the value column', async () => {
+	it('puts the text of the predicates of a wide card where the text of its IRI starts, past the column of the grips, and the pills and the text of a literal in the value column', async () => {
 		await renderList();
 
 		// Measured from the inside of the border of the card.
@@ -388,10 +404,12 @@ describe('StatementList, edited in a browser', () => {
 			return Math.round(xOf(input) + parseFloat(getComputedStyle(input).paddingLeft));
 		};
 
-		expect(rows().map(row => textOf(row.querySelector('.statement-predicate vscode-textfield')))).toEqual([10, 10, 10]);
-		expect(xOf(rows()[0].querySelector('.value-pill'))).toBe(158);
-		expect(textOf(within(rows()[1]).getByLabelText('Value 1'))).toBe(159);
-		expect(xOf(document.querySelector('.statement-list-add'))).toBe(10);
+		// Past the column of the grips, after the inset of the text of a field.
+		expect(rows().map(row => textOf(row.querySelector('.statement-predicate vscode-textfield')))).toEqual([21, 21, 21]);
+		expect(iriTextOf(card)).toBe(21);
+		expect(xOf(rows()[0].querySelector('.value-pill'))).toBe(169);
+		expect(textOf(within(rows()[1]).getByLabelText('Value 1'))).toBe(170);
+		expect(xOf(document.querySelector('.statement-list-add'))).toBe(21);
 	});
 
 	it('moves a pill dragged onto the right half of another to after it, and writes the new order', async () => {
@@ -405,5 +423,80 @@ describe('StatementList, edited in a browser', () => {
 		await expect.poll(() => host.submitted.length).toBe(1);
 
 		expect(host.submitted[0].operations).toEqual([{ op: 'setValues', subject: TEST_SUBJECT, predicate: RDFS.subClassOf, values: [{ kind: 'existing', anchor: 120 }, { kind: 'existing', anchor: 130 }, { kind: 'existing', anchor: 110 }] }]);
+	});
+
+	it('moves a row dragged by its grip onto the lower half of another to after it, and shows the grip before the predicate field only with the pointer in the row or at the place of the grip', async () => {
+		const { host } = await renderList();
+		const grip = rows()[0].querySelector<HTMLElement>('.row-grip')!;
+		const area = grip.parentElement!.getBoundingClientRect();
+
+		expect(getComputedStyle(grip).visibility).toBe('hidden');
+
+		// Pointing at the place of the grip beside the row, under the grip, shows it.
+		await userEvent.hover(rows()[0], { position: { x: area.left - rows()[0].getBoundingClientRect().left + area.width / 2, y: area.height - 2 } });
+
+		expect(getComputedStyle(grip).visibility).toBe('visible');
+		expect(grip.getBoundingClientRect().right).toBeLessThanOrEqual(rows()[0].querySelector('.statement-predicate vscode-textfield')!.getBoundingClientRect().left);
+
+		const target = rows()[2].getBoundingClientRect();
+
+		await userEvent.dragAndDrop(grip, rows()[2], { targetPosition: { x: target.width / 2, y: target.height - 3 } });
+		await expect.poll(() => host.submitted.length).toBe(1);
+
+		expect(host.submitted[0].operations).toEqual([{ op: 'moveProperty', subject: TEST_SUBJECT, predicate: RDF.type, target: RDFS.subClassOf, placement: 'after' }]);
+	});
+
+	it('shows no focus ring on the grip of a row while the row is dragged', async () => {
+		await renderList();
+
+		const grip = rows()[2].querySelector<HTMLElement>('.row-grip')!;
+
+		// Reached by the keyboard, from the predicate field after it, the grip shows its ring.
+		await userEvent.click(rows()[2].querySelector('.statement-predicate vscode-textfield')!);
+		await userEvent.keyboard('{Shift>}{Tab}{/Shift}');
+
+		expect(document.activeElement).toBe(grip);
+		expect(getComputedStyle(grip).outlineStyle).toBe('solid');
+
+		await act(async () => {
+			fireEvent.dragStart(grip, { dataTransfer: new DataTransfer() });
+		});
+
+		expect(getComputedStyle(grip).outlineStyle).toBe('none');
+	});
+
+	it('gives the grip of a row no background under the pointer', async () => {
+		await renderList();
+
+		const grip = rows()[0].querySelector<HTMLElement>('.row-grip')!;
+
+		await userEvent.hover(rows()[0]);
+		await userEvent.hover(grip);
+
+		expect(getComputedStyle(grip).backgroundColor).toBe('rgba(0, 0, 0, 0)');
+	});
+
+	it('moves a row dropped over the label row of the card to the top, and one dropped over the link that adds a property to the bottom', async () => {
+		const { host, unmount } = await renderList(SAMPLE, [], RESOURCES, 1000, true);
+		const gripOf = (row: HTMLElement) => row.querySelector<HTMLElement>('.row-grip')!;
+		const label = rows()[0];
+
+		expect(label.getAttribute('aria-label')).toBe('Label');
+
+		await userEvent.hover(rows()[2]);
+		await userEvent.dragAndDrop(gripOf(rows()[2]), label, { targetPosition: { x: label.getBoundingClientRect().width / 2, y: 3 } });
+		await expect.poll(() => host.submitted.length).toBe(1);
+
+		expect(host.submitted[0].operations).toEqual([{ op: 'moveProperty', subject: TEST_SUBJECT, predicate: RDFS.subClassOf, target: RDF.type, placement: 'before' }]);
+
+		unmount();
+
+		const bottom = await renderList(SAMPLE, [], RESOURCES, 1000, true);
+
+		await userEvent.hover(rows()[1]);
+		await userEvent.dragAndDrop(gripOf(rows()[1]), document.querySelector<HTMLElement>('.statement-list-add')!);
+		await expect.poll(() => bottom.host.submitted.length).toBe(1);
+
+		expect(bottom.host.submitted[0].operations).toEqual([{ op: 'moveProperty', subject: TEST_SUBJECT, predicate: RDF.type, target: RDFS.subClassOf, placement: 'after' }]);
 	});
 });
