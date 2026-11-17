@@ -1781,6 +1781,35 @@ button.statement-predicate-tag:focus-visible {
 	min-width: 0;
 }
 
+/*
+ * A pill that can be moved is dragged by the pointer; while one is dragged, an accent bar in the gap
+ * before a pill, or after the last one, shows where it is dropped.
+ */
+.resource-values > [draggable="true"] {
+	position: relative;
+	cursor: grab;
+}
+
+.resource-values > .is-drop-before::before,
+.resource-values > .is-drop-after::after {
+	content: '';
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	width: 2px;
+	border-radius: 1px;
+	background: var(--vscode-focusBorder);
+	pointer-events: none;
+}
+
+.resource-values > .is-drop-before::before {
+	left: calc(var(--chip-gap, 6px) / -2 - 1px);
+}
+
+.resource-values > .is-drop-after::after {
+	right: calc(var(--chip-gap, 6px) / -2 - 1px);
+}
+
 .resource-values > .combobox {
 	flex: 1 1 160px;
 	min-width: 160px;

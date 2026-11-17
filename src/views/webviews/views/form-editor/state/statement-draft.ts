@@ -144,6 +144,26 @@ export class StatementDraft {
 	}
 
 	/**
+	 * Move a value to another place among the values, which changes their order only.
+	 * @param from The index of the value.
+	 * @param to The index the value has afterwards.
+	 * @returns The draft with the value moved, the draft itself where it stays where it is.
+	 */
+	withValueMoved(from: number, to: number): StatementDraft {
+		const value = this.values[from];
+
+		if (!value || from === to || to < 0 || to >= this.values.length) {
+			return this;
+		}
+
+		const values = this.values.filter((_, position) => position !== from);
+
+		values.splice(to, 0, value);
+
+		return new StatementDraft(this.predicate, values);
+	}
+
+	/**
 	 * Remove a value.
 	 * @param index The index of the value.
 	 * @returns The draft without the value.

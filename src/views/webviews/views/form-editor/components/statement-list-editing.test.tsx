@@ -139,6 +139,38 @@ describe('StatementList, edited', () => {
 		expect(host.submitted).toEqual([]);
 	});
 
+	it('moves a pill one place by Alt and an arrow, writes the new order and keeps the focus on the pill', async () => {
+		const { host } = renderList(withAnchors(createTestCardBody([createProperty('rdfs:subClassOf', [createIriView('ex:A', 'A'), createIriView('ex:B', 'B'), createIriView('ex:C', 'C')])])));
+		const pill = within(rows()[0]).getByText('C').closest<HTMLElement>('.value-pill')!;
+
+		pill.focus();
+		await act(async () => {
+			fireEvent.keyDown(pill, { key: 'ArrowLeft', altKey: true });
+		});
+
+		expect(host.submitted[0].operations).toEqual([{ op: 'setValues', subject: TEST_SUBJECT, predicate: RDFS.subClassOf, values: [{ kind: 'existing', anchor: 110 }, { kind: 'existing', anchor: 130 }, { kind: 'existing', anchor: 120 }] }]);
+		expect(document.activeElement?.textContent).toContain('C');
+	});
+
+	it('moves a pill dragged to another place among the pills, and shows where it is dropped', async () => {
+		const { host } = renderList(withAnchors(createTestCardBody([createProperty('rdfs:subClassOf', [createIriView('ex:A', 'A'), createIriView('ex:B', 'B'), createIriView('ex:C', 'C')])])));
+		const wrapperOf = (label: string) => within(rows()[0]).getByText(label).closest<HTMLElement>('[data-value-index]')!;
+		const dataTransfer = { effectAllowed: '', dropEffect: '', setData: () => undefined };
+
+		fireEvent.dragStart(wrapperOf('A'), { dataTransfer });
+		// Without a pointer position in jsdom, the drop goes into the gap before the pill under it.
+		fireEvent.dragOver(wrapperOf('C'), { dataTransfer });
+
+		expect(wrapperOf('C').classList.contains('is-drop-before')).toBe(true);
+
+		await act(async () => {
+			fireEvent.drop(wrapperOf('C'), { dataTransfer });
+		});
+
+		expect(host.submitted[0].operations).toEqual([{ op: 'setValues', subject: TEST_SUBJECT, predicate: RDFS.subClassOf, values: [{ kind: 'existing', anchor: 120 }, { kind: 'existing', anchor: 110 }, { kind: 'existing', anchor: 130 }] }]);
+		expect(rows()[0].querySelector('.is-drop-before, .is-drop-after')).toBeNull();
+	});
+
 	it('adds a typed resource and removes a pill', async () => {
 		const { host } = renderList();
 		const row = rows()[2];

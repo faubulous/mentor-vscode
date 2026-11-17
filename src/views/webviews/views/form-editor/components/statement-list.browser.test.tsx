@@ -5,7 +5,7 @@ import { OWL, RDF, RDFS, XSD } from '@faubulous/mentor-rdf';
 import { createEditingHostStub } from '@src/utilities/mocks/editing-host-fixtures';
 import { createResourceDataServiceStub } from '@src/utilities/mocks/resource-data-service-fixtures';
 import { createResourceListItem } from '@src/utilities/mocks/resource-list-item-fixtures';
-import { EXAMPLE_NAMESPACE, TEST_NAMESPACES, TEST_SUBJECT, createLiteralView, createProperty, createSampleCardBody, createTestCardBody, withAnchors } from '@src/utilities/mocks/statement-fixtures';
+import { EXAMPLE_NAMESPACE, TEST_NAMESPACES, TEST_SUBJECT, createIriView, createLiteralView, createProperty, createSampleCardBody, createTestCardBody, withAnchors } from '@src/utilities/mocks/statement-fixtures';
 import { ResourceCardBodyData } from '../form-editor-model';
 import { EditingController } from '../state/editing-controller';
 import { FormEditorContext } from '../state/form-editor-context';
@@ -392,5 +392,18 @@ describe('StatementList, edited in a browser', () => {
 		expect(xOf(rows()[0].querySelector('.value-pill'))).toBe(158);
 		expect(textOf(within(rows()[1]).getByLabelText('Value 1'))).toBe(159);
 		expect(xOf(document.querySelector('.statement-list-add'))).toBe(10);
+	});
+
+	it('moves a pill dragged onto the right half of another to after it, and writes the new order', async () => {
+		const { host } = await renderList(withAnchors(createTestCardBody([createProperty('rdfs:subClassOf', [createIriView('ex:A', 'A'), createIriView('ex:B', 'B'), createIriView('ex:C', 'C')])])));
+		const wrapperOf = (label: string) => within(document.body).getByText(label).closest<HTMLElement>('[data-value-index]')!;
+		const source = wrapperOf('A').getBoundingClientRect();
+		const target = wrapperOf('C').getBoundingClientRect();
+
+		// The pill is grabbed by its label: its ring turns into the remove button under the pointer.
+		await userEvent.dragAndDrop(wrapperOf('A'), wrapperOf('C'), { sourcePosition: { x: source.width - 3, y: source.height / 2 }, targetPosition: { x: target.width - 2, y: target.height / 2 } });
+		await expect.poll(() => host.submitted.length).toBe(1);
+
+		expect(host.submitted[0].operations).toEqual([{ op: 'setValues', subject: TEST_SUBJECT, predicate: RDFS.subClassOf, values: [{ kind: 'existing', anchor: 120 }, { kind: 'existing', anchor: 130 }, { kind: 'existing', anchor: 110 }] }]);
 	});
 });

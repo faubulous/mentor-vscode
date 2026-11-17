@@ -51,6 +51,17 @@ describe('StatementDraft', () => {
 		expect(stored.withLiteralTag(2, { language: 'de' })).toBe(stored);
 	});
 
+	it('moves a value to another place among the values, and changes nothing where it stays', () => {
+		const stored = StatementDraft.fromProperty(createLabelProperty());
+		const anchorsOf = (draft: StatementDraft) => draft.toStatementValues().map(value => value.kind === 'existing' ? value.anchor : undefined);
+
+		expect(anchorsOf(stored.withValueMoved(2, 0))).toEqual([130, 110, 120]);
+		expect(anchorsOf(stored.withValueMoved(0, 2))).toEqual([120, 130, 110]);
+		expect(stored.withValueMoved(2, 0).hasSameValues(stored)).toBe(false);
+		expect(stored.withValueMoved(1, 1)).toBe(stored);
+		expect(stored.withValueMoved(0, 3)).toBe(stored);
+	});
+
 	it('adds and removes values and takes a predicate', () => {
 		const draft = StatementDraft.EMPTY.withPredicate(RDFS.comment).withValueAppended(RdfDataFactory.literal('x'));
 
