@@ -15,6 +15,23 @@ import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 
 const NAMESPACES = Object.entries(TEST_NAMESPACES).map(([prefix, iri]) => ({ prefix, iri }));
 const SAMPLE = withAnchors(createSampleCardBody());
+/**
+ * The page of the tests has no context bar and no toolbar, which the title bar of a card stays under.
+ */
+const NO_BARS = { height: 'auto', overflow: 'visible', '--form-context-bar-height': '0px', '--form-toolbar-height': '0px' } as React.CSSProperties;
+
+/**
+ * The room before a gutter and the gap after it, as wide as the room above the chevron in the title
+ * bar.
+ */
+const GUTTER_ROOM = (36 - 28) / 2;
+
+/**
+ * Where the content of a card starts and ends, from the inside of its border: past the room before
+ * the gutter, the gutter and the gap after it.
+ */
+const CONTENT_EDGE = GUTTER_ROOM + 28 + GUTTER_ROOM;
+
 const RESOURCES = [createResourceListItem('Plant', { label: 'Plant' }), createResourceListItem('Shrub', { label: 'Shrub' })];
 
 /**
@@ -29,7 +46,7 @@ async function renderList(cardBody: ResourceCardBodyData = SAMPLE, others: Resou
 	const editing = new EditingController(host);
 	const dataService = createResourceDataServiceStub([cardBody, ...others]);
 	const ui = (current: ResourceCardBodyData) => (
-		<div className="form-editor" style={{ height: 'auto', overflow: 'visible' }}>
+		<div className="form-editor" style={NO_BARS}>
 			<FormEditorContext.Provider value={{ readOnly: false, editing, namespaces: NAMESPACES, languageTags: {}, resources, labelPredicates: labelRow ? [RdfDataFactory.namedNode(RDFS.label)] : undefined }}>
 				<article className="resource-card is-expanded" style={{ width }}>
 					<div className="resource-card-body">
@@ -184,17 +201,50 @@ describe('StatementList, edited in a browser', () => {
 		expect(host.submitted).toEqual([]);
 	});
 
-	it('draws the box of a field only on intent', async () => {
+	it('draws no box around a field, but an underline on the line of its row on intent, quiet when pointed at and in the accent with the focus, moving nothing', async () => {
 		await renderList();
 
-		const field = within(rows()[1]).getByLabelText('Value 1');
-		const border = (): string => getComputedStyle(field).getPropertyValue('--vscode-settings-textInputBorder').trim();
+		const row = rows()[1];
+		const field = within(row).getByLabelText('Value 1');
+		const input = field.shadowRoot!.querySelector('input')!;
+		const underline = (): string => getComputedStyle(field).getPropertyValue('--underline-accent').trim() || getComputedStyle(field).getPropertyValue('--underline-color').trim();
+		const place = (): string => JSON.stringify(input.getBoundingClientRect());
+		const atRest = place();
 
-		expect(border()).toBe('transparent');
+		expect(getComputedStyle(field).getPropertyValue('--vscode-settings-textInputBorder').trim()).toBe('transparent');
+		expect(underline()).toBe('transparent');
+		// The field reaches down to the line of its row, so its underline lies on it.
+		expect(Math.round(field.getBoundingClientRect().bottom)).toBe(Math.round(row.querySelector('.statement-cells')!.getBoundingClientRect().bottom));
 
 		await userEvent.hover(field);
 
-		expect(border()).not.toBe('transparent');
+		expect(underline()).not.toBe('transparent');
+		expect(place()).toBe(atRest);
+
+		await userEvent.click(field);
+
+		expect(underline()).toBe(getComputedStyle(field).getPropertyValue('--form-accent').trim());
+		expect(getComputedStyle(field).getPropertyValue('--underline-width').trim()).toBe('2px');
+		expect(place()).toBe(atRest);
+	});
+
+	it('runs the line of a row from content edge to content edge, with the grip and the menu in the gutters beside it', async () => {
+		await renderList();
+
+		const card = document.querySelector<HTMLElement>('.resource-card')!;
+		const left = card.getBoundingClientRect().left + card.clientLeft;
+		const right = card.getBoundingClientRect().right - card.clientLeft;
+		const cells = rows()[0].querySelector('.statement-cells')!.getBoundingClientRect();
+		const grip = rows()[0].querySelector('.row-grip')!.getBoundingClientRect();
+		const menu = rows()[0].querySelector('.row-menu')!.getBoundingClientRect();
+
+		expect(Math.round(cells.left - left)).toBe(CONTENT_EDGE);
+		expect(Math.round(right - cells.right)).toBe(CONTENT_EDGE);
+		// The grip stands as far from the border as from the content, and the menu likewise on the other side.
+		expect(Math.round(grip.left - left)).toBe(GUTTER_ROOM);
+		expect(Math.round(cells.left - grip.right)).toBe(GUTTER_ROOM);
+		expect(Math.round(menu.left - cells.right)).toBe(GUTTER_ROOM);
+		expect(Math.round(right - menu.right)).toBe(GUTTER_ROOM);
 	});
 
 	it('leaves the focus where the user put it when the edit of the row left is applied', async () => {
@@ -334,8 +384,9 @@ describe('StatementList, edited in a browser', () => {
 
 		expect(centreOf(within(box).getByRole('button', { name: 'Expand' }))).toBe(centreOf(within(box).getByRole('button', { name: 'More actions' })));
 		expect(within(box).queryByRole('button', { name: 'Choose type' })).toBeNull();
-		expect(box.querySelector('.statement-line.is-card-header > .statement-predicate')).toBeNull();
-		expect(Math.round(box.querySelector('.nested-card-summary')!.getBoundingClientRect().left - box.getBoundingClientRect().left)).toBe(42 + 1);
+		expect(box.querySelector('.statement-line.is-card-header > .statement-cells > .statement-predicate')).toBeNull();
+		// Past the padding of the box, its gutter and the gap after it, inside its border.
+		expect(Math.round(box.querySelector('.nested-card-summary')!.getBoundingClientRect().left - box.getBoundingClientRect().left)).toBe(1 + CONTENT_EDGE);
 	});
 
 	it('gives every row of one line the height of the row token of a wide card, whether it holds a field or pills', async () => {
@@ -344,7 +395,7 @@ describe('StatementList, edited in a browser', () => {
 		expect(rows().map(row => Math.round(row.getBoundingClientRect().height))).toEqual([32, 32, 32]);
 	});
 
-	it('starts the labels of a narrow card where the text of its IRI starts and the values after a label column as wide as the longest label, at least the label token, and puts the tag of a literal under its label', async () => {
+	it('stacks the predicate of a row of a narrow card above its values, both at the content edge, where the text of its IRI starts', async () => {
 		await renderList(SAMPLE, [], RESOURCES, 500);
 
 		const card = document.querySelector<HTMLElement>('.resource-card')!;
@@ -352,16 +403,11 @@ describe('StatementList, edited in a browser', () => {
 		const xOf = (element: Element | null): number => Math.round(element!.getBoundingClientRect().left - left);
 		const label = rows()[1];
 
-		const column = Math.round(rows()[2].querySelector('.statement-predicate')!.getBoundingClientRect().width);
-		const widest = Math.max(...rows().map(row => Math.ceil(row.querySelector('.statement-predicate-sizer')!.scrollWidth)));
-
-		// Past the column of the grips, after the inset of the text of a field.
-		expect(xOf(rows()[0])).toBe(16 + 5);
-		expect(xOf(rows()[0])).toBe(iriTextOf(card));
-		expect(column).toBe(Math.max(88, widest));
-		expect(xOf(rows()[2].querySelector('.statement-values'))).toBe(21 + column + 12);
-		expect(getComputedStyle(within(label).getByText('en', { selector: '.literal-field-tag' })).display).toBe('none');
-		expect(within(label).getByRole('button', { name: 'en' }).getBoundingClientRect().top).toBeGreaterThan(label.querySelector('.statement-predicate vscode-textfield')!.getBoundingClientRect().bottom - 1);
+		expect(xOf(rows()[0].querySelector('.statement-cells'))).toBe(CONTENT_EDGE);
+		expect(iriTextOf(card)).toBe(CONTENT_EDGE);
+		expect(xOf(rows()[2].querySelector('.statement-values'))).toBe(CONTENT_EDGE);
+		expect(rows()[2].querySelector('.statement-values')!.getBoundingClientRect().top).toBeGreaterThanOrEqual(rows()[2].querySelector('.statement-predicate')!.getBoundingClientRect().bottom - 1);
+		expect(getComputedStyle(within(label).getByText('en', { selector: '.literal-field-tag' })).display).not.toBe('none');
 	});
 
 	it.each([1000, 500])('lets the values of a row run to the inset of the row and a nested card to the inset of its row, in a card %ipx wide', async width => {
@@ -380,17 +426,15 @@ describe('StatementList, edited in a browser', () => {
 
 		const labelRow = within(card).getAllByRole('group', { name: 'rdfs:label' }).find(row => !box.contains(row))!;
 
-		const inset = 10;
-		const textStart = 21;
 
-		// The values of a row end where the room its actions keep begins, in the card and in the nested card.
-		expect(rightOf(card) - card.clientLeft - rightOf(labelRow.querySelector('.statement-values')!)).toBe(inset + 44);
-		expect(rightOf(box) - rightOf(within(box).getByRole('group', { name: 'rdfs:label' }).querySelector('.statement-values')!)).toBe(45);
-		// A narrow card gives the nested card the whole row from the start of the text of the rows, a wide one the value column.
-		expect(leftOf(box) - leftOf(card) - card.clientLeft).toBe(width < 560 ? textStart : textStart + 120 + 24);
+		// The values of a row end at the content edge, in the card and in the box, inside its border.
+		expect(rightOf(card) - card.clientLeft - rightOf(labelRow.querySelector('.statement-values')!)).toBe(CONTENT_EDGE);
+		expect(rightOf(box) - rightOf(within(box).getByRole('group', { name: 'rdfs:label' }).querySelector('.statement-values')!)).toBe(1 + CONTENT_EDGE);
+		// A narrow card gives the box the whole row from the content edge, a wide one the value column.
+		expect(leftOf(box) - leftOf(card) - card.clientLeft).toBe(width < 560 ? CONTENT_EDGE : CONTENT_EDGE + 160 + 24);
 	});
 
-	it('puts the text of the predicates of a wide card where the text of its IRI starts, past the column of the grips, and the pills and the text of a literal in the value column', async () => {
+	it('puts the text of the predicates of a wide card at the content edge, where the text of its IRI starts, and every kind of value at the edge of the value column', async () => {
 		await renderList();
 
 		// Measured from the inside of the border of the card.
@@ -404,12 +448,12 @@ describe('StatementList, edited in a browser', () => {
 			return Math.round(xOf(input) + parseFloat(getComputedStyle(input).paddingLeft));
 		};
 
-		// Past the column of the grips, after the inset of the text of a field.
-		expect(rows().map(row => textOf(row.querySelector('.statement-predicate vscode-textfield')))).toEqual([21, 21, 21]);
-		expect(iriTextOf(card)).toBe(21);
-		expect(xOf(rows()[0].querySelector('.value-pill'))).toBe(169);
-		expect(textOf(within(rows()[1]).getByLabelText('Value 1'))).toBe(170);
-		expect(xOf(document.querySelector('.statement-list-add'))).toBe(21);
+		// The values past the predicate column and the gap after it.
+		expect(rows().map(row => textOf(row.querySelector('.statement-predicate vscode-textfield')))).toEqual([CONTENT_EDGE, CONTENT_EDGE, CONTENT_EDGE]);
+		expect(iriTextOf(card)).toBe(CONTENT_EDGE);
+		expect(xOf(rows()[0].querySelector('.value-pill'))).toBe(CONTENT_EDGE + 160 + 24);
+		expect(textOf(within(rows()[1]).getByLabelText('Value 1'))).toBe(CONTENT_EDGE + 160 + 24);
+		expect(xOf(document.querySelector('.statement-list-add'))).toBe(CONTENT_EDGE);
 	});
 
 	it('moves a pill dragged onto the right half of another to after it, and writes the new order', async () => {
@@ -436,7 +480,8 @@ describe('StatementList, edited in a browser', () => {
 		await userEvent.hover(rows()[0], { position: { x: area.left - rows()[0].getBoundingClientRect().left + area.width / 2, y: area.height - 2 } });
 
 		expect(getComputedStyle(grip).visibility).toBe('visible');
-		expect(grip.getBoundingClientRect().right).toBeLessThanOrEqual(rows()[0].querySelector('.statement-predicate vscode-textfield')!.getBoundingClientRect().left);
+		// The box of the predicate field reaches out by the inset of its text; its underline starts at the content edge.
+		expect(grip.getBoundingClientRect().right).toBeLessThanOrEqual(rows()[0].querySelector('.statement-cells')!.getBoundingClientRect().left);
 
 		const target = rows()[2].getBoundingClientRect();
 
@@ -465,15 +510,18 @@ describe('StatementList, edited in a browser', () => {
 		expect(getComputedStyle(grip).outlineStyle).toBe('none');
 	});
 
-	it('gives the grip of a row no background under the pointer', async () => {
+	it('tints the grip of a row under the pointer, as a button', async () => {
 		await renderList();
 
 		const grip = rows()[0].querySelector<HTMLElement>('.row-grip')!;
 
 		await userEvent.hover(rows()[0]);
-		await userEvent.hover(grip);
 
 		expect(getComputedStyle(grip).backgroundColor).toBe('rgba(0, 0, 0, 0)');
+
+		await userEvent.hover(grip);
+
+		expect(getComputedStyle(grip).backgroundColor).not.toBe('rgba(0, 0, 0, 0)');
 	});
 
 	it('moves a row dropped over the label row of the card to the top, and one dropped over the link that adds a property to the bottom', async () => {
@@ -498,5 +546,46 @@ describe('StatementList, edited in a browser', () => {
 		await expect.poll(() => bottom.host.submitted.length).toBe(1);
 
 		expect(bottom.host.submitted[0].operations).toEqual([{ op: 'moveProperty', subject: TEST_SUBJECT, predicate: RDF.type, target: RDFS.subClassOf, placement: 'after' }]);
+	});
+
+	it('gives the label row the height of every row, its fields reaching down to its line, the label in the title size beside the predicate', async () => {
+		await renderList(SAMPLE, [], RESOURCES, 1000, true);
+
+		const row = rows()[0];
+		const cells = row.querySelector('.statement-cells')!.getBoundingClientRect();
+		const fields = Array.from(row.querySelectorAll<HTMLElement>('vscode-textfield'));
+		const centreOf = (field: HTMLElement): number => {
+			const input = field.shadowRoot!.querySelector('input')!.getBoundingClientRect();
+
+			return Math.round(input.top + input.height / 2);
+		};
+
+		expect(Math.round(row.getBoundingClientRect().height)).toBe(32);
+		expect(fields.map(field => Math.round(field.getBoundingClientRect().bottom))).toEqual([Math.round(cells.bottom), Math.round(cells.bottom)]);
+		expect(centreOf(fields[1])).toBe(centreOf(fields[0]));
+	});
+
+	it('moves the grip, the predicate and the menu of a row that starts with a collapsed box down to the middle of the box', async () => {
+		const node = RdfDataFactory.blankNode('b1');
+		const cardBody = withAnchors(createTestCardBody([createProperty('rdfs:comment', [{ term: node, editable: true, nested: { term: node, propertyCount: 1 } }])]));
+		const nodeCardBody = withAnchors({ subject: node, predicates: [createProperty('rdfs:label', [createLiteralView('Leaf')])] });
+
+		await renderList(cardBody, [nodeCardBody]);
+
+		const row = rows()[0];
+		const centreOf = (element: Element): number => Math.round(element.getBoundingClientRect().top + element.getBoundingClientRect().height / 2);
+		const box = row.querySelector('.resource-card.is-nested')!;
+		const centre = centreOf(row.querySelector('.statement-predicate vscode-textfield')!);
+
+		// The box after the space above the row, the space and the line under it, and Add value a row apart.
+		// The chevron of the box has as much room above and under it as beside it.
+		const chevron = box.querySelector('.nested-card-chevron')!.getBoundingClientRect();
+		const bounds = box.getBoundingClientRect();
+
+		expect(Math.round(chevron.top - bounds.top - 1)).toBe(Math.round(chevron.left - bounds.left - 1));
+		expect(Math.round(bounds.bottom - 1 - chevron.bottom)).toBe(Math.round(chevron.left - bounds.left - 1));
+		expect(Math.round(bounds.height)).toBe(36);
+		expect(Math.round(row.getBoundingClientRect().height * 2) / 2).toBe(2.5 + 36 + 2.5 + 1 + 6 + 26);
+		expect([centreOf(box), centreOf(row.querySelector('.row-grip')!), centreOf(row.querySelector('.row-menu')!)]).toEqual([centre, centre, centre]);
 	});
 });

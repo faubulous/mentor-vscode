@@ -32,10 +32,9 @@ export interface RowGripProps {
 }
 
 /**
- * The grip of a row, shown before the row while the pointer or the focus is in the row or in the
- * area of the grip beside it:
- * dragging it moves the row among the rows of its card, and ↑ and ↓ on the focused grip move the
- * row one place.
+ * The grip of a row, shown in the gutter before the row while the pointer or the focus is in the
+ * row: dragging it moves the row among the rows of its card, and ↑ and ↓ on the focused grip move
+ * the row one place.
  * @param props The row and how it moves.
  * @returns The grip.
  */
@@ -53,19 +52,17 @@ export function RowGrip({ label, onMoveUp, onMoveDown, onDragStart, onDragEnd }:
 	};
 
 	return (
-		<span className="row-grip-area">
-			<button
-				type="button"
-				className="icon-button row-grip"
-				aria-label={`Move ${label}`}
-				title="Drag to move, or press ↑ or ↓"
-				draggable
-				onDragStart={onDragStart}
-				onDragEnd={onDragEnd}
-				onKeyDown={handleKeyDown}
-			>
-				<vscode-icon name="gripper" size={14}></vscode-icon>
-			</button>
-		</span>
+		<button
+			type="button"
+			className="icon-button row-grip"
+			aria-label={`Move ${label}`}
+			title="Drag to move, or press ↑ or ↓"
+			draggable
+			onDragStart={onDragStart}
+			onDragEnd={onDragEnd}
+			onKeyDown={handleKeyDown}
+		>
+			<vscode-icon name="gripper" size={14}></vscode-icon>
+		</button>
 	);
 }

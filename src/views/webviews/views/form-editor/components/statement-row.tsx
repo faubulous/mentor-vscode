@@ -235,33 +235,37 @@ export function StatementRow({ property, editor, services, autoFocus = false, he
 			onBlur={edited ? handleBlur : undefined}
 			onContextMenu={openOnContextMenu}
 		>
-			{reorder?.grip && <RowGrip label={label} {...reorder.grip} />}
-			{header?.kind === 'type' && <span className="statement-gutter">{_chevron(header)}</span>}
-			{header
-				? !typeless && _headerPredicateOf(header, edited, label)
-				: (
-					<span className={`statement-predicate${_isIriLabel(predicateView, label) ? ' is-iri' : ''}`} {...getResourceTooltipAttributes(edited ? undefined : predicateView?.term)}>
-						{edited ? <PredicateField editor={edited.editor} state={edited.state} label={label} autoFocus={autoFocus} /> : <span className="statement-predicate-text">{label}</span>}
-						{wholes.length > 0 && <span className="statement-predicate-count">{wholes.length}</span>}
-						<PredicateTags
-							tags={_tagsOf(literals, edited, languageTags, namespaces)}
-							onOpen={edited ? index => rowRef.current?.querySelector<HTMLElement>(`[data-value-index="${index}"] .literal-field-tag`)?.click() : undefined}
-						/>
-					</span>
-				)}
-			<span className="statement-values">
-				{literals.map(entry => <StatementValueCell key={entry.index} {...entry} edited={edited} {...context} />)}
-				{edited && !(folded && resources.length === 0) ? !addLink && !titled && _resourceBox(edited, resources, property, { header: header?.kind, autoFocus: addingValue, label }) : _resourcePills(resources, context)}
-				{wholes.map(entry => <StatementValueCell key={entry.index} {...entry} edited={edited} {...context} />)}
-				{addLink && <button type="button" className="add-link statement-value-add" onClick={() => setAddingValue(true)}>{addLink}</button>}
-				{header?.kind === 'type' && header.collapsed && _collapsedSummaryOf(header)}
-				{header?.kind === 'type' && header.caption && <span className="nested-card-caption">{header.caption.join('\n')}</span>}
-				{property && <PropertyComments property={property} />}
+			<span className="row-gutter is-start">
+				{reorder?.grip && <RowGrip label={label} {...reorder.grip} />}
+				{header?.kind === 'type' && _chevron(header)}
 			</span>
-			<span className="statement-actions">
+			<div className="statement-cells">
+				{header
+					? !typeless && _headerPredicateOf(header, edited, label)
+					: (
+						<span className={`statement-predicate${_isIriLabel(predicateView, label) ? ' is-iri' : ''}`} {...getResourceTooltipAttributes(edited ? undefined : predicateView?.term)}>
+							{edited ? <PredicateField editor={edited.editor} state={edited.state} label={label} autoFocus={autoFocus} /> : <span className="statement-predicate-text">{label}</span>}
+							{wholes.length > 0 && <span className="statement-predicate-count">{wholes.length}</span>}
+							<PredicateTags
+								tags={_tagsOf(literals, edited, languageTags, namespaces)}
+								onOpen={edited ? index => rowRef.current?.querySelector<HTMLElement>(`[data-value-index="${index}"] .literal-field-tag`)?.click() : undefined}
+							/>
+						</span>
+					)}
+				<span className="statement-values">
+					{literals.map(entry => <StatementValueCell key={entry.index} {...entry} edited={edited} {...context} />)}
+					{edited && !(folded && resources.length === 0) ? !addLink && !titled && _resourceBox(edited, resources, property, { header: header?.kind, autoFocus: addingValue, label }) : _resourcePills(resources, context)}
+					{wholes.map(entry => <StatementValueCell key={entry.index} {...entry} edited={edited} {...context} />)}
+					{addLink && <button type="button" className="add-link statement-value-add" onClick={() => setAddingValue(true)}>{addLink}</button>}
+					{header?.kind === 'type' && header.collapsed && _collapsedSummaryOf(header)}
+					{header?.kind === 'type' && header.caption && <span className="nested-card-caption">{header.caption.join('\n')}</span>}
+					{property && <PropertyComments property={property} />}
+				</span>
+				{error && <RowError message={error} onDismiss={state?.rejection ? () => editor?.dismissRejection() : undefined} />}
+			</div>
+			<span className="row-gutter is-end statement-actions">
 				{!header && _rowMenuOf(predicateView, label, cardPins, pinScopes, edited, menuRef)}
 			</span>
-			{error && <RowError message={error} onDismiss={state?.rejection ? () => editor?.dismissRejection() : undefined} />}
 		</div>
 	);
 }
