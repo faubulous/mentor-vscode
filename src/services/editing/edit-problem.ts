@@ -66,6 +66,18 @@ export type EditProblem =
 	 */
 	| { kind: 'nodesNotSupported' }
 	/**
+	 * The syntax of the document has no prefix declarations.
+	 */
+	| { kind: 'prefixesNotSupported' }
+	/**
+	 * A prefix is not valid.
+	 */
+	| { kind: 'invalidPrefix'; prefix: string }
+	/**
+	 * The document declares the prefix for another namespace.
+	 */
+	| { kind: 'prefixTaken'; prefix: string }
+	/**
 	 * An IRI is empty.
 	 */
 	| { kind: 'emptyIri' }

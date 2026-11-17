@@ -144,3 +144,37 @@ export function getIriFromText(prefixes: Readonly<PrefixMap>, text: string): str
 	return getIriFromPrefixedName(prefixes, text);
 }
 
+
+/**
+ * The keyword a prefix declaration starts with: `@prefix` in the Turtle form, which ends with a
+ * period, or `PREFIX` in the SPARQL form, written in either case.
+ */
+export type PrefixDeclarationKeyword = '@prefix' | 'PREFIX' | 'prefix';
+
+/**
+ * A prefix as it can be declared (`PN_PREFIX`, ASCII letters only): empty, or a letter, then
+ * letters, digits, `_`, `-` and `.`, not ending in `.`.
+ */
+const PREFIX = /^([A-Za-z]([\w.-]*[\w-])?)?$/;
+
+/**
+ * Indicate whether a prefix can be declared as it is.
+ * @param prefix The prefix, without the colon.
+ * @returns `true` for a valid prefix.
+ */
+export function isValidPrefix(prefix: string): boolean {
+	return PREFIX.test(prefix);
+}
+
+/**
+ * Write the declaration of a prefix.
+ * @param keyword The keyword the declaration starts with.
+ * @param prefix The prefix, without the colon.
+ * @param namespaceIri The namespace IRI.
+ * @returns The declaration, without a line break.
+ */
+export function getPrefixDeclaration(keyword: PrefixDeclarationKeyword, prefix: string, namespaceIri: string): string {
+	const declaration = `${keyword} ${prefix}: <${namespaceIri}>`;
+
+	return keyword === '@prefix' ? `${declaration} .` : declaration;
+}

@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { RdfToken, TokenType } from '@faubulous/mentor-rdf-parsers';
 import { TurtleDocument } from '@src/languages';
+import { getPrefixDeclaration } from '@src/utilities/prefixed-name';
 import { TurtlePrefixDefinitionService } from '@src/languages/turtle/services/turtle-prefix-definition-service';
 
 /**
@@ -14,6 +15,6 @@ export class SparqlPrefixDefinitionService extends TurtlePrefixDefinitionService
 	}
 
 	protected override getPrefixDefinition(_tokenType: TokenType, upperCase: boolean, prefix: string, namespaceIri: string): string {
-		return `${upperCase ? 'PREFIX' : 'prefix'} ${prefix}: <${namespaceIri}>`;
+		return getPrefixDeclaration(upperCase ? 'PREFIX' : 'prefix', prefix, namespaceIri);
 	}
 }
