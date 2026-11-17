@@ -30,6 +30,8 @@ export function getEditProblemMessage(problem: EditProblem): string {
 			return 'Values written in separate statements keep their order.';
 		case 'commentsBetweenValues':
 			return 'Values with comments between them cannot change their order.';
+		case 'separateBlocks':
+			return 'Properties written in separate blocks of statements keep their order.';
 		case 'statementNotEnded':
 			return 'The statement is not ended by a period.';
 		case 'listsNotSupported':

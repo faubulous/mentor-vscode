@@ -1,8 +1,9 @@
 import { BlankNode, NamedNode } from '@rdfjs/types';
 import { RDF } from '@faubulous/mentor-rdf/ontologies';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { PinnedProperty, ResourceCardBodyData, TermData } from '../form-editor-model';
 import { useNestedCollapse } from '../hooks/use-nested-collapse';
+import { useRowReorder } from '../hooks/use-row-reorder';
 import { useStatementRows } from '../hooks/use-statement-rows';
 import { StatementServices, useStatementServices } from '../hooks/use-statement-services';
 import { IResourceDataService } from '../services/resource-data-service.interface';
@@ -66,8 +67,9 @@ const TYPE_ROW: LeadingRow = { predicates: [RDF.type], predicateText: 'a' };
  * card asks for it: the label predicate and the label as the title of the card. The nested card of
  * a blank node is led by a header: a chevron that collapses the card to the header, which then
  * names the other properties, the type of the node, which asks to choose one while there is none,
- * and the comments of the node. The ⋮ menu of a row pins its property and removes it. The
- * title bar of the card collapses and expands the nested cards all at once.
+ * and the comments of the node. The ⋮ menu of a row pins its property and removes it, and its grip
+ * moves it among the other rows, while the leading row stays first. The title bar of the card
+ * collapses and expands the nested cards all at once.
  * @param props The resource and where the list stands.
  * @returns The rows.
  */
@@ -95,6 +97,8 @@ export function StatementList({ cardBody, stale = false, dataService, depth, vis
 		? { kind: 'type', collapsed: collapsed.value, summary: _summaryOf(rows), pinned: _pinnedOf(rows, pins), caption: comments, onToggle: collapsed.toggle }
 		: labelRow ? { kind: 'label' } : undefined;
 	const adding = rows.some(entry => entry.editor?.isOpen === true);
+	const listRef = useRef<HTMLDivElement>(null);
+	const { reorderOf, listDrop } = useRowReorder(rows, listRef);
 
 	const handleAddProperty = (): void => {
 		setFocusedRowId(addRow?.()?.id);
@@ -108,6 +112,7 @@ export function StatementList({ cardBody, stale = false, dataService, depth, vis
 			services={services}
 			autoFocus={entry?.editor !== undefined && entry.editor.id === focusedRowId}
 			header={rowHeader}
+			reorder={entry && !rowHeader ? reorderOf(entry) : undefined}
 			dataService={dataService}
 			depth={depth}
 			visited={visited}
@@ -115,7 +120,7 @@ export function StatementList({ cardBody, stale = false, dataService, depth, vis
 	);
 
 	return (
-		<div className={`statement-list${editable ? ' is-editable' : ''}${collapsed.value ? ' is-collapsed' : ''}`}>
+		<div ref={listRef} className={`statement-list${editable ? ' is-editable' : ''}${collapsed.value ? ' is-collapsed' : ''}`} {...listDrop}>
 			{header && rowOf(leadingEntry, header)}
 			{!collapsed.value && rows.map(entry => rowOf(entry))}
 			{!collapsed.value && addRow && !adding && (
