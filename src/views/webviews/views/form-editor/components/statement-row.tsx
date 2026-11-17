@@ -462,7 +462,7 @@ function _addLinkOf(edited: EditedRow, header: RowHeader | undefined, literals: 
 /**
  * The box of the resources of an edited row, with the input of the next value after the pills. In a
  * row without pills it stands after the nested cards of blank nodes, and in a row with values it
- * shows while the focus is in the row. The type of a blank node offers the classes of the document
+ * shows while the focus is in the row, or at once where Add value opened it. The type of a blank node offers the classes of the document
  * and asks to choose one while there is none. `[` typed into the empty input starts a new blank
  * node where the predicate takes resources.
  * @param edited The row.
@@ -477,7 +477,8 @@ function _resourceBox(edited: EditedRow, resources: readonly ShownValue[], prope
 	const isType = header === 'type';
 	const { editor, state, services } = edited;
 	const range = _rangeOf(header, property);
-	const onIntent = resources.length === 0 && state.draft.values.length > 0 && state.pendingText === '';
+	// The input Add value opens shows at once: hidden until the row has the focus, it could not take it.
+	const onIntent = !autoFocus && resources.length === 0 && state.draft.values.length > 0 && state.pendingText === '';
 	const classes = ['statement-value', 'is-adder', ...(resources.length === 0 ? ['is-after-values'] : []), ...(onIntent ? ['is-on-intent'] : [])];
 
 	return (
