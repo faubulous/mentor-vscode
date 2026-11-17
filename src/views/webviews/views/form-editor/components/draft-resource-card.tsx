@@ -56,26 +56,28 @@ export function DraftResourceCard({ type, index, edited }: DraftResourceCardProp
 		<div className="resource-card is-nested is-draft" data-value-index={index}>
 			<div className="statement-list is-editable">
 				<div className="nested-card-header" role="group" aria-label="New blank node">
-					<span className="statement-gutter"></span>
-					<span className="statement-predicate" {...getResourceTooltipAttributes(RdfDataFactory.namedNode(RDF.type))}>type</span>
-					<span className="statement-values">
-						<span className="statement-value is-adder">
-							<ResourceValues
-								resources={types}
-								documentResources={services.classes}
-								range="resource"
-								pendingText={text}
-								services={services}
-								placeholder="Choose type"
-								onPendingInput={setText}
-								onPick={term => term.termType === 'NamedNode' && choose(term)}
-								onCreate={handleCreate}
-								onRemove={() => editor.setNodeType(index, undefined)}
-								autoFocus
-							/>
+					<span className="row-gutter is-start"></span>
+					<div className="statement-cells">
+						<span className="statement-predicate" {...getResourceTooltipAttributes(RdfDataFactory.namedNode(RDF.type))}>type</span>
+						<span className="statement-values">
+							<span className="statement-value is-adder">
+								<ResourceValues
+									resources={types}
+									documentResources={services.classes}
+									range="resource"
+									pendingText={text}
+									services={services}
+									placeholder="Choose type"
+									onPendingInput={setText}
+									onPick={term => term.termType === 'NamedNode' && choose(term)}
+									onCreate={handleCreate}
+									onRemove={() => editor.setNodeType(index, undefined)}
+									autoFocus
+								/>
+							</span>
 						</span>
-					</span>
-					<span className="statement-actions">
+					</div>
+					<span className="row-gutter is-end statement-actions">
 						<button type="button" className="statement-row-remove" aria-label="Remove new blank node" title="Remove" onClick={() => editor.removeValue(index)}>
 							<vscode-icon name="close" size={12}></vscode-icon>
 						</button>

@@ -323,5 +323,5 @@ function _predicateOf(entry: StatementRowEntry): string | undefined {
 function _gripOf(list: HTMLElement | null, predicate: string): HTMLElement | null | undefined {
 	const row = Array.from(list?.children ?? []).find(child => child.getAttribute('data-predicate') === predicate);
 
-	return row?.querySelector<HTMLElement>(':scope > .row-grip-area > .row-grip');
+	return row?.querySelector<HTMLElement>(':scope > .row-gutter > .row-grip');
 }

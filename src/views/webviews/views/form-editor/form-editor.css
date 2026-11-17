@@ -25,6 +25,8 @@ body {
 	--form-field-height: 26px;
 	/* The inset of the text in a field, which plain text in its place takes too, so the two line up. */
 	--form-field-text-inset: 5px;
+	/* The accent of the focus, which fields hide from their own box and draw as their underline. */
+	--form-accent: var(--vscode-focusBorder);
 	/* The corners: pills and chips take the middle radius of the webviews, fields the large one, icon buttons and floating widgets their own. */
 	--form-radius-pill: var(--mentor-radius-md);
 	--form-radius-field: var(--mentor-radius-lg);
@@ -455,56 +457,64 @@ body {
 /* ---------- Resource cards ---------- */
 
 /*
- * Each card is a bordered box with square corners on a surface a step above the editor, and lays
+ * Each card is a bordered box with rounded corners on a surface a step above the editor, and lays
  * itself out by its own width in one of three densities: wide in the form editor, narrow in a
- * side panel, and the tooltip density a host asks for with `data-density`. The tokens of the
- * density size the title bar, the rows, the label column, the chips and the title.
- * The text of the rows starts past the column of the grips of the rows, and the IRI of an expanded
- * card starts with it.
+ * side panel, and the tooltip density a host asks for with `data-density`. Everything hangs off
+ * one grid that is the same on both sides: a gutter on each side holds the buttons of a row, the
+ * chevron and the menu of the title bar, and the content between them starts at the content edge,
+ * where the predicates, the title and the IRI start.
  */
 .resource-card {
 	container: card / inline-size;
-	--card-head-h: 36px;
-	--card-head-pad-x: 8px;
-	--card-head-gap: 6px;
-	/* The room at the edges of the card: the label row of a collapsed card starts under the left edge of the kind icon, which stands under the chevron, and the rows end here. */
-	--card-inset: 10px;
-	--card-chevron: 20px;
-	/* The column before the rows that holds their grips, as wide as a grip. */
-	--row-grip: 16px;
-	/* Where the text of the rows starts: past the column of the grips, after the inset of the text of a field. */
-	--row-text-start: calc(var(--row-grip) + var(--form-field-text-inset));
-	--row-min-h: 32px;
-	--row-pad-y: 6px;
-	--label-min: 120px;
+	--card-radius: 6px;
+	/* The room before the gutters, as wide as the room above the buttons in them in the title bar. */
+	--card-pad-x: calc((var(--head-h) - var(--gutter)) / 2);
+	--card-pad-y: 6px;
+	--head-h: 36px;
+	--gutter: 28px;
+	/* The gap after a gutter is as wide as the room before it, so its button stands midway between the border and the content. */
+	--gutter-gap: var(--card-pad-x);
+	--content-edge: calc(var(--card-pad-x) + var(--gutter) + var(--gutter-gap));
+	--predicate-column: 160px;
 	--col-gap: 24px;
+	--line-box: 26px;
+	/* A row of one line, its line under it included, and the space above and under the line box that makes it so tall. */
+	--row-min-h: 32px;
+	--row-pad: calc((var(--row-min-h) - var(--line-box) - 1px) / 2);
+	--title-size: 17px;
+	--tag-size: 0.84em;
+	--meta-size: 0.84em;
 	--chip-h: 22px;
-	--chip-pad-x: 8px;
+	--chip-pad-start: 8px;
+	--chip-pad-end: 8px;
 	--chip-gap: 6px;
-	--icon-btn: 24px;
-	--title-size: 15px;
+	--ring-size: 8px;
+	/*
+	 * A collapsed box of a blank node, with as much room above and under its chevron as beside it,
+	 * and how far a row that starts with one moves its first line down to the middle of the box.
+	 */
+	--nested-box-h: calc(var(--line-box) + 2 * var(--card-pad-x) + 2px);
+	--box-line-offset: calc((var(--nested-box-h) - var(--line-box)) / 2);
+	--icon-btn: 28px;
 	--clamp: 3;
-	/* The room at the end of a row that its actions overlay: the pin of a pinned property and the ⋮ menu. */
-	--row-actions: 44px;
-	/* The padding that makes a row of one field as tall as a row, its line under it included. */
-	--row-field-pad: calc((var(--row-min-h) - var(--form-field-height) - 1px) / 2);
 	position: relative;
 	padding: 0;
 	border: 1px solid var(--form-hairline);
+	border-radius: var(--card-radius);
 	background: var(--form-card-background);
-	line-height: 20px;
+	line-height: var(--line-box);
 }
 
 /* A card in its most compact density, as the tooltip of a resource shows it. */
 .resource-card[data-density="tooltip"] {
-	--card-inset: 10px;
-	--row-min-h: 20px;
-	--row-pad-y: 0px;
-	--label-min: 72px;
+	--content-edge: 10px;
 	--col-gap: 8px;
+	--line-box: 18px;
 	--chip-h: 18px;
-	--chip-pad-x: 5px;
+	--chip-pad-start: 5px;
+	--chip-pad-end: 5px;
 	--chip-gap: 4px;
+	--ring-size: 8px;
 	--title-size: 13px;
 	--clamp: none;
 	max-width: 360px;
@@ -530,8 +540,9 @@ body {
 }
 
 /*
- * The title bar stays in view under the toolbar while the card scrolls: the chevron, the types of
- * a collapsed card, the usages and the tools.
+ * The title bar stays in view under the toolbar while the card scrolls: the chevron in the gutter
+ * on the left, the types of a collapsed card from the content edge, and before the menu in the
+ * gutter on the right the toggle of the nested cards and the usages. Its rule spans the card.
  */
 .resource-card-title-bar {
 	position: sticky;
@@ -539,19 +550,22 @@ body {
 	z-index: 6;
 	display: flex;
 	align-items: center;
-	gap: var(--card-head-gap);
-	min-height: var(--card-head-h);
-	padding: 0 var(--card-head-pad-x);
+	gap: var(--gutter-gap);
+	min-height: var(--head-h);
+	box-sizing: border-box;
+	padding: 0 var(--card-pad-x);
 	border-bottom: 1px solid var(--form-row-border);
+	border-radius: calc(var(--card-radius) - 1px) calc(var(--card-radius) - 1px) 0 0;
 	background: var(--form-card-title-background);
+	line-height: 20px;
 }
 
 .icon-button.resource-card-chevron {
-	width: var(--card-chevron);
-	height: var(--card-chevron);
+	width: var(--gutter);
+	height: var(--gutter);
 }
 
-/* The buttons of the title bar and the headers: an icon in a square that tints on hover. */
+/* The buttons of the title bar and the gutters: an icon in a square that tints on hover. */
 .icon-button {
 	display: inline-flex;
 	flex: none;
@@ -561,7 +575,7 @@ body {
 	height: var(--icon-btn, 28px);
 	padding: 0;
 	border: 0;
-	border-radius: var(--form-radius-button);
+	border-radius: var(--form-radius-field);
 	background: transparent;
 	color: var(--vscode-descriptionForeground);
 	cursor: pointer;
@@ -583,24 +597,23 @@ body {
 }
 
 /*
- * The IRI of the resource in the footer, in a box of one line that a field takes the place of
- * where the resource can be renamed. As text and as a link it is cut at its start, so the local
- * name stays in view, and the title tells it whole.
+ * The IRI of the resource in the footer, in mono type, a field taking its place where the resource
+ * can be renamed. As text and as a link it is cut at its start, so the local name stays in view,
+ * and the title tells it whole. Its text starts at the content edge, where the predicates start.
  */
 .resource-card-iri {
 	flex: 1 1 auto;
 	display: flex;
 	align-items: center;
 	min-width: 0;
-	height: var(--form-field-height);
 	color: var(--vscode-descriptionForeground);
 	font-family: var(--form-mono);
-	font-size: 0.84em;
+	font-size: var(--tag-size);
 }
 
 .resource-card-iri-text {
 	min-width: 0;
-	padding: 0 var(--form-field-text-inset);
+	padding: 0;
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
@@ -625,26 +638,25 @@ body {
 
 .resource-card-iri-link:focus-visible {
 	outline: 1px solid var(--vscode-focusBorder);
-	outline-offset: -1px;
+	outline-offset: 1px;
 }
 
-/* The IRI as a mono field, muted until it has the focus. */
-.resource-card-iri-field {
+/* The IRI as a mono field, muted until it has the focus, its text where the text of the IRI stands. */
+.input-field.resource-card-iri-field {
+	margin-left: calc(-1 * var(--form-field-text-inset));
 	--vscode-font-family: var(--form-mono);
 	--vscode-font-size: 1em;
 	--vscode-settings-textInputForeground: var(--vscode-descriptionForeground);
 }
 
-.resource-card-iri-field:focus-within {
+.input-field.resource-card-iri-field:focus-within {
 	--vscode-settings-textInputForeground: var(--vscode-foreground);
 }
 
-
-/* The types of a collapsed card, muted, where its text starts: past the chevron, as the title under it. */
+/* The types of a collapsed card, muted, from the content edge. */
 .resource-card-types {
 	flex: 1 1 auto;
 	min-width: 0;
-	padding-left: 5px;
 	color: var(--form-muted);
 	font-size: 0.93em;
 	overflow: hidden;
@@ -652,7 +664,7 @@ body {
 	white-space: nowrap;
 }
 
-/* The ⋯ button of a card and its menu, which opens under it at the right edge of the card. */
+/* The ⋮ button of a card and its menu, which opens under it at the right edge of the card. */
 .resource-card-menu {
 	position: relative;
 	display: inline-flex;
@@ -667,27 +679,24 @@ body {
 }
 
 /*
- * The footer of a card holds the IRI, whose text starts where the title and the types of a
- * collapsed card start, and where the text of the rows starts while the card is expanded. While
- * the card is expanded it stays at the bottom of the view as the card scrolls past it.
+ * The footer of a card holds the IRI, from the content edge to the content edge, under a rule that
+ * spans the card. While the card is expanded it stays at the bottom of the view as the card
+ * scrolls past it.
  */
 .resource-card-footer {
 	display: flex;
 	align-items: center;
 	min-height: 28px;
-	padding: 0 var(--card-head-pad-x) 0 calc(var(--card-head-pad-x) + var(--card-chevron) + var(--card-head-gap));
+	padding: 0 var(--content-edge);
 	border-top: 1px solid var(--form-row-border);
-}
-
-.resource-card-footer.is-expanded {
-	padding-left: var(--row-grip);
 }
 
 .resource-card-footer.is-expanded {
 	position: sticky;
 	bottom: 0;
 	z-index: 6;
-	min-height: var(--card-head-h);
+	min-height: var(--head-h);
+	border-radius: 0 0 calc(var(--card-radius) - 1px) calc(var(--card-radius) - 1px);
 	background: var(--form-card-title-background);
 }
 
@@ -697,11 +706,11 @@ body {
 	border-bottom: 0;
 }
 
-/* How often the resource is used, before the tools; a narrow card leaves out the word. */
+/* How often the resource is used, before the menu; a narrow card leaves out the word. */
 .card-usage {
 	flex: none;
 	color: var(--vscode-descriptionForeground);
-	font-size: 0.84em;
+	font-size: var(--meta-size);
 	white-space: nowrap;
 }
 
@@ -709,20 +718,18 @@ body {
 	display: inline-flex;
 	flex: none;
 	align-items: center;
-	gap: 2px;
 }
 
 /*
  * The label row of a collapsed card is its clickable area: the icon of the kind of the resource,
- * centred under the chevron of the title bar, then the title, starting where the text of the IRI
- * starts, and the types. Its line under it is inset, as the lines of the rows are.
+ * centred in the gutter under the chevron of the title bar, then the title from the content edge.
+ * Its line under it runs between the content edges, as the lines of the rows do.
  */
 .resource-card-header {
 	display: flex;
 	align-items: center;
-	min-height: var(--row-min-h);
-	margin: 0 var(--card-inset);
-	padding: var(--row-pad-y) 0;
+	min-height: calc(var(--line-box) + 2 * var(--row-pad));
+	margin: 0 var(--content-edge);
 	box-sizing: border-box;
 	border-bottom: 1px solid var(--form-row-border);
 	cursor: pointer;
@@ -734,19 +741,19 @@ body {
 	outline-offset: -1px;
 }
 
+/* The kind icon stands in the gutter, before the content edge the title starts at. */
 .resource-card-kind {
 	display: inline-flex;
 	flex: none;
-	width: 16px;
+	justify-content: center;
+	width: var(--gutter);
 	height: 16px;
-	/* The chevron after the padding of the title bar, and the text of the IRI inside its box after it. */
-	margin: 0 7px 0 calc(var(--card-head-pad-x) + 2px - var(--card-inset));
+	margin: 0 var(--gutter-gap) 0 calc(-1 * (var(--gutter) + var(--gutter-gap)));
 }
 
 .resource-card-title {
 	display: flex;
 	align-items: center;
-	gap: var(--card-head-gap);
 	min-width: 0;
 }
 
@@ -773,7 +780,7 @@ body {
 	-webkit-line-clamp: var(--clamp);
 	-webkit-box-orient: vertical;
 	overflow: hidden;
-	margin: var(--row-pad-y) var(--card-inset) 10px;
+	margin: var(--row-pad) var(--content-edge);
 	color: var(--vscode-foreground);
 }
 
@@ -835,84 +842,87 @@ body {
 /* ---------- Statements ---------- */
 
 /*
- * The rows of a card share one grid: the label column as wide as its longest label, at least the
- * label token and at most 40% of the card, and the values. The grid starts where the text of the
- * rows starts, so the labels and the lines under the rows start there too, and the grips of the
- * rows stand before it.
+ * The rows of a card stack in its body. Each is laid out alike: a gutter on each side, and between
+ * them the cells of the predicate and of the values, on a predicate column of a fixed width.
  */
 .statement-list {
-	display: grid;
-	grid-template-columns: fit-content(40%) minmax(0, 1fr);
-	column-gap: var(--col-gap);
-	padding: 0 var(--card-inset) 4px var(--row-text-start);
+	display: flex;
+	flex-direction: column;
+	padding: var(--card-pad-y) var(--card-pad-x);
 }
 
 /*
- * Every row of a card is a subgrid of the labels and the values, before an inset that the actions
- * of the row overlay, with a line under it. A row of one line is as tall as the row token. The
- * cells align to the top; the predicate is nudged so it centres on the first line of the values: a
- * field, a chip in its box, or the header of a nested card.
+ * A row: the gutter of its grip, its cells and the gutter of its menu. The gutters keep their width
+ * whether their buttons show or not, so nothing moves when they appear.
  */
 .statement-line {
 	position: relative;
-	grid-column: 1 / -1;
+	display: flex;
+	gap: var(--gutter-gap);
+	min-width: 0;
+}
+
+.row-gutter {
+	flex: none;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	width: var(--gutter);
+	padding-top: var(--row-pad);
+}
+
+/*
+ * The cells of a row: the predicate in its column and the values after the gap, each a line box
+ * high after the space above the row and with the same space under it, so labels, chips and text
+ * share their first line. The line of the row runs under the cells only, from content edge to
+ * content edge; the rules of the title bar and the footer span the card.
+ */
+.statement-cells {
+	position: relative;
+	flex: 1 1 auto;
 	display: grid;
-	grid-template-columns: subgrid;
+	grid-template-columns: var(--predicate-column) minmax(0, 1fr);
+	column-gap: var(--col-gap);
 	align-items: start;
-	box-sizing: border-box;
-	min-height: var(--row-min-h);
-	padding: var(--row-field-pad) var(--row-actions) var(--row-field-pad) 0;
+	min-width: 0;
+	padding-top: var(--row-pad);
 	border-bottom: 1px solid var(--form-row-border);
-	line-height: 20px;
 }
 
-.statement-line.is-resource-row {
-	padding-block: 0;
-}
-
-.statement-line.is-resource-row > .statement-predicate {
-	margin-top: calc((var(--row-min-h) - var(--form-field-height)) / 2);
-}
-
-.statement-line.is-nested-row {
-	padding-block: var(--row-pad-y);
-}
-
-.statement-line.is-nested-row > .statement-predicate {
-	margin-top: calc((var(--row-min-h) - var(--form-field-height)) / 2 + 1px);
-}
-
-/* The last row of a card, which the link that adds a property may follow, has no line under it. */
-.statement-list > .statement-line:last-child,
-.statement-list > .statement-line:has(+ .statement-list-add-row),
+/* The row that ends a card shows no line under it, but keeps its height; the row of Add property has none. */
+.statement-list > .statement-line:last-child > .statement-cells,
 .resource-card-header:last-child {
-	border-bottom: 0;
+	border-bottom-color: transparent;
 }
 
-/* The gutter holds what stands before the predicate, over the padding of the row. */
-.statement-gutter {
-	position: absolute;
-	top: 0;
-	left: 0;
-}
-
-/* The predicate, by its label; as plain text it takes the inset of a field, so it lines up with the text of one. */
+/* The predicate, by its label on one line, cut with an ellipsis where it is longer than its column. */
 .statement-predicate {
 	grid-column: 1;
-	min-width: var(--label-min);
+	min-width: 0;
+	padding-bottom: var(--row-pad);
 	color: var(--vscode-descriptionForeground);
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
 }
 
-.statement-predicate:not(:has(.input-field)) {
-	padding: 3px 0;
-}
-
-/* The predicate field starts before its column, so its box is not cut at the edge of the column. */
+/* The predicate field starts before its column by the inset of its text, so it is not cut there. */
 .statement-predicate:has(.input-field) {
 	overflow: visible;
+}
+
+/*
+ * A row that starts with the box of a blank node has its first line in the middle of the box: the
+ * grip, the predicate and the menu move down to it, and the predicate keeps the space under it its
+ * field reaches down into, so the field still ends on the line of the row.
+ */
+.statement-line.is-nested-row > .row-gutter {
+	padding-top: calc(var(--row-pad) + var(--box-line-offset));
+}
+
+.statement-line.is-nested-row > .statement-cells > .statement-predicate {
+	--row-pad: calc(var(--box-line-offset) + (var(--row-min-h) - var(--line-box) - 1px) / 2);
+	padding-top: var(--box-line-offset);
 }
 
 /* A predicate named by its IRI is cut at its start, so its local name stays in view. */
@@ -924,24 +934,10 @@ body {
 	text-align: left;
 }
 
-/*
- * The count of the nested cards of a row and the tags of its literals, which a narrow card shows by
- * the label instead of at the values.
- */
+/* The count of the nested cards of a row and the tags of its literals, which no layout shows by the label. */
 .statement-predicate-count,
 .statement-predicate-tags {
 	display: none;
-}
-
-.statement-predicate-count {
-	margin-left: 6px;
-	color: var(--form-muted);
-	font-size: 0.84em;
-}
-
-.statement-predicate-tags {
-	margin-top: 2px;
-	white-space: normal;
 }
 
 .statement-predicate-tag {
@@ -951,40 +947,18 @@ body {
 	background: none;
 	color: var(--form-muted);
 	font: inherit;
-	font-size: 0.84em;
-	line-height: 16px;
+	font-size: var(--tag-size);
 }
 
-button.statement-predicate-tag {
-	cursor: pointer;
-}
-
-button.statement-predicate-tag:hover {
-	color: var(--vscode-foreground);
-}
-
-button.statement-predicate-tag:focus-visible {
-	outline: 1px solid var(--vscode-focusBorder);
-}
-
+/* The values, each starting at the edge of the value column, whatever kind they are. */
 .statement-values {
 	grid-column: 2;
 	display: flex;
 	flex-direction: column;
 	align-items: stretch;
-	gap: 2px;
 	min-width: 0;
+	padding-bottom: var(--row-pad);
 	color: var(--vscode-foreground);
-}
-
-/* The actions of a row overlay its inset at the top right, centred on the first line of the values. */
-.statement-actions {
-	position: absolute;
-	top: calc((var(--row-min-h) - var(--icon-btn)) / 2);
-	right: 0;
-	display: flex;
-	justify-content: flex-end;
-	gap: 2px;
 }
 
 .statement-value {
@@ -1007,9 +981,8 @@ button.statement-predicate-tag:focus-visible {
 .statement-comment {
 	display: block;
 	margin-top: 4px;
-	padding: 0 5px;
 	color: var(--form-muted);
-	font-size: 0.84em;
+	font-size: var(--tag-size);
 	line-height: 18px;
 	white-space: pre-wrap;
 }
@@ -1040,28 +1013,33 @@ button.statement-predicate-tag:focus-visible {
 }
 
 /*
- * A literal that is read: its text where the text of a field stands, wrapping and cut after a few
- * lines, with its language or datatype after it as a muted label. Its space above and below is
- * margin, not padding, which would show the line after the cut.
+ * A literal that is read: its text from the edge of the value column, wrapping and cut after a few
+ * lines, and its language or datatype as a muted tag at the end of the column, on the first line.
  */
 .literal-value {
+	display: flex;
+	align-items: flex-start;
+	gap: var(--col-gap);
+	width: 100%;
+	min-width: 0;
+}
+
+.literal-text {
 	display: -webkit-box;
+	flex: 1 1 auto;
 	-webkit-line-clamp: var(--clamp);
 	-webkit-box-orient: vertical;
+	min-width: 0;
 	overflow: hidden;
-	box-sizing: border-box;
-	min-height: 20px;
-	margin: 3px 0;
-	padding: 0 5px;
 	white-space: pre-wrap;
 	overflow-wrap: anywhere;
 }
 
 .literal-tag {
-	display: inline-block;
-	margin-left: 8px;
+	flex: none;
+	margin-left: auto;
 	color: var(--form-muted);
-	font-size: 0.84em;
+	font-size: var(--tag-size);
 	white-space: nowrap;
 }
 
@@ -1070,16 +1048,16 @@ button.statement-predicate-tag:focus-visible {
 	position: relative;
 	display: inline-flex;
 	align-items: center;
-	gap: var(--chip-gap, 6px);
+	gap: var(--chip-gap);
 	min-width: 0;
 	max-width: 100%;
 	box-sizing: border-box;
-	height: var(--chip-h, 22px);
-	padding: 0 var(--chip-pad-x, 8px);
+	height: var(--chip-h);
+	padding: 0 var(--chip-pad-end) 0 var(--chip-pad-start);
 	border: 1px solid transparent;
-	border-radius: var(--form-radius-pill);
+	border-radius: var(--form-radius-field);
 	background: var(--form-pill-background);
-	line-height: 20px;
+	line-height: var(--chip-h);
 	outline: none;
 	white-space: nowrap;
 }
@@ -1100,8 +1078,8 @@ button.statement-predicate-tag:focus-visible {
 .value-ring {
 	flex: none;
 	box-sizing: border-box;
-	width: 8px;
-	height: 8px;
+	width: var(--ring-size);
+	height: var(--ring-size);
 	border: 1.5px solid currentColor;
 	border-radius: 50%;
 	color: var(--form-ring);
@@ -1117,165 +1095,85 @@ button.statement-predicate-tag:focus-visible {
 	text-overflow: ellipsis;
 }
 
-/* The pills of a row that only reads, in the box the pills of an edited row have, so they stand at the same place. */
+/* The chips of a row that only reads, wrapping as the chips of an edited row do. */
 .value-pills {
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
 	gap: var(--chip-gap);
-	box-sizing: border-box;
-	min-height: calc(var(--row-min-h) - 1px);
-	padding: 2px 3px;
-	border: 1px solid transparent;
+	min-height: var(--line-box);
 }
 
 /*
- * A blank node of a value: a nested card as wide as the value column, on a surface between the
- * card and the editor, led by its header, with rows of a narrower grid after a gutter the chevron
- * of the header stands in, and the link that adds a property.
+ * A blank node of a value: a box as wide as the value column, on a surface between the card and the
+ * editor. Its rows are laid out as the rows of a card, on a narrower predicate column, and its
+ * header is a row of the box's own height: the chevron in its gutter, the type, and after it the
+ * summary of a collapsed box and the caption.
  */
 .resource-card.is-nested {
 	container: box / inline-size;
+	--card-radius: 4px;
+	--card-pad-y: 0px;
+	--predicate-column: 120px;
+	--col-gap: 16px;
 	position: relative;
 	width: 100%;
 	box-sizing: border-box;
 	margin: 0;
 	padding: 0;
 	border: 1px solid var(--form-hairline);
+	border-radius: var(--card-radius);
 	background: var(--form-nested-background);
 }
 
-/*
- * The grid of a nested card: its labels start past the chevron of its header and its label column
- * is narrower.
- */
-.resource-card.is-nested > .statement-list {
-	--label-min: 88px;
-	padding: 0 0 0 42px;
+/* The header of a box, and of the box of a new blank node: a row as high as the inside of the box of a collapsed node. */
+:is(.statement-line.is-card-header, .nested-card-header) {
+	--row-pad: calc((var(--nested-box-h) - 2px - var(--line-box)) / 2);
 }
 
-/*
- * The rows of a nested card centre their cells and pad their values, so a row is as tall as its
- * values make it. Their boxes of pills have no inset: the box draws its line around the pills on
- * intent, and starts before the value column by the inset of a field, so pills and fields line up
- * with the type pill of the header.
- */
-.resource-card.is-nested .statement-line .resource-values,
-.resource-card.is-nested .statement-line .value-pills {
-	width: calc(100% + 4px);
-	min-height: var(--chip-h);
-	margin-left: -4px;
-	padding: 0 4px;
-	border: 0;
-	box-shadow: inset 0 0 0 1px transparent;
-}
-
-.resource-card.is-nested .statement-line .resource-values:hover,
-.resource-card.is-nested .statement-line .resource-values:focus-within {
-	box-shadow: inset 0 0 0 1px var(--form-field-border);
-}
-
-.resource-card.is-nested .statement-line .resource-values:focus-within {
-	box-shadow: inset 0 0 0 1px var(--vscode-focusBorder);
-}
-
-.resource-card.is-nested .statement-line .literal-field,
-.resource-card.is-nested .statement-line .literal-value {
-	width: calc(100% + 4px);
-	margin-left: -4px;
-}
-
-.resource-card.is-nested .statement-line .literal-field {
-	box-sizing: border-box;
-}
-
-.resource-card.is-nested .statement-line {
+:is(.statement-line.is-card-header, .nested-card-header) > .statement-cells > .statement-values {
+	flex-direction: row;
 	align-items: center;
-	min-height: var(--row-min-h);
-	padding: 0 var(--row-actions) 0 0;
-	border-top: 1px solid var(--form-row-border);
+	gap: 16px;
+}
+
+/* The header of a collapsed box is all there is of it: no line under it. */
+.statement-list > .statement-line.is-card-header:last-child > .statement-cells {
 	border-bottom: 0;
 }
 
-.resource-card.is-nested .statement-line > .statement-predicate {
-	margin-top: 0;
-}
-
-/*
- * The actions of a nested row sit at its vertical centre, as its cells do. A margin centres them
- * rather than a transform, which would make them a stacking context of their own and put the
- * menu of a pin under the rows after it.
- */
-.resource-card.is-nested .statement-line > .statement-actions,
-.nested-card-header > .statement-actions {
-	top: 50%;
-	right: 6px;
-	margin-top: -13px;
-}
-
-.resource-card.is-nested .statement-line > .statement-values {
-	padding: var(--row-field-pad) 0;
-}
-
-/* The grip of a nested row sits at its vertical centre, in the room before the labels of the card, up to the box of the predicate field. */
-.resource-card.is-nested .statement-line > .row-grip-area {
-	left: auto;
-	right: calc(100% + var(--form-field-text-inset));
-}
-
-.resource-card.is-nested .statement-line > .row-grip-area > .row-grip {
-	top: 50%;
-	margin-top: calc(var(--icon-btn) / -2);
-}
-
-.resource-card.is-nested .statement-line.is-resource-row > .statement-values {
-	padding: calc((var(--row-min-h) - var(--chip-h) - 1px) / 2) 0;
-}
-
-.resource-card.is-nested .statement-line.is-nested-row > .statement-values {
-	padding: var(--row-pad-y) 0;
-}
-
-/* The header of a nested card: the chevron before the labels, the type, and after it the summary of a collapsed card and the caption. */
-.resource-card.is-nested .statement-line.is-card-header,
+/* The header of the box of a new blank node, laid out as the header of a box. */
 .nested-card-header {
-	min-height: var(--row-min-h);
-	border-top: 0;
+	position: relative;
+	display: flex;
+	gap: var(--gutter-gap);
 }
 
-.resource-card.is-nested .statement-line.is-card-header > .statement-values,
-.nested-card-header > .statement-values {
-	flex-direction: row;
-	align-items: center;
-	gap: 10px;
-	padding: 0;
+.nested-card-header > .statement-cells {
+	border-bottom: 0;
 }
 
-/* The box of the type shares the header with the summary and the caption, which give way before the pill does, and its input stays on the line of the pill. */
-.statement-line.is-card-header > .statement-values > .statement-value,
-.nested-card-header > .statement-values > .statement-value {
+/* The box of the type shares the header with the summary and the caption, which give way before the chip does, and its input stays on the line of the chip. */
+:is(.statement-line.is-card-header, .nested-card-header) > .statement-cells > .statement-values > .statement-value {
 	flex: 0 1 auto;
 	min-width: 0;
 }
 
-.statement-line.is-card-header > .statement-values > .nested-card-summary,
-.statement-line.is-card-header > .statement-values > .nested-card-caption {
+.statement-line.is-card-header > .statement-cells > .statement-values > :is(.nested-card-summary, .nested-card-caption) {
 	flex: 1 1 0;
 	min-width: 0;
 }
 
-.statement-line.is-card-header .resource-values,
-.nested-card-header .resource-values {
+:is(.statement-line.is-card-header, .nested-card-header) .resource-values {
 	flex-wrap: nowrap;
 }
 
-.statement-line.is-card-header .resource-values > .combobox,
-.nested-card-header .resource-values > .combobox {
+:is(.statement-line.is-card-header, .nested-card-header) .resource-values > .combobox {
 	flex: 1 1 100px;
 	min-width: 100px;
 }
 
-/* In a header with a type pill the input takes no room until the header has the focus, which a click on the box gives it. */
+/* In a header with a type chip the input takes no room until the header has the focus, which a click on the box gives it. */
 .statement-line.is-card-header .resource-values:has([data-value-index]):not(:focus-within) > .combobox {
 	flex: 0 0 0;
 	width: 0;
@@ -1283,55 +1181,40 @@ button.statement-predicate-tag:focus-visible {
 	overflow: hidden;
 }
 
-
-/* A collapsed nested card without a type gives its summary the whole row. */
-.statement-line.is-card-header.is-typeless > .statement-values {
+/* A collapsed box without a type gives its summary the whole row. */
+.statement-line.is-card-header.is-typeless > .statement-cells > .statement-values {
 	grid-column: 1 / -1;
-}
-
-/* The chevron of a nested card stands before its labels, inside the edge of the box. */
-.resource-card.is-nested .statement-line.is-card-header > .statement-gutter {
-	top: calc((var(--row-min-h) - 20px) / 2);
-	left: -34px;
 }
 
 .icon-button.nested-card-chevron {
-	width: 20px;
-	height: 20px;
+	width: var(--gutter);
+	height: var(--line-box);
 	color: var(--vscode-descriptionForeground);
 }
 
-/* The header of the nested card of a new blank node, laid out like the header of a nested card. */
-.nested-card-header {
-	position: relative;
-	grid-column: 1 / -1;
-	display: grid;
-	grid-template-columns: subgrid;
-	align-items: center;
-	padding: 0 var(--row-actions) 0 0;
-	line-height: 20px;
-}
-
 /*
- * The ⋯ button of a nested card and its menu, over the actions column of the header row. The button
- * is faint until the pointer or the focus is in the card, and stays in the order of Tab.
+ * The ⋮ button of a box and its menu, in the gutter on the right of its header, on the axis of
+ * its chevron. The button is faint until the pointer or the focus is in the box, and stays in the
+ * order of Tab.
  */
-/* The ⋮ of a nested card stands on the axis of its chevron, in the middle of the header row. */
 .nested-card-menu {
 	position: absolute;
-	top: calc((var(--row-min-h) - var(--icon-btn)) / 2);
-	right: 6px;
+	top: calc((var(--nested-box-h) - 2px - var(--line-box)) / 2);
+	right: var(--card-pad-x);
+	display: flex;
+	justify-content: center;
+	width: var(--gutter);
 }
 
 .nested-card-more {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	width: var(--icon-btn);
-	height: var(--icon-btn);
+	width: var(--gutter);
+	height: var(--line-box);
 	padding: 0;
 	border: 0;
-	border-radius: var(--form-radius-button);
+	border-radius: var(--form-radius-field);
 	background: none;
 	color: var(--vscode-descriptionForeground);
 	cursor: pointer;
@@ -1360,87 +1243,70 @@ button.statement-predicate-tag:focus-visible {
 	z-index: 10;
 }
 
-/* The other properties of a collapsed nested card, named after its type. */
+/* The other properties of a collapsed box, named after its type. */
 .nested-card-summary {
 	flex: 0 1 auto;
 	min-width: 0;
 	overflow: hidden;
 	color: var(--vscode-descriptionForeground);
-	font-size: 0.93em;
 	text-overflow: ellipsis;
 	white-space: nowrap;
 }
 
-/* The pinned properties of a collapsed nested card, each a muted label before its values. */
-/* The pinned properties take most of the room the header leaves, before the caption. */
-.statement-line.is-card-header > .statement-values > .nested-card-summary.is-pinned {
+/* The pinned properties of a collapsed box take most of the room the header leaves, before the caption. */
+.statement-line.is-card-header > .statement-cells > .statement-values > .nested-card-summary.is-pinned {
 	flex-grow: 3;
 	color: var(--vscode-foreground);
 }
 
-/* The pinned properties run on one line, which ends in an ellipsis where it does not fit. */
+/* The pinned properties run on one line, each a muted label before its values, which ends in an ellipsis where it does not fit. */
 .nested-card-pinned + .nested-card-pinned {
-	margin-left: 14px;
+	margin-left: 16px;
 }
 
 .nested-card-pinned-label {
 	color: var(--form-muted);
-	font-size: 0.9em;
 }
 
-/* The comment lines written above a blank node, as the quiet caption of the header of its card. */
+/* The comment lines written above a blank node, as the quiet caption of the header of its box. */
 .nested-card-caption {
 	flex: 1 1 auto;
 	min-width: 0;
 	overflow: hidden;
 	color: var(--form-muted);
 	font-family: var(--form-mono);
-	font-size: 0.84em;
+	font-size: var(--tag-size);
 	text-overflow: ellipsis;
 	white-space: nowrap;
 }
 
 /*
- * The grip of a row stands before the row, in the column of the grips, on the first line of the
- * values: hidden until the pointer or the focus is in the row. The area of the grip beside the row
- * belongs to the row, so pointing at the place of the grip shows it. A line along the top or the
- * bottom of the row marks where the dragged row drops, over the rows next to it, which would
- * otherwise cover the half of it that reaches into them.
+ * The grip of a row stands in the gutter on its left, on the first line: hidden until the pointer
+ * or the focus is in the row. A line along the top or the bottom of the cells of a row marks where
+ * the dragged row drops, over the rows next to it, which would otherwise cover the half of it that
+ * reaches into them.
  */
-.statement-line > .row-grip-area {
-	position: absolute;
-	top: 0;
-	bottom: 0;
-	left: calc(-1 * var(--row-text-start));
-	width: var(--row-grip);
-}
-
-.row-grip-area > .row-grip {
-	position: absolute;
-	top: calc((var(--row-min-h) - var(--icon-btn)) / 2);
-	left: 0;
-	width: 100%;
+.row-gutter > .row-grip {
+	width: var(--gutter);
+	height: var(--line-box);
+	color: var(--form-muted);
 	visibility: hidden;
 	cursor: grab;
 }
 
-/* The grip has no background, not even on hover, where its dots only brighten. */
-.row-grip-area > .row-grip:hover {
-	background: transparent;
-}
-
-.statement-line:hover > .row-grip-area > .row-grip,
-.statement-line:focus-within > .row-grip-area > .row-grip {
+.statement-line:hover > .row-gutter > .row-grip,
+.statement-line:focus-within > .row-gutter > .row-grip {
 	visibility: visible;
 }
 
-/* Pressing the grip focuses it, but the grip of the dragged row shows no focus ring while it is dragged. */
-.statement-line.is-dragged > .row-grip-area > .row-grip {
+/* Pressing the grip focuses it, but the grip of the dragged row shows neither its focus ring nor its tint while it is dragged. */
+.statement-line.is-dragged > .row-gutter > .row-grip {
 	outline: none;
+	background: transparent;
 }
 
-.statement-line.is-drop-before::before,
-.statement-line.is-drop-after::after {
+.statement-line.is-drop-before > .statement-cells::before,
+.statement-line.is-drop-after > .statement-cells::after {
 	content: '';
 	position: absolute;
 	z-index: 2;
@@ -1452,36 +1318,48 @@ button.statement-predicate-tag:focus-visible {
 	pointer-events: none;
 }
 
-.statement-line.is-drop-before::before {
+.statement-line.is-drop-before > .statement-cells::before {
 	top: -1px;
 }
 
-.statement-line.is-drop-after::after {
+.statement-line.is-drop-after > .statement-cells::after {
 	bottom: -1px;
 }
 
 /*
- * The ⋮ menu of a row: its button faint until the pointer or the focus is in the row, and the pin
- * of a pinned property before it at all times. Its menu opens under it, at the right edge of the row.
+ * The ⋮ menu of a row, in the gutter on its right: at rest the gutter shows the pin of a pinned
+ * property, and while the pointer or the focus is in the row the ⋮ button takes its place. Its
+ * menu opens under it, at the right edge of the row.
  */
 .row-menu {
 	position: relative;
-	display: inline-flex;
+	display: flex;
 	align-items: center;
-	gap: 2px;
+	justify-content: center;
+	width: var(--gutter);
+	height: var(--line-box);
 }
 
 .row-menu > .icon-button {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
 	visibility: hidden;
 }
 
-.statement-line:hover > .statement-actions > .row-menu > .icon-button,
-.statement-line:focus-within > .statement-actions > .row-menu > .icon-button {
+.statement-line:hover > .row-gutter > .row-menu > .icon-button,
+.statement-line:focus-within > .row-gutter > .row-menu > .icon-button {
 	visibility: visible;
 }
 
 .row-menu-pin {
 	color: var(--vscode-descriptionForeground);
+}
+
+.statement-line:hover > .row-gutter > .row-menu > .row-menu-pin,
+.statement-line:focus-within > .row-gutter > .row-menu > .row-menu-pin {
+	visibility: hidden;
 }
 
 .row-menu vscode-context-menu {
@@ -1509,8 +1387,8 @@ button.statement-predicate-tag:focus-visible {
 	display: flex;
 	flex-wrap: wrap;
 	gap: 12px var(--col-gap);
-	margin: 0 var(--card-inset);
-	padding: 8px 0 10px;
+	margin: 0 var(--content-edge);
+	padding: var(--row-pad) 0;
 	border-bottom: 1px solid var(--form-row-border);
 }
 
@@ -1584,19 +1462,14 @@ button.statement-predicate-tag:focus-visible {
 	color: var(--vscode-descriptionForeground);
 }
 
-.pinned-properties-list .value-pill {
-	height: 20px;
-	padding: 0 8px;
-	gap: 7px;
-	font-size: 0.93em;
-}
-
-/* The button that removes a property of a blank node, shown on hover and while the row has the focus. */
+/* The button that removes a new blank node, in the gutter on the right of its header, shown on hover and while the header has the focus. */
 .statement-row-remove {
 	display: inline-flex;
 	align-items: center;
-	height: var(--form-field-height);
-	padding: 0 4px;
+	justify-content: center;
+	width: var(--gutter);
+	height: var(--line-box);
+	padding: 0;
 	border: 0;
 	border-radius: var(--form-radius-button);
 	background: none;
@@ -1605,10 +1478,8 @@ button.statement-predicate-tag:focus-visible {
 	visibility: hidden;
 }
 
-.statement-line:hover > .statement-actions > .statement-row-remove,
-.statement-line:focus-within > .statement-actions > .statement-row-remove,
-.nested-card-header:hover > .statement-actions > .statement-row-remove,
-.nested-card-header:focus-within > .statement-actions > .statement-row-remove {
+.nested-card-header:hover > .row-gutter > .statement-row-remove,
+.nested-card-header:focus-within > .row-gutter > .statement-row-remove {
 	visibility: visible;
 }
 
@@ -1622,18 +1493,18 @@ button.statement-predicate-tag:focus-visible {
 
 /*
  * The links that add something turn into an input in place: text only, muted until the pointer is
- * on them. Add property ends the rows of a card; Add value, Choose type and Add label stand where
- * the value they ask for goes.
+ * on them. Add property ends the rows of a card, at the content edge; Add value, Choose type and Add
+ * label stand where the value they ask for goes, flush with the edge of the value column.
  */
 .add-link {
+	height: var(--line-box);
 	padding: 0;
 	border: 0;
 	border-radius: var(--mentor-radius-sm);
 	background: none;
 	color: var(--form-muted);
 	font: inherit;
-	font-size: 0.93em;
-	line-height: 20px;
+	line-height: var(--line-box);
 	cursor: pointer;
 }
 
@@ -1646,31 +1517,16 @@ button.statement-predicate-tag:focus-visible {
 	outline-offset: 1px;
 }
 
+/* The row of Add property: no line under it, its link where the predicates start. */
 .statement-list-add-row {
-	grid-column: 1 / -1;
 	display: flex;
 	align-items: center;
-	min-height: var(--row-min-h);
-	padding: 2px 0;
+	padding: var(--row-pad) 0 var(--row-pad) calc(var(--gutter) + var(--gutter-gap));
 }
 
-.resource-card.is-nested .statement-list-add-row {
-	padding: 0;
-	border-top: 1px solid var(--form-row-border);
-}
-
+/* Add value stands under the last value, a row apart as the values of an edited row are. */
 .statement-value-add {
 	align-self: flex-start;
-	margin: 6px 0 4px 5px;
-}
-
-/* In a header row the link stands where the pill or the title goes. */
-.statement-line.is-card-header .statement-value-add {
-	margin: 0;
-}
-
-.statement-line.is-card-label .statement-value-add {
-	margin: 5px 0 5px 4px;
 }
 
 .nested-placeholder {
@@ -1693,20 +1549,19 @@ button.statement-predicate-tag:focus-visible {
 }
 
 .resource-form-loading {
-	padding: 8px var(--card-inset) 4px;
+	padding: var(--row-pad) var(--content-edge);
 	color: var(--vscode-descriptionForeground);
 }
 
 /*
- * The label row leads an expanded card: the label is the title of the card, in the size of the
- * title, with its tag shown only while it is edited.
+ * The label row leads an expanded card: the label is the title of the card, in the size and weight
+ * of the title on the line box of every row, with its tag shown only while it is edited.
  */
-.statement-line.is-card-label {
-	padding-right: 0;
-}
-
 .statement-line.is-card-label .literal-field {
 	--clamp: 1;
+}
+
+.statement-line.is-card-label .literal-field > .input-field {
 	--vscode-font-size: var(--title-size);
 	--vscode-font-weight: 600;
 }
@@ -1719,7 +1574,7 @@ button.statement-predicate-tag:focus-visible {
 	display: inline-block;
 }
 
-.statement-line.is-card-label .literal-value {
+.statement-line.is-card-label .literal-text {
 	display: block;
 	font-size: var(--title-size);
 	font-weight: 600;
@@ -1731,8 +1586,10 @@ button.statement-predicate-tag:focus-visible {
 /* ---------- Edited statements ---------- */
 
 /*
- * Plain at rest, field on intent: the fields of an edited row draw no box until the pointer or the
- * focus is on them, and then the box of a VS Code input at the size they have, so nothing moves.
+ * The fields of an edited row draw no box, no background and no corners in any state: the row
+ * being edited marks them with the underlines of its cells. Their text starts at the edge of their
+ * column, where the text of a row that only reads stands, so nothing moves when a field takes the
+ * focus.
  */
 .statement-line.is-editable .statement-value {
 	align-items: stretch;
@@ -1743,41 +1600,73 @@ button.statement-predicate-tag:focus-visible {
 	width: 100%;
 	--vscode-settings-textInputBackground: transparent;
 	--vscode-settings-textInputBorder: transparent;
+	--vscode-focusBorder: transparent;
+	--vscode-settings-textInputForeground: var(--vscode-foreground);
 }
 
 /*
- * The field paints its background itself, rounded as its box: the input inside the box is square,
- * and its background would cover the corners of the border.
+ * The fields of a row, and the box of its chips, reach up and down by the space of the row, so they
+ * are as high as the row and their bottom edge lies on the line of the row. In the row being edited,
+ * the edited row with the focus in it and not in the row of a nested box, that edge is drawn as an
+ * underline over the line, and in the accent for the field with the focus; a field that is pointed
+ * at draws the quiet underline too. The underline is painted, not a border, so it takes no room and
+ * nothing moves in any state, and it spans the column of the field, not the inset its box reaches
+ * out into.
  */
-.input-field:hover,
-.input-field:focus-within {
-	--vscode-settings-textInputBorder: var(--form-field-border);
-	border-radius: 4px;
-	background-color: var(--form-field-background);
+.statement-cells :is(.input-field:not(.is-new), .resource-values) {
+	--underline-color: transparent;
+	--underline-width: 1px;
+	--underline-inset: 0px;
+	box-sizing: content-box;
+	min-height: var(--line-box);
+	margin-block: calc(-1 * var(--row-pad)) calc(-1 * (var(--row-pad) + 1px));
+	padding-block: var(--row-pad) calc(var(--row-pad) + 1px);
+	background: linear-gradient(var(--underline-accent, var(--underline-color)), var(--underline-accent, var(--underline-color))) no-repeat right bottom / calc(100% - var(--underline-inset)) var(--underline-width);
 }
 
-/* The predicate field starts before its column by the inset of its text, so the text lines up with the column. */
+.statement-line.is-editable:focus-within:not(:has(.statement-line:focus-within)) > .statement-cells > .statement-predicate > .input-field,
+.statement-line.is-editable:focus-within:not(:has(.statement-line:focus-within)) > .statement-cells > .statement-values > .statement-value > .literal-field > .input-field,
+.statement-line.is-editable:focus-within:not(:has(.statement-line:focus-within)) > .statement-cells > .statement-values > .statement-value > .resource-values,
+.statement-cells :is(.input-field:not(.is-new), .resource-values):hover {
+	--underline-color: var(--form-field-border);
+}
+
+/* A field of one line is one line box high, whatever its text makes of the box inside it, as the title does. */
+.statement-cells vscode-textfield.input-field:not(.is-new) {
+	height: var(--line-box);
+}
+
+/* The accent of the field with the focus wins over the quiet underline of the row it is in. */
+.statement-cells :is(.input-field:not(.is-new), .resource-values):focus-within {
+	--underline-accent: var(--form-accent);
+	--underline-width: 2px;
+}
+
+/* The values of a row stand a row apart, so each field reaches its own line. */
+.statement-line.is-editable > .statement-cells > .statement-values {
+	gap: calc(2 * var(--row-pad) + 1px);
+}
+
+/* The text of a field stands after its border and padding, so the field starts before its column by that inset. */
+.statement-cells :is(.statement-predicate, .literal-field) > .input-field {
+	--underline-inset: var(--field-text-inset);
+}
+
+.statement-predicate > .input-field,
+.literal-field > .input-field,
+.resource-values > .combobox:first-child > .input-field {
+	--field-text-inset: var(--form-field-text-inset);
+	width: calc(100% + var(--field-text-inset));
+	margin-left: calc(-1 * var(--field-text-inset));
+}
+
+/* The text of an area of several lines stands after its border and the padding the browser gives a text area. */
+.literal-field > vscode-textarea.input-field {
+	--field-text-inset: 3px;
+}
+
 .input-field.is-predicate {
-	width: calc(100% + var(--form-field-text-inset));
-	margin-left: calc(-1 * var(--form-field-text-inset));
 	--vscode-settings-textInputForeground: var(--vscode-descriptionForeground);
-}
-
-/*
- * The predicate field takes no width of its own, so the text beside it, which is not shown, sizes
- * the label column of the card as the text of a row that only reads does.
- */
-.input-field.is-predicate {
-	contain: inline-size;
-}
-
-.statement-predicate-sizer {
-	display: block;
-	height: 0;
-	padding: 0 var(--form-field-text-inset);
-	overflow: hidden;
-	visibility: hidden;
-	white-space: nowrap;
 }
 
 .input-field.is-predicate:focus-within {
@@ -1788,7 +1677,7 @@ button.statement-predicate-tag:focus-visible {
 	--vscode-font-family: var(--vscode-editor-font-family, monospace);
 }
 
-/* A literal: its field, and the muted label of its tag after the text, which opens its picker. */
+/* A literal: its field, and the muted tag of its language or datatype at the end, which opens its picker. */
 .literal-field {
 	position: relative;
 	display: block;
@@ -1802,14 +1691,14 @@ button.statement-predicate-tag:focus-visible {
 
 .literal-field-tag {
 	height: 22px;
-	margin: 0 2px 0 4px;
-	padding: 0 6px;
+	margin: 0 0 0 var(--col-gap);
+	padding: 0 4px;
 	border: 1px solid transparent;
 	border-radius: var(--form-radius-field);
 	background: transparent;
 	color: var(--form-muted);
 	font: inherit;
-	font-size: 0.84em;
+	font-size: var(--tag-size);
 	white-space: nowrap;
 	cursor: pointer;
 }
@@ -1834,40 +1723,25 @@ button.statement-predicate-tag:focus-visible {
 	max-width: 100%;
 }
 
-/* A row of literals only shows the input of a further value while the focus is in the row. */
-/* Without pills the input of a new value stands after the nested cards of blank nodes, so showing it on
-   intent moves nothing above a click into a nested card. */
+/* Without chips the input of a new value stands after the boxes of blank nodes, so showing it on intent moves nothing above a click into a box. */
 .statement-values > .statement-value.is-adder.is-after-values {
 	order: 1;
 }
 
-.statement-line:not(:focus-within) > .statement-values > .statement-value.is-adder.is-on-intent {
+/* A row of literals only shows the input of a further value while the focus is in the row. */
+.statement-line:not(:focus-within) > .statement-cells > .statement-values > .statement-value.is-adder.is-on-intent {
 	display: none;
 }
 
-/* The resources of a row in one box, the pills before the input of the next value. */
+/* The resources of a row: the chips, wrapping, before the input of the next value. */
 .resource-values {
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
-	gap: var(--chip-gap, 6px);
-	box-sizing: border-box;
+	gap: var(--chip-gap);
 	width: 100%;
-	min-height: calc(var(--row-min-h, 32px) - 1px);
-	padding: 1px 3px;
-	border: 1px solid transparent;
-	border-radius: var(--form-radius-field);
+	min-height: var(--line-box);
 	cursor: text;
-}
-
-.resource-values:hover,
-.resource-values:focus-within {
-	border-color: var(--form-field-border);
-	background: var(--form-field-background);
-}
-
-.resource-values:focus-within {
-	border-color: var(--vscode-focusBorder);
 }
 
 /* A pill stands in a wrapper of its own height, so the box centres it with an even space around it, and gives way like the pill does. */
@@ -1898,11 +1772,11 @@ button.statement-predicate-tag:focus-visible {
 }
 
 .resource-values > .is-drop-before::before {
-	left: calc(var(--chip-gap, 6px) / -2 - 1px);
+	left: calc(var(--chip-gap) / -2 - 1px);
 }
 
 .resource-values > .is-drop-after::after {
-	right: calc(var(--chip-gap, 6px) / -2 - 1px);
+	right: calc(var(--chip-gap) / -2 - 1px);
 }
 
 .resource-values > .combobox {
@@ -1921,21 +1795,15 @@ button.statement-predicate-tag:focus-visible {
 	min-width: 60px;
 }
 
-.resource-values .input-field.is-new {
-	--vscode-settings-textInputBackground: transparent;
-	--vscode-settings-textInputBorder: transparent;
-	--vscode-focusBorder: transparent;
-}
-
 .resource-values .value-pill:focus {
 	border-color: var(--vscode-focusBorder);
 }
 
-/* The remove button takes the place of the ring of a pill while the pointer or the focus is on it. */
+/* The remove button takes the place of the ring of a chip while the pointer or the focus is on it. */
 .value-pill-remove {
 	position: absolute;
 	top: 50%;
-	left: 6px;
+	left: calc(var(--chip-pad-start) + var(--ring-size) / 2 - 8px);
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
@@ -2071,124 +1939,60 @@ button.statement-predicate-tag:focus-visible {
 /* ---------- Scaling ---------- */
 
 /*
- * A narrow card, as in a side panel or a split editor: the tokens of the narrow density. The rows
- * keep their two columns; the usage count drops its word, the tags of literals stand under the
- * label, and a row of nested cards gives them the whole row, its label with their count above one
- * list of them.
+ * A narrow card, as in a side panel or a split editor, keeps its gutters and the lines of its rows,
+ * but stacks the cells of a row: the predicate above its values, which take the whole width. The
+ * usage count drops its word. The tooltip density keeps its own tokens.
  */
 @container card (max-width: 559px) {
-	.resource-card > * {
-		--card-head-h: 30px;
-		--card-head-pad-x: 4px;
-		--card-head-gap: 4px;
-		--card-inset: 10px;
-		--row-min-h: 26px;
-		--row-pad-y: 3px;
-		--label-min: 88px;
-		--col-gap: 12px;
-		--chip-h: 20px;
-		--chip-pad-x: 6px;
-		--chip-gap: 5px;
-		--icon-btn: 22px;
-		--title-size: 14px;
-		--clamp: 4;
+	.resource-card:not([data-density="tooltip"]) > * {
+		--head-h: 30px;
 	}
 
 	.card-usage-word {
 		display: none;
 	}
 
-	/* The tag of a literal of a row of the card stands under the label of its row. */
-	.resource-card:not(.is-nested) > .resource-card-body > .statement-list > .statement-line.is-literal-row .literal-field-tag[slot="content-after"],
-	.resource-card:not(.is-nested) > .resource-card-body > .statement-list > .statement-line.is-literal-row .literal-tag {
-		display: none;
-	}
-
-	.resource-card:not(.is-nested) > .resource-card-body > .statement-list > .statement-line > .statement-predicate > .statement-predicate-tags {
-		display: block;
-	}
-
-	.resource-card:not(.is-nested) > .resource-card-body > .statement-list > .statement-line.is-nested-row {
-		row-gap: 4px;
-	}
-
-	.resource-card:not(.is-nested) > .resource-card-body > .statement-list > .statement-line.is-nested-row > .statement-predicate {
-		grid-row: 1;
-		grid-column: 1 / -1;
-		margin-top: 0;
-	}
-
-	.resource-card:not(.is-nested) > .resource-card-body > .statement-list > .statement-line.is-nested-row > .statement-values {
-		grid-row: 2;
-		grid-column: 1 / -1;
-	}
-
-	/* The nested cards of the row are one list: no gaps, one line between them. */
-	.statement-line.is-nested-row > .statement-values > .statement-value.is-node + .statement-value.is-node {
-		margin-top: -1px;
+	.resource-card:not(.is-nested) > .resource-card-body > .statement-list > .statement-line > .statement-cells {
+		grid-template-columns: minmax(0, 1fr);
 	}
 
 	/*
-	 * The label of a row of nested cards and their count stand on one line: the label as wide as
-	 * its text, which the text beside a field gives it, and the count after it.
+	 * The predicate keeps the room its field reaches down into, so its underline stands clear of the
+	 * values. Above the box of a blank node it stays on the first line of the row, as the grip does.
 	 */
-	.resource-card:not(.is-nested) > .resource-card-body > .statement-list > .statement-line.is-nested-row > .statement-predicate {
-		display: grid;
-		grid-template-columns: auto auto;
-		justify-content: start;
-		align-items: baseline;
+	.resource-card:not(.is-nested) > .resource-card-body > .statement-list > .statement-line > .statement-cells > .statement-predicate {
+		--row-pad: calc((var(--row-min-h) - var(--line-box) - 1px) / 2);
+		padding-top: 0;
+		padding-bottom: calc(var(--row-pad) + 1px);
 	}
 
-	.statement-line.is-nested-row > .statement-predicate > :is(.input-field, .statement-predicate-text, .statement-predicate-sizer) {
+	.resource-card:not(.is-nested) > .resource-card-body > .statement-list > .statement-line.is-nested-row > .row-gutter {
+		padding-top: var(--row-pad);
+	}
+
+	.resource-card:not(.is-nested) > .resource-card-body > .statement-list > .statement-line > .statement-cells > .statement-values {
 		grid-column: 1;
-	}
-
-	.resource-card:not(.is-nested) > .resource-card-body > .statement-list > .statement-line.is-nested-row > .statement-predicate > .statement-predicate-count {
-		display: inline;
-		grid-row: 1;
-		grid-column: 2;
 	}
 }
 
-/* A narrow nested card stacks its rows, keeping the chevron of its header. */
+/* A narrow box stacks its rows as a narrow card does, keeping the chevron of its header. */
 @container box (max-width: 440px) {
-	.resource-card.is-nested > .statement-list {
-		padding-left: 12px;
-	}
-
-	.resource-card.is-nested .statement-line:not(.is-card-header) {
+	.resource-card.is-nested .statement-line:not(.is-card-header) > .statement-cells {
 		grid-template-columns: minmax(0, 1fr);
-		row-gap: 2px;
-		align-items: start;
-		min-height: 0;
-		padding: 6px var(--row-actions) 6px 0;
 	}
 
-	.resource-card.is-nested .statement-line:not(.is-card-header) > .statement-predicate {
-		grid-row: 1;
+	.resource-card.is-nested .statement-line:not(.is-card-header) > .statement-cells > .statement-predicate {
+		--row-pad: calc((var(--row-min-h) - var(--line-box) - 1px) / 2);
+		padding-top: 0;
+		padding-bottom: calc(var(--row-pad) + 1px);
+	}
+
+	.resource-card.is-nested .statement-line.is-nested-row > .row-gutter {
+		padding-top: var(--row-pad);
+	}
+
+	.resource-card.is-nested .statement-line:not(.is-card-header) > .statement-cells > .statement-values {
 		grid-column: 1;
-		min-width: 0;
-		font-size: 0.8em;
-		line-height: 18px;
-	}
-
-	.resource-card.is-nested .statement-line:not(.is-card-header) > .statement-values {
-		grid-row: 2;
-		grid-column: 1;
-		padding: 0;
-	}
-
-	.resource-card.is-nested .statement-line:not(.is-card-header) > .statement-actions {
-		top: 6px;
-		margin-top: 0;
-	}
-
-	.resource-card.is-nested .statement-line.is-card-header {
-		padding-left: 26px;
-	}
-
-	.resource-card.is-nested .statement-line.is-card-header > .statement-gutter {
-		left: 0;
 	}
 }
 
@@ -2297,10 +2101,11 @@ button.statement-predicate-tag:focus-visible {
 	align-items: baseline;
 	gap: var(--col-gap);
 	min-width: 0;
-	padding: 6px var(--card-inset) 4px;
+	padding: 6px var(--content-edge) 4px;
 }
 
 .resource-card.is-compact .resource-card-kind {
+	width: 16px;
 	margin: 0;
 	align-self: center;
 }
@@ -2314,7 +2119,7 @@ button.statement-predicate-tag:focus-visible {
 }
 
 .resource-card.is-compact .resource-card-description {
-	margin: 0 var(--card-inset) 6px;
+	margin: 0 var(--content-edge) 6px;
 }
 
 .resource-card.is-compact .pinned-properties-list {
@@ -2327,7 +2132,7 @@ button.statement-predicate-tag:focus-visible {
 	display: flex;
 	align-items: baseline;
 	gap: var(--col-gap);
-	padding: 4px var(--card-inset);
+	padding: 4px var(--content-edge);
 	border-top: 1px solid var(--form-row-border);
 }
 
