@@ -1,4 +1,4 @@
-import { RDFS, Uri, VocabularyRepository } from '@faubulous/mentor-rdf';
+import { RDF, RDFS, Uri, VocabularyRepository } from '@faubulous/mentor-rdf';
 import { IDocumentContext } from '@src/services/document/document-context.interface';
 import { IPrefixLookupService } from '@src/services/document/prefix-lookup-service.interface';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
@@ -55,7 +55,7 @@ interface TermEntry extends TermRankingKeys {
 
 /**
  * The terms of the store as one document sees them, read at one version of the store and by the
- * prefixes the document declared then: those the document describes, the predicates it uses, and
+ * prefixes the document declared then: those the document describes, those it uses by kind, and
  * the entries of the terms searched so far.
  */
 interface DocumentTerms {
@@ -80,9 +80,11 @@ interface DocumentTerms {
 	described: ReadonlySet<string>;
 
 	/**
-	 * The IRIs the document uses as predicates.
+	 * The IRIs the document uses as terms of each kind, which a search of the kind offers though
+	 * the store may not say they are: its predicates, the classes it types resources with, and the
+	 * resources it describes or types.
 	 */
-	predicates: readonly string[];
+	uses: Partial<Record<TermSearchKind, readonly string[]>>;
 
 	/**
 	 * The entry of each term searched so far.
@@ -139,20 +141,14 @@ export class TermCatalogueService {
 	}
 
 	/**
-	 * The IRIs a search of a kind looks at: the terms of the store of that kind, and for predicates
-	 * those the document uses besides.
+	 * The IRIs a search of a kind looks at: the terms of the store of that kind, and those the
+	 * document uses as that kind besides.
 	 * @param kind The kind of terms.
 	 * @param documentTerms The terms of the document.
 	 * @returns The IRIs, each once.
 	 */
 	private _candidatesOf(kind: TermSearchKind, documentTerms: DocumentTerms): Set<string> {
-		const candidates = new Set(this._getIndex().terms[kind]);
-
-		if (kind === 'predicate') {
-			documentTerms.predicates.forEach(iri => candidates.add(iri));
-		}
-
-		return candidates;
+		return new Set([...this._getIndex().terms[kind], ...documentTerms.uses[kind] ?? []]);
 	}
 
 	/**
@@ -291,19 +287,26 @@ export class TermCatalogueService {
 			return cached;
 		}
 
-		const described = new Set<string>();
+		const subjects = new Set<string>();
 		const predicates = new Set<string>();
+		const types = new Set<string>();
 
 		for (const quad of this._vocabulary.store.matchAll(context.graphs, null, null, null, false)) {
 			if (quad.subject.termType === 'NamedNode') {
-				described.add(quad.subject.value);
+				subjects.add(quad.subject.value);
+			}
+
+			if (quad.predicate.value === RDF.type && quad.object.termType === 'NamedNode') {
+				types.add(quad.object.value);
 			}
 
 			predicates.add(quad.predicate.value);
-			described.add(quad.predicate.value);
 		}
 
-		this._documentTerms = { version, context, namespacesKey, described, predicates: Array.from(predicates), entries: new Map(), proposals: new Map() };
+		const described = new Set([...subjects, ...predicates]);
+		const uses = { predicate: Array.from(predicates), class: Array.from(types), resource: Array.from(new Set([...subjects, ...types])) };
+
+		this._documentTerms = { version, context, namespacesKey, described, uses, entries: new Map(), proposals: new Map() };
 
 		return this._documentTerms;
 	}

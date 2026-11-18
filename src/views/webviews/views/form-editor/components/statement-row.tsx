@@ -3,7 +3,7 @@ import { RDF } from '@faubulous/mentor-rdf/ontologies';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { ValueKind } from '@src/utilities/value-kind';
 import { ScopeKey } from '@src/utilities/config-scope';
-import { NamespaceData, PredicateData, TermData } from '../form-editor-model';
+import { NamespaceData, PredicateData, TermData, TermSearchKind } from '../form-editor-model';
 import { ContextMenu, useContextMenu } from '../hooks/use-context-menu';
 import { RowReorder } from '../hooks/use-row-reorder';
 import { useRowEditorState } from '../hooks/use-row-editor-state';
@@ -462,8 +462,8 @@ function _addLinkOf(edited: EditedRow, header: RowHeader | undefined, literals: 
 /**
  * The box of the resources of an edited row, with the input of the next value after the pills. In a
  * row without pills it stands after the nested cards of blank nodes, and in a row with values it
- * shows while the focus is in the row. The type of a blank node offers the classes of the document
- * and asks to choose one while there is none. `[` typed into the empty input starts a new blank
+ * shows while the focus is in the row. It offers the terms of the workspace, the type of a blank
+ * node its classes, and asks to choose one while there is none. `[` typed into the empty input starts a new blank
  * node where the predicate takes resources. A row for a new statement takes no value until its
  * predicate is picked, and its input asks for that.
  * @param edited The row.
@@ -476,7 +476,7 @@ function _addLinkOf(edited: EditedRow, header: RowHeader | undefined, literals: 
 function _resourceBox(edited: EditedRow, resources: readonly ShownValue[], property: PredicateData | undefined, options: { header?: RowHeader['kind']; autoFocus: boolean; label: string }): React.JSX.Element {
 	const { header, autoFocus, label } = options;
 	const isType = header === 'type';
-	const { editor, state, services } = edited;
+	const { editor, state } = edited;
 	const range = _rangeOf(header, property);
 	const awaitsPredicate = editor.isNew && state.draft.predicate === undefined;
 	const onIntent = resources.length === 0 && state.draft.values.length > 0 && state.pendingText === '';
@@ -486,14 +486,12 @@ function _resourceBox(edited: EditedRow, resources: readonly ShownValue[], prope
 		<span className={classes.join(' ')}>
 			<ResourceValues
 				resources={resources.map(({ view, index }) => ({ view, index }))}
-				documentResources={isType ? services.classes : services.resources}
-				range={range}
+				kind={_termKindOf(isType, range)}
 				pendingText={state.pendingText}
-				services={services}
 				placeholder={awaitsPredicate ? 'Pick a property first' : _placeholderOf(state.draft.values.length, header, label)}
 				readOnly={awaitsPredicate}
 				onPendingInput={text => editor.inputPending(text)}
-				onPick={term => editor.addValue(term)}
+				onPick={option => editor.pickValue(option)}
 				onCreate={() => editor.commitPending()}
 				onRemove={index => editor.removeValue(index)}
 				onMove={(from, to) => editor.moveValue(from, to)}
@@ -502,6 +500,21 @@ function _resourceBox(edited: EditedRow, resources: readonly ShownValue[], prope
 			/>
 		</span>
 	);
+}
+
+/**
+ * The kind of terms the input of the next value of a row offers: classes for a type, resources
+ * where the predicate takes them, none where it takes text only.
+ * @param isType Whether the row is the type of a resource.
+ * @param range What the input reads typed text as.
+ * @returns The kind, or `undefined` for none.
+ */
+function _termKindOf(isType: boolean, range: ValueKind): TermSearchKind | undefined {
+	if (isType) {
+		return 'class';
+	}
+
+	return range === 'literal' ? undefined : 'resource';
 }
 
 /**

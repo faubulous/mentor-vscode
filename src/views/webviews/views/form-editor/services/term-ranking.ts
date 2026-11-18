@@ -1,5 +1,5 @@
 import { getLocalPartAndQuery } from '@src/utilities/uri';
-import { TermSource } from '../form-editor-model';
+import { ResourceOptionData, TermSource } from '../form-editor-model';
 
 /**
  * What a term is matched and ranked by.
@@ -80,6 +80,17 @@ export function rankTerms<T>(terms: Iterable<T>, text: string, keysOf: (term: T)
 	}
 
 	return matches.sort(_compareMatches).map(match => match.term);
+}
+
+/**
+ * The options of a search that match typed text, ranked as {@link rankTerms} ranks terms, as a
+ * picker narrows its last answer by.
+ * @param options The options.
+ * @param text The typed text; empty matches every option.
+ * @returns The matching options, best first.
+ */
+export function rankTermOptions(options: Iterable<ResourceOptionData>, text: string): ResourceOptionData[] {
+	return rankTerms(options, text, option => ({ iri: option.subject.value, label: option.label, prefixedName: option.prefixedName, source: option.source }));
 }
 
 /**

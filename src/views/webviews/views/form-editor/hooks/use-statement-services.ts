@@ -1,6 +1,5 @@
 import { useMemo } from 'react';
-import { OWL, RDFS } from '@faubulous/mentor-rdf/ontologies';
-import { ResourceCardBodyData, ResourceListItemData, TermData } from '../form-editor-model';
+import { ResourceCardBodyData, TermData } from '../form-editor-model';
 import { TermViewResolver } from '../services/statement/term-view-resolver';
 import { TypedTermReader } from '../services/statement/typed-term-reader';
 import { useFormEditorContext } from '../state/form-editor-context';
@@ -24,17 +23,6 @@ export interface StatementServices {
 	 * spells them.
 	 */
 	languages: readonly string[];
-
-	/**
-	 * The resources of the document, which the rows offer as values.
-	 */
-	resources: readonly ResourceListItemData[];
-
-	/**
-	 * The classes the document declares, typed as an OWL or RDFS class, which the type of a blank
-	 * node is chosen from.
-	 */
-	classes: readonly ResourceListItemData[];
 }
 
 /**
@@ -58,20 +46,9 @@ export function useStatementServices(cardBody: ResourceCardBodyData, enabled: bo
 		return {
 			reader: new TypedTermReader(prefixes),
 			resolver: new TermViewResolver(prefixes, resources ?? [], _viewsOf(cardBody)),
-			languages: _languagesOf(cardBody).map(language => languageTags[language] ?? language),
-			resources: resources ?? [],
-			classes: _classesOf(resources ?? [])
+			languages: _languagesOf(cardBody).map(language => languageTags[language] ?? language)
 		};
 	}, [enabled, namespaces, resources, languageTags, cardBody]);
-}
-
-/**
- * The classes among the resources of the document: those typed as an OWL or RDFS class.
- * @param resources The resources of the document.
- * @returns The classes, in the order of the resources.
- */
-function _classesOf(resources: readonly ResourceListItemData[]): ResourceListItemData[] {
-	return resources.filter(resource => resource.typeIri === OWL.Class || resource.typeIri === RDFS.Class);
 }
 
 /**

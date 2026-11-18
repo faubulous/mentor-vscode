@@ -2,6 +2,7 @@ import { NamedNode } from '@rdfjs/types';
 import { useState } from 'react';
 import { RDF } from '@faubulous/mentor-rdf/ontologies';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
+import { ResourceOptionData } from '../form-editor-model';
 import { EditedRow } from './edited-row';
 import { getResourceTooltipAttributes } from './resource-tooltip';
 import { ResourceValues } from './resource-values';
@@ -28,7 +29,7 @@ export interface DraftResourceCardProps {
 
 /**
  * A new blank node in the row that started it: a nested card whose header asks for the type, with
- * the input taking the focus when the card appears and offering the classes of the document. The
+ * the input taking the focus when the card appears and offering the classes of the workspace. The
  * node is written with the row once its type is chosen; leaving the row without one, or Escape,
  * drops it.
  * @param props The node and its row.
@@ -39,8 +40,8 @@ export function DraftResourceCard({ type, index, edited }: DraftResourceCardProp
 	const [text, setText] = useState('');
 	const types = type ? [{ view: services.resolver.viewOf(type), index: 0 }] : [];
 
-	const choose = (term: NamedNode): void => {
-		editor.setNodeType(index, term);
+	const handlePick = (option: ResourceOptionData): void => {
+		editor.pickNodeType(index, option);
 		setText('');
 	};
 
@@ -48,7 +49,8 @@ export function DraftResourceCard({ type, index, edited }: DraftResourceCardProp
 		const reading = services.reader.readValue(text, 'resource');
 
 		if (reading?.term?.termType === 'NamedNode') {
-			choose(reading.term);
+			editor.setNodeType(index, reading.term);
+			setText('');
 		}
 	};
 
@@ -63,13 +65,11 @@ export function DraftResourceCard({ type, index, edited }: DraftResourceCardProp
 							<span className="statement-value is-adder">
 								<ResourceValues
 									resources={types}
-									documentResources={services.classes}
-									range="resource"
+									kind="class"
 									pendingText={text}
-									services={services}
 									placeholder="Choose type"
 									onPendingInput={setText}
-									onPick={term => term.termType === 'NamedNode' && choose(term)}
+									onPick={handlePick}
 									onCreate={handleCreate}
 									onRemove={() => editor.setNodeType(index, undefined)}
 									autoFocus

@@ -25,6 +25,15 @@ const PREF_LABEL: ResourceOptionData = {
 };
 
 /**
+ * The option of a term of SKOS, whose prefix the document of the tests does not declare.
+ * @param localName The local name of the term.
+ * @returns The option.
+ */
+function skosOption(localName: string): ResourceOptionData {
+	return { ...PREF_LABEL, subject: RdfDataFactory.namedNode(`${SKOS}${localName}`), label: localName, prefixedName: `skos:${localName}` };
+}
+
+/**
  * The label property of the tests, anchored.
  */
 const LABEL: PredicateData = withAnchors(createTestCardBody([{ ...createProperty('rdfs:label', [createLiteralView('Tree', 'en')]), predicate: { term: RdfDataFactory.namedNode(RDFS.label), prefixedName: 'rdfs:label', editable: true } }])).predicates[0];
@@ -242,6 +251,45 @@ describe('StatementRowEditor', () => {
 			{ op: 'declarePrefix', prefix: 'skos', namespace: SKOS },
 			{ op: 'setValues', subject: TEST_SUBJECT, predicate: `${SKOS}prefLabel`, values: [{ kind: 'term', term: RdfDataFactory.literal('Oak') }] }
 		]);
+	});
+
+	it('writes picked values with the declaration of the prefix they share, once', () => {
+		const { editor } = createEditor();
+
+		editor.pickValue(skosOption('Concept'));
+		editor.pickValue(skosOption('ConceptScheme'));
+		editor.leave();
+
+		expect(editor.takeEdit()).toEqual([
+			{ op: 'declarePrefix', prefix: 'skos', namespace: SKOS },
+			{
+				op: 'setValues',
+				subject: TEST_SUBJECT,
+				predicate: RDFS.label,
+				values: [{ kind: 'existing', anchor: 110 }, { kind: 'term', term: RdfDataFactory.namedNode(`${SKOS}Concept`) }, { kind: 'term', term: RdfDataFactory.namedNode(`${SKOS}ConceptScheme`) }]
+			}
+		]);
+	});
+
+	it('writes a new blank node with the declaration of the prefix of its picked type', () => {
+		const { editor } = createEditor();
+
+		editor.addNode();
+		editor.pickNodeType(1, skosOption('Concept'));
+		editor.leave();
+
+		expect(editor.takeEdit()?.[0]).toEqual({ op: 'declarePrefix', prefix: 'skos', namespace: SKOS });
+	});
+
+	it('declares no prefix for a picked value that is removed before the row is written', () => {
+		const { editor } = createEditor();
+
+		editor.pickValue(skosOption('Concept'));
+		editor.removeValue(1);
+		editor.inputLiteral(0, 'Oak');
+		editor.leave();
+
+		expect(editor.takeEdit()?.map(operation => operation.op)).toEqual(['setValues']);
 	});
 
 	it('reads the predicate field anew once something else is typed over a pick', () => {
