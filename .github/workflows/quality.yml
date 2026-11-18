@@ -30,8 +30,15 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Audit dependencies
+      # The dependencies the extension ships must have no high or critical advisories.
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
+
+      # Advisories of the development tools are reported without failing the build, as they run
+      # only on the machines of developers and in CI, and wait on releases of those tools.
+      - name: Audit development dependencies
         run: npm audit --audit-level=high
+        continue-on-error: true
 
       - name: Type check and lint
         run: npm run check
