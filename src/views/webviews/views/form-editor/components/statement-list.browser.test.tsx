@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { userEvent } from 'vitest/browser';
 import { act, fireEvent, render, within } from '@testing-library/react';
-import { OWL, RDF, RDFS, XSD } from '@faubulous/mentor-rdf';
+import { RDF, RDFS, XSD } from '@faubulous/mentor-rdf';
 import { createEditingHostStub } from '@src/utilities/mocks/editing-host-fixtures';
 import { createResourceDataServiceStub } from '@src/utilities/mocks/resource-data-service-fixtures';
 import { createResourceListItem } from '@src/utilities/mocks/resource-list-item-fixtures';
 import { EXAMPLE_NAMESPACE, TEST_NAMESPACES, TEST_SUBJECT, createIriView, createLiteralView, createProperty, createSampleCardBody, createTestCardBody, withAnchors } from '@src/utilities/mocks/statement-fixtures';
-import { ResourceCardBodyData, ResourceOptionData } from '../form-editor-model';
+import { createTermOption, createTermSearchStub } from '@src/utilities/mocks/term-search-fixtures';
+import { ResourceCardBodyData } from '../form-editor-model';
 import { ITermSearchService } from '../services/term-search-service.interface';
 import { EditingController } from '../state/editing-controller';
 import { FormEditorContext } from '../state/form-editor-context';
@@ -78,6 +79,15 @@ async function renderList(cardBody: ResourceCardBodyData = SAMPLE, others: Resou
 }
 
 /**
+ * The labels of the options a combobox in an element shows.
+ * @param element The element.
+ * @returns The labels, in order.
+ */
+function optionLabelsOf(element: HTMLElement): (string | null)[] {
+	return Array.from(element.querySelectorAll('.combobox-option-label')).map(option => option.textContent);
+}
+
+/**
  * Move the focus out of the list, to a button after it.
  */
 async function leaveList(): Promise<void> {
@@ -120,18 +130,25 @@ describe('StatementList, edited in a browser', () => {
 		expect(host.submitted.map(edit => edit.operations[0])).toEqual([{ op: 'setValues', subject: TEST_SUBJECT, predicate: RDFS.label, values: [{ kind: 'term', term: RdfDataFactory.literal('Trees', 'en') }] }]);
 	});
 
-	it('adds a typed resource as a pill and offers the resources of the document', async () => {
-		await renderList();
+	it('adds a typed resource as a pill and offers the resources of the workspace not among the values', async () => {
+		const resources = [createTermOption(`${EXAMPLE_NAMESPACE}Shrub`, 'Shrub'), createTermOption(`${EXAMPLE_NAMESPACE}Shrubbery`, 'Shrubbery', { source: 'workspace' })];
+		const termSearch = createTermSearchStub({ resource: resources });
+
+		await renderList(SAMPLE, [], RESOURCES, 1000, false, termSearch);
 
 		const row = rows()[2];
 
 		await userEvent.click(within(row).getByLabelText('New value'));
 		await userEvent.keyboard('shr');
 
-		expect(Array.from(row.querySelectorAll('.combobox-option-label')).map(option => option.textContent)).toEqual(['Shrub']);
+		await expect.poll(() => optionLabelsOf(row)).toEqual(['Shrub', 'Shrubbery']);
 
 		await userEvent.keyboard('{Enter}');
-		await userEvent.keyboard('ex:Tree{Enter}');
+		await userEvent.keyboard('shr');
+
+		await expect.poll(() => optionLabelsOf(row)).toEqual(['Shrubbery']);
+
+		await userEvent.keyboard('{Backspace}{Backspace}{Backspace}ex:Tree{Enter}');
 
 		expect(pillsOf(row)).toEqual(['Thing', 'Shrub', 'ex:Tree']);
 	});
@@ -177,11 +194,11 @@ describe('StatementList, edited in a browser', () => {
 		await renderList(cardBody);
 		await userEvent.click(within(rows()[0]).getByRole('button', { name: /^Integer\./ }));
 
-		expect(Array.from(rows()[0].querySelectorAll('.combobox-option-label')).map(option => option.textContent)).toEqual([]);
+		expect(optionLabelsOf(rows()[0])).toEqual([]);
 
 		await userEvent.keyboard('{ArrowDown}');
 
-		expect(Array.from(rows()[0].querySelectorAll('.combobox-option-label')).map(option => option.textContent)).toEqual(['Text', 'Integer', 'Decimal', 'Double', 'Float', 'Markdown']);
+		expect(optionLabelsOf(rows()[0])).toEqual(['Text', 'Integer', 'Decimal', 'Double', 'Float', 'Markdown']);
 	});
 
 	it('steps a whole number with the arrows', async () => {
@@ -286,15 +303,9 @@ describe('StatementList, edited in a browser', () => {
 
 	it('offers the predicates of the workspace in the row Add property opens, which takes a value once one is picked', async () => {
 		const skos = 'http://www.w3.org/2004/02/skos/core#';
-		const prefLabel: ResourceOptionData = { subject: RdfDataFactory.namedNode(`${skos}prefLabel`), label: 'preferred label', prefixedName: 'skos:prefLabel', source: 'workspace', missingPrefix: { prefix: 'skos', namespace: skos } };
-		const searched: string[] = [];
-		const termSearch: ITermSearchService = {
-			search: async (_kind, text) => {
-				searched.push(text);
-
-				return 'preferred label'.startsWith(text) ? [prefLabel] : [];
-			}
-		};
+		const prefLabel = createTermOption(`${skos}prefLabel`, 'preferred label', { prefixedName: 'skos:prefLabel', source: 'workspace', missingPrefix: { prefix: 'skos', namespace: skos } });
+		const termSearch = createTermSearchStub({ predicate: [prefLabel] });
+		const { searched } = termSearch;
 		const { host } = await renderList(SAMPLE, [], RESOURCES, 1000, false, termSearch);
 
 		await userEvent.click(document.querySelector<HTMLElement>('.statement-list-add')!);
@@ -325,17 +336,17 @@ describe('StatementList, edited in a browser', () => {
 		]]);
 	});
 
-	it('offers the classes of the document as the type of an untyped blank node', async () => {
+	it('offers the classes of the workspace as the type of an untyped blank node', async () => {
 		const node = RdfDataFactory.blankNode('b1');
 		const cardBody = withAnchors(createTestCardBody([createProperty('rdfs:comment', [{ term: node, editable: true, nested: { term: node, propertyCount: 1 } }])]));
 		const nodeCardBody = withAnchors({ subject: node, predicates: [createProperty('rdfs:label', [createLiteralView('Leaf')])] });
-		const resources = [
-			createResourceListItem('Plant', { label: 'Plant', typeIri: OWL.Class }),
-			createResourceListItem('Plank', { label: 'Plank' }),
-			createResourceListItem('Planter', { label: 'Planter', typeIri: RDFS.Class })
-		];
+		const plant = createTermOption(`${EXAMPLE_NAMESPACE}Plant`, 'Plant');
+		const termSearch = createTermSearchStub({
+			class: [plant, createTermOption(`${EXAMPLE_NAMESPACE}Planter`, 'Planter', { source: 'declared' })],
+			resource: [plant, createTermOption(`${EXAMPLE_NAMESPACE}Plank`, 'Plank')]
+		});
 
-		await renderList(cardBody, [nodeCardBody], resources);
+		await renderList(cardBody, [nodeCardBody], RESOURCES, 1000, false, termSearch);
 
 		const header = within(document.querySelector<HTMLElement>('.resource-card.is-nested')!).getByRole('group', { name: 'Type' });
 
@@ -344,7 +355,7 @@ describe('StatementList, edited in a browser', () => {
 		await expect.poll(() => document.activeElement).toBe(within(header).getByLabelText('New value'));
 		await userEvent.keyboard('plan');
 
-		expect(Array.from(header.querySelectorAll('.combobox-option-label')).map(option => option.textContent)).toEqual(['Plant', 'Planter']);
+		await expect.poll(() => optionLabelsOf(header)).toEqual(['Plant', 'Planter']);
 	});
 
 	it('starts a new blank node with [, puts the focus into the input of its type, and writes it with the type', async () => {

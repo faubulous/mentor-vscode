@@ -1,10 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { VscodeTextfield } from '@vscode-elements/elements';
-import { ResourceOptionData } from '../form-editor-model';
-import { useTermOptions } from '../hooks/use-term-options';
 import { StatementRowEditor } from '../state/statement-row-editor';
 import { StatementRowState } from '../state/statement-row-state';
-import { Combobox, ComboboxOption } from './combobox';
+import { TermPicker } from './term-picker';
 
 /**
  * Properties of the {@link PredicateField} component.
@@ -44,8 +42,6 @@ export interface PredicateFieldProps {
 export function PredicateField({ editor, state, label, autoFocus = false }: PredicateFieldProps): React.JSX.Element {
 	const fieldRef = useRef<VscodeTextfield>(null);
 	const [focused, setFocused] = useState(false);
-	const terms = useTermOptions('predicate', state.predicateText, focused);
-	const options = useMemo(() => terms.map(_optionOf), [terms]);
 
 	// The field takes the focus once it has rendered the input it hands the focus to.
 	useEffect(() => {
@@ -65,11 +61,10 @@ export function PredicateField({ editor, state, label, autoFocus = false }: Pred
 	};
 
 	return (
-		<Combobox
+		<TermPicker
+			kind="predicate"
 			text={focused || (editor.isNew && state.stored.predicate === undefined) ? state.predicateText : label}
 			onTextChange={text => editor.inputPredicate(text)}
-			options={options}
-			ranked
 			openOnFocus={editor.isNew}
 			onPick={option => editor.pickPredicate(option)}
 			onCreate={() => editor.commitPredicate()}
@@ -82,21 +77,4 @@ export function PredicateField({ editor, state, label, autoFocus = false }: Pred
 			fieldRef={fieldRef}
 		/>
 	);
-}
-
-/**
- * The option of a predicate: its glyph, its label, its IRI, and the prefix picking it declares.
- * The prefixed name is matched against but not shown, as the IRI says the same.
- * @param term The predicate.
- * @returns The option.
- */
-function _optionOf(term: ResourceOptionData): ComboboxOption<ResourceOptionData> {
-	return {
-		label: term.label,
-		detail: term.subject.value,
-		keywords: term.prefixedName,
-		iconName: term.iconName,
-		hint: term.missingPrefix ? `adds ${term.missingPrefix.prefix}:` : undefined,
-		value: term
-	};
 }

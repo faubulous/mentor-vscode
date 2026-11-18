@@ -104,6 +104,23 @@ describe('TermCatalogueService', () => {
 		expect(await find('class', 'oak')).toEqual([]);
 	});
 
+	it('offers the resources the document describes and the classes it types them with, though the store does not tell what they are', async () => {
+		const store = createStore();
+		const gardenGraph = 'http://example.org/garden';
+
+		store.loadTurtle(`${PREAMBLE}
+			ex:Garden ex:grows v:Oak .
+			ex:Bed a ex:Planter .
+		`, gardenGraph, true);
+
+		const options = { catalogue: createCatalogue(store), document: { ...createDocument(), graphs: [DOCUMENT_GRAPH, gardenGraph] } as IDocumentContext };
+
+		expect(await find('resource', 'gard', options)).toEqual([`${EX}Garden`]);
+		expect(await find('class', 'planter', options)).toEqual([`${EX}Planter`]);
+		expect(await find('resource', 'planter', options)).toEqual([`${EX}Planter`]);
+		expect(await find('class', 'gard', options)).toEqual([]);
+	});
+
 	it('proposes the prefix the workspace uses where the document declares none for the namespace', async () => {
 		const [tree] = await createCatalogue().search({ kind: 'class', text: 'Tree', limit: 1 }, createDocument());
 

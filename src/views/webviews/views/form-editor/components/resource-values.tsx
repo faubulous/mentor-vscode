@@ -1,10 +1,7 @@
 import { DragEvent, KeyboardEvent, MouseEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { VscodeTextfield } from '@vscode-elements/elements';
-import { ValueKind } from '@src/utilities/value-kind';
-import { BlankNode, NamedNode } from '@rdfjs/types';
-import { ResourcePillData, TermData } from '../form-editor-model';
-import { StatementServices } from '../hooks/use-statement-services';
-import { Combobox, ComboboxOption } from './combobox';
+import { ResourceOptionData, TermData, TermSearchKind } from '../form-editor-model';
+import { TermPicker } from './term-picker';
 import { ValuePill } from './value-pill';
 
 /**
@@ -48,24 +45,14 @@ export interface ResourceValuesProps {
 	resources: readonly ResourceValueEntry[];
 
 	/**
-	 * The resources of the document, which the input offers.
+	 * The kind of terms the input offers, such as classes for a type; none where it takes text only.
 	 */
-	documentResources: readonly ResourcePillData[];
-
-	/**
-	 * What the predicate takes, which decides how typed text is read.
-	 */
-	range: ValueKind;
+	kind?: TermSearchKind;
 
 	/**
 	 * The text typed into the input.
 	 */
 	pendingText: string;
-
-	/**
-	 * Reads typed text and names the resources on offer.
-	 */
-	services: StatementServices;
 
 	/**
 	 * The hint shown in the empty input.
@@ -78,9 +65,9 @@ export interface ResourceValuesProps {
 	onPendingInput: (text: string) => void;
 
 	/**
-	 * Called with a resource picked from the list.
+	 * Called with a term picked from the list.
 	 */
-	onPick: (term: NamedNode | BlankNode) => void;
+	onPick: (option: ResourceOptionData) => void;
 
 	/**
 	 * Called when Enter takes the typed text.
@@ -119,8 +106,9 @@ export interface ResourceValuesProps {
 
 /**
  * The resources of a statement in one box: a pill per resource and the input of the next value
- * after the last pill, which offers the resources of the document and takes a typed prefixed name,
- * `<iri>` or, where the predicate takes more than resources, text. The box is one stop of Tab, the
+ * after the last pill, which offers the terms of the workspace that are not among the values yet,
+ * as a {@link TermPicker}, and takes a typed prefixed name, `<iri>` or, where the predicate takes
+ * more than resources, text. The box is one stop of Tab, the
  * input; the arrows walk the pills from it. On a pill Backspace and Delete remove it, Alt with an
  * arrow moves it one place, and typing continues in the input. Where the values can be moved, a
  * pill is dragged to another place among the pills, an accent bar showing where it is dropped.
@@ -129,12 +117,12 @@ export interface ResourceValuesProps {
  * @returns The box.
  */
 export function ResourceValues(props: ResourceValuesProps): React.JSX.Element {
-	const { resources, documentResources, range, pendingText, services, placeholder, onPendingInput, onPick, onCreate, onRemove, onMove, onStartNode, autoFocus = false, readOnly = false } = props;
+	const { resources, kind, pendingText, placeholder, onPendingInput, onPick, onCreate, onRemove, onMove, onStartNode, autoFocus = false, readOnly = false } = props;
 	const pills = useRef<(HTMLElement | null)[]>([]);
 	const fieldRef = useRef<VscodeTextfield>(null);
 	const [focusRequest, setFocusRequest] = useState<number>();
 	const [drag, setDrag] = useState<PillDragState>();
-	const options = useMemo(() => range === 'literal' ? [] : _optionsOf(documentResources, resources, services), [range, documentResources, resources, services]);
+	const present = useMemo(() => _presentOf(resources), [resources]);
 
 	// The input takes the focus once it has rendered the field it hands the focus to.
 	useEffect(() => {
@@ -281,10 +269,11 @@ export function ResourceValues(props: ResourceValuesProps): React.JSX.Element {
 					<ValuePill view={view} pillRef={element => { pills.current[position] = element; }} onKeyDown={handlePillKeyDown(position)} onRemove={() => onRemove(index)} />
 				</span>
 			))}
-			<Combobox
+			<TermPicker
+				kind={kind}
+				exclude={present}
 				text={pendingText}
 				onTextChange={onPendingInput}
-				options={options}
 				onPick={onPick}
 				onCreate={onCreate}
 				onKeyDown={handleFieldKeyDown}
@@ -299,25 +288,12 @@ export function ResourceValues(props: ResourceValuesProps): React.JSX.Element {
 }
 
 /**
- * The resources of the document the input offers: those not among the values already, by their
- * label with their IRI after it, and found by their prefixed name too.
- * @param documentResources The resources of the document.
+ * The IRIs among the values, which the input does not offer again.
  * @param resources The resources of the row.
- * @param services Names the resources by their prefixed names.
- * @returns The options.
+ * @returns The IRIs.
  */
-function _optionsOf(documentResources: readonly ResourcePillData[], resources: readonly ResourceValueEntry[], services: StatementServices): ComboboxOption<NamedNode | BlankNode>[] {
-	const present = new Set(resources.flatMap(({ view }) => view.term.termType === 'NamedNode' ? [view.term.value] : []));
-
-	return documentResources.flatMap(resource => {
-		if (resource.subject.termType !== 'NamedNode' || present.has(resource.subject.value)) {
-			return [];
-		}
-
-		const prefixedName = resource.prefixedName ?? services.resolver.viewOf(resource.subject).prefixedName;
-
-		return [{ label: resource.label, detail: resource.subject.value, keywords: prefixedName, value: resource.subject }];
-	});
+function _presentOf(resources: readonly ResourceValueEntry[]): Set<string> {
+	return new Set(resources.flatMap(({ view }) => view.term.termType === 'NamedNode' ? [view.term.value] : []));
 }
 
 /**

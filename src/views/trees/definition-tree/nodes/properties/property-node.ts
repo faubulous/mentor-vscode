@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { RDFS, VocabularyRepository } from '@faubulous/mentor-rdf';
+import { OWL, RDFS, VocabularyRepository } from '@faubulous/mentor-rdf';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
 import { any, getPropertyTypeFromRange } from '@src/utilities';
@@ -30,18 +30,26 @@ export class PropertyNode extends DefinitionTreeNode {
 		return result;
 	}
 
+	/**
+	 * Get the range of a property, which its glyph and colour show: its declared range, else its
+	 * datatype, else `rdfs:Literal` for a datatype property, which takes literals, else
+	 * `rdfs:Resource`.
+	 * @param propertyUri The IRI of the property.
+	 * @returns The IRI of the range.
+	 */
 	getRange(propertyUri?: string): string {
-		let rangeUri: string | undefined;
-
-		if (propertyUri) {
-			rangeUri = this.vocabulary.getRange(this.getDocumentGraphs(), propertyUri);
-
-			if (!rangeUri) {
-				rangeUri = this.vocabulary.getDatatype(this.getDocumentGraphs(), propertyUri);
-			}
+		if (!propertyUri) {
+			return RDFS.Resource;
 		}
 
-		return rangeUri ?? RDFS.Resource;
+		const graphs = this.getDocumentGraphs();
+		const rangeUri = this.vocabulary.getRange(graphs, propertyUri) ?? this.vocabulary.getDatatype(graphs, propertyUri);
+
+		if (rangeUri) {
+			return rangeUri;
+		}
+
+		return this.vocabulary.hasType(graphs, propertyUri, OWL.DatatypeProperty) ? RDFS.Literal : RDFS.Resource;
 	}
 
 	getPropertyType(rangeUri?: string) {

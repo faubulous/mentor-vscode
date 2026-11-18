@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ResourceOptionData, TermSearchKind } from '../form-editor-model';
 import { SequentialTermSearch } from '../services/sequential-term-search';
-import { rankTerms } from '../services/term-ranking';
+import { rankTermOptions } from '../services/term-ranking';
 import { useFormEditorContext } from '../state/form-editor-context';
 
 /**
@@ -31,19 +31,24 @@ const NO_ANSWER: TermAnswer = { text: '', options: [] };
  * picker is in use. Until the host answers for the current text, the terms of its last answer that
  * match the text are shown, ranked as the host ranks them, so the list follows every keystroke at
  * once and the answer only adds to it.
- * @param kind The kind of terms.
+ * @param kind The kind of terms, or `undefined` where the picker offers none.
  * @param text The typed text.
  * @param active Whether the picker is in use, as while its field has the focus.
  * @returns The terms, best first; none where the form editor offers no search.
  */
-export function useTermOptions(kind: TermSearchKind, text: string, active: boolean): readonly ResourceOptionData[] {
+export function useTermOptions(kind: TermSearchKind | undefined, text: string, active: boolean): readonly ResourceOptionData[] {
 	const { termSearch } = useFormEditorContext();
 	const [answer, setAnswer] = useState<TermAnswer>(NO_ANSWER);
 	const [search, setSearch] = useState<SequentialTermSearch>();
 
-	// The search lives with the picker, and stops answering once the picker is gone.
+	// The search lives with the picker, and stops answering once the picker is gone or offers
+	// another kind of terms.
 	useEffect(() => {
-		if (!termSearch) {
+		setAnswer(NO_ANSWER);
+
+		if (!termSearch || !kind) {
+			setSearch(undefined);
+
 			return undefined;
 		}
 
@@ -60,15 +65,5 @@ export function useTermOptions(kind: TermSearchKind, text: string, active: boole
 		}
 	}, [search, text, active]);
 
-	return useMemo(() => answer.text === text ? answer.options : _narrow(answer.options, text), [answer, text]);
-}
-
-/**
- * The terms of an answer that match other text, ranked as the host ranks them.
- * @param options The terms of the answer.
- * @param text The typed text.
- * @returns The matching terms, best first.
- */
-function _narrow(options: readonly ResourceOptionData[], text: string): ResourceOptionData[] {
-	return rankTerms(options, text, option => ({ iri: option.subject.value, label: option.label, prefixedName: option.prefixedName, source: option.source }));
+	return useMemo(() => answer.text === text ? answer.options : rankTermOptions(answer.options, text), [answer, text]);
 }

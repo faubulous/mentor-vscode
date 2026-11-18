@@ -1,8 +1,9 @@
-import { Store, rdf } from '@faubulous/mentor-rdf';
+import { RDF, Store } from '@faubulous/mentor-rdf';
+import { getIconContextOf } from '@src/utilities/resource-icon';
 import { getSubjectIconName } from '@src/utilities/subject-icon';
 
 /**
- * Tells the glyphs of IRIs from the types the store asserts for them across all its graphs.
+ * Tells the glyphs of IRIs from the statements the store holds about them across all its graphs.
  * Memoized until the store changes, because snapshots and searches ask for the same vocabulary
  * terms over and over.
  */
@@ -24,7 +25,7 @@ export class StoreIconResolver {
 	constructor(private readonly _store: Store) { }
 
 	/**
-	 * The glyph of an IRI, from its types in the store.
+	 * The glyph of an IRI, from its statements in the store.
 	 * @param iri The IRI.
 	 * @returns The glyph, or `undefined` when the store knows no type for the IRI.
 	 */
@@ -46,20 +47,16 @@ export class StoreIconResolver {
 	}
 
 	/**
-	 * Read the glyph of an IRI from the store.
+	 * Read the glyph of an IRI from its statements in the store: its types, and, as the cards read
+	 * it, its range, which tells a date or a number property from a relation.
 	 * @param iri The IRI.
 	 * @returns The glyph, or `undefined` when the store knows no type for the IRI.
 	 */
 	private _read(iri: string): string | undefined {
 		const store = this._store;
-		const types: string[] = [];
+		const quads = Array.from(store.matchAll(undefined, store.dataFactory.namedNode(iri), null, null, false));
+		const types = quads.flatMap(quad => quad.predicate.value === RDF.type && quad.object.termType === 'NamedNode' ? [quad.object.value] : []);
 
-		for (const quad of store.matchAll(undefined, store.dataFactory.namedNode(iri), rdf.type, null, false)) {
-			if (quad.object.termType === 'NamedNode') {
-				types.push(quad.object.value);
-			}
-		}
-
-		return types.length > 0 ? getSubjectIconName(types) : undefined;
+		return types.length > 0 ? getSubjectIconName(types, getIconContextOf(quads)) : undefined;
 	}
 }

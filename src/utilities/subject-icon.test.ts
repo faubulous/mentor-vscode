@@ -18,10 +18,12 @@ describe('getSubjectIconName', () => {
 		expect(getSubjectIconName([RDF.Property], { rangeIri: RDF.langString })).toBe('symbol-text');
 	});
 
-	it('falls back to the property glyph when no range is declared', () => {
-		for (const type of [OWL.ObjectProperty, OWL.DatatypeProperty, OWL.AnnotationProperty, RDF.Property]) {
+	it('falls back to the property glyph when no range is declared, and to the text glyph for a datatype property', () => {
+		for (const type of [OWL.ObjectProperty, OWL.AnnotationProperty, RDF.Property]) {
 			expect(getSubjectIconName([type]), type).toBe('mentor-rdf-object-property');
 		}
+
+		expect(getSubjectIconName([OWL.DatatypeProperty])).toBe('symbol-text');
 	});
 
 	it('only ever returns a glyph that exists', () => {

@@ -1,4 +1,5 @@
 import { EditOperation } from '@src/services/editing/edit-operation';
+import { StatementValue } from '@src/services/editing/statement-value';
 import { BlankNode, NamedNode } from '@rdfjs/types';
 import { ValueKind } from '@src/utilities/value-kind';
 import { PredicateData, ResourceOptionData, TermData } from '../form-editor-model';
@@ -49,12 +50,6 @@ interface PickedPredicate {
 	 * The IRI of the predicate.
 	 */
 	iri: string;
-
-	/**
-	 * The prefix the document is to declare for the text, until the edit writing the predicate
-	 * declares it.
-	 */
-	missingPrefix?: ResourceOptionData['missingPrefix'];
 }
 
 /**
@@ -110,6 +105,12 @@ export class StatementRowEditor implements EditWriter {
 	private _unfitting?: { draft: StatementDraft; indexes: ReadonlySet<number> };
 
 	private _pickedPredicate?: PickedPredicate;
+
+	/**
+	 * The prefix each term picked from a picker is written with, where the document declares none
+	 * for its namespace yet, by the IRI of the term; the edit that first writes one declares it.
+	 */
+	private readonly _proposedPrefixes = new Map<string, NonNullable<ResourceOptionData['missingPrefix']>>();
 
 	/**
 	 * Create the editor of a row.
@@ -271,7 +272,8 @@ export class StatementRowEditor implements EditWriter {
 	pickPredicate(option: ResourceOptionData): void {
 		const text = option.prefixedName ?? `<${option.subject.value}>`;
 
-		this._pickedPredicate = { text, iri: option.subject.value, missingPrefix: option.missingPrefix };
+		this._pickedPredicate = { text, iri: option.subject.value };
+		this._proposePrefixOf(option);
 		this._update(this._state.withPredicateText(text));
 		this.commitPredicate();
 	}
@@ -340,6 +342,17 @@ export class StatementRowEditor implements EditWriter {
 	 */
 	addValue(term: TermData['term']): void {
 		this._update(this._state.withValueAppended(term));
+	}
+
+	/**
+	 * Add a term picked from the options of the field for a new value, and empty the field. Where
+	 * the document declares no prefix for its namespace, the edit writing it declares the one
+	 * proposed.
+	 * @param option The option picked.
+	 */
+	pickValue(option: ResourceOptionData): void {
+		this._proposePrefixOf(option);
+		this.addValue(option.subject);
 	}
 
 	/**
@@ -414,6 +427,17 @@ export class StatementRowEditor implements EditWriter {
 	 */
 	setNodeType(index: number, type: NamedNode | undefined): void {
 		this._update(this._state.withDraft(this._state.draft.withNodeType(index, type)));
+	}
+
+	/**
+	 * Choose the type of a new blank node from the options of its type field. Where the document
+	 * declares no prefix for its namespace, the edit writing it declares the one proposed.
+	 * @param index The index of the node among the values.
+	 * @param option The option picked.
+	 */
+	pickNodeType(index: number, option: ResourceOptionData): void {
+		this._proposePrefixOf(option);
+		this.setNodeType(index, option.subject);
 	}
 
 	/**
@@ -595,24 +619,40 @@ export class StatementRowEditor implements EditWriter {
 	}
 
 	/**
-	 * The declaration of the prefix a picked predicate is written with, for the edit that writes
-	 * the predicate. It is declared once: a later edit finds it in the document.
+	 * Remember the prefix a picked term is written with, where the document declares none for its
+	 * namespace yet.
+	 * @param option The option picked.
+	 */
+	private _proposePrefixOf(option: ResourceOptionData): void {
+		if (option.missingPrefix) {
+			this._proposedPrefixes.set(option.subject.value, option.missingPrefix);
+		}
+	}
+
+	/**
+	 * The declarations of the prefixes the picked terms an edit writes are written with. Each is
+	 * declared once: a later edit finds it in the document.
 	 * @param operation The edit.
-	 * @returns The `declarePrefix` operation, or none.
+	 * @returns The `declarePrefix` operations, or none.
 	 */
 	private _prefixDeclarationsFor(operation: EditOperation): EditOperation[] {
-		const picked = this._pickedPredicate;
-		const predicate = operation.op === 'setPredicate' ? operation.newPredicate : operation.op === 'setValues' ? operation.predicate : undefined;
+		const declarations = new Map<string, EditOperation>();
 
-		if (!picked?.missingPrefix || predicate !== picked.iri) {
-			return [];
+		for (const iri of _writtenIrisOf(operation)) {
+			const proposed = this._proposedPrefixes.get(iri);
+
+			if (proposed && !declarations.has(proposed.prefix)) {
+				declarations.set(proposed.prefix, { op: 'declarePrefix', prefix: proposed.prefix, namespace: proposed.namespace });
+			}
 		}
 
-		const { prefix, namespace } = picked.missingPrefix;
+		for (const [iri, proposed] of this._proposedPrefixes) {
+			if (declarations.has(proposed.prefix)) {
+				this._proposedPrefixes.delete(iri);
+			}
+		}
 
-		this._pickedPredicate = { ...picked, missingPrefix: undefined };
-
-		return [{ op: 'declarePrefix', prefix, namespace }];
+		return Array.from(declarations.values());
 	}
 
 	/**
@@ -693,6 +733,41 @@ export class StatementRowEditor implements EditWriter {
 		for (const listener of this._listeners) {
 			listener();
 		}
+	}
+}
+
+/**
+ * The IRIs an edit writes as predicates and values, those of new blank nodes and lists included.
+ * @param operation The edit.
+ * @returns The IRIs, in no particular order.
+ */
+function _writtenIrisOf(operation: EditOperation): string[] {
+	if (operation.op === 'setPredicate') {
+		return [operation.newPredicate];
+	}
+
+	if (operation.op === 'setValues') {
+		return [operation.predicate, ...operation.values.flatMap(_irisOfValue)];
+	}
+
+	return [];
+}
+
+/**
+ * The IRIs a value of an edit writes.
+ * @param value The value.
+ * @returns The IRIs.
+ */
+function _irisOfValue(value: StatementValue): string[] {
+	switch (value.kind) {
+		case 'term':
+			return value.term.termType === 'NamedNode' ? [value.term.value] : [];
+		case 'list':
+			return value.items.flatMap(_irisOfValue);
+		case 'node':
+			return value.statements.flatMap(statement => [statement.predicate, ...statement.values.flatMap(_irisOfValue)]);
+		default:
+			return [];
 	}
 }
 
