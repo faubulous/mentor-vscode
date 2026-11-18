@@ -6,7 +6,7 @@ import { RDF, RDFS, XSD } from '@faubulous/mentor-rdf';
 import { createEditingHostStub, EditingHostStub } from '@src/utilities/mocks/editing-host-fixtures';
 import { createResourceDataServiceStub } from '@src/utilities/mocks/resource-data-service-fixtures';
 import { EXAMPLE_NAMESPACE, TEST_NAMESPACES, TEST_SUBJECT, createIriView, createLiteralView, createProperty, createSampleCardBody, createTestCardBody, withAnchors } from '@src/utilities/mocks/statement-fixtures';
-import { renderWebview } from '@src/utilities/mocks/webview-test-utils';
+import { renderWebview, typeInto } from '@src/utilities/mocks/webview-test-utils';
 import { PredicateData, ResourceCardBodyData } from '../form-editor-model';
 import { EditingController } from '../state/editing-controller';
 import { FormEditorContext, FormEditorContextValue } from '../state/form-editor-context';
@@ -60,14 +60,6 @@ function rowLabels(): (string | null)[] {
 }
 
 /**
- * Type into a field, as the user does.
- */
-function type(field: HTMLElement, text: string): void {
-	(field as HTMLInputElement).value = text;
-	fireEvent.input(field);
-}
-
-/**
  * Move the focus out of a row, as tabbing away from it does.
  */
 async function leave(row: HTMLElement): Promise<void> {
@@ -99,9 +91,9 @@ async function typeNewStatement(predicate: string, value: string): Promise<void>
 
 	const row = rows()[rows().length - 1];
 
-	type(within(row).getByLabelText('Predicate'), predicate);
+	typeInto(within(row).getByLabelText('Predicate'), predicate);
 	fireEvent.focusOut(within(row).getByLabelText('Predicate'), { relatedTarget: within(row).getByLabelText('New value') });
-	type(within(row).getByLabelText('New value'), value);
+	typeInto(within(row).getByLabelText('New value'), value);
 	await leave(row);
 }
 
@@ -120,7 +112,7 @@ describe('StatementList, edited', () => {
 	it('writes an edited literal as a new term among the written values, from the version of the data', async () => {
 		const { host } = renderList();
 
-		type(within(rows()[1]).getByLabelText('Value 1'), 'Oak');
+		typeInto(within(rows()[1]).getByLabelText('Value 1'), 'Oak');
 		await leave(rows()[1]);
 
 		expect(host.submitted).toEqual([{
@@ -132,8 +124,8 @@ describe('StatementList, edited', () => {
 	it('writes nothing when a row is left as it was', async () => {
 		const { host } = renderList();
 
-		type(within(rows()[1]).getByLabelText('Value 1'), 'Oak');
-		type(within(rows()[1]).getByLabelText('Value 1'), 'Tree');
+		typeInto(within(rows()[1]).getByLabelText('Value 1'), 'Oak');
+		typeInto(within(rows()[1]).getByLabelText('Value 1'), 'Tree');
 		await leave(rows()[1]);
 
 		expect(host.submitted).toEqual([]);
@@ -176,7 +168,7 @@ describe('StatementList, edited', () => {
 		const row = rows()[2];
 		const field = within(row).getByLabelText('New value');
 
-		type(field, 'ex:Plant');
+		typeInto(field, 'ex:Plant');
 		fireEvent.keyDown(field, { key: 'Enter' });
 		fireEvent.click(within(row).getByLabelText('Remove Thing'));
 		await leave(row);
@@ -189,7 +181,7 @@ describe('StatementList, edited', () => {
 		const row = rows()[2];
 		const field = within(row).getByLabelText('New value') as HTMLInputElement;
 
-		type(field, 'foo:Plant');
+		typeInto(field, 'foo:Plant');
 		fireEvent.keyDown(field, { key: 'Enter' });
 
 		expect(within(row).getByRole('alert').textContent).toMatch(/'foo' is not declared/);
@@ -200,14 +192,16 @@ describe('StatementList, edited', () => {
 		expect(host.submitted).toEqual([]);
 	});
 
-	it('shows why a number does not fit its datatype, and puts the stored value back when the row is left', async () => {
+	it('shows why a number does not fit its datatype under it, and puts the stored value back when the row is left', async () => {
 		const cardBody = withAnchors(createTestCardBody([createProperty('ex:count', [{ term: RdfDataFactory.literal('42', RdfDataFactory.namedNode(XSD.integer)), editable: true }])]));
 		const { host } = renderList(cardBody);
 		const field = within(rows()[0]).getByLabelText('Value 1') as HTMLInputElement;
 
-		type(field, '4.5');
+		typeInto(field, '4.5');
 
-		expect(within(rows()[0]).getByText(/Whole numbers/).classList.contains('is-problem')).toBe(true);
+		expect(within(rows()[0]).getByText('Not a valid integer — expected 42', { selector: '.literal-field-problem' })).toBeTruthy();
+		expect(field.closest('.literal-field')?.classList.contains('is-problem')).toBe(true);
+		expect(field.getAttribute('aria-invalid')).toBe('true');
 
 		fireEvent.keyDown(field, { key: 'Enter' });
 		await leave(rows()[0]);
@@ -222,7 +216,7 @@ describe('StatementList, edited', () => {
 		const predicate = within(row).getByLabelText('Predicate');
 
 		fireEvent.focus(predicate);
-		type(predicate, 'rdfs:comment');
+		typeInto(predicate, 'rdfs:comment');
 		fireEvent.focusOut(predicate, { relatedTarget: within(row).getByLabelText('New value') });
 
 		expect(host.submitted.map(edit => edit.operations[0])).toEqual([{ op: 'setPredicate', subject: TEST_SUBJECT, predicate: RDFS.label, newPredicate: RDFS.comment }]);
@@ -234,7 +228,7 @@ describe('StatementList, edited', () => {
 		const predicate = within(row).getByLabelText('Predicate');
 
 		fireEvent.focus(predicate);
-		type(predicate, 'rdfs:comment');
+		typeInto(predicate, 'rdfs:comment');
 		fireEvent.focusOut(predicate, { relatedTarget: within(row).getByLabelText('New value') });
 		await settle(host);
 
@@ -246,12 +240,16 @@ describe('StatementList, edited', () => {
 		expect(row.getAttribute('aria-label')).toBe('rdfs:comment');
 	});
 
-	it('gives up what was typed with Escape', async () => {
+	it('goes on to the field of a new value with Escape in a value, and gives up what was typed with Escape there', async () => {
 		const { host } = renderList();
 		const field = within(rows()[1]).getByLabelText('Value 1') as HTMLInputElement;
 
-		type(field, 'Oak');
+		typeInto(field, 'Oak');
 		fireEvent.keyDown(field, { key: 'Escape' });
+
+		expect(field.value).toBe('Oak');
+
+		fireEvent.keyDown(within(rows()[1]).getByLabelText('New value'), { key: 'Escape' });
 		await leave(rows()[1]);
 
 		expect(field.value).toBe('Tree');
@@ -328,9 +326,9 @@ describe('StatementList, edited', () => {
 	it('holds a second change back until the first one arrives, then writes it against the new anchors', async () => {
 		const { host, deliver } = renderList();
 
-		type(within(rows()[1]).getByLabelText('Value 1'), 'Oak');
+		typeInto(within(rows()[1]).getByLabelText('Value 1'), 'Oak');
 		await leave(rows()[1]);
-		type(within(rows()[1]).getByLabelText('Value 1'), 'Elm');
+		typeInto(within(rows()[1]).getByLabelText('Value 1'), 'Elm');
 		await leave(rows()[1]);
 
 		expect(host.submitted).toHaveLength(1);
@@ -351,9 +349,9 @@ describe('StatementList, edited', () => {
 	it('holds the change of another row back until the first edit arrives, so it is built from the new version', async () => {
 		const { host, deliver } = renderList();
 
-		type(within(rows()[1]).getByLabelText('Value 1'), 'Oak');
+		typeInto(within(rows()[1]).getByLabelText('Value 1'), 'Oak');
 		await leave(rows()[1]);
-		type(within(rows()[2]).getByLabelText('New value'), 'ex:Plant');
+		typeInto(within(rows()[2]).getByLabelText('New value'), 'ex:Plant');
 		await leave(rows()[2]);
 
 		expect(host.submitted).toHaveLength(1);
@@ -373,7 +371,7 @@ describe('StatementList, edited', () => {
 		const { deliver } = renderList();
 		const field = within(rows()[1]).getByLabelText('Value 1') as HTMLInputElement;
 
-		type(field, 'Oak');
+		typeInto(field, 'Oak');
 		await deliver({ ...SAMPLE, predicates: [createProperty('ex:first', [{ ...createIriView('ex:A', 'A'), anchor: 5 }]), ...SAMPLE.predicates] }, { version: 2 });
 
 		expect(rowLabels().slice(0, 3)).toEqual(['ex:first', 'rdf:type', 'rdfs:label']);
@@ -384,7 +382,7 @@ describe('StatementList, edited', () => {
 		const { host, deliver } = renderList();
 
 		await deliver(SAMPLE, { stale: true });
-		type(within(rows()[1]).getByLabelText('Value 1'), 'Oak');
+		typeInto(within(rows()[1]).getByLabelText('Value 1'), 'Oak');
 		await leave(rows()[1]);
 
 		expect(host.submitted).toHaveLength(0);

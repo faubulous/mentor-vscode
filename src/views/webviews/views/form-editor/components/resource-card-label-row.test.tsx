@@ -7,7 +7,7 @@ import { createEditingHostStub } from '@src/utilities/mocks/editing-host-fixture
 import { createResourceDataServiceStub } from '@src/utilities/mocks/resource-data-service-fixtures';
 import { createResourceListItem } from '@src/utilities/mocks/resource-list-item-fixtures';
 import { TEST_NAMESPACES, TEST_SUBJECT, createIriView, createLiteralView, createProperty, createTestCardBody, withAnchors } from '@src/utilities/mocks/statement-fixtures';
-import { renderWebview } from '@src/utilities/mocks/webview-test-utils';
+import { renderWebview, typeInto } from '@src/utilities/mocks/webview-test-utils';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { PredicateData } from '../form-editor-model';
 import { EditingController } from '../state/editing-controller';
@@ -45,14 +45,6 @@ function renderCard(properties: PredicateData[]) {
 }
 
 /**
- * Type into a field, as the user does.
- */
-function type(field: HTMLElement, text: string): void {
-	(field as HTMLInputElement).value = text;
-	fireEvent.input(field);
-}
-
-/**
  * Move the focus out of a field to nowhere, as tabbing away from the card does.
  */
 async function leave(field: HTMLElement): Promise<void> {
@@ -66,7 +58,7 @@ describe('ResourceCard, its label row', () => {
 		const { host, labelRow } = renderCard([createProperty('rdfs:label', [createLiteralView('Tree')]), createProperty('ex:p', [createIriView('ex:A', 'A')])]);
 		const title = within(labelRow).getByLabelText('Value 1');
 
-		type(title, 'Oak');
+		typeInto(title, 'Oak');
 		await leave(title);
 
 		expect(host.submitted.map(record => record.operations)).toEqual([[{ op: 'setValues', subject: TEST_SUBJECT, predicate: RDFS.label, values: [{ kind: 'term', term: RdfDataFactory.literal('Oak') }] }]]);
@@ -78,7 +70,7 @@ describe('ResourceCard, its label row', () => {
 
 		expect((predicate as HTMLInputElement).value).toBe('rdfs:label');
 
-		type(predicate, 'skos:prefLabel');
+		typeInto(predicate, 'skos:prefLabel');
 		await leave(predicate);
 
 		expect(host.submitted.map(record => record.operations)).toEqual([[{ op: 'setPredicate', subject: TEST_SUBJECT, predicate: RDFS.label, newPredicate: SKOS.prefLabel }]]);
@@ -96,7 +88,7 @@ describe('ResourceCard, its label row', () => {
 		expect(input.getAttribute('placeholder')).toBe('Add label');
 		expect((within(labelRow).getByLabelText('Predicate') as HTMLInputElement).value).toBe('rdfs:label');
 
-		type(input, 'Oak');
+		typeInto(input, 'Oak');
 		await leave(input);
 
 		expect(host.submitted.map(record => record.operations)).toEqual([[{ op: 'setValues', subject: TEST_SUBJECT, predicate: RDFS.label, values: [{ kind: 'term', term: RdfDataFactory.literal('Oak') }] }]]);

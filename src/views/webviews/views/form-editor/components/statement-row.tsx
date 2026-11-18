@@ -15,7 +15,7 @@ import { useFormEditorContext } from '../state/form-editor-context';
 import { StatementRowEditor } from '../state/statement-row-editor';
 import { StatementRowState } from '../state/statement-row-state';
 import { PinnedProperties, usePinnedProperties } from '../state/pinned-properties-context';
-import { getLiteralFieldTag, getLiteralTag } from './datatype-labels';
+import { getLiteralTag, getPrefixedNameIn, PrefixedNameOf } from './datatype-labels';
 import { EditedRow } from './edited-row';
 import { RowGrip } from './row-grip';
 import { RowMenu } from './row-menu';
@@ -174,9 +174,9 @@ interface ShownValue {
  */
 export function StatementRow({ property, editor, services, autoFocus = false, header, reorder, ...context }: StatementRowProps): React.JSX.Element {
 	const state = useRowEditorState(editor);
-	const edited: EditedRow | undefined = editor && state && services ? { editor, state, services } : undefined;
-	const { languageFilter = LanguageFilter.ALL, pinScopes = [], languageTags, namespaces } = useFormEditorContext();
 	const rowRef = useRef<HTMLDivElement>(null);
+	const edited: EditedRow | undefined = editor && state && services ? { editor, state, services, focusNewValue: () => _focusNewValueField(rowRef.current) } : undefined;
+	const { languageFilter = LanguageFilter.ALL, pinScopes = [], namespaces } = useFormEditorContext();
 	const { menuRef, openOnContextMenu } = useContextMenu();
 	const cardPins = usePinnedProperties();
 	const values = _shownValues(state?.draft.values ?? property?.values.map(view => ({ kind: 'written' as const, view })) ?? [], services, languageFilter);
@@ -247,7 +247,7 @@ export function StatementRow({ property, editor, services, autoFocus = false, he
 							{edited ? <PredicateField editor={edited.editor} state={edited.state} label={label} autoFocus={autoFocus} /> : <span className="statement-predicate-text">{label}</span>}
 							{wholes.length > 0 && <span className="statement-predicate-count">{wholes.length}</span>}
 							<PredicateTags
-								tags={_tagsOf(literals, edited, languageTags, namespaces)}
+								tags={_tagsOf(literals, edited, namespaces)}
 								onOpen={edited ? index => rowRef.current?.querySelector<HTMLElement>(`[data-value-index="${index}"] .literal-field-tag`)?.click() : undefined}
 							/>
 						</span>
@@ -338,22 +338,17 @@ function _predicateIriOf(predicateView: TermData | undefined): string | undefine
 
 /**
  * The language tags and datatypes of the literals of a row, which a narrow card shows under the
- * label: as their fields name them where the row is edited, as they are read otherwise.
+ * label, as their fields name them.
  * @param literals The literals of the row.
  * @param edited The row, where it is edited.
- * @param languageTags The spellings of the language tags of the document.
  * @param namespaces The namespace declarations of the document.
  * @returns The tags, by the index of their values.
  */
-function _tagsOf(literals: readonly ShownValue[], edited: EditedRow | undefined, languageTags: Readonly<Record<string, string>>, namespaces: readonly NamespaceData[]): { index: number; tag: string }[] {
-	return literals.flatMap(({ view, index }) => {
-		if (view.term.termType !== 'Literal') {
-			return [];
-		}
+function _tagsOf(literals: readonly ShownValue[], edited: EditedRow | undefined, namespaces: readonly NamespaceData[]): { index: number; tag: string }[] {
+	const prefixedNameOf: PrefixedNameOf = edited ? datatype => edited.services.resolver.viewOf(datatype).prefixedName : getPrefixedNameIn(namespaces);
 
-		const tag = edited
-			? getLiteralFieldTag(view.term, languageTags, datatype => edited.services.resolver.viewOf(datatype).prefixedName)
-			: getLiteralTag(view.term, languageTags, namespaces);
+	return literals.flatMap(({ view, index }) => {
+		const tag = view.term.termType === 'Literal' ? getLiteralTag(view.term, prefixedNameOf) : undefined;
 
 		return tag ? [{ index, tag }] : [];
 	});
@@ -378,6 +373,15 @@ function _isIriLabel(predicateView: TermData | undefined, label: string): boolea
  */
 function _isOwnEvent(event: KeyboardEvent<HTMLElement>): boolean {
 	return event.target instanceof Element && event.target.closest('.statement-line') === event.currentTarget;
+}
+
+/**
+ * Move the focus to the field of a new value of a row, not of a row nested in it, where the row
+ * has one.
+ * @param row The element of the row.
+ */
+function _focusNewValueField(row: HTMLElement | null): void {
+	row?.querySelector<HTMLElement>(':scope > .statement-cells > .statement-values > .statement-value.is-adder .input-field')?.focus();
 }
 
 /**

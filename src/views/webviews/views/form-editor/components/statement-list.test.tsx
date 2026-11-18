@@ -45,7 +45,7 @@ describe('StatementList', () => {
 		expect(screen.getByText('en', { selector: '.statement-predicate-tag' })).toBeTruthy();
 	});
 
-	it('shows the datatype of a literal as a tag by its prefix, and none for a plain string', () => {
+	it('shows the datatype of a literal as a tag by its name, XSD ones without their prefix, and none for a plain string', () => {
 		const cardBody = createTestCardBody([createProperty('ex:p', [
 			{ term: RdfDataFactory.literal('42', RdfDataFactory.namedNode(XSD.integer)), editable: true },
 			{ term: RdfDataFactory.literal('plain', RdfDataFactory.namedNode(XSD.string)), editable: true }
@@ -53,7 +53,7 @@ describe('StatementList', () => {
 
 		renderList(cardBody);
 
-		expect(screen.getByText('xsd:integer', { selector: '.literal-tag' })).toBeTruthy();
+		expect(screen.getByText('integer', { selector: '.literal-tag' })).toBeTruthy();
 		expect(screen.getAllByText(/./, { selector: '.literal-tag' })).toHaveLength(1);
 	});
 

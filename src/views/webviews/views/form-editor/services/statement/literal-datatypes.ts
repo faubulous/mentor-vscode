@@ -1,25 +1,7 @@
 import { XSD } from '@faubulous/mentor-rdf/ontologies';
 import { Term } from '@rdfjs/types';
-
-/**
- * A datatype the literal fields know: its IRI and the text it takes.
- */
-interface LiteralDatatype {
-	/**
-	 * The IRI of the datatype.
-	 */
-	iri: string;
-
-	/**
-	 * The text the datatype takes; any text when absent.
-	 */
-	pattern?: RegExp;
-}
-
-/**
- * A number with an optional exponent, infinity or not-a-number, as doubles and floats are written.
- */
-const FLOATING_POINT = /^([+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?|[+-]?INF|NaN)$/;
+import { XsdValidation } from 'rdf-validation';
+import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 
 /**
  * The IRI of the Markdown media type, which text literals in Markdown are typed with.
@@ -27,18 +9,9 @@ const FLOATING_POINT = /^([+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?|[+-]?INF|NaN)$
 export const MARKDOWN_DATATYPE = 'https://www.iana.org/assignments/media-types/text/markdown';
 
 /**
- * The datatypes the literal fields know, in the order the picker offers them.
+ * The datatypes the literal fields know and offer, in the order they are offered.
  */
-const KNOWN: readonly LiteralDatatype[] = [
-	{ iri: XSD.string },
-	{ iri: XSD.integer, pattern: /^[+-]?\d+$/ },
-	{ iri: XSD.decimal, pattern: /^[+-]?(\d+(\.\d*)?|\.\d+)$/ },
-	{ iri: XSD.double, pattern: FLOATING_POINT },
-	{ iri: XSD.float, pattern: FLOATING_POINT },
-	{ iri: XSD.boolean, pattern: /^(true|false|1|0)$/ },
-	{ iri: XSD.anyURI, pattern: /^[a-zA-Z][\w+.-]*:\S*$/ },
-	{ iri: MARKDOWN_DATATYPE }
-];
+const KNOWN: readonly string[] = [XSD.string, XSD.boolean, XSD.integer, XSD.decimal, XSD.double, XSD.date, XSD.dateTime, XSD.anyURI];
 
 /**
  * The datatypes whose values are numbers, written in the editor font and stepped with the arrows.
@@ -46,8 +19,28 @@ const KNOWN: readonly LiteralDatatype[] = [
 const NUMERIC: ReadonlySet<string> = new Set([XSD.integer, XSD.decimal, XSD.double, XSD.float]);
 
 /**
- * What the literal fields know about datatypes: which of them are numbers, which text each takes,
- * and which of them a text fits. How they are named is the components' to say.
+ * The year, month and day a date or a date and time starts with.
+ */
+const DATE_START = /^-?(\d{4,})-(\d{2})-(\d{2})/;
+
+/**
+ * Checks the text of literals of the XSD datatypes, by the rules SHACL validation checks them with.
+ */
+const XSD_VALIDATION = new XsdValidation();
+
+/**
+ * What a text of a datatype must be beyond the rules of the XSD validation: a date names a day its
+ * month has, and a URI holds no white space.
+ */
+const FURTHER_CHECKS: ReadonlyMap<string, (text: string) => boolean> = new Map([
+	[XSD.date, _hasExistingDay],
+	[XSD.dateTime, _hasExistingDay],
+	[XSD.anyURI, (text: string) => !/\s/.test(text)]
+]);
+
+/**
+ * What the literal fields know about datatypes: which of them they offer, which are numbers, and
+ * which text each takes. How they are named is the components' to say.
  */
 export class LiteralDatatypes {
 	/**
@@ -60,34 +53,35 @@ export class LiteralDatatypes {
 	}
 
 	/**
-	 * Indicate whether the literal fields know a datatype, and name it themselves.
+	 * Indicate whether the literal fields know a datatype, and offer it themselves.
 	 * @param iri The IRI of the datatype.
 	 * @returns `true` for a datatype the fields know.
 	 */
 	static isKnown(iri: string): boolean {
-		return KNOWN.some(datatype => datatype.iri === iri);
+		return KNOWN.includes(iri);
 	}
 
 	/**
-	 * Indicate whether a text is a value of a datatype. A datatype the fields do not know takes
-	 * any text.
+	 * Indicate whether a text is a value of a datatype, by the lexical rules of XSD for its
+	 * datatypes, with a day that exists in its month for dates and no white space in URIs. A
+	 * datatype of another vocabulary takes any text.
 	 * @param iri The IRI of the datatype.
 	 * @param text The text.
 	 * @returns `true` when the text fits.
 	 */
 	static fits(iri: string, text: string): boolean {
-		const pattern = KNOWN.find(datatype => datatype.iri === iri)?.pattern;
+		const literal = RdfDataFactory.literal(text, RdfDataFactory.namedNode(iri));
 
-		return !pattern || pattern.test(text);
+		return XSD_VALIDATION.validateSimple(literal) && (FURTHER_CHECKS.get(iri)?.(text) ?? true);
 	}
 
 	/**
-	 * The datatypes a text fits, in the order the picker offers them.
+	 * The datatypes the fields know that a text fits, in the order they are offered.
 	 * @param text The text.
 	 * @returns The IRIs of the datatypes.
 	 */
 	static fitting(text: string): string[] {
-		return KNOWN.filter(datatype => !datatype.pattern || datatype.pattern.test(text)).map(datatype => datatype.iri);
+		return KNOWN.filter(iri => LiteralDatatypes.fits(iri, text));
 	}
 
 	/**
@@ -99,4 +93,38 @@ export class LiteralDatatypes {
 	static fitsTerm(term: Term): boolean {
 		return term.termType !== 'Literal' || LiteralDatatypes.fits(term.datatype.value, term.value);
 	}
+}
+
+/**
+ * Indicate whether the day a date names exists in its month, as the 29th of February does in a leap
+ * year only. A text that names no date passes, as the lexical rules judge it.
+ * @param text The text of a date, or of a date and time.
+ * @returns `true` when the day exists.
+ */
+function _hasExistingDay(text: string): boolean {
+	const match = DATE_START.exec(text);
+
+	if (!match) {
+		return true;
+	}
+
+	const [year, month, day] = [Number(match[1]) * (text.startsWith('-') ? -1 : 1), Number(match[2]), Number(match[3])];
+
+	return day <= _daysInMonth(year, month);
+}
+
+/**
+ * The number of days of a month in the proleptic Gregorian calendar XSD dates are written in.
+ * @param year The year, where 0 is the year before 1.
+ * @param month The month, from 1.
+ * @returns The number of days.
+ */
+function _daysInMonth(year: number, month: number): number {
+	if (month === 2) {
+		const leap = (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+
+		return leap ? 29 : 28;
+	}
+
+	return [4, 6, 9, 11].includes(month) ? 30 : 31;
 }
