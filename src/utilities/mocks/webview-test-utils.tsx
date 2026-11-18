@@ -176,3 +176,17 @@ export function renderWebview<M extends WebviewMessage = WebviewMessage>(ui: Rea
 
 	return { ...render(ui), host };
 }
+
+/**
+ * Lay an element over the whole page, above everything laid out in it, as the cards and bars after
+ * a popup would be; only what is in the top layer of the page stays in view over it.
+ * @returns The element, which the test removes again.
+ */
+export function coverPage(): HTMLElement {
+	const cover = document.createElement('div');
+
+	cover.style.cssText = 'position: fixed; inset: 0; z-index: 1000; background: black;';
+	document.body.append(cover);
+
+	return cover;
+}

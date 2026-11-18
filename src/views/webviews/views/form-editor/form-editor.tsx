@@ -25,6 +25,7 @@ import { useScrolledPast } from './hooks/use-scrolled-past';
 import { useUndoRouting } from './hooks/use-undo-routing';
 import { EditingHostService } from './services/editing-host-service';
 import { ResourceDataService } from './services/resource-data-service';
+import { TermSearchService } from './services/term-search-service';
 import { EditingController } from './state/editing-controller';
 import { FormEditorContext, FormEditorContextValue } from './state/form-editor-context';
 import { PersistedViewState, ViewStateChanges } from './state/persisted-view-state';
@@ -71,6 +72,7 @@ function FormEditor(): React.JSX.Element {
 	const storeDataService = useMemo(() => new ResourceDataService(resources => messagingRef.current?.postMessage({ id: 'ResourceRequest', resources, source: 'store' })), []);
 	const hostService = useMemo(() => new EditingHostService(message => messagingRef.current?.postMessage(message)), []);
 	const controller = useMemo(() => new EditingController(hostService), [hostService]);
+	const termSearch = useMemo(() => new TermSearchService(message => messagingRef.current?.postMessage(message)), []);
 	const focusedBlockId = useFocusedBlock(scrollElement);
 	const busyIds = useBusyResources(controller);
 	const routeUndo = useUndoRouting(scrollElement);
@@ -89,6 +91,9 @@ function FormEditor(): React.JSX.Element {
 			case 'EditRejected':
 				hostService.accept(message);
 				break;
+			case 'TermSearchResult':
+				termSearch.accept(message);
+				break;
 			case 'ScrollToResource':
 				revealResourceRef.current?.(message.resource);
 				break;
@@ -105,7 +110,7 @@ function FormEditor(): React.JSX.Element {
 			default:
 				break;
 		}
-	}, [documentDataService, storeDataService, hostService, updateViewState]);
+	}, [documentDataService, storeDataService, hostService, termSearch, updateViewState]);
 
 	const messaging = useWebviewMessaging<FormEditorMessages>(onMessage);
 
@@ -249,6 +254,7 @@ function FormEditor(): React.JSX.Element {
 	const context: FormEditorContextValue = useMemo(() => ({
 		readOnly: !editable,
 		editing: editable ? controller : undefined,
+		termSearch,
 		namespaces: snapshot?.namespaces ?? [],
 		languageTags: snapshot?.languageTags ?? {},
 		languageFilter,
@@ -265,7 +271,7 @@ function FormEditor(): React.JSX.Element {
 		onRevealInTextEditor: handleRevealPosition,
 		revealedResource: revealed,
 		filterText
-	}), [snapshot, editable, controller, languageFilter, handleRevealResource, handleOpenExternal, handleRenameResource, handleRevealPosition, handleSetPin, handleUnpinAll, handleRemoveResource, revealed, filterText]);
+	}), [snapshot, editable, controller, termSearch, languageFilter, handleRevealResource, handleOpenExternal, handleRenameResource, handleRevealPosition, handleSetPin, handleUnpinAll, handleRemoveResource, revealed, filterText]);
 
 	if (!snapshot) {
 		return (

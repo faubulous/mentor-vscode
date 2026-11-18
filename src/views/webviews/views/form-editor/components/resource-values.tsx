@@ -110,6 +110,11 @@ export interface ResourceValuesProps {
 	 * Whether the input takes the focus when it appears.
 	 */
 	autoFocus?: boolean;
+
+	/**
+	 * Whether the input takes no value yet, as in a row whose predicate is not picked.
+	 */
+	readOnly?: boolean;
 }
 
 /**
@@ -124,7 +129,7 @@ export interface ResourceValuesProps {
  * @returns The box.
  */
 export function ResourceValues(props: ResourceValuesProps): React.JSX.Element {
-	const { resources, documentResources, range, pendingText, services, placeholder, onPendingInput, onPick, onCreate, onRemove, onMove, onStartNode, autoFocus = false } = props;
+	const { resources, documentResources, range, pendingText, services, placeholder, onPendingInput, onPick, onCreate, onRemove, onMove, onStartNode, autoFocus = false, readOnly = false } = props;
 	const pills = useRef<(HTMLElement | null)[]>([]);
 	const fieldRef = useRef<VscodeTextfield>(null);
 	const [focusRequest, setFocusRequest] = useState<number>();
@@ -208,7 +213,7 @@ export function ResourceValues(props: ResourceValuesProps): React.JSX.Element {
 	};
 
 	const handleFieldKeyDown = (event: KeyboardEvent<VscodeTextfield>): void => {
-		if (onStartNode && event.key === '[' && pendingText === '') {
+		if (onStartNode && !readOnly && event.key === '[' && pendingText === '') {
 			event.preventDefault();
 			onStartNode();
 
@@ -285,6 +290,7 @@ export function ResourceValues(props: ResourceValuesProps): React.JSX.Element {
 				onKeyDown={handleFieldKeyDown}
 				label="New value"
 				placeholder={placeholder}
+				readOnly={readOnly}
 				className="is-new"
 				fieldRef={fieldRef}
 			/>
@@ -294,7 +300,7 @@ export function ResourceValues(props: ResourceValuesProps): React.JSX.Element {
 
 /**
  * The resources of the document the input offers: those not among the values already, by their
- * label, with their prefixed name and IRI under it.
+ * label with their IRI after it, and found by their prefixed name too.
  * @param documentResources The resources of the document.
  * @param resources The resources of the row.
  * @param services Names the resources by their prefixed names.
@@ -310,7 +316,7 @@ function _optionsOf(documentResources: readonly ResourcePillData[], resources: r
 
 		const prefixedName = resource.prefixedName ?? services.resolver.viewOf(resource.subject).prefixedName;
 
-		return [{ label: resource.label, detail: prefixedName ? `${prefixedName}\n${resource.subject.value}` : resource.subject.value, keywords: prefixedName, value: resource.subject }];
+		return [{ label: resource.label, detail: resource.subject.value, keywords: prefixedName, value: resource.subject }];
 	});
 }
 

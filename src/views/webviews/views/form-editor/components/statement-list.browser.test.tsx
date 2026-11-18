@@ -6,7 +6,8 @@ import { createEditingHostStub } from '@src/utilities/mocks/editing-host-fixture
 import { createResourceDataServiceStub } from '@src/utilities/mocks/resource-data-service-fixtures';
 import { createResourceListItem } from '@src/utilities/mocks/resource-list-item-fixtures';
 import { EXAMPLE_NAMESPACE, TEST_NAMESPACES, TEST_SUBJECT, createIriView, createLiteralView, createProperty, createSampleCardBody, createTestCardBody, withAnchors } from '@src/utilities/mocks/statement-fixtures';
-import { ResourceCardBodyData } from '../form-editor-model';
+import { ResourceCardBodyData, ResourceOptionData } from '../form-editor-model';
+import { ITermSearchService } from '../services/term-search-service.interface';
 import { EditingController } from '../state/editing-controller';
 import { FormEditorContext } from '../state/form-editor-context';
 import { ResourceCardFooter } from './resource-card-footer';
@@ -40,14 +41,17 @@ const RESOURCES = [createResourceListItem('Plant', { label: 'Plant' }), createRe
  * @param cardBody The statements.
  * @param others The statements about the blank nodes it shows.
  * @param resources The resources of the document.
+ * @param width The width of the card.
+ * @param labelRow Whether the card shows a label row.
+ * @param termSearch Searches the terms of the workspace the pickers offer.
  */
-async function renderList(cardBody: ResourceCardBodyData = SAMPLE, others: ResourceCardBodyData[] = [], resources = RESOURCES, width = 1000, labelRow = false) {
+async function renderList(cardBody: ResourceCardBodyData = SAMPLE, others: ResourceCardBodyData[] = [], resources = RESOURCES, width = 1000, labelRow = false, termSearch?: ITermSearchService) {
 	const host = createEditingHostStub();
 	const editing = new EditingController(host);
 	const dataService = createResourceDataServiceStub([cardBody, ...others]);
 	const ui = (current: ResourceCardBodyData) => (
 		<div className="form-editor" style={NO_BARS}>
-			<FormEditorContext.Provider value={{ readOnly: false, editing, namespaces: NAMESPACES, languageTags: {}, resources, labelPredicates: labelRow ? [RdfDataFactory.namedNode(RDFS.label)] : undefined }}>
+			<FormEditorContext.Provider value={{ readOnly: false, editing, termSearch, namespaces: NAMESPACES, languageTags: {}, resources, labelPredicates: labelRow ? [RdfDataFactory.namedNode(RDFS.label)] : undefined }}>
 				<article className="resource-card is-expanded" style={{ width }}>
 					<div className="resource-card-body">
 						<StatementList cardBody={current} dataService={dataService} depth={0} visited={[current.subject]} labelRow={labelRow} />
@@ -278,6 +282,47 @@ describe('StatementList, edited in a browser', () => {
 		await leaveList();
 
 		expect(host.submitted.map(edit => edit.operations[0])).toEqual([{ op: 'setValues', subject: TEST_SUBJECT, predicate: RDFS.seeAlso, values: [{ kind: 'term', term: RdfDataFactory.namedNode(`${EXAMPLE_NAMESPACE}Plant`) }] }]);
+	});
+
+	it('offers the predicates of the workspace in the row Add property opens, which takes a value once one is picked', async () => {
+		const skos = 'http://www.w3.org/2004/02/skos/core#';
+		const prefLabel: ResourceOptionData = { subject: RdfDataFactory.namedNode(`${skos}prefLabel`), label: 'preferred label', prefixedName: 'skos:prefLabel', source: 'workspace', missingPrefix: { prefix: 'skos', namespace: skos } };
+		const searched: string[] = [];
+		const termSearch: ITermSearchService = {
+			search: async (_kind, text) => {
+				searched.push(text);
+
+				return 'preferred label'.startsWith(text) ? [prefLabel] : [];
+			}
+		};
+		const { host } = await renderList(SAMPLE, [], RESOURCES, 1000, false, termSearch);
+
+		await userEvent.click(document.querySelector<HTMLElement>('.statement-list-add')!);
+
+		const row = rows()[3];
+		const value = within(row).getByLabelText('New value') as unknown as { placeholder: string; readonly: boolean };
+
+		await expect.poll(() => within(row).queryByRole('option', { name: /preferred label/ })).not.toBeNull();
+		expect(value.placeholder).toBe('Pick a property first');
+		expect(value.readonly).toBe(true);
+
+		await userEvent.keyboard('pref');
+		await expect.poll(() => searched[searched.length - 1]).toBe('pref');
+		await userEvent.click(within(row).getByRole('option', { name: /preferred label/ }));
+
+		expect((within(row).getByLabelText('Predicate') as HTMLInputElement).value).toBe('skos:prefLabel');
+
+		await userEvent.click(within(row).getByLabelText('New value'));
+
+		expect(value.readonly).toBe(false);
+
+		await userEvent.keyboard('ex:Plant{Enter}');
+		await leaveList();
+
+		expect(host.submitted.map(edit => edit.operations)).toEqual([[
+			{ op: 'declarePrefix', prefix: 'skos', namespace: skos },
+			{ op: 'setValues', subject: TEST_SUBJECT, predicate: `${skos}prefLabel`, values: [{ kind: 'term', term: RdfDataFactory.namedNode(`${EXAMPLE_NAMESPACE}Plant`) }] }
+		]]);
 	});
 
 	it('offers the classes of the document as the type of an untyped blank node', async () => {

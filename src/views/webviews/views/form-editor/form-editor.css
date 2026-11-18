@@ -671,11 +671,32 @@ body {
 }
 
 .resource-card-menu vscode-context-menu {
-	position: absolute;
-	top: 100%;
-	right: 0;
-	z-index: 10;
 	--vscode-font-size: 12px;
+}
+
+/*
+ * A ⋮ menu opens in the top layer of the page, so no card, footer or bar covers it: under its
+ * button, aligned to the right edge of the button, or above it where there is no room below; a
+ * right-click places it at the pointer instead. The popover draws nothing of its own.
+ */
+:is(.resource-card-menu, .nested-card-menu, .row-menu) {
+	anchor-name: --menu-button;
+	anchor-scope: --menu-button;
+}
+
+:is(.resource-card-menu, .nested-card-menu, .row-menu) vscode-context-menu {
+	position: fixed;
+	position-anchor: --menu-button;
+	position-try-fallbacks: flip-block;
+	inset: auto;
+	top: anchor(bottom);
+	right: anchor(right);
+	margin: 0;
+	padding: 0;
+	overflow: visible;
+	border: 0;
+	background: transparent;
+	color: inherit;
 }
 
 /*
@@ -1236,13 +1257,6 @@ body {
 	opacity: 1;
 }
 
-.nested-card-menu vscode-context-menu {
-	position: absolute;
-	top: 100%;
-	right: 0;
-	z-index: 10;
-}
-
 /* The other properties of a collapsed box, named after its type. */
 .nested-card-summary {
 	flex: 0 1 auto;
@@ -1363,10 +1377,6 @@ body {
 }
 
 .row-menu vscode-context-menu {
-	position: absolute;
-	top: 100%;
-	right: 0;
-	z-index: 10;
 	--vscode-font-size: 12px;
 }
 
@@ -1624,7 +1634,7 @@ body {
 	background: linear-gradient(var(--underline-accent, var(--underline-color)), var(--underline-accent, var(--underline-color))) no-repeat right bottom / calc(100% - var(--underline-inset)) var(--underline-width);
 }
 
-.statement-line.is-editable:focus-within:not(:has(.statement-line:focus-within)) > .statement-cells > .statement-predicate > .input-field,
+.statement-line.is-editable:focus-within:not(:has(.statement-line:focus-within)) > .statement-cells > .statement-predicate > .combobox > .input-field,
 .statement-line.is-editable:focus-within:not(:has(.statement-line:focus-within)) > .statement-cells > .statement-values > .statement-value > .literal-field > .input-field,
 .statement-line.is-editable:focus-within:not(:has(.statement-line:focus-within)) > .statement-cells > .statement-values > .statement-value > .resource-values,
 .statement-cells :is(.input-field:not(.is-new), .resource-values):hover {
@@ -1648,11 +1658,11 @@ body {
 }
 
 /* The text of a field stands after its border and padding, so the field starts before its column by that inset. */
-.statement-cells :is(.statement-predicate, .literal-field) > .input-field {
+.statement-cells :is(.statement-predicate > .combobox, .literal-field) > .input-field {
 	--underline-inset: var(--field-text-inset);
 }
 
-.statement-predicate > .input-field,
+.statement-predicate > .combobox > .input-field,
 .literal-field > .input-field,
 .resource-values > .combobox:first-child > .input-field {
 	--field-text-inset: var(--form-field-text-inset);
@@ -1855,33 +1865,45 @@ body {
 	color: var(--vscode-foreground);
 }
 
-/* A combobox: its field, and under it the list of the options the typed text matches. */
+/* A combobox: its field, and under it the list of the options the typed text matches, anchored to the field. */
 .combobox {
+	anchor-name: --combobox;
+	anchor-scope: --combobox;
 	position: relative;
 	display: block;
 }
 
 .combobox-list {
-	position: absolute;
-	top: calc(100% + 2px);
-	left: 0;
-	z-index: 4;
-	min-width: 100%;
+	/* A popover in the top layer, placed under its field, or above it where there is no room below. */
+	position: fixed;
+	position-anchor: --combobox;
+	inset: auto;
+	top: anchor(bottom);
+	left: anchor(left);
+	position-try-fallbacks: flip-block;
+	position-visibility: anchors-visible;
+	box-sizing: border-box;
+	min-width: anchor-size(width);
+	max-width: 90vw;
 	max-height: 260px;
-	margin: 0;
+	margin: 2px 0;
 	padding: 2px 0;
 	overflow-y: auto;
 	border: 1px solid var(--vscode-editorWidget-border, var(--vscode-widget-border, var(--form-hairline)));
 	border-radius: var(--form-radius-field);
 	background: var(--vscode-editorWidget-background, var(--vscode-editor-background));
 	box-shadow: 0 2px 8px var(--vscode-widget-shadow, rgba(0, 0, 0, 0.36));
+	color: var(--vscode-foreground);
 	list-style: none;
 }
 
+/* An option on one line: its glyph, its label, its IRI cut where it does not fit, and what else picking it does. */
 .combobox-option {
 	display: flex;
-	flex-direction: column;
+	align-items: center;
+	gap: 6px;
 	padding: 2px 8px;
+	white-space: nowrap;
 	cursor: pointer;
 }
 
@@ -1890,14 +1912,35 @@ body {
 	color: var(--vscode-list-activeSelectionForeground, var(--vscode-foreground));
 }
 
+.combobox-option > .resource-icon {
+	flex: none;
+}
+
+.combobox-option-label {
+	flex: none;
+	max-width: 60%;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
 .combobox-option-detail {
+	flex: 1 1 auto;
+	min-width: 0;
+	overflow: hidden;
 	color: var(--vscode-descriptionForeground);
 	font-family: var(--vscode-editor-font-family, monospace);
 	font-size: 11px;
-	white-space: pre;
+	text-overflow: ellipsis;
 }
 
-.combobox-option.is-active .combobox-option-detail {
+.combobox-option-hint {
+	flex: none;
+	margin-left: auto;
+	color: var(--vscode-descriptionForeground);
+	font-size: 11px;
+}
+
+.combobox-option.is-active :is(.combobox-option-detail, .combobox-option-hint) {
 	color: inherit;
 }
 

@@ -6,6 +6,7 @@ import { createResourceDataServiceStub } from '@src/utilities/mocks/resource-dat
 import { createResourceListItem } from '@src/utilities/mocks/resource-list-item-fixtures';
 import { TEST_NAMESPACES, createLiteralView, createProperty, createTestCardBody, withAnchors } from '@src/utilities/mocks/statement-fixtures';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
+import { coverPage } from '@src/utilities/mocks/webview-test-utils';
 import { EditingController } from '../state/editing-controller';
 import { FormEditorContext } from '../state/form-editor-context';
 import { ResourceCard } from '../components/resource-card';
@@ -133,6 +134,28 @@ function _actionsOf(row: HTMLElement): HTMLElement {
 }
 
 describe('useContextMenu, in a browser', () => {
+	it('opens the menu of a ⋮ button under the button, over everything laid out after it', async () => {
+		const { card } = await renderCard();
+		const button = card.querySelector<HTMLElement>('.resource-card-menu .icon-button')!;
+
+		await clickOn(button);
+		await expect.poll(() => openMenus().length).toBe(1);
+
+		const cover = coverPage();
+
+		try {
+			const menu = openMenus()[0];
+			const box = menu.shadowRoot!.querySelector('.context-menu')!.getBoundingClientRect();
+			const anchor = button.closest('.resource-card-menu')!.getBoundingClientRect();
+
+			expect(Math.abs(box.top - anchor.bottom)).toBeLessThanOrEqual(1);
+			expect(Math.abs(box.right - anchor.right)).toBeLessThanOrEqual(1);
+			expect(document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2)).toBe(menu);
+		} finally {
+			cover.remove();
+		}
+	});
+
 	it.each([
 		['the title bar of the card', (card: HTMLElement) => card.querySelector<HTMLElement>('.resource-card-title-bar')!, 'middle'],
 		['the actions of a row of the card', (card: HTMLElement) => _actionsOf(_ownRowsOf(card).slice(-1)[0]), 'middle'],

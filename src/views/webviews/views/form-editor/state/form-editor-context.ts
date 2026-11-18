@@ -2,6 +2,7 @@ import { createContext, useContext } from 'react';
 import { BlankNode, NamedNode } from '@rdfjs/types';
 import { DocumentPosition, NamespaceData, ResourceListItemData } from '../form-editor-model';
 import { ScopeKey } from '@src/utilities/config-scope';
+import { ITermSearchService } from '../services/term-search-service.interface';
 import { IEditingController } from './editing-controller.interface';
 import { LanguageFilter } from './language-filter';
 
@@ -20,6 +21,12 @@ export interface FormEditorContextValue {
 	 * a document with syntax errors, in which case every editing affordance stays hidden.
 	 */
 	editing?: IEditingController;
+
+	/**
+	 * Searches the terms of the workspace the pickers offer, such as the predicates of a new
+	 * statement. Absent where only the terms of the document are offered.
+	 */
+	termSearch?: ITermSearchService;
 
 	/**
 	 * The namespace declarations of the document.

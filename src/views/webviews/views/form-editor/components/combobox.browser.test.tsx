@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { userEvent } from 'vitest/browser';
 import { render } from '@testing-library/react';
 import { useState } from 'react';
+import { coverPage } from '@src/utilities/mocks/webview-test-utils';
 import { Combobox, ComboboxOption } from './combobox';
 
 const OPTIONS: ComboboxOption<string>[] = [
@@ -92,6 +93,25 @@ describe('Combobox', () => {
 		await userEvent.keyboard('{Escape}');
 
 		expect(onCancel).toHaveBeenCalled();
+	});
+
+	it('opens the list under the field, over everything laid out after it', async () => {
+		const { container, field } = await renderCombobox();
+
+		await userEvent.keyboard('t');
+
+		const cover = coverPage();
+
+		try {
+			const list = container.querySelector<HTMLElement>('.combobox-list')!;
+			const box = list.getBoundingClientRect();
+			const option = container.querySelector('.combobox-option')!.getBoundingClientRect();
+
+			expect(box.top).toBeGreaterThanOrEqual(field.getBoundingClientRect().bottom);
+			expect(list.contains(document.elementFromPoint(option.left + option.width / 2, option.top + option.height / 2))).toBe(true);
+		} finally {
+			cover.remove();
+		}
 	});
 
 	it('picks an option clicked, keeping the focus in the field', async () => {

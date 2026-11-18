@@ -1,9 +1,10 @@
 import { EditOperation } from '@src/services/editing/edit-operation';
 import { BlankNode, NamedNode } from '@rdfjs/types';
 import { ValueKind } from '@src/utilities/value-kind';
-import { PredicateData, TermData } from '../form-editor-model';
+import { PredicateData, ResourceOptionData, TermData } from '../form-editor-model';
 import { EditOutcome } from '../services/editing-host-service.interface';
 import { LiteralDatatypes } from '../services/statement/literal-datatypes';
+import { IriReading } from '../services/statement/typed-term-reader';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { EditWriter } from './edit-writer';
 import { IEditingController } from './editing-controller.interface';
@@ -32,6 +33,28 @@ interface QueuedWrites {
 	 * Where the property is to be written among the properties of the subject.
 	 */
 	move?: PropertyMove;
+}
+
+/**
+ * A predicate picked from the options of the predicate field, which the field names by the text
+ * it shows for it until something else is typed.
+ */
+interface PickedPredicate {
+	/**
+	 * The text the field shows for the predicate.
+	 */
+	text: string;
+
+	/**
+	 * The IRI of the predicate.
+	 */
+	iri: string;
+
+	/**
+	 * The prefix the document is to declare for the text, until the edit writing the predicate
+	 * declares it.
+	 */
+	missingPrefix?: ResourceOptionData['missingPrefix'];
 }
 
 /**
@@ -85,6 +108,8 @@ export class StatementRowEditor implements EditWriter {
 	private _retired = false;
 
 	private _unfitting?: { draft: StatementDraft; indexes: ReadonlySet<number> };
+
+	private _pickedPredicate?: PickedPredicate;
 
 	/**
 	 * Create the editor of a row.
@@ -238,11 +263,25 @@ export class StatementRowEditor implements EditWriter {
 	}
 
 	/**
+	 * Take a predicate picked from the options of the predicate field: the field shows its prefixed
+	 * name, or its IRI, and the predicate is taken as {@link commitPredicate} takes it. Where the
+	 * document declares no prefix for its namespace, the edit writing it declares the one proposed.
+	 * @param option The option picked.
+	 */
+	pickPredicate(option: ResourceOptionData): void {
+		const text = option.prefixedName ?? `<${option.subject.value}>`;
+
+		this._pickedPredicate = { text, iri: option.subject.value, missingPrefix: option.missingPrefix };
+		this._update(this._state.withPredicateText(text));
+		this.commitPredicate();
+	}
+
+	/**
 	 * Take the predicate the predicate field names, as leaving or confirming the field does: a row
 	 * for a new statement keeps it until the row is written, any other row writes it.
 	 */
 	commitPredicate(): void {
-		const reading = this._data.reader.readPredicate(this._state.predicateText);
+		const reading = this._readPredicate();
 
 		if (!reading.term) {
 			this._update(this._state.withProblem(reading.problem));
@@ -470,7 +509,7 @@ export class StatementRowEditor implements EditWriter {
 		this._sending = true;
 		this._update(this._state.withRejection(undefined));
 
-		return [operation];
+		return [...this._prefixDeclarationsFor(operation), operation];
 	}
 
 	settle(outcome: EditOutcome): void {
@@ -528,7 +567,7 @@ export class StatementRowEditor implements EditWriter {
 	 * @returns The operation, or `undefined` when the field names the stored predicate or none.
 	 */
 	private _predicateEdit(): EditOperation | undefined {
-		const reading = this._data.reader.readPredicate(this._state.predicateText);
+		const reading = this._readPredicate();
 		const predicate = this._state.stored.predicate;
 
 		if (!reading.term || !predicate || reading.term.value === predicate) {
@@ -538,6 +577,42 @@ export class StatementRowEditor implements EditWriter {
 		this._claimedPredicate = reading.term.value;
 
 		return { op: 'setPredicate', subject: this._data.subject, predicate, newPredicate: reading.term.value };
+	}
+
+	/**
+	 * Read the predicate the predicate field names: the one picked while the field shows the text
+	 * of the pick, which may use a prefix the document does not declare yet, else the typed text.
+	 * @returns The reading.
+	 */
+	private _readPredicate(): IriReading {
+		const picked = this._pickedPredicate;
+
+		if (picked && picked.text === this._state.predicateText) {
+			return { term: RdfDataFactory.namedNode(picked.iri) };
+		}
+
+		return this._data.reader.readPredicate(this._state.predicateText);
+	}
+
+	/**
+	 * The declaration of the prefix a picked predicate is written with, for the edit that writes
+	 * the predicate. It is declared once: a later edit finds it in the document.
+	 * @param operation The edit.
+	 * @returns The `declarePrefix` operation, or none.
+	 */
+	private _prefixDeclarationsFor(operation: EditOperation): EditOperation[] {
+		const picked = this._pickedPredicate;
+		const predicate = operation.op === 'setPredicate' ? operation.newPredicate : operation.op === 'setValues' ? operation.predicate : undefined;
+
+		if (!picked?.missingPrefix || predicate !== picked.iri) {
+			return [];
+		}
+
+		const { prefix, namespace } = picked.missingPrefix;
+
+		this._pickedPredicate = { ...picked, missingPrefix: undefined };
+
+		return [{ op: 'declarePrefix', prefix, namespace }];
 	}
 
 	/**

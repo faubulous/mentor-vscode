@@ -464,7 +464,8 @@ function _addLinkOf(edited: EditedRow, header: RowHeader | undefined, literals: 
  * row without pills it stands after the nested cards of blank nodes, and in a row with values it
  * shows while the focus is in the row. The type of a blank node offers the classes of the document
  * and asks to choose one while there is none. `[` typed into the empty input starts a new blank
- * node where the predicate takes resources.
+ * node where the predicate takes resources. A row for a new statement takes no value until its
+ * predicate is picked, and its input asks for that.
  * @param edited The row.
  * @param resources The resources of the row.
  * @param property The property of the row, whose values tell what the predicate takes.
@@ -477,6 +478,7 @@ function _resourceBox(edited: EditedRow, resources: readonly ShownValue[], prope
 	const isType = header === 'type';
 	const { editor, state, services } = edited;
 	const range = _rangeOf(header, property);
+	const awaitsPredicate = editor.isNew && state.draft.predicate === undefined;
 	const onIntent = resources.length === 0 && state.draft.values.length > 0 && state.pendingText === '';
 	const classes = ['statement-value', 'is-adder', ...(resources.length === 0 ? ['is-after-values'] : []), ...(onIntent ? ['is-on-intent'] : [])];
 
@@ -488,7 +490,8 @@ function _resourceBox(edited: EditedRow, resources: readonly ShownValue[], prope
 				range={range}
 				pendingText={state.pendingText}
 				services={services}
-				placeholder={_placeholderOf(state.draft.values.length, header, label)}
+				placeholder={awaitsPredicate ? 'Pick a property first' : _placeholderOf(state.draft.values.length, header, label)}
+				readOnly={awaitsPredicate}
 				onPendingInput={text => editor.inputPending(text)}
 				onPick={term => editor.addValue(term)}
 				onCreate={() => editor.commitPending()}
