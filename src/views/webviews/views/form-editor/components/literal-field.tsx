@@ -1,5 +1,6 @@
 import { FocusEvent, FormEvent, KeyboardEvent, MouseEvent, useRef, useState } from 'react';
 import { VscodeTextarea, VscodeTextfield } from '@vscode-elements/elements';
+import { ResourceOptionData } from '../form-editor-model';
 import { StatementServices } from '../hooks/use-statement-services';
 import { useWrappedLines } from '../hooks/use-wrapped-lines';
 import { LiteralTag } from '../state/literal-tag';
@@ -60,9 +61,10 @@ export interface LiteralFieldProps {
 	onInput: (text: string) => void;
 
 	/**
-	 * Called with the tag picked for the literal.
+	 * Called with the tag picked for the literal, and the datatype of the workspace it was picked
+	 * from, if it was.
 	 */
-	onTagPick: (tag: LiteralTag) => void;
+	onTagPick: (tag: LiteralTag, datatype?: ResourceOptionData) => void;
 }
 
 /**
@@ -142,9 +144,9 @@ export function LiteralField(props: LiteralFieldProps): React.JSX.Element {
 			text={text}
 			languages={languages}
 			services={services}
-			onPick={picked => {
+			onPick={(picked, datatype) => {
 				closePicker();
-				onTagPick(picked);
+				onTagPick(picked, datatype);
 			}}
 			onCancel={closePicker}
 		/>

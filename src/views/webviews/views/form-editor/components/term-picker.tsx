@@ -6,7 +6,7 @@ import { Combobox, ComboboxOption, ComboboxProps } from './combobox';
 /**
  * Properties of the {@link TermPicker} component.
  */
-export interface TermPickerProps extends Omit<ComboboxProps<ResourceOptionData>, 'options' | 'ranked'> {
+export interface TermPickerProps extends Omit<ComboboxProps<ResourceOptionData>, 'options'> {
 	/**
 	 * The kind of terms offered; none are offered where it is absent, as for a field that takes text.
 	 */
@@ -43,23 +43,33 @@ export function TermPicker(props: TermPickerProps): React.JSX.Element {
 		onBlur?.();
 	};
 
-	return <Combobox {...comboboxProps} text={text} options={options} ranked onFocus={handleFocus} onBlur={handleBlur} />;
+	return <Combobox {...comboboxProps} text={text} options={options} onFocus={handleFocus} onBlur={handleBlur} />;
 }
 
 /**
- * The options of terms: each by its label, with its IRI after it and the prefix picking it
- * declares, found by its prefixed name too, which the IRI shows already.
+ * The options of terms.
  * @param terms The terms, best first.
  * @param exclude The IRIs of terms not offered.
  * @returns The options.
  */
 function _optionsOf(terms: readonly ResourceOptionData[], exclude: ReadonlySet<string> | undefined): ComboboxOption<ResourceOptionData>[] {
-	return terms.filter(term => !exclude?.has(term.subject.value)).map(term => ({
+	return terms.filter(term => !exclude?.has(term.subject.value)).map(term => getTermOption(term, term));
+}
+
+/**
+ * The option of a term, as every picker shows one: by its label, with its glyph before it, its
+ * IRI after it and the prefix picking it declares. Its prefixed name is matched but not shown, as
+ * the IRI says the same.
+ * @param term The term.
+ * @param value What picking the option yields.
+ * @returns The option.
+ */
+export function getTermOption<T>(term: ResourceOptionData, value: T): ComboboxOption<T> {
+	return {
 		label: term.label,
 		detail: term.subject.value,
-		keywords: term.prefixedName,
 		iconName: term.iconName,
 		hint: term.missingPrefix ? `adds ${term.missingPrefix.prefix}:` : undefined,
-		value: term
-	}));
+		value
+	};
 }

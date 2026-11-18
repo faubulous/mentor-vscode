@@ -100,7 +100,8 @@ interface DocumentTerms {
 /**
  * Answers the searches of the pickers of the form editor from the store: the predicates, classes,
  * resources and datatypes of the document, of the vocabularies it declares and of the rest of the
- * workspace, ranked in that order and then by how well they match. The terms of the store, and
+ * workspace, ranked in that order and then by how well they match, and the languages the workspace
+ * tags its literals with. The terms of the store, and
  * their labels and prefixed names as the document sees them, are read once per version of it, so
  * a keystroke only matches and ranks them. A search waits until the workspace is indexed, so it
  * never answers from a store that is still being filled.
@@ -109,6 +110,8 @@ export class TermCatalogueService {
 	private _index?: TermIndex;
 
 	private _documentTerms?: DocumentTerms;
+
+	private _languages?: { version: number; languages: readonly string[] };
 
 	/**
 	 * Create the catalogue.
@@ -138,6 +141,27 @@ export class TermCatalogueService {
 		const ranked = rankTerms(entries, search.text, entry => entry);
 
 		return ranked.slice(0, Math.max(0, search.limit)).map(entry => this._optionOf(entry));
+	}
+
+	/**
+	 * The languages the literals of the workspace are tagged with, the most used first, which the
+	 * tag picker offers after those of the card. They are read once per version of the store, and
+	 * only once the workspace is indexed.
+	 * @returns The language tags, as the store holds them.
+	 */
+	async getWorkspaceLanguages(): Promise<readonly string[]> {
+		await this._whenIndexed();
+
+		const version = this._vocabulary.store.version;
+
+		if (this._languages?.version !== version) {
+			const usage = this._vocabulary.getLanguageTagUsageStats(undefined);
+			const languages = Object.keys(usage).sort((a, b) => usage[b] - usage[a] || a.localeCompare(b));
+
+			this._languages = { version, languages };
+		}
+
+		return this._languages.languages;
 	}
 
 	/**

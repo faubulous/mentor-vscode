@@ -1623,7 +1623,7 @@ body {
  * nothing moves in any state, and it spans the column of the field, not the inset its box reaches
  * out into.
  */
-.statement-cells :is(.input-field:not(.is-new), .resource-values) {
+.statement-cells :is(.input-field:not(.is-new, .is-tag), .resource-values) {
 	--underline-color: transparent;
 	--underline-width: 1px;
 	--underline-inset: 0px;
@@ -1637,17 +1637,17 @@ body {
 .statement-line.is-editable:focus-within:not(:has(.statement-line:focus-within)) > .statement-cells > .statement-predicate > .combobox > .input-field,
 .statement-line.is-editable:focus-within:not(:has(.statement-line:focus-within)) > .statement-cells > .statement-values > .statement-value > .literal-field > .input-field,
 .statement-line.is-editable:focus-within:not(:has(.statement-line:focus-within)) > .statement-cells > .statement-values > .statement-value > .resource-values,
-.statement-cells :is(.input-field:not(.is-new), .resource-values):hover {
+.statement-cells :is(.input-field:not(.is-new, .is-tag), .resource-values):hover {
 	--underline-color: var(--form-field-border);
 }
 
 /* A field of one line is one line box high, whatever its text makes of the box inside it, as the title does. */
-.statement-cells vscode-textfield.input-field:not(.is-new) {
+.statement-cells vscode-textfield.input-field:not(.is-new, .is-tag) {
 	height: var(--line-box);
 }
 
 /* The accent of the field with the focus wins over the quiet underline of the row it is in. */
-.statement-cells :is(.input-field:not(.is-new), .resource-values):focus-within {
+.statement-cells :is(.input-field:not(.is-new, .is-tag), .resource-values):focus-within {
 	--underline-accent: var(--form-accent);
 	--underline-width: 2px;
 }
@@ -1724,6 +1724,7 @@ body {
 	color: var(--vscode-errorForeground);
 }
 
+/* The picker of the tag opens over the end of the field, on a surface of its own that covers the text under it. */
 .tag-picker {
 	position: absolute;
 	top: 0;
@@ -1731,6 +1732,13 @@ body {
 	z-index: 3;
 	width: 220px;
 	max-width: 100%;
+	border: 1px solid var(--form-field-border);
+	border-radius: var(--form-radius-field);
+	background: var(--form-field-background);
+}
+
+.tag-picker:focus-within {
+	border-color: var(--form-accent);
 }
 
 /* Without chips the input of a new value stands after the boxes of blank nodes, so showing it on intent moves nothing above a click into a box. */

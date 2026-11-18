@@ -26,11 +26,12 @@ export function createTermOption(iri: string, label: string, overrides: Partial<
 
 /**
  * Make a term search that answers with the given terms of each kind that match the text, ranked as
- * the host ranks them.
+ * the host ranks them, and with the given languages of the workspace.
  * @param terms The terms of each kind.
+ * @param languages The languages of the workspace, the most used first.
  * @returns The search.
  */
-export function createTermSearchStub(terms: Partial<Record<TermSearchKind, readonly ResourceOptionData[]>>): TermSearchStub {
+export function createTermSearchStub(terms: Partial<Record<TermSearchKind, readonly ResourceOptionData[]>>, languages: readonly string[] = []): TermSearchStub {
 	const searched: string[] = [];
 
 	return {
@@ -39,6 +40,7 @@ export function createTermSearchStub(terms: Partial<Record<TermSearchKind, reado
 			searched.push(text);
 
 			return rankTermOptions(terms[kind] ?? [], text).slice(0, limit);
-		}
+		},
+		getWorkspaceLanguages: async () => [...languages]
 	};
 }

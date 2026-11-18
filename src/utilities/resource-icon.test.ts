@@ -63,6 +63,13 @@ describe('getResourceIconName', () => {
 		expect(getResourceIconName([RDF.Property])).toBe('rdf-object-property');
 	});
 
+	it('shows a datatype by the shape of the values it holds, and text where it has no glyph of its own', () => {
+		expect(getResourceIconName([RDFS.Datatype], { iri: XSD.dateTime })).toBe('calendar');
+		expect(getResourceIconName([RDFS.Datatype], { iri: XSD.integer })).toBe('symbol-number');
+		expect(getResourceIconName([RDFS.Datatype], { iri: 'http://example.org/Length' })).toBe('symbol-text');
+		expect(getResourceIconName([RDFS.Datatype])).toBe('symbol-text');
+	});
+
 	it('has no glyph for a resource it does not recognize', () => {
 		expect(getResourceIconName([])).toBeUndefined();
 		expect(getResourceIconName(['http://example.org/Thing'])).toBeUndefined();
@@ -88,14 +95,15 @@ describe('getPropertyIconName', () => {
 });
 
 describe('getIconContextOf', () => {
-	it('reads the range, the constrained datatype and the predicates from the statements about a resource', () => {
-		const statement = (predicate: string, object: string) => ({ predicate: RdfDataFactory.namedNode(predicate), object: RdfDataFactory.namedNode(object) });
+	it('reads the IRI, the range, the constrained datatype and the predicates from the statements about a resource', () => {
+		const subject = RdfDataFactory.namedNode('http://example.org/created');
+		const statement = (predicate: string, object: string) => RdfDataFactory.quad(subject, RdfDataFactory.namedNode(predicate), RdfDataFactory.namedNode(object));
 
 		expect(getIconContextOf([
 			statement(RDF.type, OWL.DatatypeProperty),
 			statement(RDFS.range, XSD.dateTime),
 			statement(SH.datatype, XSD.date),
-			{ predicate: RdfDataFactory.namedNode(RDFS.label), object: RdfDataFactory.literal('created') }
-		])).toEqual({ predicateIris: [RDF.type, RDFS.range, SH.datatype, RDFS.label], rangeIri: XSD.dateTime, datatypeIri: XSD.date });
+			RdfDataFactory.quad(subject, RdfDataFactory.namedNode(RDFS.label), RdfDataFactory.literal('created'))
+		])).toEqual({ iri: subject.value, predicateIris: [RDF.type, RDFS.range, SH.datatype, RDFS.label], rangeIri: XSD.dateTime, datatypeIri: XSD.date });
 	});
 });

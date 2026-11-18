@@ -40,7 +40,8 @@ function option(name: string, source: ResourceOptionData['source'] = 'workspace'
 async function renderOptions(initial: { text: string; active: boolean }) {
 	const searches: OpenSearch[] = [];
 	const termSearch: ITermSearchService = {
-		search: (_kind, text) => new Promise(answer => searches.push({ text, answer }))
+		search: (_kind, text) => new Promise(answer => searches.push({ text, answer })),
+		getWorkspaceLanguages: async () => []
 	};
 	const hook = renderHook(({ text, active }) => useTermOptions('predicate', text, active), {
 		initialProps: initial,

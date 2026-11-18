@@ -58,6 +58,16 @@ function _getDatatypeIconName(datatypeIri?: string): string | undefined {
 }
 
 /**
+ * Get the glyph of a datatype: the shape of the values it holds, text for one with no glyph of
+ * its own, as literals are text.
+ * @param datatypeIri The IRI of the datatype, if known.
+ * @returns The name of the icon to show.
+ */
+export function getDatatypeIconName(datatypeIri?: string): string {
+	return (datatypeIri && _getDatatypeIconName(datatypeIri)) || 'symbol-text';
+}
+
+/**
  * Get the glyph of a property from the type of value it takes. A data property is shown by the
  * shape of its values rather than by a glyph of its own, which is what distinguishes it from an
  * object property at a glance.
@@ -105,6 +115,8 @@ const PROPERTY_TYPES = new Set([
  * What is known about a resource beyond the types it asserts.
  */
 export interface ResourceIconContext {
+	/** The IRI of the resource, which names the glyph of a datatype. */
+	iri?: string;
 	/** The range of the resource, when it is a property. */
 	rangeIri?: string;
 	/** The kind of values the resource takes, when it is a property. */
@@ -116,16 +128,20 @@ export interface ResourceIconContext {
 }
 
 /**
- * Read what the statements about a resource tell its glyph by besides its types: its range, the
- * value type it constrains as a property shape, and the predicates it uses. The cards and the
+ * Read what the statements about a resource tell its glyph by besides its types: its IRI, its
+ * range, the value type it constrains as a property shape, and the predicates it uses. The cards and the
  * pickers of the form editor read it alike, so a term looks the same in both.
  * @param quads The statements about the resource.
  * @returns The context.
  */
-export function getIconContextOf(quads: Iterable<Pick<Quad, 'predicate' | 'object'>>): ResourceIconContext {
+export function getIconContextOf(quads: Iterable<Pick<Quad, 'subject' | 'predicate' | 'object'>>): ResourceIconContext {
 	const context: ResourceIconContext & { predicateIris: string[] } = { predicateIris: [] };
 
 	for (const quad of quads) {
+		if (quad.subject.termType === 'NamedNode') {
+			context.iri ??= quad.subject.value;
+		}
+
 		const predicate = quad.predicate.value;
 		const object = quad.object.termType === 'NamedNode' ? quad.object.value : undefined;
 
@@ -144,7 +160,7 @@ export function getIconContextOf(quads: Iterable<Pick<Quad, 'predicate' | 'objec
 /**
  * Get the glyph of a resource from the types it asserts, falling back to what its statements say
  * about it. A datatype property takes literals, so it shows the text glyph where its range tells
- * nothing more specific.
+ * nothing more specific; a datatype shows the shape of the values it holds.
  * @param typeIris The IRIs of the resource's types.
  * @param context What else is known about the resource.
  * @returns The name of the icon to show, or `undefined` for an unrecognized resource.
@@ -159,6 +175,10 @@ export function getResourceIconName(
 		if (types.has(iri)) {
 			return icon;
 		}
+	}
+
+	if (types.has(RDFS.Datatype)) {
+		return getDatatypeIconName(context.iri);
 	}
 
 	for (const type of PROPERTY_TYPES) {

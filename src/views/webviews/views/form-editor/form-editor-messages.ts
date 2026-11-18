@@ -54,7 +54,12 @@ export type FormEditorHostMessage =
 	/**
 	 * The answer to a {@link FormEditorWebviewMessage} `TermSearch`: the terms that match, best first.
 	 */
-	| { id: 'TermSearchResult'; requestId: number; options: ResourceOptionData[] };
+	| { id: 'TermSearchResult'; requestId: number; options: ResourceOptionData[] }
+	/**
+	 * The answer to a {@link FormEditorWebviewMessage} `WorkspaceLanguagesRequest`: the language
+	 * tags of the literals of the workspace, the most used first.
+	 */
+	| { id: 'WorkspaceLanguagesResponse'; requestId: number; languages: string[] };
 
 /**
  * Messages sent from the webview to the extension host.
@@ -105,6 +110,11 @@ export type FormEditorWebviewMessage =
 	 * host answers with a `TermSearchResult` of the same `requestId`.
 	 */
 	| { id: 'TermSearch'; requestId: number; kind: TermSearchKind; text: string; limit: number }
+	/**
+	 * Ask for the languages the workspace tags its literals with; the host answers with a
+	 * `WorkspaceLanguagesResponse` of the same `requestId`.
+	 */
+	| { id: 'WorkspaceLanguagesRequest'; requestId: number }
 	| ExecuteCommandMessage;
 
 /**

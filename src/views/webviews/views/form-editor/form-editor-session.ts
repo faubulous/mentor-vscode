@@ -522,6 +522,9 @@ export class FormEditorSession implements vscode.Disposable {
 			case 'TermSearch':
 				await this._answerTermSearch(message);
 				break;
+			case 'WorkspaceLanguagesRequest':
+				await this._answerWorkspaceLanguages(message.requestId);
+				break;
 			case 'ExecuteCommand': {
 				const command = message as ExecuteCommandMessage;
 
@@ -991,6 +994,18 @@ export class FormEditorSession implements vscode.Disposable {
 		const options = vocabulary && context ? await this._getTermCatalogue(vocabulary).search(search, context) : [];
 
 		this._postMessage({ id: 'TermSearchResult', requestId: search.requestId, options });
+	}
+
+	/**
+	 * Answer a request for the languages the workspace tags its literals with. Without a store, the
+	 * answer offers none.
+	 * @param requestId The request.
+	 */
+	private async _answerWorkspaceLanguages(requestId: number): Promise<void> {
+		const vocabulary = this._getVocabulary();
+		const languages = vocabulary ? await this._getTermCatalogue(vocabulary).getWorkspaceLanguages() : [];
+
+		this._postMessage({ id: 'WorkspaceLanguagesResponse', requestId, languages: [...languages] });
 	}
 
 	/**

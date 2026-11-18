@@ -94,28 +94,63 @@ export function rankTermOptions(options: Iterable<ResourceOptionData>, text: str
 }
 
 /**
- * How well a term matches typed text.
+ * The items that match typed text, as a picker matches what it offers besides terms: those whose
+ * name starts with the text first, then those with a word of the label that does, then those with
+ * a name that contains it, each in the order given.
+ * @param items The items, in the order they are offered in.
+ * @param text The typed text; empty matches every item.
+ * @param namesOf The names an item is matched by, its label first.
+ * @returns The matching items, best first.
+ */
+export function narrowByMatch<T>(items: Iterable<T>, text: string, namesOf: (item: T) => readonly (string | undefined)[]): T[] {
+	const needle = text.trim().toLowerCase();
+	const matches: { item: T; quality: number }[] = [];
+
+	for (const item of items) {
+		const quality = _qualityOfNames(needle, namesOf(item));
+
+		if (quality >= 0) {
+			matches.push({ item, quality });
+		}
+	}
+
+	return matches.sort((a, b) => a.quality - b.quality).map(match => match.item);
+}
+
+/**
+ * How well a term matches typed text, by its label, the local part of its IRI and its prefixed
+ * name.
  * @param needle The typed text, trimmed and in lower case; empty matches every term.
  * @param keys What the term is matched by.
- * @returns `0` where a name starts with the text, `1` where a word of the label does, `2` where a
- * name contains it, `-1` where it does not match.
+ * @returns The quality, as {@link _qualityOfNames} tells it.
  */
 function _matchQuality(needle: string, keys: TermRankingKeys): number {
+	return _qualityOfNames(needle, [keys.label, getLocalPartAndQuery(keys.iri), keys.prefixedName]);
+}
+
+/**
+ * How well names match typed text.
+ * @param needle The typed text, trimmed and in lower case; empty matches any names.
+ * @param names The names, the label first, whose words are matched too.
+ * @returns `0` where a name starts with the text, `1` where a word of the label does, `2` where a
+ * name contains it, `-1` where none matches.
+ */
+function _qualityOfNames(needle: string, names: readonly (string | undefined)[]): number {
 	if (needle === '') {
 		return 0;
 	}
 
-	const names = [keys.label, getLocalPartAndQuery(keys.iri), keys.prefixedName ?? ''].map(name => name.toLowerCase());
+	const lowered = names.map(name => (name ?? '').toLowerCase());
 
-	if (names.some(name => name.startsWith(needle))) {
+	if (lowered.some(name => name.startsWith(needle))) {
 		return 0;
 	}
 
-	if (names[0].split(/[\s_\-/]+/).some(word => word.startsWith(needle))) {
+	if ((lowered[0] ?? '').split(/[\s_\-/]+/).some(word => word.startsWith(needle))) {
 		return 1;
 	}
 
-	return names.some(name => name.includes(needle)) ? 2 : -1;
+	return lowered.some(name => name.includes(needle)) ? 2 : -1;
 }
 
 /**

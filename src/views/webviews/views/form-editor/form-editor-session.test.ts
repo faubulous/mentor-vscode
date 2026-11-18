@@ -187,6 +187,17 @@ function lastResponseOf(panel: TestPanel): Extract<FormEditorHostMessage, { id: 
 	return responses[responses.length - 1];
 }
 
+/**
+ * Register the services the term catalogue of a session reads from: a repository over a store, a
+ * prefix lookup that proposes no prefix, and an index that is complete.
+ * @param store The store.
+ */
+function registerCatalogueServices(store: Store): void {
+	container.registerInstance(ServiceToken.VocabularyRepository, new VocabularyRepository(store));
+	container.registerInstance(ServiceToken.PrefixLookupService, { getPrefixForIri: (_document: string, _namespace: string, fallback: string) => fallback } as never);
+	container.registerInstance(ServiceToken.WorkspaceIndexerService, { waitForIndexed: () => Promise.resolve() } as never);
+}
+
 describe('FormEditorSession', () => {
 	beforeEach(() => {
 		container.reset();
@@ -261,9 +272,7 @@ describe('FormEditorSession', () => {
 		const store = new Store();
 
 		store.loadTurtle(`@prefix rdf: <${_RDF}> .\n<${EX}height> a rdf:Property .\n<${EX}width> a rdf:Property .\n`, 'http://example.org/vocabulary', false);
-		container.registerInstance(ServiceToken.VocabularyRepository, new VocabularyRepository(store));
-		container.registerInstance(ServiceToken.PrefixLookupService, { getPrefixForIri: (_document: string, _namespace: string, fallback: string) => fallback } as never);
-		container.registerInstance(ServiceToken.WorkspaceIndexerService, { waitForIndexed: () => Promise.resolve() } as never);
+		registerCatalogueServices(store);
 
 		const { posted, receive } = await createSession('ex:A a ex:Class .\n');
 
@@ -273,6 +282,19 @@ describe('FormEditorSession', () => {
 
 		expect(result.requestId).toBe(7);
 		expect(result.options.map(option => [option.subject.value, option.prefixedName, option.source])).toEqual([[`${EX}height`, 'ex:height', 'declared']]);
+	});
+
+	it('answers a request for the languages of the workspace, the most used first, under the id of the request', async () => {
+		const store = new Store();
+
+		store.loadTurtle(`<${EX}Tree> <${EX}label> "Arbre"@fr, "Baum"@de, "Ein Baum"@de .\n`, 'http://example.org/labels', false);
+		registerCatalogueServices(store);
+
+		const { posted, receive } = await createSession('ex:A a ex:Class .\n');
+
+		await receive({ id: 'WorkspaceLanguagesRequest', requestId: 3 });
+
+		expect(postedOf(posted, 'WorkspaceLanguagesResponse')).toEqual([{ id: 'WorkspaceLanguagesResponse', requestId: 3, languages: ['de', 'fr'] }]);
 	});
 
 	it('tells the webview when the document cannot be shown', async () => {

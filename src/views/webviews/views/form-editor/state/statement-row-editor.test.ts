@@ -13,6 +13,8 @@ const reader = new TypedTermReader(TEST_NAMESPACES);
 
 const SKOS = 'http://www.w3.org/2004/02/skos/core#';
 
+const XSD_NAMESPACE = 'http://www.w3.org/2001/XMLSchema#';
+
 /**
  * The option of `skos:prefLabel`, whose prefix the document of the tests does not declare.
  */
@@ -279,6 +281,20 @@ describe('StatementRowEditor', () => {
 		editor.leave();
 
 		expect(editor.takeEdit()?.[0]).toEqual({ op: 'declarePrefix', prefix: 'skos', namespace: SKOS });
+	});
+
+	it('writes a literal with a datatype picked from the workspace and the declaration of its prefix', () => {
+		const { editor } = createEditor();
+		const dateTime = { ...PREF_LABEL, subject: RdfDataFactory.namedNode(XSD.dateTime), label: 'date time', prefixedName: 'xsd:dateTime', missingPrefix: { prefix: 'xsd', namespace: XSD_NAMESPACE } };
+
+		editor.inputLiteral(0, '2026-11-18T12:00:00Z');
+		editor.pickLiteralDatatype(0, dateTime);
+		editor.leave();
+
+		expect(editor.takeEdit()).toEqual([
+			{ op: 'declarePrefix', prefix: 'xsd', namespace: XSD_NAMESPACE },
+			{ op: 'setValues', subject: TEST_SUBJECT, predicate: RDFS.label, values: [{ kind: 'term', term: RdfDataFactory.literal('2026-11-18T12:00:00Z', RdfDataFactory.namedNode(XSD.dateTime)) }] }
+		]);
 	});
 
 	it('declares no prefix for a picked value that is removed before the row is written', () => {

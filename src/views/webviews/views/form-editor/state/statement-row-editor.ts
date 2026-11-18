@@ -317,6 +317,17 @@ export class StatementRowEditor implements EditWriter {
 	}
 
 	/**
+	 * Give a literal a datatype picked from the datatypes of the workspace. Where the document
+	 * declares no prefix for its namespace, the edit writing it declares the one proposed.
+	 * @param index The index of the value.
+	 * @param option The option picked.
+	 */
+	pickLiteralDatatype(index: number, option: ResourceOptionData): void {
+		this._proposePrefixOf(option);
+		this.inputLiteralTag(index, { datatype: option.subject.value });
+	}
+
+	/**
 	 * Take the first text typed into the empty field of a language the row lacks: it becomes a
 	 * literal of the language after the other values. Nothing typed adds nothing.
 	 * @param language The language tag.
@@ -737,7 +748,8 @@ export class StatementRowEditor implements EditWriter {
 }
 
 /**
- * The IRIs an edit writes as predicates and values, those of new blank nodes and lists included.
+ * The IRIs an edit writes as predicates, values and datatypes of literals, those of new blank
+ * nodes and lists included.
  * @param operation The edit.
  * @returns The IRIs, in no particular order.
  */
@@ -761,6 +773,10 @@ function _writtenIrisOf(operation: EditOperation): string[] {
 function _irisOfValue(value: StatementValue): string[] {
 	switch (value.kind) {
 		case 'term':
+			if (value.term.termType === 'Literal') {
+				return [value.term.datatype.value];
+			}
+
 			return value.term.termType === 'NamedNode' ? [value.term.value] : [];
 		case 'list':
 			return value.items.flatMap(_irisOfValue);
