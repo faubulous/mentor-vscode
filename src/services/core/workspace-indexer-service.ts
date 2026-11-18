@@ -1,5 +1,4 @@
 import * as vscode from 'vscode';
-import picomatch from 'picomatch';
 import { IWorkspaceFileService, WorkspaceFileListChangeEvent } from './workspace-file-service.interface';
 import { IWorkspaceIndexerService, IndexingStatistics } from './workspace-indexer.interface';
 import { IDocumentFactory } from '../document/document-factory.interface';
@@ -9,7 +8,7 @@ import { DocumentDiagnosticsService } from '../document/document-diagnostics-ser
 import { getConfig } from '@src/utilities/vscode/config';
 import { isDocumentOpen } from '@src/utilities/vscode/editors';
 import { describeUriPath } from '@src/utilities/vscode/log';
-import { normalizeGlobPattern } from '@src/utilities/glob';
+import { compileGlob, GlobMatcher, normalizeGlobPattern } from '@src/utilities/glob';
 import { createEventLoopYielder } from '@src/utilities/scheduling';
 import { getErrorMessage } from '@src/utilities/error';
 import { getHeapUsedMb } from '@src/utilities/runtime';
@@ -666,8 +665,8 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService, vscode
 	 * 'mentor.index.includeFiles' configuration setting.
 	 * @returns An array of canonical workspace URIs as strings.
 	 */
-	private _loadIncludePatterns(): picomatch.Matcher[] {
-		const result: picomatch.Matcher[] = [];
+	private _loadIncludePatterns(): GlobMatcher[] {
+		const result: GlobMatcher[] = [];
 
 		let hasErrors = false;
 
@@ -684,11 +683,7 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService, vscode
 			try {
 				// Treat patterns as repository/workspace-relative globs.
 				// Examples: data/**/*.ttl, ontologies/*.trig
-				const matcher = picomatch(pattern, {
-					dot: true,
-					nocase: false,
-					bash: false
-				});
+				const matcher = compileGlob(pattern);
 
 				result.push(matcher);
 
@@ -933,7 +928,7 @@ type IndexingRun = {
 	/**
 	 * The configured include globs that can override file size exclusions.
 	 */
-	includeMatchers: picomatch.Matcher[];
+	includeMatchers: GlobMatcher[];
 
 	/**
 	 * The maximum file size allowed for indexing unless explicitly included.

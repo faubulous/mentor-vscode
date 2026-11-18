@@ -1,12 +1,11 @@
 import * as vscode from 'vscode';
-import picomatch from 'picomatch';
 import { container } from 'tsyringe';
 import { Store } from '@faubulous/mentor-rdf';
 import { ServiceToken } from '@src/services/tokens';
 import { IWorkspaceFileService, IWorkspaceIndexerService } from '@src/services/core';
 import { IDocumentFactory } from '@src/services/document';
 import { WorkspaceUri } from '@src/providers/workspace-uri';
-import { normalizeGlobPattern } from '@src/utilities/glob';
+import { compileGlob, GlobMatcher, normalizeGlobPattern } from '@src/utilities/glob';
 import { SettingsSectionId } from '..';
 import { SettingsSectionController } from '../../settings-section-controller';
 import { SettingsSectionMessages } from '../../settings-panel-messages';
@@ -153,10 +152,10 @@ export class IndexingSectionController implements SettingsSectionController {
 			return [];
 		}
 
-		let isMatch: picomatch.Matcher;
+		let isMatch: GlobMatcher;
 
 		try {
-			isMatch = picomatch(normalized, { dot: true });
+			isMatch = compileGlob(normalized);
 		} catch {
 			// Invalid globs are flagged in the input itself; report no matches.
 			return [];
