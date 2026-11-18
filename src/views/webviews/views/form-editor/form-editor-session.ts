@@ -17,7 +17,6 @@ import { LocalPartCase, getLocalPartFromLabel } from '@src/utilities/uri';
 import { getLog } from '@src/utilities/vscode/log';
 import { getConfig, toConfigurationTarget } from '@src/utilities/vscode/config';
 import { ResourceReferenceProvider } from '@src/providers/resource-reference-provider';
-import { getSubjectIconName } from '@src/utilities/subject-icon';
 import { getTokenAtPosition, tokensMatchText } from '@src/utilities/tokens';
 import { isPlainLocalName } from '@src/utilities/prefixed-name';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
@@ -29,6 +28,10 @@ import { ResourceIndexBuilder } from '../../services/editing/resource-index-buil
 import { ResourceViewBuilder } from '../../services/editing/resource-view-builder';
 import { PinChange, PinnedPropertiesService } from '../../services/editing/pinned-properties-service';
 import { EditorSnapshotService } from '../../services/editing/editor-snapshot-service';
+import { StoreIconResolver } from '../../services/editing/store-icon-resolver';
+import { TermCatalogueService } from '../../services/editing/term-catalogue-service';
+import { IPrefixLookupService } from '@src/services/document/prefix-lookup-service.interface';
+import { IWorkspaceIndexerService } from '@src/services/core/workspace-indexer.interface';
 import { EditOutcome, FormEditorEditHandler } from './form-editor-edit-handler';
 import { FormEditorHostMessage, FormEditorWebviewMessage } from './form-editor-messages';
 import { getFormReadOnlyReason } from './form-editor-read-only';
@@ -86,21 +89,6 @@ const SUPPORTED_SYNTAXES: ReadonlySet<RdfSyntax> = new Set([
  * The settings that change how a document is shown, which rebuild the snapshot when they change.
  */
 const RENDERING_SETTINGS = ['mentor.formEditor', 'mentor.predicates', 'mentor.definitionTree.labelStyle', 'mentor.definitionTree.defaultLanguageTag'];
-
-/**
- * The glyphs of IRIs the document does not describe, read from the store at one version of it.
- */
-interface ObjectIconCache {
-	/**
-	 * The version of the store the glyphs were read at.
-	 */
-	version: number;
-
-	/**
-	 * The glyph of each IRI asked for, `undefined` when the store knows no type for it.
-	 */
-	icons: Map<string, string | undefined>;
-}
 
 /**
  * The types of the resources of the document as the store knows them, inferred ones included,
@@ -175,7 +163,9 @@ export class FormEditorSession implements vscode.Disposable {
 	 */
 	private _sentSnapshot?: DocumentSnapshot;
 
-	private _objectIcons?: ObjectIconCache;
+	private _iconResolver?: StoreIconResolver;
+
+	private _termCatalogue?: TermCatalogueService;
 
 	private _inferredTypes?: InferredTypeCache;
 
@@ -529,6 +519,9 @@ export class FormEditorSession implements vscode.Disposable {
 			case 'RemoveResource':
 				await this.removeResource(message.resource);
 				break;
+			case 'TermSearch':
+				await this._answerTermSearch(message);
+				break;
 			case 'ExecuteCommand': {
 				const command = message as ExecuteCommandMessage;
 
@@ -812,7 +805,7 @@ export class FormEditorSession implements vscode.Disposable {
 	private _getIndexOptions(): ResourceIndexOptions {
 		const vocabulary = this._getVocabulary();
 
-		return { resolveObjectIcon: vocabulary ? iri => this._resolveObjectIcon(vocabulary, iri) : undefined };
+		return { resolveObjectIcon: vocabulary ? iri => this._getIconResolver(vocabulary).resolve(iri) : undefined };
 	}
 
 	/**
@@ -988,38 +981,41 @@ export class FormEditorSession implements vscode.Disposable {
 	}
 
 	/**
-	 * The glyph of an IRI the document does not describe, from its types in the store. Memoized
-	 * until the store changes, because a snapshot asks for the same vocabulary terms over and over.
-	 * @param vocabulary The vocabulary repository over the store.
-	 * @param iri The IRI.
-	 * @returns The glyph, or `undefined` when the store knows no type for the IRI.
+	 * Answer a search of a picker with the terms of the workspace that match it, best first. Without
+	 * a store or a document context, the answer offers none, so the picker does not wait for it.
+	 * @param search The search.
 	 */
-	private _resolveObjectIcon(vocabulary: VocabularyRepository, iri: string): string | undefined {
-		const store = vocabulary.store;
+	private async _answerTermSearch(search: Extract<FormEditorWebviewMessage, { id: 'TermSearch' }>): Promise<void> {
+		const vocabulary = this._getVocabulary();
+		const context = this._getTokenizedContext();
+		const options = vocabulary && context ? await this._getTermCatalogue(vocabulary).search(search, context) : [];
 
-		if (!this._objectIcons || this._objectIcons.version !== store.version) {
-			this._objectIcons = { version: store.version, icons: new Map() };
+		this._postMessage({ id: 'TermSearchResult', requestId: search.requestId, options });
+	}
+
+	/**
+	 * The catalogue of the terms of the workspace the pickers search.
+	 * @param vocabulary The vocabulary repository over the store.
+	 * @returns The catalogue.
+	 */
+	private _getTermCatalogue(vocabulary: VocabularyRepository): TermCatalogueService {
+		if (!this._termCatalogue) {
+			const prefixLookup = container.resolve<IPrefixLookupService>(ServiceToken.PrefixLookupService);
+			const indexer = container.resolve<IWorkspaceIndexerService>(ServiceToken.WorkspaceIndexerService);
+
+			this._termCatalogue = new TermCatalogueService(vocabulary, prefixLookup, this._getIconResolver(vocabulary), () => indexer.waitForIndexed());
 		}
 
-		const icons = this._objectIcons.icons;
+		return this._termCatalogue;
+	}
 
-		if (icons.has(iri)) {
-			return icons.get(iri);
-		}
-
-		const types: string[] = [];
-
-		for (const quad of store.matchAll(undefined, store.dataFactory.namedNode(iri), rdf.type, null, false)) {
-			if (quad.object.termType === 'NamedNode') {
-				types.push(quad.object.value);
-			}
-		}
-
-		const icon = types.length > 0 ? getSubjectIconName(types) : undefined;
-
-		icons.set(iri, icon);
-
-		return icon;
+	/**
+	 * The resolver of the glyphs of IRIs the document does not describe, over the store.
+	 * @param vocabulary The vocabulary repository over the store.
+	 * @returns The resolver.
+	 */
+	private _getIconResolver(vocabulary: VocabularyRepository): StoreIconResolver {
+		return this._iconResolver ??= new StoreIconResolver(vocabulary.store);
 	}
 
 	/**

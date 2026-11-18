@@ -6,7 +6,7 @@ import 'reflect-metadata';
 
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
-import { OWL, RDF, RDFS, Store, _OWL, _RDFS } from '@faubulous/mentor-rdf';
+import { OWL, RDF, RDFS, Store, VocabularyRepository, _OWL, _RDF, _RDFS } from '@faubulous/mentor-rdf';
 import { RdfSyntax } from '@faubulous/mentor-rdf-parsers';
 import { ServiceToken } from '@src/services/tokens';
 import { IDocumentContext } from '@src/services/document/document-context.interface';
@@ -255,6 +255,24 @@ describe('FormEditorSession', () => {
 		expect(fromStore.cardHeaders?.map(cardHeader => [cardHeader.subject, cardHeader.typeIri])).toEqual([[tree, OWL.Class]]);
 		expect(fromStore.cardBodies[0].predicates.map(property => property.predicate.term.value)).toEqual([RDF.type, RDFS.label, RDFS.subClassOf]);
 		expect(fromStore.cardBodies[0].predicates.flatMap(property => property.values).every(value => !value.editable && value.anchor === undefined)).toBe(true);
+	});
+
+	it('answers a term search with the terms of the workspace that match, under the id of the request', async () => {
+		const store = new Store();
+
+		store.loadTurtle(`@prefix rdf: <${_RDF}> .\n<${EX}height> a rdf:Property .\n<${EX}width> a rdf:Property .\n`, 'http://example.org/vocabulary', false);
+		container.registerInstance(ServiceToken.VocabularyRepository, new VocabularyRepository(store));
+		container.registerInstance(ServiceToken.PrefixLookupService, { getPrefixForIri: (_document: string, _namespace: string, fallback: string) => fallback } as never);
+		container.registerInstance(ServiceToken.WorkspaceIndexerService, { waitForIndexed: () => Promise.resolve() } as never);
+
+		const { posted, receive } = await createSession('ex:A a ex:Class .\n');
+
+		await receive({ id: 'TermSearch', requestId: 7, kind: 'predicate', text: 'hei', limit: 10 });
+
+		const [result] = postedOf(posted, 'TermSearchResult');
+
+		expect(result.requestId).toBe(7);
+		expect(result.options.map(option => [option.subject.value, option.prefixedName, option.source])).toEqual([[`${EX}height`, 'ex:height', 'declared']]);
 	});
 
 	it('tells the webview when the document cannot be shown', async () => {

@@ -4,6 +4,7 @@ import { EditOperation } from './edit-operation';
 import { EditPlan, mergePlans } from './edit-plan';
 import { EditRejection, EditRejectionError } from './edit-rejection';
 import { LocalStyleDetector } from './local-style-detector';
+import { DeclarePrefixOperation, PrefixOperations } from './operations/prefix-operations';
 import { PropertyOperations } from './operations/property-operations';
 import { ResourceOperations } from './operations/resource-operations';
 import { ValueListOperations } from './operations/value-list-operations';
@@ -25,14 +26,20 @@ export class EditSynthesizer {
 	constructor(private readonly _input: SynthesisInput) { }
 
 	/**
-	 * Synthesize the operations of one user action.
+	 * Synthesize the operations of one user action. The prefixes they declare are declared first,
+	 * wherever they are listed, so that the terms of the other operations use them.
 	 * @param operations The operations to carry out together.
 	 * @returns The plan, or the reason the operations cannot be applied.
 	 */
 	synthesize(operations: EditOperation[]): EditPlan | EditRejection {
 		try {
 			const context = this.createContext();
-			const plan = mergePlans(operations.map(operation => this._synthesizeOperation(context, operation)));
+			const declarations = operations.filter((operation): operation is DeclarePrefixOperation => operation.op === 'declarePrefix');
+			const others = operations.filter(operation => operation.op !== 'declarePrefix');
+
+			// The prefixes are declared first, so that the terms the other operations write use them.
+			const prefixPlan = new PrefixOperations(context).declarePrefixes(declarations);
+			const plan = mergePlans([prefixPlan, ...others.map(operation => this._synthesizeOperation(context, operation))]);
 
 			if (findOverlappingEdits(plan.edits)) {
 				throw new EditRejectionError({ kind: 'overlappingEdits' });

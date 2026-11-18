@@ -248,6 +248,64 @@ export interface ResourceListItemData extends ResourceCardHeaderData {
 }
 
 /**
+ * The kind of terms a picker searches for: the predicates of statements, the classes a resource is
+ * typed with, the resources a value refers to, or the datatypes of literals.
+ */
+export type TermSearchKind = 'predicate' | 'class' | 'resource' | 'datatype';
+
+/**
+ * Where a term a picker offers comes from, which ranks it: the document itself, a vocabulary whose
+ * namespace the document declares, or another vocabulary of the workspace.
+ */
+export type TermSource = 'document' | 'declared' | 'workspace';
+
+/**
+ * A term as an option of a picker shows it.
+ */
+export interface ResourceOptionData {
+	/**
+	 * The IRI of the term.
+	 */
+	subject: NamedNode;
+
+	/**
+	 * The label of the term, as the cards show it.
+	 */
+	label: string;
+
+	/**
+	 * The prefixed name of the term, with the prefixes of the document or the one it would declare.
+	 */
+	prefixedName?: string;
+
+	/**
+	 * The glyph of the term, by its types.
+	 */
+	iconName?: string;
+
+	/**
+	 * Where the term comes from.
+	 */
+	source: TermSource;
+
+	/**
+	 * The prefix the document would declare for the namespace of the term to write it by its
+	 * prefixed name, where the document declares none for it.
+	 */
+	missingPrefix?: {
+		/**
+		 * The prefix, without the colon.
+		 */
+		prefix: string;
+
+		/**
+		 * The namespace IRI.
+		 */
+		namespace: string;
+	};
+}
+
+/**
  * Where the statements of a resource are read from: the document, which they can be edited in, or
  * the store, which holds the other documents of the workspace and the vocabularies Mentor ships
  * with, and whose statements only read.

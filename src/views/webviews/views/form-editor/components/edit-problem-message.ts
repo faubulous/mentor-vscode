@@ -38,6 +38,12 @@ export function getEditProblemMessage(problem: EditProblem): string {
 			return 'Lists cannot be written in the syntax of this document.';
 		case 'nodesNotSupported':
 			return 'Nested blank nodes cannot be written in the syntax of this document.';
+		case 'prefixesNotSupported':
+			return 'Prefixes cannot be declared in the syntax of this document.';
+		case 'invalidPrefix':
+			return `'${problem.prefix}' is not a valid prefix.`;
+		case 'prefixTaken':
+			return `The document already declares the prefix '${problem.prefix}' for another namespace.`;
 		case 'emptyIri':
 			return 'An IRI must not be empty.';
 		case 'invalidIri':

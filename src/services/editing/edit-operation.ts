@@ -38,5 +38,12 @@ export type EditOperation =
 	 * it goes as a whole, with the blank nodes written in it and the comments directly above it.
 	 * Statements of other resources that refer to it stay.
 	 */
-	| { op: 'removeResource'; subject: NamedNode | BlankNode };
+	| { op: 'removeResource'; subject: NamedNode | BlankNode }
+	/**
+	 * Declare a prefix for a namespace, written like the declarations of the document: after them,
+	 * or in alphabetical order where the settings keep them sorted. The prefix is used by the terms
+	 * the other operations of the same action write, wherever it is listed among them. Declaring a
+	 * prefix the document already declares for the namespace changes nothing.
+	 */
+	| { op: 'declarePrefix'; prefix: string; namespace: string };
 
