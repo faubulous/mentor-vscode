@@ -1,9 +1,8 @@
 import * as vscode from 'vscode';
-import picomatch from 'picomatch';
 import { Utils } from 'vscode-uri';
 import { IDocumentFactory } from '../document/document-factory.interface';
 import { IWorkspaceFileService, WorkspaceFileChangeEvent, WorkspaceFileListChangeEvent } from './workspace-file-service.interface';
-import { normalizeGlobPattern } from '@src/utilities/glob';
+import { matchAnyGlob, normalizeGlobPattern } from '@src/utilities/glob';
 import { WorkspaceUri } from '@src/providers/workspace-uri';
 import { getConfig } from '@src/utilities/vscode/config';
 import { isDocumentOpen } from '@src/utilities/vscode/editors';
@@ -604,8 +603,6 @@ export class WorkspaceFileService implements IWorkspaceFileService {
 			return files;
 		}
 
-		const isExcluded = picomatch(patterns, { dot: true });
-
 		return files.filter(uri => {
 			const workspaceUri = WorkspaceUri.toWorkspaceUri(uri);
 
@@ -614,7 +611,7 @@ export class WorkspaceFileService implements IWorkspaceFileService {
 				return true;
 			}
 
-			return !isExcluded(workspaceUri.relativePath);
+			return !matchAnyGlob(patterns, workspaceUri.relativePath);
 		});
 	}
 

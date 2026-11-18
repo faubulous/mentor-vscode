@@ -1,5 +1,16 @@
-import picomatch from 'picomatch';
+import { Minimatch, MinimatchOptions, unescape } from 'minimatch';
 import { toUniqueStringArray } from './array';
+
+/**
+ * Tests whether a workspace-relative path matches a compiled glob pattern.
+ */
+export type GlobMatcher = (input: string) => boolean;
+
+/**
+ * How every glob pattern is read: dot files match, and the backslash escapes on every platform,
+ * as the paths it is matched against are normalized to forward slashes everywhere.
+ */
+const GLOB_OPTIONS: MinimatchOptions = { dot: true, platform: 'linux' };
 
 /**
  * Normalizes a raw glob pattern or relative path: trims, converts backslashes
@@ -15,42 +26,107 @@ export function normalizeGlobPattern(pattern: string): string {
 }
 
 /**
+ * What is known of each pattern string that has been asked about: whether it is a glob and its
+ * fixed literal prefix. Safe to memoize at module level, as both depend on the string alone, and
+ * parsing a pattern costs far more than looking it up.
+ */
+const isGlobCache = new Map<string, boolean>();
+const baseCache = new Map<string, string>();
+
+/**
  * Returns true when the given string contains glob syntax (including negation).
  * Never throws on malformed input.
  */
 export function isGlobPattern(pattern: string): boolean {
-	try {
-		const scanned = picomatch.scan(pattern);
+	let isGlob = isGlobCache.get(pattern);
 
-		return scanned.isGlob === true || scanned.negated === true;
-	} catch {
-		return false;
+	if (isGlob === undefined) {
+		try {
+			const parsed = new Minimatch(pattern, GLOB_OPTIONS);
+
+			isGlob = parsed.negate || parsed.hasMagic();
+		} catch {
+			isGlob = false;
+		}
+
+		isGlobCache.set(pattern, isGlob);
 	}
+
+	return isGlob;
 }
 
 /**
- * Returns the fixed literal prefix of a glob pattern (`picomatch.scan().base`),
- * which degenerates to the whole string for a literal-looking pattern.
- * Root-anchored patterns like `**\/*.ttl` have no fixed prefix and yield an
- * empty string. Used to follow folder renames and deletions for patterns.
+ * Returns the fixed literal prefix of a glob pattern as it is written: its leading path segments
+ * that are literal in every expansion of its braces, without a `!` negation. A literal-looking
+ * pattern yields the whole string. Root-anchored patterns like `**\/*.ttl` have no fixed prefix and
+ * yield an empty string. Used to follow folder renames and deletions for patterns.
  */
 export function getGlobPatternBase(pattern: string): string {
-	try {
-		return picomatch.scan(pattern).base ?? '';
-	} catch {
-		return '';
+	let base = baseCache.get(pattern);
+
+	if (base === undefined) {
+		try {
+			const text = pattern.replace(/^!+/, '');
+			const parsed = new Minimatch(text, { ...GLOB_OPTIONS, optimizationLevel: 0 });
+
+			base = text.split('/').slice(0, _literalSegmentCount(text, parsed.set)).join('/');
+		} catch {
+			base = '';
+		}
+
+		baseCache.set(pattern, base);
 	}
+
+	return base;
+}
+
+/**
+ * Count the leading segments of a pattern that are literal in every expansion of its braces and
+ * read as the text writes them.
+ * @param text The pattern without its negation.
+ * @param expansions The segments of each expansion of the pattern.
+ * @returns The number of segments.
+ */
+function _literalSegmentCount(text: string, expansions: Minimatch['set']): number {
+	const written = text.split('/');
+	let count = 0;
+
+	while (count < written.length) {
+		const literal = expansions[0]?.[count];
+
+		if (typeof literal !== 'string' || expansions.some(segments => segments[count] !== literal) || unescape(written[count], GLOB_OPTIONS) !== literal) {
+			break;
+		}
+
+		count++;
+	}
+
+	return count;
+}
+
+/**
+ * Compiles a glob pattern into a matcher of workspace-relative paths, with dot-file support. Stray
+ * brackets and parentheses are read as literal characters, so only a pattern the parser rejects
+ * outright, such as one that is too long, fails.
+ * @param pattern The pattern.
+ * @returns The matcher.
+ * @throws {TypeError} If the pattern cannot be compiled.
+ */
+export function compileGlob(pattern: string): GlobMatcher {
+	const parsed = new Minimatch(pattern, GLOB_OPTIONS);
+
+	return input => parsed.match(input);
 }
 
 /**
  * Compiled matchers per pattern string. Safe to memoize at module level: a
  * compiled matcher for a given pattern string is always identical.
  */
-const matcherCache = new Map<string, picomatch.Matcher>();
+const matcherCache = new Map<string, GlobMatcher>();
 
 /**
  * Tests whether a glob pattern matches an input string, compiling the pattern
- * with `{ dot: true }` and caching the compiled matcher. Returns `false` when
+ * with dot-file support and caching the compiled matcher. Returns `false` when
  * the pattern fails to compile.
  */
 export function matchGlob(pattern: string, input: string): boolean {
@@ -58,7 +134,7 @@ export function matchGlob(pattern: string, input: string): boolean {
 
 	if (!matcher) {
 		try {
-			matcher = picomatch(pattern, { dot: true });
+			matcher = compileGlob(pattern);
 		} catch {
 			return false;
 		}
@@ -67,6 +143,17 @@ export function matchGlob(pattern: string, input: string): boolean {
 	}
 
 	return matcher(input);
+}
+
+/**
+ * Tests whether any of several glob patterns matches an input string, as
+ * {@link matchGlob} tests one. Patterns that fail to compile match nothing.
+ * @param patterns The patterns.
+ * @param input The workspace-relative path.
+ * @returns `true` when a pattern matches.
+ */
+export function matchAnyGlob(patterns: readonly string[], input: string): boolean {
+	return patterns.some(pattern => matchGlob(pattern, input));
 }
 
 /**
