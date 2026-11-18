@@ -1,10 +1,10 @@
 import { ChangeEvent, FocusEvent, KeyboardEvent, MouseEvent, useId, useRef, useState } from 'react';
-import { ResourceOptionData } from '../form-editor-model';
-import { StatementServices } from '../hooks/use-statement-services';
 import { useOverflowing } from '../hooks/use-overflowing';
+import { useTagPicker } from '../hooks/use-tag-picker';
 import { LiteralTag } from '../state/literal-tag';
 import { LiteralTagData } from './datatype-labels';
 import { TagPicker } from './tag-picker';
+import { TagChoice } from './tag-picker-items';
 
 /**
  * The tag a plain string shows while its value has the focus, which chooses a datatype for it.
@@ -31,9 +31,14 @@ export interface LiteralFieldProps {
 	text: string;
 
 	/**
-	 * The tag of the literal, shown after its text; none for a plain string.
+	 * The tag of the literal as its field shows it after the text; none for a plain string.
 	 */
 	tag?: LiteralTagData;
+
+	/**
+	 * The language or datatype of the literal, which the tag picker highlights.
+	 */
+	current: LiteralTag;
 
 	/**
 	 * What an empty value shows: the text a value of its datatype is written as.
@@ -56,14 +61,9 @@ export interface LiteralFieldProps {
 	integer: boolean;
 
 	/**
-	 * The languages of the card, which the tag picker offers.
+	 * The languages of the card, which the tag picker offers first.
 	 */
 	languages: readonly string[];
-
-	/**
-	 * Reads a typed datatype and names the datatypes on offer.
-	 */
-	services: StatementServices;
 
 	/**
 	 * Called with the text as it is typed.
@@ -86,10 +86,9 @@ export interface LiteralFieldProps {
 	onRemove: () => void;
 
 	/**
-	 * Called with the tag picked for the literal, and the datatype of the workspace it was picked
-	 * from, if it was.
+	 * Called with what the item picked from the tag picker gives the literal.
 	 */
-	onTagPick: (tag: LiteralTag, datatype?: ResourceOptionData) => void;
+	onTagPick: (choice: TagChoice) => void;
 }
 
 /**
@@ -103,25 +102,30 @@ export interface LiteralFieldProps {
  * @returns The field.
  */
 export function LiteralField(props: LiteralFieldProps): React.JSX.Element {
-	const { index, text, tag, placeholder, problem, numeric, languages, services, onInput, onTagPick } = props;
+	const { index, text, tag, current, placeholder, problem, numeric, languages, onInput, onTagPick } = props;
 	const [focused, setFocused] = useState(false);
-	const [picking, setPicking] = useState(false);
 	const textRef = useRef<HTMLSpanElement>(null);
 	const inputRef = useRef<HTMLTextAreaElement>(null);
 	const problemId = useId();
+	const listId = useId();
+	const picker = useTagPicker({ current, languages, onPick: onTagPick, onDone: () => inputRef.current?.focus() });
 	const clamped = useOverflowing(textRef, text) && !focused;
 	const shownTag = tag ?? (focused ? PLAIN_TAG : undefined);
 
 	const handleBlur = (event: FocusEvent<HTMLSpanElement>): void => {
 		if (!(event.relatedTarget instanceof Node) || !event.currentTarget.contains(event.relatedTarget)) {
 			setFocused(false);
+			picker.close();
 		}
 	};
 
-	// The picker goes with the focus in it, so the focus comes back to the text of the literal.
-	const closePicker = (): void => {
-		setPicking(false);
-		inputRef.current?.focus();
+	// The filter of the picker takes the focus as it opens, and gives it back to the text as the tag closes it.
+	const togglePicker = (): void => {
+		if (picker.open) {
+			inputRef.current?.focus();
+		}
+
+		picker.toggle();
 	};
 
 	const classes = ['literal-field', ...(problem ? ['is-problem'] : []), ...(clamped ? ['is-clamped'] : []), ...(numeric ? ['is-numeric'] : [])];
@@ -130,8 +134,8 @@ export function LiteralField(props: LiteralFieldProps): React.JSX.Element {
 		<span className={classes.join(' ')} data-value-index={index} onFocus={() => setFocused(true)} onBlur={handleBlur}>
 			<span className="literal-field-box input-field">
 				<span ref={textRef} className="literal-field-text">
-					<span className="literal-field-copy" aria-hidden="true">{`${text || placeholder}​`}</span>
-					{shownTag && _tagButton(shownTag, problem, () => setPicking(current => !current))}
+					<span className="literal-field-copy" aria-hidden="true">{`${text || placeholder}\u200b`}</span>
+					{shownTag && _tagButton(shownTag, problem, togglePicker)}
 					<textarea
 						ref={inputRef}
 						className="literal-field-input"
@@ -148,25 +152,15 @@ export function LiteralField(props: LiteralFieldProps): React.JSX.Element {
 				</span>
 			</span>
 			{problem && <span id={problemId} className="literal-field-problem">{problem}</span>}
-			{picking && (
-				<TagPicker
-					text={text}
-					languages={languages}
-					services={services}
-					onPick={(picked, datatype) => {
-						closePicker();
-						onTagPick(picked, datatype);
-					}}
-					onCancel={closePicker}
-				/>
-			)}
+			{picker.open && <TagPicker picker={picker} listId={listId} />}
 		</span>
 	);
 }
 
 /**
- * The tag after the text, which opens the tag picker. It acts on the press of the mouse, whose
- * default is prevented, so the text keeps the focus; a click by the keyboard opens it too.
+ * The tag after the text, which opens and closes the tag picker. It acts on the press of the
+ * mouse, whose default is prevented, so the focus never rests on the tag; a click by the keyboard
+ * opens it too.
  * @param tag The tag.
  * @param problem Why the text does not fit the datatype, if it does not.
  * @param onToggle Opens or closes the picker.

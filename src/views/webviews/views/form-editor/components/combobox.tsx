@@ -229,7 +229,7 @@ export function Combobox<T>(props: ComboboxProps<T>): React.JSX.Element {
 				onBlur={handleBlur}
 			/>
 			{shown && (
-				<ul id={listId} ref={_showAsPopover} popover="manual" className="combobox-list" role="listbox" aria-label={label}>
+				<ul id={listId} ref={showInTopLayer} popover="manual" className="combobox-list" role="listbox" aria-label={label}>
 					{matches.map((option, index) => (
 						<li
 							key={index}
@@ -255,12 +255,12 @@ export function Combobox<T>(props: ComboboxProps<T>): React.JSX.Element {
 }
 
 /**
- * Show the list in the top layer of the page, above the cards and bars that would cover it,
- * placed under the field it is anchored to.
- * @param list The list, or `null` once it is gone.
+ * Show a pop-up in the top layer of the page, above the cards and bars that would cover it,
+ * placed by the anchor its styles name; used as the ref of a popover element.
+ * @param popup The pop-up, or `null` once it is gone.
  */
-function _showAsPopover(list: HTMLUListElement | null): void {
-	if (list && typeof list.showPopover === 'function' && !list.matches(':popover-open')) {
-		list.showPopover();
+export function showInTopLayer(popup: HTMLElement | null): void {
+	if (popup && typeof popup.showPopover === 'function' && !popup.matches(':popover-open')) {
+		popup.showPopover();
 	}
 }

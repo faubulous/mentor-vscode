@@ -76,12 +76,11 @@ export class LiteralDatatypes {
 	}
 
 	/**
-	 * The datatypes the fields know that a text fits, in the order they are offered.
-	 * @param text The text.
+	 * The datatypes the fields know, in the order they are offered.
 	 * @returns The IRIs of the datatypes.
 	 */
-	static fitting(text: string): string[] {
-		return KNOWN.filter(iri => LiteralDatatypes.fits(iri, text));
+	static known(): readonly string[] {
+		return KNOWN;
 	}
 
 	/**

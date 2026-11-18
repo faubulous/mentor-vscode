@@ -17,4 +17,25 @@ describe('LanguageTags', () => {
 		expect(LanguageTags.nameOf('qqq')).toBeUndefined();
 		expect(LanguageTags.nameOf('not a tag')).toBeUndefined();
 	});
+
+	it('knows the common languages, ordered by their names', () => {
+		const common = LanguageTags.common();
+		const names = common.map(tag => LanguageTags.nameOf(tag)!);
+
+		expect(common.length).toBeGreaterThan(150);
+		expect(common).toContain('de');
+		expect(names).toEqual([...names].sort((a, b) => a.localeCompare(b)));
+	});
+
+	it('tells a well-formed language tag from other text', () => {
+		expect(['de', 'de-CH', 'zh-hant-tw', 'es-419', 'sl-rozaj-biske', 'en-US-x-twain', 'de-DE-u-co-phonebk'].every(tag => LanguageTags.isWellFormed(tag))).toBe(true);
+		expect(['gmail', 'd', 'de-', 'de_CH', 'de CH', ''].some(tag => LanguageTags.isWellFormed(tag))).toBe(false);
+	});
+
+	it('tells an alias of a language tag', () => {
+		expect(LanguageTags.isAlias('ger')).toBe(true);
+		expect(LanguageTags.isAlias('de-ch')).toBe(false);
+		expect(LanguageTags.isAlias('xyz')).toBe(false);
+		expect(LanguageTags.isAlias('not a tag')).toBe(false);
+	});
 });

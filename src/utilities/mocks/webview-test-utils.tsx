@@ -122,7 +122,8 @@ class VscodeElementStub extends HTMLElement {
 let currentHost: WebviewTestHost | undefined;
 
 /**
- * Register the VS Code web components as plain elements, once per page.
+ * Register the VS Code web components as plain elements, once per page. As jsdom lays nothing out,
+ * scrolling an element into view does nothing.
  */
 export function registerVscodeElements(): void {
 	for (const tag of VSCODE_ELEMENT_TAGS) {
@@ -130,6 +131,8 @@ export function registerVscodeElements(): void {
 			customElements.define(tag, class extends VscodeElementStub { });
 		}
 	}
+
+	Element.prototype.scrollIntoView ??= () => undefined;
 }
 
 /**

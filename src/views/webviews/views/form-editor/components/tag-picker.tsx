@@ -1,215 +1,121 @@
-import { _RDF, RDF, XSD } from '@faubulous/mentor-rdf/ontologies';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { VscodeTextfield } from '@vscode-elements/elements';
-import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
-import { getDatatypeIconName } from '@src/utilities/resource-icon';
-import { getLocalPartAndQuery } from '@src/utilities/uri';
-import { ResourceOptionData } from '../form-editor-model';
-import { StatementServices } from '../hooks/use-statement-services';
-import { useTermOptions } from '../hooks/use-term-options';
-import { useWorkspaceLanguages } from '../hooks/use-workspace-languages';
-import { LanguageTags } from '../services/statement/language-tags';
-import { LiteralDatatypes } from '../services/statement/literal-datatypes';
-import { narrowByMatch } from '../services/term-ranking';
-import { useFormEditorContext } from '../state/form-editor-context';
-import { LiteralTag } from '../state/literal-tag';
-import { Combobox, ComboboxOption } from './combobox';
-import { getDatatypeName } from './datatype-labels';
-import { getTermOption } from './term-picker';
+import { MouseEvent, useEffect, useRef } from 'react';
+import { TagPickerControl } from '../hooks/use-tag-picker';
+import { showInTopLayer } from './combobox';
+import { TagPickerTab } from './tag-picker-items';
 
 /**
- * The shape of a language tag such as `en` or `de-CH`.
+ * The tabs of the picker, in their order, with their names.
  */
-const LANGUAGE_TAG = /^[A-Za-z]{2,8}(-[A-Za-z0-9]{1,8})*$/;
-
-/**
- * The glyph of a language.
- */
-const LANGUAGE_ICON = 'globe';
-
-/**
- * The datatypes of the store no literal of the picker takes, as they need a language.
- */
-const LANGUAGE_DATATYPES: ReadonlySet<string> = new Set([RDF.langString, `${_RDF}dirLangString`]);
-
-/**
- * What picking an option of the picker yields: the tag, and the datatype of the workspace it was
- * picked from, which may need its prefix declared.
- */
-interface TagChoice {
-	/**
-	 * The tag.
-	 */
-	tag: LiteralTag;
-
-	/**
-	 * The datatype of the workspace picked, if one was.
-	 */
-	datatype?: ResourceOptionData;
-}
-
-/**
- * An option of the picker, with the names it is matched by.
- */
-interface TagEntry {
-	/**
-	 * The option.
-	 */
-	option: ComboboxOption<TagChoice>;
-
-	/**
-	 * The names the typed text is matched against, the label first.
-	 */
-	names: readonly (string | undefined)[];
-}
+const TABS: readonly { tab: TagPickerTab; name: string }[] = [
+	{ tab: 'datatype', name: 'Datatype' },
+	{ tab: 'language', name: 'Language' }
+];
 
 /**
  * Properties of the {@link TagPicker} component.
  */
 export interface TagPickerProps {
 	/**
-	 * The text of the literal, which decides the datatypes on offer.
+	 * The picker, as the field of the literal drives it.
 	 */
-	text: string;
+	picker: TagPickerControl;
 
 	/**
-	 * The languages of the card, on offer before those of the workspace.
+	 * The identifier of the list of items, which the text of the literal controls.
 	 */
-	languages: readonly string[];
-
-	/**
-	 * Reads a typed datatype and names the datatypes on offer.
-	 */
-	services: StatementServices;
-
-	/**
-	 * Called with the tag picked or typed, and the datatype of the workspace it was picked from.
-	 */
-	onPick: (tag: LiteralTag, datatype?: ResourceOptionData) => void;
-
-	/**
-	 * Called when the picker is left without a pick.
-	 */
-	onCancel: () => void;
+	listId: string;
 }
 
 /**
- * The picker of the language tag or datatype of a literal: a combobox offering the datatypes the
- * literal fields know that the text fits, then the languages of the card and those of the
- * workspace, the most used first, then the other datatypes of the workspace the text may fit, each
- * matched against the typed text as every picker matches. It opens over the end of the field
- * with its list open. A typed language code is taken as a language, a typed prefixed name or
- * `<iri>` as a datatype. Leaving it cancels.
- * @param props The literal and what to do with the pick.
- * @returns The picker.
+ * The identifier of an item of the picker, which the text of the literal names as the active one.
+ * @param listId The identifier of the list.
+ * @param index The index of the item.
+ * @returns The identifier.
  */
-export function TagPicker({ text, languages, services, onPick, onCancel }: TagPickerProps): React.JSX.Element {
-	const [typed, setTyped] = useState('');
-	const fieldRef = useRef<VscodeTextfield>(null);
-	const { languageTags } = useFormEditorContext();
-	const datatypes = useTermOptions('datatype', typed, true);
-	const workspaceLanguages = useWorkspaceLanguages();
-	const options = useMemo(() => {
-		const entries = [
-			..._knownDatatypeEntriesOf(text, services),
-			..._languageEntriesOf([...languages, ...workspaceLanguages.map(language => languageTags[language] ?? language)]),
-			..._storeDatatypeEntriesOf(text, datatypes)
-		];
+export function getTagPickerItemId(listId: string, index: number): string {
+	return `${listId}-${index}`;
+}
 
-		return narrowByMatch(entries, typed, entry => entry.names).map(entry => entry.option);
-	}, [text, typed, languages, workspaceLanguages, languageTags, datatypes, services]);
+/**
+ * The tag picker of a literal: a pop-up under the value with a filter that takes the focus as the
+ * picker opens, a Datatype and a Language tab under it, and the list of the items of the tab that
+ * match the filter, each its code and what it is. The filter keeps the focus: the tabs and items act
+ * on the press of the mouse, whose default is prevented, and the keys pressed in the filter move
+ * the highlight. It shows in the top layer of the page, so no card after it covers it.
+ * @param props The picker.
+ * @returns The pop-up.
+ */
+export function TagPicker({ picker, listId }: TagPickerProps): React.JSX.Element {
+	const listRef = useRef<HTMLDivElement>(null);
+	const filterRef = useRef<HTMLInputElement>(null);
+	const { tab, items, active, filter } = picker;
+	const noun = tab === 'datatype' ? 'datatypes' : 'languages';
 
 	useEffect(() => {
-		const field = fieldRef.current;
-
-		void Promise.resolve(field?.updateComplete).then(() => field?.focus());
+		filterRef.current?.focus();
 	}, []);
 
-	const create = (value: string): void => {
-		const trimmed = value.trim();
+	useEffect(() => {
+		listRef.current?.querySelector('.is-active')?.scrollIntoView({ block: 'nearest' });
+	}, [tab, active]);
 
-		if (LANGUAGE_TAG.test(trimmed)) {
-			onPick({ language: trimmed });
-
-			return;
-		}
-
-		const reading = services.reader.readIri(trimmed);
-
-		if (reading.term) {
-			onPick({ datatype: reading.term.value });
-		}
+	const act = (event: MouseEvent, action: () => void): void => {
+		event.preventDefault();
+		action();
 	};
 
 	return (
-		<span className="tag-picker" onBlur={event => !event.currentTarget.contains(event.relatedTarget as Node | null) && onCancel()}>
-			<Combobox text={typed} onTextChange={setTyped} options={options} openOnFocus onPick={choice => onPick(choice.tag, choice.datatype)} onCreate={create} onCancel={onCancel} label="Language or datatype" placeholder="language or datatype" className="is-tag" fieldRef={fieldRef} />
-		</span>
+		<div ref={showInTopLayer} popover="manual" className="tag-picker">
+			<input
+				ref={filterRef}
+				type="text"
+				className="tag-picker-filter"
+				role="combobox"
+				value={filter}
+				placeholder={`Search ${noun}`}
+				autoComplete="off"
+				spellCheck={false}
+				aria-label={`Search ${noun}`}
+				aria-expanded={true}
+				aria-controls={listId}
+				aria-activedescendant={items.length > 0 ? getTagPickerItemId(listId, active) : undefined}
+				onChange={event => picker.setFilter(event.currentTarget.value)}
+				onKeyDown={picker.handleKeyDown}
+			/>
+			<div className="tag-picker-tabs" role="tablist" aria-label="Datatype or language">
+				{TABS.map(entry => (
+					<button
+						key={entry.tab}
+						type="button"
+						role="tab"
+						tabIndex={-1}
+						className={`tag-picker-tab${entry.tab === tab ? ' is-active' : ''}`}
+						aria-selected={entry.tab === tab}
+						aria-controls={listId}
+						onMouseDown={event => act(event, () => picker.showTab(entry.tab))}
+					>
+						{entry.name}
+					</button>
+				))}
+			</div>
+			<div ref={listRef} id={listId} className="tag-picker-list" role="listbox" aria-label={tab === 'datatype' ? 'Datatypes' : 'Languages'}>
+				{items.map((item, index) => (
+					<div
+						key={item.key}
+						id={getTagPickerItemId(listId, index)}
+						className={`tag-picker-item${index === active ? ' is-active' : ''}`}
+						role="option"
+						aria-selected={index === active}
+						aria-label={item.description ? `${item.code}, ${item.description}` : item.code}
+						onMouseDown={event => act(event, () => picker.pick(item))}
+						onMouseEnter={() => picker.highlight(index)}
+					>
+						<span className="tag-picker-code">{item.code}</span>
+						<span className="tag-picker-description">{item.description}</span>
+					</div>
+				))}
+				{items.length === 0 && <div className="tag-picker-empty">No matching {noun}</div>}
+			</div>
+		</div>
 	);
-}
-
-/**
- * The datatypes the literal fields know that a text fits, in the order the fields know them, by
- * the names the fields give them.
- * @param text The text of the literal.
- * @param services Names the datatypes by their prefixed names.
- * @returns The entries.
- */
-function _knownDatatypeEntriesOf(text: string, services: StatementServices): TagEntry[] {
-	return LiteralDatatypes.fitting(text).map(iri => {
-		const datatype = RdfDataFactory.namedNode(iri);
-		const prefixedName = services.resolver.viewOf(datatype).prefixedName;
-		const label = getDatatypeName(datatype, () => prefixedName);
-		const tag = iri === XSD.string ? {} : { datatype: iri };
-
-		return {
-			option: { label, detail: iri, iconName: getDatatypeIconName(iri), value: { tag } },
-			names: [label, prefixedName, getLocalPartAndQuery(iri)]
-		};
-	});
-}
-
-/**
- * The languages on offer, each once, in the order given, by their tags with their names after them.
- * @param languages The language tags, those of the card first.
- * @returns The entries.
- */
-function _languageEntriesOf(languages: readonly string[]): TagEntry[] {
-	const seen = new Set<string>();
-	const entries: TagEntry[] = [];
-
-	for (const language of languages) {
-		const key = language.toLowerCase();
-
-		if (seen.has(key)) {
-			continue;
-		}
-
-		const name = LanguageTags.nameOf(language);
-
-		seen.add(key);
-		entries.push({ option: { label: language, detail: name ?? 'Language', iconName: LANGUAGE_ICON, value: { tag: { language } } }, names: [language, name] });
-	}
-
-	return entries;
-}
-
-/**
- * The other datatypes of the workspace a text may fit, as the host ranked them: not those the
- * literal fields know, which come first, nor those that need a language.
- * @param text The text of the literal.
- * @param datatypes The datatypes of the workspace that match the typed text, best first.
- * @returns The entries.
- */
-function _storeDatatypeEntriesOf(text: string, datatypes: readonly ResourceOptionData[]): TagEntry[] {
-	return datatypes
-		.filter(datatype => {
-			const iri = datatype.subject.value;
-
-			return !LiteralDatatypes.isKnown(iri) && !LANGUAGE_DATATYPES.has(iri) && LiteralDatatypes.fits(iri, text);
-		})
-		.map(datatype => ({
-			option: getTermOption(datatype, { tag: { datatype: datatype.subject.value }, datatype }),
-			names: [datatype.label, getLocalPartAndQuery(datatype.subject.value), datatype.prefixedName]
-		}));
 }
