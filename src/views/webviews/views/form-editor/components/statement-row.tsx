@@ -462,10 +462,11 @@ function _addLinkOf(edited: EditedRow, header: RowHeader | undefined, literals: 
 /**
  * The box of the resources of an edited row, with the input of the next value after the pills. In a
  * row without pills it stands after the nested cards of blank nodes, and in a row with values it
- * shows while the focus is in the row. It offers the terms of the workspace, the type of a blank
- * node its classes, and asks to choose one while there is none. `[` typed into the empty input starts a new blank
- * node where the predicate takes resources. A row for a new statement takes no value until its
- * predicate is picked, and its input asks for that.
+ * shows while the focus is in the row, or at once where Add value opened it. It offers the terms
+ * of the workspace, the type of a blank node its classes, and asks to choose one while there is
+ * none. `[` typed into the empty input starts a new blank node where the predicate takes resources.
+ * A row for a new statement takes no value until its predicate is picked, and its input asks for
+ * that.
  * @param edited The row.
  * @param resources The resources of the row.
  * @param property The property of the row, whose values tell what the predicate takes.
@@ -479,7 +480,8 @@ function _resourceBox(edited: EditedRow, resources: readonly ShownValue[], prope
 	const { editor, state } = edited;
 	const range = _rangeOf(header, property);
 	const awaitsPredicate = editor.isNew && state.draft.predicate === undefined;
-	const onIntent = resources.length === 0 && state.draft.values.length > 0 && state.pendingText === '';
+	// The input Add value opens shows at once: hidden until the row has the focus, it could not take it.
+	const onIntent = !autoFocus && resources.length === 0 && state.draft.values.length > 0 && state.pendingText === '';
 	const classes = ['statement-value', 'is-adder', ...(resources.length === 0 ? ['is-after-values'] : []), ...(onIntent ? ['is-on-intent'] : [])];
 
 	return (

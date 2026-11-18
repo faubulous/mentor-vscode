@@ -621,6 +621,28 @@ describe('StatementList, edited in a browser', () => {
 		expect(centreOf(fields[1])).toBe(centreOf(fields[0]));
 	});
 
+	it('turns Add value under the nested card of a blank node into the input of the next value, which takes the focus', async () => {
+		const node = RdfDataFactory.blankNode('b1');
+		const cardBody = withAnchors(createTestCardBody([createProperty('rdfs:comment', [{ term: node, editable: true, nested: { term: node, propertyCount: 1 } }])]));
+		const nodeCardBody = withAnchors({ subject: node, predicates: [createProperty('rdfs:label', [createLiteralView('Leaf')])] });
+
+		await renderList(cardBody, [nodeCardBody]);
+
+		const row = rows()[0];
+
+		await userEvent.click(within(row).getByRole('button', { name: 'Add value' }));
+
+		const adder = row.querySelector<HTMLElement>(':scope > .statement-cells > .statement-values > .statement-value.is-adder')!;
+
+		await expect.poll(() => adder.querySelector('vscode-textfield')!.matches(':focus-within')).toBe(true);
+		expect(adder.checkVisibility()).toBe(true);
+		expect(within(row).queryByRole('button', { name: 'Add value' })).toBeNull();
+
+		await leaveList();
+
+		expect(within(row).getByRole('button', { name: 'Add value' })).toBeTruthy();
+	});
+
 	it('moves the grip, the predicate and the menu of a row that starts with a collapsed box down to the middle of the box', async () => {
 		const node = RdfDataFactory.blankNode('b1');
 		const cardBody = withAnchors(createTestCardBody([createProperty('rdfs:comment', [{ term: node, editable: true, nested: { term: node, propertyCount: 1 } }])]));
