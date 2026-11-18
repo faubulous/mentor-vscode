@@ -6,6 +6,7 @@
  */
 
 import { _SH, OWL, RDF, RDFS, SH, SKOS, XSD } from '@faubulous/mentor-rdf';
+import type { Quad } from '@rdfjs/types';
 import type { ValueKind } from '@src/utilities/value-kind';
 
 /**
@@ -115,8 +116,35 @@ export interface ResourceIconContext {
 }
 
 /**
+ * Read what the statements about a resource tell its glyph by besides its types: its range, the
+ * value type it constrains as a property shape, and the predicates it uses. The cards and the
+ * pickers of the form editor read it alike, so a term looks the same in both.
+ * @param quads The statements about the resource.
+ * @returns The context.
+ */
+export function getIconContextOf(quads: Iterable<Pick<Quad, 'predicate' | 'object'>>): ResourceIconContext {
+	const context: ResourceIconContext & { predicateIris: string[] } = { predicateIris: [] };
+
+	for (const quad of quads) {
+		const predicate = quad.predicate.value;
+		const object = quad.object.termType === 'NamedNode' ? quad.object.value : undefined;
+
+		context.predicateIris.push(predicate);
+
+		if (predicate === RDFS.range) {
+			context.rangeIri ??= object;
+		} else if (predicate === SH.datatype) {
+			context.datatypeIri ??= object;
+		}
+	}
+
+	return context;
+}
+
+/**
  * Get the glyph of a resource from the types it asserts, falling back to what its statements say
- * about it.
+ * about it. A datatype property takes literals, so it shows the text glyph where its range tells
+ * nothing more specific.
  * @param typeIris The IRIs of the resource's types.
  * @param context What else is known about the resource.
  * @returns The name of the icon to show, or `undefined` for an unrecognized resource.
@@ -135,7 +163,7 @@ export function getResourceIconName(
 
 	for (const type of PROPERTY_TYPES) {
 		if (types.has(type)) {
-			return getPropertyIconName(context.rangeIri, context.valueKind);
+			return getPropertyIconName(context.rangeIri, context.valueKind ?? (types.has(OWL.DatatypeProperty) ? 'literal' : undefined));
 		}
 	}
 

@@ -1,9 +1,10 @@
 import { QuadContext } from '@faubulous/mentor-rdf-parsers';
 import { BlankNode, Literal, NamedNode, Quad_Object, Quad_Subject, Term } from '@rdfjs/types';
-import { OWL, RDF, RDFS, SH, Uri } from '@faubulous/mentor-rdf';
+import { OWL, RDF, Uri } from '@faubulous/mentor-rdf';
 import { IDocumentContext } from '@src/services/document/document-context.interface';
 import { termToString } from 'rdf-string';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
+import { getIconContextOf } from '@src/utilities/resource-icon';
 import { DEFAULT_ICON, getSubjectIconName } from '@src/utilities/subject-icon';
 import { getTokenPosition, hasSourcePosition } from '@src/utilities/tokens';
 import { ValueKind, ValueKindHint } from '@src/utilities/value-kind';
@@ -329,11 +330,7 @@ export class ResourceViewBuilder {
 	 * @returns The icon name.
 	 */
 	private _resolveIconName(entry: ResourceIndexEntry, typeIris: readonly string[]): string {
-		return getSubjectIconName(typeIris, {
-			rangeIri: _objectIriOf(entry, RDFS.range),
-			predicateIris: entry.quads.map(quad => quad.predicate.value),
-			datatypeIri: _objectIriOf(entry, SH.datatype)
-		});
+		return getSubjectIconName(typeIris, getIconContextOf(entry.quads));
 	}
 
 	/**
@@ -372,16 +369,6 @@ function _primaryTypeIndex(typeIris: readonly string[]): number {
  */
 function _countProperties(entry: ResourceIndexEntry): number {
 	return new Set(entry.quads.map(quad => quad.predicate.value).filter(iri => !isCollectionChainPredicate(iri))).size;
-}
-
-/**
- * Get the IRI a resource states for a predicate, if it states one.
- * @param entry The resource.
- * @param predicateIri The predicate.
- * @returns The IRI, or `undefined`.
- */
-function _objectIriOf(entry: ResourceIndexEntry, predicateIri: string): string | undefined {
-	return entry.quads.find(quad => quad.predicate.value === predicateIri && quad.object.termType === 'NamedNode')?.object.value;
 }
 
 /**

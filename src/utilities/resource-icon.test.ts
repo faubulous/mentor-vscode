@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { OWL, RDF, SH, SKOS, XSD } from '@faubulous/mentor-rdf';
+import { OWL, RDF, RDFS, SH, SKOS, XSD } from '@faubulous/mentor-rdf';
+import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import * as fs from 'fs';
 import * as path from 'path';
-import { getPropertyIconName, getResourceIconName } from './resource-icon';
+import { getIconContextOf, getPropertyIconName, getResourceIconName } from './resource-icon';
 
 /**
  * The glyph names the Mentor icon font carries, read from the glyph sources the font is built
@@ -54,6 +55,14 @@ describe('getResourceIconName', () => {
 		}
 	});
 
+	it('shows a datatype property by the text glyph where its range tells nothing more specific', () => {
+		expect(getResourceIconName([OWL.DatatypeProperty])).toBe('symbol-text');
+		expect(getResourceIconName([OWL.DatatypeProperty], { rangeIri: 'http://example.org/Length' })).toBe('symbol-text');
+		expect(getResourceIconName([OWL.DatatypeProperty], { rangeIri: XSD.dateTime })).toBe('calendar');
+		expect(getResourceIconName([OWL.ObjectProperty])).toBe('rdf-object-property');
+		expect(getResourceIconName([RDF.Property])).toBe('rdf-object-property');
+	});
+
 	it('has no glyph for a resource it does not recognize', () => {
 		expect(getResourceIconName([])).toBeUndefined();
 		expect(getResourceIconName(['http://example.org/Thing'])).toBeUndefined();
@@ -75,5 +84,18 @@ describe('getPropertyIconName', () => {
 	it('falls back to the object property glyph for an undeclared or unknown range', () => {
 		expect(getPropertyIconName()).toBe('rdf-object-property');
 		expect(getPropertyIconName('http://example.org/Thing')).toBe('rdf-object-property');
+	});
+});
+
+describe('getIconContextOf', () => {
+	it('reads the range, the constrained datatype and the predicates from the statements about a resource', () => {
+		const statement = (predicate: string, object: string) => ({ predicate: RdfDataFactory.namedNode(predicate), object: RdfDataFactory.namedNode(object) });
+
+		expect(getIconContextOf([
+			statement(RDF.type, OWL.DatatypeProperty),
+			statement(RDFS.range, XSD.dateTime),
+			statement(SH.datatype, XSD.date),
+			{ predicate: RdfDataFactory.namedNode(RDFS.label), object: RdfDataFactory.literal('created') }
+		])).toEqual({ predicateIris: [RDF.type, RDFS.range, SH.datatype, RDFS.label], rangeIri: XSD.dateTime, datatypeIri: XSD.date });
 	});
 });

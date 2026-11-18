@@ -22,7 +22,7 @@ vi.mock('tsyringe', () => ({
 	singleton: () => (t: any) => t,
 }));
 
-import { XSD, RDF, RDFS } from '@faubulous/mentor-rdf';
+import { OWL, XSD, RDF, RDFS } from '@faubulous/mentor-rdf';
 import * as vscode from 'vscode';
 import { PropertyNode } from '@src/views/trees/definition-tree/nodes/properties/property-node';
 import { ServiceToken } from '@src/services/tokens';
@@ -52,6 +52,7 @@ beforeEach(() => {
 		hasShapes: vi.fn(() => false),
 		getRange: vi.fn(() => undefined),
 		getDatatype: vi.fn(() => undefined),
+		hasType: vi.fn(() => false),
 		getSubProperties: vi.fn(() => []),
 		hasIndividuals: vi.fn(() => false),
 	};
@@ -237,6 +238,13 @@ describe('PropertyNode', () => {
 			mockVocabularyStub.getDatatype = vi.fn(() => undefined);
 			const node = makeNode('urn:ex#p');
 			expect(node.getRange('urn:ex#p')).toBe(RDFS.Resource);
+		});
+
+		it('should return RDFS.Literal for a datatype property that declares neither a range nor a datatype', () => {
+			mockVocabularyStub.hasType = vi.fn((_graphs: string[], _uri: string, type: string) => type === OWL.DatatypeProperty);
+			const node = makeNode('urn:ex#p');
+			expect(node.getRange('urn:ex#p')).toBe(RDFS.Literal);
+			expect(node.getIcon()?.id).toBe('symbol-text');
 		});
 
 		it('should return RDFS.Resource when propertyUri is undefined', () => {
