@@ -124,6 +124,21 @@ describe('TermCatalogueService', () => {
 		expect(tree.missingPrefix).toBeUndefined();
 	});
 
+	it('finds a term by the prefixed name it would have with the prefix it proposes', async () => {
+		expect(await find('class', 'v:tr')).toEqual([`${V}Tree`]);
+	});
+
+	it('writes the terms by the prefixes the document declares now, though the store did not change', async () => {
+		const catalogue = createCatalogue();
+		const document = createDocument();
+
+		expect((await catalogue.search({ kind: 'class', text: 'Tree', limit: 1 }, document))[0]).toMatchObject({ source: 'workspace', missingPrefix: { prefix: 'v' } });
+
+		document.namespaces['voc'] = V;
+
+		expect((await catalogue.search({ kind: 'class', text: 'Tree', limit: 1 }, document))[0]).toMatchObject({ prefixedName: 'voc:Tree', source: 'declared', missingPrefix: undefined });
+	});
+
 	it('returns at most as many terms as asked for', async () => {
 		expect(await find('predicate', '', { limit: 2 })).toHaveLength(2);
 	});

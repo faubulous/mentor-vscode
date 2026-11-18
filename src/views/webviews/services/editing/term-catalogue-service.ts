@@ -3,7 +3,8 @@ import { IDocumentContext } from '@src/services/document/document-context.interf
 import { IPrefixLookupService } from '@src/services/document/prefix-lookup-service.interface';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { getPrefixedName, isPlainLocalName, isValidPrefix } from '@src/utilities/prefixed-name';
-import { ResourceOptionData, TermSearchKind, TermSource } from '@src/views/webviews/views/form-editor/form-editor-model';
+import { ResourceOptionData, TermSearchKind } from '@src/views/webviews/views/form-editor/form-editor-model';
+import { TermRankingKeys, rankTerms } from '@src/views/webviews/views/form-editor/services/term-ranking';
 import { StoreIconResolver } from './store-icon-resolver';
 
 /**
@@ -42,8 +43,20 @@ interface TermIndex {
 }
 
 /**
- * The terms of a document: those it describes and the predicates it uses, read at one version of
- * the store.
+ * A term as a document sees it: its label, its prefixed name, the prefix it would declare and
+ * where it comes from.
+ */
+interface TermEntry extends TermRankingKeys {
+	/**
+	 * The prefix the document would declare to write the term by its prefixed name.
+	 */
+	missingPrefix?: ResourceOptionData['missingPrefix'];
+}
+
+/**
+ * The terms of the store as one document sees them, read at one version of the store and by the
+ * prefixes the document declared then: those the document describes, the predicates it uses, and
+ * the entries of the terms searched so far.
  */
 interface DocumentTerms {
 	/**
@@ -57,6 +70,11 @@ interface DocumentTerms {
 	context: IDocumentContext;
 
 	/**
+	 * The prefixes the document declared, which the prefixed names were read by.
+	 */
+	namespacesKey: string;
+
+	/**
 	 * The IRIs the document describes or uses as predicates.
 	 */
 	described: ReadonlySet<string>;
@@ -65,45 +83,25 @@ interface DocumentTerms {
 	 * The IRIs the document uses as predicates.
 	 */
 	predicates: readonly string[];
+
+	/**
+	 * The entry of each term searched so far.
+	 */
+	entries: Map<string, TermEntry>;
+
+	/**
+	 * The prefix proposed for each namespace looked up so far, `undefined` where none is.
+	 */
+	proposals: Map<string, ResourceOptionData['missingPrefix']>;
 }
-
-/**
- * A term that matches a search, with what ranks it.
- */
-interface RankedTerm {
-	/**
-	 * The IRI of the term.
-	 */
-	iri: string;
-
-	/**
-	 * The label of the term.
-	 */
-	label: string;
-
-	/**
-	 * Where the term comes from.
-	 */
-	source: TermSource;
-
-	/**
-	 * How well the term matches: `0` where a name starts with the text, `1` where a word of the
-	 * label does, `2` where a name contains it.
-	 */
-	quality: number;
-}
-
-/**
- * The rank of each source: the document first, then the vocabularies it declares, then the rest.
- */
-const SOURCE_RANK: Record<TermSource, number> = { document: 0, declared: 1, workspace: 2 };
 
 /**
  * Answers the searches of the pickers of the form editor from the store: the predicates, classes,
  * resources and datatypes of the document, of the vocabularies it declares and of the rest of the
- * workspace, ranked in that order and then by how well they match. The terms of the store are read
- * once per version of it. A search waits until the workspace is indexed, so it never answers from a
- * store that is still being filled.
+ * workspace, ranked in that order and then by how well they match. The terms of the store, and
+ * their labels and prefixed names as the document sees them, are read once per version of it, so
+ * a keystroke only matches and ranks them. A search waits until the workspace is indexed, so it
+ * never answers from a store that is still being filled.
  */
 export class TermCatalogueService {
 	private _index?: TermIndex;
@@ -134,20 +132,10 @@ export class TermCatalogueService {
 		await this._whenIndexed();
 
 		const documentTerms = this._getDocumentTerms(context);
-		const needle = search.text.trim().toLowerCase();
-		const ranked: RankedTerm[] = [];
+		const entries = Array.from(this._candidatesOf(search.kind, documentTerms), iri => this._entryOf(iri, documentTerms));
+		const ranked = rankTerms(entries, search.text, entry => entry);
 
-		for (const iri of this._candidatesOf(search.kind, documentTerms)) {
-			const term = this._rank(iri, needle, context, documentTerms);
-
-			if (term) {
-				ranked.push(term);
-			}
-		}
-
-		ranked.sort(_compareRanked);
-
-		return ranked.slice(0, Math.max(0, search.limit)).map(term => this._optionOf(term, context));
+		return ranked.slice(0, Math.max(0, search.limit)).map(entry => this._optionOf(entry));
 	}
 
 	/**
@@ -168,84 +156,90 @@ export class TermCatalogueService {
 	}
 
 	/**
-	 * Rank a term for a search.
+	 * The entry of a term for a document, read once per version of the store: its label, its
+	 * prefixed name by the prefixes of the document, else by the prefix the workspace uses for its
+	 * namespace, which the document would then declare, and where it comes from.
 	 * @param iri The IRI of the term.
-	 * @param needle The typed text, trimmed and in lower case.
-	 * @param context The document.
 	 * @param documentTerms The terms of the document.
-	 * @returns The ranked term, or `undefined` when it does not match.
+	 * @returns The entry.
 	 */
-	private _rank(iri: string, needle: string, context: IDocumentContext, documentTerms: DocumentTerms): RankedTerm | undefined {
+	private _entryOf(iri: string, documentTerms: DocumentTerms): TermEntry {
+		const cached = documentTerms.entries.get(iri);
+
+		if (cached) {
+			return cached;
+		}
+
+		const context = documentTerms.context;
 		const label = context.getResourceLabel(iri).value;
-		const quality = _matchQuality(needle, label, Uri.getLocalPart(iri) ?? '', getPrefixedName(context.namespaces, iri));
+		const prefixedName = getPrefixedName(context.namespaces, iri);
+		const described = documentTerms.described.has(iri);
+		const entry: TermEntry = prefixedName !== undefined
+			? { iri, label, prefixedName, source: described ? 'document' : 'declared' }
+			: { iri, label, source: described ? 'document' : 'workspace', ...this._proposalOf(iri, documentTerms) };
 
-		if (quality < 0) {
-			return undefined;
-		}
+		documentTerms.entries.set(iri, entry);
 
-		return { iri, label, quality, source: this._sourceOf(iri, context, documentTerms) };
+		return entry;
 	}
 
 	/**
-	 * Where a term comes from.
+	 * The prefixed name of a term whose namespace the document declares no prefix for, by the prefix
+	 * the workspace uses for the namespace, which the document would declare. The prefix is looked
+	 * up once per namespace.
 	 * @param iri The IRI of the term.
-	 * @param context The document.
 	 * @param documentTerms The terms of the document.
-	 * @returns The source.
+	 * @returns The prefixed name and the prefix to declare, or nothing where the term is written by
+	 * its IRI.
 	 */
-	private _sourceOf(iri: string, context: IDocumentContext, documentTerms: DocumentTerms): TermSource {
-		if (documentTerms.described.has(iri)) {
-			return 'document';
-		}
-
-		return getPrefixedName(context.namespaces, iri) !== undefined ? 'declared' : 'workspace';
-	}
-
-	/**
-	 * The option of a ranked term, with its prefixed name: by the prefixes of the document, else by
-	 * the prefix the workspace uses for its namespace, which the document would then declare.
-	 * @param term The term.
-	 * @param context The document.
-	 * @returns The option.
-	 */
-	private _optionOf(term: RankedTerm, context: IDocumentContext): ResourceOptionData {
-		const option: ResourceOptionData = {
-			subject: RdfDataFactory.namedNode(term.iri),
-			label: term.label,
-			prefixedName: getPrefixedName(context.namespaces, term.iri),
-			iconName: this._icons.resolve(term.iri),
-			source: term.source
-		};
-
-		if (option.prefixedName === undefined) {
-			const missingPrefix = this._missingPrefixOf(term.iri, context);
-
-			if (missingPrefix) {
-				option.prefixedName = `${missingPrefix.prefix}:${term.iri.slice(missingPrefix.namespace.length)}`;
-				option.missingPrefix = missingPrefix;
-			}
-		}
-
-		return option;
-	}
-
-	/**
-	 * The prefix the document would declare to write a term by its prefixed name: the one the
-	 * workspace uses for the namespace, where it is valid, not empty and not declared by the
-	 * document for another namespace, and the rest of the IRI is a plain local name.
-	 * @param iri The IRI of the term.
-	 * @param context The document.
-	 * @returns The prefix and the namespace, or `undefined` when the term is written by its IRI.
-	 */
-	private _missingPrefixOf(iri: string, context: IDocumentContext): ResourceOptionData['missingPrefix'] {
+	private _proposalOf(iri: string, documentTerms: DocumentTerms): Pick<TermEntry, 'prefixedName' | 'missingPrefix'> {
 		const namespace = Uri.getNamespaceIri(iri);
+		const localName = iri.slice(namespace.length);
+
+		if (!isPlainLocalName(localName)) {
+			return {};
+		}
+
+		if (!documentTerms.proposals.has(namespace)) {
+			documentTerms.proposals.set(namespace, this._missingPrefixOf(namespace, documentTerms.context));
+		}
+
+		const missingPrefix = documentTerms.proposals.get(namespace);
+
+		return missingPrefix ? { prefixedName: `${missingPrefix.prefix}:${localName}`, missingPrefix } : {};
+	}
+
+	/**
+	 * The prefix the document would declare for a namespace: the one the workspace uses for it,
+	 * where it is valid, not empty and not declared by the document for another namespace.
+	 * @param namespace The namespace IRI.
+	 * @param context The document.
+	 * @returns The prefix and the namespace, or `undefined` when none is proposed.
+	 */
+	private _missingPrefixOf(namespace: string, context: IDocumentContext): ResourceOptionData['missingPrefix'] {
 		const prefix = this._prefixLookup.getPrefixForIri(context.uri.toString(), namespace, '');
 
-		if (prefix === '' || !isValidPrefix(prefix) || context.namespaces[prefix] !== undefined || !isPlainLocalName(iri.slice(namespace.length))) {
+		if (prefix === '' || !isValidPrefix(prefix) || context.namespaces[prefix] !== undefined) {
 			return undefined;
 		}
 
 		return { prefix, namespace };
+	}
+
+	/**
+	 * The option of a term.
+	 * @param entry The entry of the term.
+	 * @returns The option.
+	 */
+	private _optionOf(entry: TermEntry): ResourceOptionData {
+		return {
+			subject: RdfDataFactory.namedNode(entry.iri),
+			label: entry.label,
+			prefixedName: entry.prefixedName,
+			iconName: this._icons.resolve(entry.iri),
+			source: entry.source,
+			missingPrefix: entry.missingPrefix
+		};
 	}
 
 	/**
@@ -283,15 +277,17 @@ export class TermCatalogueService {
 	}
 
 	/**
-	 * The terms of a document, read anew once the store changed.
+	 * The terms of a document, read anew once the store or the prefixes of the document changed: a
+	 * prefix declared changes no statement, and so not the store.
 	 * @param context The document.
 	 * @returns The terms.
 	 */
 	private _getDocumentTerms(context: IDocumentContext): DocumentTerms {
 		const version = this._vocabulary.store.version;
+		const namespacesKey = JSON.stringify(Object.entries(context.namespaces));
 		const cached = this._documentTerms;
 
-		if (cached?.version === version && cached.context === context) {
+		if (cached?.version === version && cached.context === context && cached.namespacesKey === namespacesKey) {
 			return cached;
 		}
 
@@ -307,44 +303,8 @@ export class TermCatalogueService {
 			described.add(quad.predicate.value);
 		}
 
-		this._documentTerms = { version, context, described, predicates: Array.from(predicates) };
+		this._documentTerms = { version, context, namespacesKey, described, predicates: Array.from(predicates), entries: new Map(), proposals: new Map() };
 
 		return this._documentTerms;
 	}
-}
-
-/**
- * How well a term matches typed text.
- * @param needle The typed text, trimmed and in lower case; empty matches every term.
- * @param label The label of the term.
- * @param localName The local name of the term.
- * @param prefixedName The prefixed name of the term, if it has one.
- * @returns `0` where a name starts with the text, `1` where a word of the label does, `2` where a
- * name contains it, `-1` where it does not match.
- */
-function _matchQuality(needle: string, label: string, localName: string, prefixedName: string | undefined): number {
-	const names = [label, localName, prefixedName ?? ''].map(name => name.toLowerCase());
-
-	if (needle === '' || names.some(name => name.startsWith(needle))) {
-		return 0;
-	}
-
-	if (names[0].split(/[\s_\-/]+/).some(word => word.startsWith(needle))) {
-		return 1;
-	}
-
-	return names.some(name => name.includes(needle)) ? 2 : -1;
-}
-
-/**
- * Order ranked terms: by source, then by how well they match, then by label and IRI.
- * @param a A term.
- * @param b Another term.
- * @returns A negative number when `a` comes first, a positive one when `b` does.
- */
-function _compareRanked(a: RankedTerm, b: RankedTerm): number {
-	return SOURCE_RANK[a.source] - SOURCE_RANK[b.source]
-		|| a.quality - b.quality
-		|| a.label.localeCompare(b.label)
-		|| a.iri.localeCompare(b.iri);
 }

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { RDF, RDFS, XSD } from '@faubulous/mentor-rdf';
 import { EXAMPLE_NAMESPACE as EX, TEST_NAMESPACES, TEST_SUBJECT, createLiteralView, createProperty, withAnchors, createTestCardBody } from '@src/utilities/mocks/statement-fixtures';
-import { PredicateData } from '../form-editor-model';
+import { PredicateData, ResourceOptionData } from '../form-editor-model';
 import { TypedTermReader } from '../services/statement/typed-term-reader';
 import { EditWriter } from './edit-writer';
 import { StatementRowData } from './statement-row-data';
@@ -10,6 +10,19 @@ import { StatementRowOwner } from './statement-row-owner';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 
 const reader = new TypedTermReader(TEST_NAMESPACES);
+
+const SKOS = 'http://www.w3.org/2004/02/skos/core#';
+
+/**
+ * The option of `skos:prefLabel`, whose prefix the document of the tests does not declare.
+ */
+const PREF_LABEL: ResourceOptionData = {
+	subject: RdfDataFactory.namedNode(`${SKOS}prefLabel`),
+	label: 'preferred label',
+	prefixedName: 'skos:prefLabel',
+	source: 'workspace',
+	missingPrefix: { prefix: 'skos', namespace: SKOS }
+};
 
 /**
  * The label property of the tests, anchored.
@@ -199,6 +212,46 @@ describe('StatementRowEditor', () => {
 
 		expect(editor.takeEdit()).toEqual([{ op: 'setPredicate', subject: TEST_SUBJECT, predicate: RDFS.label, newPredicate: RDFS.comment }]);
 		expect(editor.claimedPredicate).toBe(RDFS.comment);
+	});
+
+	it('writes a picked predicate by its prefixed name and declares the prefix the document lacks with it, once', () => {
+		const { editor } = createEditor();
+
+		editor.pickPredicate(PREF_LABEL);
+
+		expect(editor.state.predicateText).toBe('skos:prefLabel');
+		expect(editor.takeEdit()).toEqual([
+			{ op: 'declarePrefix', prefix: 'skos', namespace: SKOS },
+			{ op: 'setPredicate', subject: TEST_SUBJECT, predicate: RDFS.label, newPredicate: `${SKOS}prefLabel` }
+		]);
+
+		editor.settle({ ok: false, problem: { kind: 'staleVersion' }, version: 1 });
+		editor.commitPredicate();
+
+		expect(editor.takeEdit()).toEqual([{ op: 'setPredicate', subject: TEST_SUBJECT, predicate: RDFS.label, newPredicate: `${SKOS}prefLabel` }]);
+	});
+
+	it('writes a new statement of a picked predicate with the declaration of its prefix', () => {
+		const { editor } = createEditor('new');
+
+		editor.pickPredicate(PREF_LABEL);
+		editor.inputPending('Oak');
+		editor.leave();
+
+		expect(editor.takeEdit()).toEqual([
+			{ op: 'declarePrefix', prefix: 'skos', namespace: SKOS },
+			{ op: 'setValues', subject: TEST_SUBJECT, predicate: `${SKOS}prefLabel`, values: [{ kind: 'term', term: RdfDataFactory.literal('Oak') }] }
+		]);
+	});
+
+	it('reads the predicate field anew once something else is typed over a pick', () => {
+		const { editor } = createEditor('new');
+
+		editor.pickPredicate(PREF_LABEL);
+		editor.inputPredicate('rdfs:comment');
+		editor.commitPredicate();
+
+		expect(editor.state.draft.predicate).toBe(RDFS.comment);
 	});
 
 	it('hands a new statement of a predicate the card shows to the row of that predicate', () => {

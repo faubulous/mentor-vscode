@@ -61,6 +61,7 @@ export function useContextMenu(): ContextMenu {
 		event.stopPropagation();
 
 		_placeAt(menu, event.clientX, event.clientY);
+		_openInTopLayer(menu);
 		menu.show = true;
 
 		void menu.updateComplete.then(() => _keepInView(menu));
@@ -82,7 +83,29 @@ export function toggleMenuAtButton(menu: VscodeContextMenu | null): void {
 	menu.style.removeProperty('left');
 	menu.style.removeProperty('top');
 	menu.style.removeProperty('right');
+	menu.style.removeProperty('position-try-fallbacks');
+	_openInTopLayer(menu);
 	menu.show = !menu.show;
+}
+
+/**
+ * Put the menu into the top layer of the page as a popover, so nothing laid out over its place
+ * covers it. It stays there once opened: a closed menu draws nothing, and it leaves the top layer
+ * with the element.
+ * @param menu The menu element.
+ */
+function _openInTopLayer(menu: VscodeContextMenu): void {
+	if (typeof menu.showPopover !== 'function') {
+		return;
+	}
+
+	if (!menu.hasAttribute('popover')) {
+		menu.setAttribute('popover', 'manual');
+	}
+
+	if (!menu.matches(':popover-open')) {
+		menu.showPopover();
+	}
 }
 
 /**
@@ -96,18 +119,17 @@ function _close(menu: VscodeContextMenu): void {
 }
 
 /**
- * Place the menu with its top left corner at a point of the viewport, in the coordinates of the
- * element it is laid out in.
+ * Place the menu with its top left corner at a point of the viewport, which the menu is laid out
+ * in as a popover; it is kept in view by {@link _keepInView}, not by flipping it over its button.
  * @param menu The menu element.
  * @param x The horizontal position in the viewport.
  * @param y The vertical position in the viewport.
  */
 function _placeAt(menu: VscodeContextMenu, x: number, y: number): void {
-	const container = (menu.offsetParent ?? menu.parentElement)?.getBoundingClientRect();
-
-	menu.style.left = `${x - (container?.left ?? 0)}px`;
-	menu.style.top = `${y - (container?.top ?? 0)}px`;
+	menu.style.left = `${x}px`;
+	menu.style.top = `${y}px`;
 	menu.style.right = 'auto';
+	menu.style.setProperty('position-try-fallbacks', 'none');
 }
 
 /**
@@ -121,10 +143,10 @@ function _keepInView(menu: VscodeContextMenu): void {
 	const overflowBottom = bounds.bottom - document.documentElement.clientHeight;
 
 	if (overflowRight > 0) {
-		menu.style.left = `${menu.offsetLeft - Math.min(bounds.width, bounds.left)}px`;
+		menu.style.left = `${bounds.left - Math.min(bounds.width, bounds.left)}px`;
 	}
 
 	if (overflowBottom > 0) {
-		menu.style.top = `${menu.offsetTop - Math.min(bounds.height, bounds.top)}px`;
+		menu.style.top = `${bounds.top - Math.min(bounds.height, bounds.top)}px`;
 	}
 }
