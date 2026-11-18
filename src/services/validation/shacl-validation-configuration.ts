@@ -521,8 +521,8 @@ function rewritePrefixed(value: string, oldKey: string, newKey: string): string 
  *
  * Shape file entries are canonical `workspace:///...` URIs and are rewritten
  * by exact prefix using the renames' URI forms. Include/exclude entries are rewritten
- * on their fixed literal prefix (`picomatch.scan().base`, the whole string for
- * a literal path) using the bare-path forms, so a folder-scoped pattern and an
+ * on their fixed literal prefix ({@link getGlobPatternBase}, the whole string
+ * for a literal path) using the bare-path forms, so a folder-scoped pattern and an
  * exact document path both follow a rename while a root-anchored pattern like
  * `**\/*.ttl` (no fixed prefix) is left untouched. `!` exclusion prefixes are
  * preserved.
