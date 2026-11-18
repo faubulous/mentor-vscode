@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
+	compileGlob,
 	getExtensionGlob,
 	getGlobPatternBase,
 	isGlobPattern,
 	isNegatedPattern,
 	isSafeRelativePath,
+	matchAnyGlob,
 	matchGlob,
 	normalizeGlobPattern,
 	splitNegatedPatterns,
@@ -36,6 +38,14 @@ describe('isGlobPattern', () => {
 		expect(isGlobPattern('models/data.ttl')).toBe(false);
 		expect(isGlobPattern('')).toBe(false);
 	});
+
+	it('detects braces, character classes, single characters and extglobs, but not escaped wildcards', () => {
+		expect(isGlobPattern('*.{ttl,nt}')).toBe(true);
+		expect(isGlobPattern('models/[ab]*.ttl')).toBe(true);
+		expect(isGlobPattern('models/?.ttl')).toBe(true);
+		expect(isGlobPattern('models/@(a|b).ttl')).toBe(true);
+		expect(isGlobPattern('models/\\*.ttl')).toBe(false);
+	});
 });
 
 describe('getGlobPatternBase', () => {
@@ -46,6 +56,20 @@ describe('getGlobPatternBase', () => {
 
 	it('yields an empty string for root-anchored patterns', () => {
 		expect(getGlobPatternBase('**/*.ttl')).toBe('');
+		expect(getGlobPatternBase('*.ttl')).toBe('');
+		expect(getGlobPatternBase('**/.git/**')).toBe('');
+	});
+
+	it('returns the segments every expansion of braces shares, without a negation', () => {
+		expect(getGlobPatternBase('a/{b,c}/*.ttl')).toBe('a');
+		expect(getGlobPatternBase('data/**/*.{ttl,n3}')).toBe('data');
+		expect(getGlobPatternBase('!models/*.ttl')).toBe('models');
+		expect(getGlobPatternBase('models/**/x/**/*.ttl')).toBe('models');
+	});
+
+	it('returns the prefix as the pattern writes it, escapes included, so it can be cut from the pattern', () => {
+		expect(getGlobPatternBase('models/\\*.ttl')).toBe('models/\\*.ttl');
+		expect(getGlobPatternBase('.vscode/**')).toBe('.vscode');
 	});
 });
 
@@ -59,6 +83,45 @@ describe('matchGlob', () => {
 	it('does not cross path separators with a single star', () => {
 		expect(matchGlob('models/*.ttl', 'models/nested/data.ttl')).toBe(false);
 		expect(matchGlob('models/**/*.ttl', 'models/nested/data.ttl')).toBe(true);
+	});
+
+	it('matches dot folders, braces, classes and extglobs, case-sensitively', () => {
+		expect(matchGlob('**/.git/**', 'src/.git/config')).toBe(true);
+		expect(matchGlob('**/node_modules/**', 'x/node_modules/y/z.ttl')).toBe(true);
+		expect(matchGlob('data/**/*.{ttl,n3}', 'data/q/r.n3')).toBe(true);
+		expect(matchGlob('data/**/*.{ttl,n3}', 'data/q/r.nt')).toBe(false);
+		expect(matchGlob('models/[ab]*.ttl', 'models/b.ttl')).toBe(true);
+		expect(matchGlob('models/[ab]*.ttl', 'models/c.ttl')).toBe(false);
+		expect(matchGlob('models/@(a|b).ttl', 'models/a.ttl')).toBe(true);
+		expect(matchGlob('models/@(a|b).ttl', 'models/ab.ttl')).toBe(false);
+		expect(matchGlob('Models/*.ttl', 'models/data.ttl')).toBe(false);
+	});
+
+	it('reads an escaped wildcard as the character itself', () => {
+		expect(matchGlob('models/\\*.ttl', 'models/*.ttl')).toBe(true);
+		expect(matchGlob('models/\\*.ttl', 'models/data.ttl')).toBe(false);
+	});
+});
+
+describe('compileGlob', () => {
+	it('compiles a pattern into a matcher of workspace-relative paths', () => {
+		const matcher = compileGlob('ontologies/*.trig');
+
+		expect(matcher('ontologies/o.trig')).toBe(true);
+		expect(matcher('ontologies/o.ttl')).toBe(false);
+	});
+
+	it('reads stray brackets and parentheses literally', () => {
+		expect(compileGlob('a/[')('a/[')).toBe(true);
+		expect(compileGlob('a/(')('a/(')).toBe(true);
+	});
+});
+
+describe('matchAnyGlob', () => {
+	it('matches when any of the patterns does', () => {
+		expect(matchAnyGlob(['**/.git/**', 'models/*.ttl'], 'models/data.ttl')).toBe(true);
+		expect(matchAnyGlob(['**/.git/**', 'models/*.ttl'], 'data/data.ttl')).toBe(false);
+		expect(matchAnyGlob([], 'models/data.ttl')).toBe(false);
 	});
 });
 
