@@ -1,4 +1,4 @@
-import { FormEvent, KeyboardEvent, MouseEvent, Ref, useEffect, useId, useMemo, useState } from 'react';
+import { FormEvent, KeyboardEvent, MouseEvent, ReactNode, Ref, RefCallback, useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { VscodeTextfield } from '@vscode-elements/elements';
 import { ResourceIcon } from './resource-icon';
 
@@ -121,6 +121,12 @@ export interface ComboboxProps<T> {
 	 * The field, for the caller to focus.
 	 */
 	fieldRef?: Ref<VscodeTextfield>;
+
+	/**
+	 * What follows the text of the field, as the kind of a new value does: it stands right after the
+	 * typed text, or after the placeholder while the field is empty.
+	 */
+	suffix?: ReactNode;
 }
 
 /**
@@ -129,17 +135,33 @@ export interface ComboboxProps<T> {
  * the list and highlights the best match, the arrows move the highlight, Enter picks it or, with
  * no match, takes the typed text, Escape closes the list and with the list closed cancels, and a
  * click picks an option. The focus stays in the field throughout; the list opens in the top layer of the
- * page, so no card covers it, and is styled with the list colours of the theme.
+ * page, so no card covers it, and is styled with the list colours of the theme. A suffix follows
+ * the text, placed by a hidden copy of it.
  * @param props The text, the options and what to do with a pick.
  * @returns The combobox.
  */
 export function Combobox<T>(props: ComboboxProps<T>): React.JSX.Element {
-	const { text, onTextChange, options, openOnFocus = false, readOnly = false, onPick, onCreate, onCancel, onKeyDown, onFocus, onBlur, label, placeholder, title, className, fieldRef } = props;
+	const { text, onTextChange, options, openOnFocus = false, readOnly = false, onPick, onCreate, onCancel, onKeyDown, onFocus, onBlur, label, placeholder, title, className, fieldRef, suffix } = props;
 	const listId = useId();
 	const [open, setOpen] = useState(false);
 	const [active, setActive] = useState(0);
 	const matches = useMemo(() => options.slice(0, MAX_OPTIONS), [options]);
 	const shown = open && !readOnly && matches.length > 0;
+	const ownField = useRef<VscodeTextfield | null>(null);
+	const setField = useCallback<RefCallback<VscodeTextfield>>(element => {
+		ownField.current = element;
+		_assignRef(fieldRef, element);
+	}, [fieldRef]);
+
+	// The text the field shows is set before anything moves the focus, as starting a literal does:
+	// the field renders a new value later, and a blur in between would read the old one back.
+	useLayoutEffect(() => {
+		const input = ownField.current?.wrappedElement;
+
+		if (input && input.value !== text) {
+			input.value = text;
+		}
+	}, [text]);
 
 	// The best match is highlighted while typing and as the options arrive, so Enter picks it.
 	useEffect(() => setActive(0), [text, options]);
@@ -211,7 +233,7 @@ export function Combobox<T>(props: ComboboxProps<T>): React.JSX.Element {
 	return (
 		<span className="combobox">
 			<vscode-textfield
-				ref={fieldRef}
+				ref={setField}
 				className={`input-field${className ? ` ${className}` : ''}`}
 				value={text}
 				placeholder={placeholder}
@@ -228,6 +250,12 @@ export function Combobox<T>(props: ComboboxProps<T>): React.JSX.Element {
 				onFocus={handleFocus}
 				onBlur={handleBlur}
 			/>
+			{suffix && (
+				<span className="combobox-suffix">
+					<span className="combobox-suffix-copy" aria-hidden="true">{text || placeholder}</span>
+					{suffix}
+				</span>
+			)}
 			{shown && (
 				<ul id={listId} ref={showInTopLayer} popover="manual" className="combobox-list" role="listbox" aria-label={label}>
 					{matches.map((option, index) => (
@@ -262,5 +290,18 @@ export function Combobox<T>(props: ComboboxProps<T>): React.JSX.Element {
 export function showInTopLayer(popup: HTMLElement | null): void {
 	if (popup && typeof popup.showPopover === 'function' && !popup.matches(':popover-open')) {
 		popup.showPopover();
+	}
+}
+
+/**
+ * Hand an element to a ref the caller passed, an object or a function.
+ * @param ref The ref, if any.
+ * @param element The element, or `null` once it is gone.
+ */
+function _assignRef<T>(ref: Ref<T> | undefined, element: T | null): void {
+	if (typeof ref === 'function') {
+		ref(element);
+	} else if (ref) {
+		ref.current = element;
 	}
 }

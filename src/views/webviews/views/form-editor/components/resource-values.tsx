@@ -1,6 +1,9 @@
-import { DragEvent, KeyboardEvent, MouseEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { DragEvent, FocusEvent, KeyboardEvent, MouseEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { VscodeTextfield } from '@vscode-elements/elements';
 import { ResourceOptionData, TermData, TermSearchKind } from '../form-editor-model';
+import { NewValueKind } from '../state/new-value-kind';
+import { NewValueKindMarker } from './new-value-kind-marker';
+import { TagChoice } from './tag-picker-items';
 import { TermPicker } from './term-picker';
 import { ValuePill } from './value-pill';
 
@@ -36,6 +39,27 @@ interface PillDragState {
 }
 
 /**
+ * The kind of value the input makes of the typed text, which it shows after the text, and what to
+ * do when another is picked.
+ */
+interface NewValueKindControl {
+	/**
+	 * The kind.
+	 */
+	kind: NewValueKind;
+
+	/**
+	 * The languages of the card, which the tag picker offers first.
+	 */
+	languages: readonly string[];
+
+	/**
+	 * Called with what the item picked gives the typed text.
+	 */
+	onPick: (choice: TagChoice) => void;
+}
+
+/**
  * Properties of the {@link ResourceValues} component.
  */
 export interface ResourceValuesProps {
@@ -60,9 +84,9 @@ export interface ResourceValuesProps {
 	placeholder: string;
 
 	/**
-	 * Called with the text of the input as it is typed.
+	 * Called with the text of the input as it is typed, and where the caret stands in it.
 	 */
-	onPendingInput: (text: string) => void;
+	onPendingInput: (text: string, caret: number) => void;
 
 	/**
 	 * Called with a term picked from the list.
@@ -94,6 +118,18 @@ export interface ResourceValuesProps {
 	onStartNode?: () => void;
 
 	/**
+	 * Called when `"` is typed into the empty input, to start a literal; absent where the input
+	 * takes no literal.
+	 */
+	onStartText?: () => void;
+
+	/**
+	 * The kind of value the input makes, shown after its text while it has the focus and text;
+	 * absent where the input makes resources of one kind only, as types.
+	 */
+	newValueKind?: NewValueKindControl;
+
+	/**
 	 * Whether the input takes the focus when it appears.
 	 */
 	autoFocus?: boolean;
@@ -112,16 +148,19 @@ export interface ResourceValuesProps {
  * input; the arrows walk the pills from it. On a pill Backspace and Delete remove it, Alt with an
  * arrow moves it one place, and typing continues in the input. Where the values can be moved, a
  * pill is dragged to another place among the pills, an accent bar showing where it is dropped.
- * Moving changes the order of the values only.
+ * Moving changes the order of the values only. Once text is typed into the input, the kind of
+ * value it makes stands after the text, and opens the tag picker; `"` in the empty input starts
+ * text.
  * @param props The resources and their callbacks.
  * @returns The box.
  */
 export function ResourceValues(props: ResourceValuesProps): React.JSX.Element {
-	const { resources, kind, pendingText, placeholder, onPendingInput, onPick, onCreate, onRemove, onMove, onStartNode, autoFocus = false, readOnly = false } = props;
+	const { resources, kind, pendingText, placeholder, onPendingInput, onPick, onCreate, onRemove, onMove, onStartNode, onStartText, newValueKind, autoFocus = false, readOnly = false } = props;
 	const pills = useRef<(HTMLElement | null)[]>([]);
 	const fieldRef = useRef<VscodeTextfield>(null);
 	const [focusRequest, setFocusRequest] = useState<number>();
 	const [drag, setDrag] = useState<PillDragState>();
+	const [focused, setFocused] = useState(false);
 	const present = useMemo(() => _presentOf(resources), [resources]);
 
 	// The input takes the focus once it has rendered the field it hands the focus to.
@@ -194,7 +233,7 @@ export function ResourceValues(props: ResourceValuesProps): React.JSX.Element {
 			default:
 				if (event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) {
 					event.preventDefault();
-					onPendingInput(pendingText + event.key);
+					onPendingInput(pendingText + event.key, pendingText.length + 1);
 					fieldRef.current?.focus();
 				}
 		}
@@ -204,6 +243,13 @@ export function ResourceValues(props: ResourceValuesProps): React.JSX.Element {
 		if (onStartNode && !readOnly && event.key === '[' && pendingText === '') {
 			event.preventDefault();
 			onStartNode();
+
+			return;
+		}
+
+		if (onStartText && !readOnly && event.key === '"' && pendingText === '') {
+			event.preventDefault();
+			onStartText();
 
 			return;
 		}
@@ -219,6 +265,19 @@ export function ResourceValues(props: ResourceValuesProps): React.JSX.Element {
 			} else {
 				focusPill(resources.length - 1);
 			}
+		}
+	};
+
+	// The kind shows while the input has the focus, or the tag picker the kind opened.
+	const trackFocus = (event: FocusEvent<HTMLSpanElement>): void => {
+		const target = event.target as Element;
+
+		setFocused(target === fieldRef.current || target.closest('.combobox-suffix') !== null);
+	};
+
+	const loseFocus = (event: FocusEvent<HTMLSpanElement>): void => {
+		if (!(event.relatedTarget instanceof Node) || !event.currentTarget.contains(event.relatedTarget)) {
+			setFocused(false);
 		}
 	};
 
@@ -263,7 +322,7 @@ export function ResourceValues(props: ResourceValuesProps): React.JSX.Element {
 	} : {};
 
 	return (
-		<span className="resource-values" onMouseDown={focusFieldOnFreeSpace}>
+		<span className="resource-values" onMouseDown={focusFieldOnFreeSpace} onFocus={trackFocus} onBlur={loseFocus}>
 			{resources.map(({ view, index }, position) => (
 				<span key={index} data-value-index={index} className={_dropClassOf(drag, position, resources.length)} {...dragHandlersOf(position)}>
 					<ValuePill view={view} pillRef={element => { pills.current[position] = element; }} onKeyDown={handlePillKeyDown(position)} onRemove={() => onRemove(index)} />
@@ -273,7 +332,7 @@ export function ResourceValues(props: ResourceValuesProps): React.JSX.Element {
 				kind={kind}
 				exclude={present}
 				text={pendingText}
-				onTextChange={onPendingInput}
+				onTextChange={text => onPendingInput(text, fieldRef.current?.wrappedElement?.selectionStart ?? text.length)}
 				onPick={onPick}
 				onCreate={onCreate}
 				onKeyDown={handleFieldKeyDown}
@@ -282,6 +341,7 @@ export function ResourceValues(props: ResourceValuesProps): React.JSX.Element {
 				readOnly={readOnly}
 				className="is-new"
 				fieldRef={fieldRef}
+				suffix={newValueKind && focused && !readOnly && pendingText !== '' ? <NewValueKindMarker {...newValueKind} onDone={() => _focusAtEnd(fieldRef.current)} /> : undefined}
 			/>
 		</span>
 	);
@@ -352,4 +412,16 @@ function _dropClassOf(drag: PillDragState | undefined, position: number, count: 
 	}
 
 	return drag.slot === count && position === count - 1 ? 'is-drop-after' : undefined;
+}
+
+/**
+ * Move the focus into a field with the caret after its text, as typing goes on where it stopped.
+ * @param field The field.
+ */
+function _focusAtEnd(field: VscodeTextfield | null): void {
+	field?.focus();
+
+	const input = field?.wrappedElement;
+
+	input?.setSelectionRange(input.value.length, input.value.length);
 }

@@ -1,13 +1,15 @@
+import { Literal, NamedNode } from '@rdfjs/types';
 import { TermData } from '../form-editor-model';
 import { TermProblem } from '../services/statement/term-problem';
 import { LiteralTag } from './literal-tag';
+import { NewValueKind } from './new-value-kind';
 import { RowRejection } from './row-rejection';
 import { StatementDraft } from './statement-draft';
 
 /**
  * The state of one statement row while it is edited: the statement as stored and as edited, the
- * text of the predicate field and of the field a new value is typed into, why the last thing
- * typed could not be read, and why the row was last not written. Immutable: every transition
+ * text of the predicate field and of the field a new value is typed into, with the kind chosen
+ * for it, why the last thing typed could not be read, and why the row was last not written. Immutable: every transition
  * returns the next state.
  */
 export class StatementRowState {
@@ -19,6 +21,8 @@ export class StatementRowState {
 	 * @param pendingText The text typed for a new value.
 	 * @param problem Why the last thing typed could not be read.
 	 * @param rejection Why the row was last not written, until it is dismissed or written again.
+	 * @param pendingKind The kind chosen for the text typed for a new value, until the field is
+	 * emptied; absent where the text tells it.
 	 */
 	constructor(
 		readonly stored: StatementDraft,
@@ -26,7 +30,8 @@ export class StatementRowState {
 		readonly predicateText: string,
 		readonly pendingText = '',
 		readonly problem?: TermProblem,
-		readonly rejection?: RowRejection
+		readonly rejection?: RowRejection,
+		readonly pendingKind?: NewValueKind
 	) { }
 
 	/**
@@ -59,7 +64,7 @@ export class StatementRowState {
 	 * @returns The next state.
 	 */
 	withPredicateText(text: string): StatementRowState {
-		return new StatementRowState(this.stored, this.draft, text, this.pendingText, undefined, this.rejection);
+		return new StatementRowState(this.stored, this.draft, text, this.pendingText, undefined, this.rejection, this.pendingKind);
 	}
 
 	/**
@@ -68,16 +73,25 @@ export class StatementRowState {
 	 * @returns The next state.
 	 */
 	withPredicate(iri: string): StatementRowState {
-		return new StatementRowState(this.stored, this.draft.withPredicate(iri), this.predicateText, this.pendingText, undefined, this.rejection);
+		return new StatementRowState(this.stored, this.draft.withPredicate(iri), this.predicateText, this.pendingText, undefined, this.rejection, this.pendingKind);
 	}
 
 	/**
-	 * Replace the text typed for a new value.
+	 * Replace the text typed for a new value. Emptying the field forgets the kind chosen for it.
 	 * @param text The text.
 	 * @returns The next state.
 	 */
 	withPendingText(text: string): StatementRowState {
-		return new StatementRowState(this.stored, this.draft, this.predicateText, text, undefined, this.rejection);
+		return new StatementRowState(this.stored, this.draft, this.predicateText, text, undefined, this.rejection, text === '' ? undefined : this.pendingKind);
+	}
+
+	/**
+	 * Choose the kind of the value the text typed for a new value makes.
+	 * @param kind The kind.
+	 * @returns The next state.
+	 */
+	withPendingKind(kind: NewValueKind): StatementRowState {
+		return new StatementRowState(this.stored, this.draft, this.predicateText, this.pendingText, this.problem, this.rejection, kind);
 	}
 
 	/**
@@ -110,6 +124,16 @@ export class StatementRowState {
 	}
 
 	/**
+	 * Put another term in the place of a value.
+	 * @param index The index of the value.
+	 * @param term The term.
+	 * @returns The next state.
+	 */
+	withValueReplaced(index: number, term: NamedNode | Literal): StatementRowState {
+		return this.withDraft(this.draft.withValueReplaced(index, term));
+	}
+
+	/**
 	 * Remove a value.
 	 * @param index The index of the value.
 	 * @returns The next state.
@@ -134,7 +158,7 @@ export class StatementRowState {
 	 * @returns The next state.
 	 */
 	withDraft(draft: StatementDraft): StatementRowState {
-		return new StatementRowState(this.stored, draft, this.predicateText, this.pendingText, this.problem, this.rejection);
+		return new StatementRowState(this.stored, draft, this.predicateText, this.pendingText, this.problem, this.rejection, this.pendingKind);
 	}
 
 	/**
@@ -147,7 +171,7 @@ export class StatementRowState {
 	rebasedOnto(stored: StatementDraft, predicateText: string): StatementRowState {
 		const text = stored.predicate !== this.stored.predicate ? predicateText : this.predicateText;
 
-		return new StatementRowState(stored, this.draft.rebasedOnto(stored), text, this.pendingText, this.problem, this.rejection);
+		return new StatementRowState(stored, this.draft.rebasedOnto(stored), text, this.pendingText, this.problem, this.rejection, this.pendingKind);
 	}
 
 	/**
@@ -156,7 +180,7 @@ export class StatementRowState {
 	 * @returns The next state.
 	 */
 	withProblem(problem: TermProblem): StatementRowState {
-		return new StatementRowState(this.stored, this.draft, this.predicateText, this.pendingText, problem, this.rejection);
+		return new StatementRowState(this.stored, this.draft, this.predicateText, this.pendingText, problem, this.rejection, this.pendingKind);
 	}
 
 	/**
@@ -165,6 +189,6 @@ export class StatementRowState {
 	 * @returns The next state.
 	 */
 	withRejection(rejection: RowRejection | undefined): StatementRowState {
-		return new StatementRowState(this.stored, this.draft, this.predicateText, this.pendingText, this.problem, rejection);
+		return new StatementRowState(this.stored, this.draft, this.predicateText, this.pendingText, this.problem, rejection, this.pendingKind);
 	}
 }

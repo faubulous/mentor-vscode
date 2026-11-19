@@ -17,7 +17,12 @@ export type TagPickerTab = 'datatype' | 'language';
  * What picking an item of the tag picker gives a literal: its tag, and the prefix to declare for
  * the datatype, if any.
  */
-export interface TagChoice {
+export interface TagChoiceOfLiteral {
+	/**
+	 * Tells the choice of a tag from the choice of a resource.
+	 */
+	kind: 'literal';
+
 	/**
 	 * The tag: a language, a datatype, or neither for a plain string.
 	 */
@@ -28,6 +33,18 @@ export interface TagChoice {
 	 */
 	missingPrefix?: PrefixProposal;
 }
+
+/**
+ * What picking an item of the tag picker gives a value: a tag for a literal, or a resource
+ * instead of a literal.
+ */
+export type TagChoice = TagChoiceOfLiteral | { kind: 'resource' };
+
+/**
+ * Where the Datatype tab offers the item that makes a value a resource: first for the text typed
+ * for a new value, after the datatypes the literal fields offer for a literal.
+ */
+export type ResourceItemPlace = 'first' | 'last';
 
 /**
  * An item of the tag picker: its code, what it is, and what picking it gives.
@@ -65,6 +82,16 @@ export interface TagPickerItemData {
 const FREE_TAG_DESCRIPTION = 'Use this tag';
 
 /**
+ * The key of the item that makes a value a resource.
+ */
+const RESOURCE_KEY = 'resource';
+
+/**
+ * The item that makes a value a resource, named by what its text is then read as.
+ */
+const RESOURCE_ITEM: TagPickerItemData = { key: RESOURCE_KEY, code: 'resource', description: 'IRI', names: ['resource', 'IRI'], choice: { kind: 'resource' } };
+
+/**
  * The datatypes the literal fields offer themselves, in the order they are offered.
  */
 const OFFERED_DATATYPES: readonly string[] = [XSD.string, XSD.boolean, XSD.integer, XSD.decimal, XSD.double, XSD.date, XSD.dateTime, XSD.anyURI];
@@ -76,15 +103,17 @@ const LANGUAGE_DATATYPES: ReadonlySet<string> = new Set([RDF.langString, `${_RDF
 
 /**
  * The datatypes the tag picker offers: those the literal fields offer themselves, string first, then the
- * other datatypes of the workspace, as the host ranked them.
+ * other datatypes of the workspace, as the host ranked them. Where a value may be a resource, the
+ * resource item stands first or after the datatypes of the literal fields.
  * @param storeDatatypes The datatypes of the workspace.
+ * @param resourceItem Where the resource item stands, if it is offered.
  * @returns The items.
  */
-export function getDatatypeItems(storeDatatypes: readonly ResourceOptionData[]): TagPickerItemData[] {
-	const known = OFFERED_DATATYPES.map(iri => {
+export function getDatatypeItems(storeDatatypes: readonly ResourceOptionData[], resourceItem?: ResourceItemPlace): TagPickerItemData[] {
+	const known: TagPickerItemData[] = OFFERED_DATATYPES.map(iri => {
 		const code = getDatatypeName(RdfDataFactory.namedNode(iri), () => undefined);
 
-		return { key: _datatypeKeyOf(iri), code, description: getDatatypeFormat(iri) ?? '', names: [code], choice: { tag: iri === XSD.string ? {} : { datatype: iri } } };
+		return { key: _datatypeKeyOf(iri), code, description: getDatatypeFormat(iri) ?? '', names: [code], choice: { kind: 'literal', tag: iri === XSD.string ? {} : { datatype: iri } } };
 	});
 
 	const others = storeDatatypes
@@ -97,11 +126,15 @@ export function getDatatypeItems(storeDatatypes: readonly ResourceOptionData[]):
 				code,
 				description: option.missingPrefix ? `${option.label} · adds ${option.missingPrefix.prefix}:` : option.label,
 				names: [code, option.label, getLocalPartAndQuery(option.subject.value)],
-				choice: { tag: { datatype: option.subject.value }, missingPrefix: option.missingPrefix }
-			};
+				choice: { kind: 'literal', tag: { datatype: option.subject.value }, missingPrefix: option.missingPrefix }
+			} satisfies TagPickerItemData;
 		});
 
-	return [...known, ...others];
+	if (resourceItem === 'first') {
+		return [RESOURCE_ITEM, ...known, ...others];
+	}
+
+	return resourceItem === 'last' ? [...known, RESOURCE_ITEM, ...others] : [...known, ...others];
 }
 
 /**
@@ -122,7 +155,7 @@ export function getLanguageItems(usedLanguages: readonly string[]): TagPickerIte
 			seen.add(key);
 			const name = LanguageTags.nameOf(tag);
 
-			items.push({ key, code: tag, description: name ?? 'Language', names: [tag, name], choice: { tag: { language: tag } } });
+			items.push({ key, code: tag, description: name ?? 'Language', names: [tag, name], choice: { kind: 'literal', tag: { language: tag } } });
 		}
 	}
 
@@ -148,16 +181,20 @@ export function filterTagPickerItems(items: readonly TagPickerItemData[], filter
 
 	const tag = LanguageTags.normalize(typed);
 
-	return [...matches, { key: _languageKeyOf(tag), code: tag, description: FREE_TAG_DESCRIPTION, names: [tag], choice: { tag: { language: tag } } }];
+	return [...matches, { key: _languageKeyOf(tag), code: tag, description: FREE_TAG_DESCRIPTION, names: [tag], choice: { kind: 'literal', tag: { language: tag } } }];
 }
 
 /**
  * The key of the item that stands for a tag: the item of its language or of its datatype, and
- * that of string for a plain string.
- * @param tag The tag.
+ * that of string for a plain string; the resource item for a value that is to be a resource.
+ * @param tag The tag, or `resource`.
  * @returns The key.
  */
-export function getTagItemKey(tag: LiteralTag): string {
+export function getTagItemKey(tag: LiteralTag | 'resource'): string {
+	if (tag === 'resource') {
+		return RESOURCE_KEY;
+	}
+
 	return tag.language ? _languageKeyOf(tag.language) : _datatypeKeyOf(tag.datatype ?? XSD.string);
 }
 

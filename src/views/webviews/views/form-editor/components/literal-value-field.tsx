@@ -68,6 +68,7 @@ export function LiteralValueField({ view, index, edited }: LiteralValueFieldProp
 			numeric={LiteralDatatypes.isNumeric(datatype)}
 			integer={datatype === XSD.integer}
 			languages={services.languages}
+			offersResource={index < editor.state.draft.values.length}
 			onInput={text => _input(edited, index, term.language, text, languageFilter)}
 			onFinish={() => {
 				editor.confirm();
@@ -126,14 +127,22 @@ function _input(edited: EditedRow, index: number, language: string, text: string
 }
 
 /**
- * Give a literal the tag picked for it. The empty field of the language a row lacks is no value
- * yet, and takes no other tag.
+ * Give a literal the tag picked for it, or make it the resource its text names and go on to the
+ * field of a new value. The empty field of the language a row lacks is no value yet, and takes no
+ * other tag.
  * @param edited The row.
  * @param index The index of the value.
  * @param choice What the item picked gives the literal.
  */
 function _pickTag(edited: EditedRow, index: number, choice: TagChoice): void {
-	if (index < edited.editor.state.draft.values.length) {
+	if (index >= edited.editor.state.draft.values.length) {
+		return;
+	}
+
+	if (choice.kind === 'resource') {
+		edited.editor.turnLiteralIntoResource(index);
+		edited.focusNewValue();
+	} else {
 		edited.editor.pickLiteralTag(index, choice.tag, choice.missingPrefix);
 	}
 }

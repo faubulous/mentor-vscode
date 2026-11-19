@@ -34,6 +34,16 @@ const GUTTER_ROOM = (36 - 28) / 2;
  */
 const CONTENT_EDGE = GUTTER_ROOM + 28 + GUTTER_ROOM;
 
+/**
+ * The height of a line of a text value, which wraps single spaced in the line box of a row.
+ */
+const TEXT_LINE = 20;
+
+/**
+ * A property with a literal and a resource, whose next value may be either.
+ */
+const MIXED = withAnchors(createTestCardBody([createProperty('ex:note', [createLiteralView('First'), createIriView('ex:A', 'A')])]));
+
 const RESOURCES = [createResourceListItem('Plant', { label: 'Plant' }), createResourceListItem('Shrub', { label: 'Shrub' })];
 
 /**
@@ -121,6 +131,17 @@ function iriTextOf(card: HTMLElement): number {
 	const text = card.querySelector('.resource-card-iri-text')!;
 
 	return Math.round(text.getBoundingClientRect().left + parseFloat(getComputedStyle(text).paddingLeft) - card.getBoundingClientRect().left - card.clientLeft);
+}
+
+/**
+ * Press a tag that just appeared, as a person does: the pointer moves away from where it clicked,
+ * here to the predicate of the row, and the tag takes the press once a moment has passed.
+ * @param tag The tag.
+ */
+async function pressFreshTag(tag: HTMLElement): Promise<void> {
+	await userEvent.hover(tag.closest('.statement-line')!.querySelector<HTMLElement>('.statement-predicate')!);
+	await expect.poll(() => tag.classList.contains('is-guarded'), { timeout: 2000 }).toBe(false);
+	await userEvent.click(tag);
 }
 
 /**
@@ -230,10 +251,10 @@ describe('StatementList, edited in a browser', () => {
 		await userEvent.click(field);
 		await userEvent.click(within(rows()[0]).getByRole('button', { name: 'Datatype integer, change' }));
 
-		expect(codesOf(rows()[0])).toEqual(['string', 'boolean', 'integer', 'decimal', 'double', 'date', 'dateTime', 'anyURI']);
+		expect(codesOf(rows()[0])).toEqual(['string', 'boolean', 'integer', 'decimal', 'double', 'date', 'dateTime', 'anyURI', 'resource']);
 		expect(activeCodeOf(rows()[0])).toBe('integer');
 
-		await userEvent.keyboard('{ArrowUp}{ArrowUp}{ArrowUp}');
+		await userEvent.keyboard('{ArrowUp}{ArrowUp}{ArrowUp}{ArrowUp}');
 
 		expect(activeCodeOf(rows()[0])).toBe('anyURI');
 
@@ -323,8 +344,8 @@ describe('StatementList, edited in a browser', () => {
 		const { host } = await renderList(cardBody, [], RESOURCES, 1000, false, termSearch);
 
 		await userEvent.click(within(rows()[1]).getByLabelText('Value 1'));
-		await userEvent.click(within(rows()[1]).getByRole('button', { name: 'Datatype string, change' }));
-		await expect.poll(() => codesOf(rows()[1]).slice(8)).toEqual(['geo:wktLiteral']);
+		await pressFreshTag(within(rows()[1]).getByRole('button', { name: 'Datatype string, change' }));
+		await expect.poll(() => codesOf(rows()[1]).slice(9)).toEqual(['geo:wktLiteral']);
 
 		expect(within(rows()[1]).getByRole('option', { name: 'geo:wktLiteral, wkt literal · adds geo:' })).toBeTruthy();
 
@@ -379,8 +400,8 @@ describe('StatementList, edited in a browser', () => {
 		const field = within(rows()[0]).getByLabelText('Value 1');
 		const plain = within(rows()[1]).getByLabelText('Value 1');
 
-		// The text takes two lines, and the tag stands on the second one.
-		expect(field.getBoundingClientRect().height).toBeGreaterThan(40);
+		// The text takes two lines of text, single spaced, and the tag stands on the second one.
+		expect(Math.round(field.getBoundingClientRect().height)).toBe(2 * TEXT_LINE);
 		expect(tag.getBoundingClientRect().top).toBeGreaterThan(field.getBoundingClientRect().top + 20);
 		expect(tag.title).toBe('Language: English');
 		expect(within(rows()[1]).queryByRole('button', { name: 'Datatype string, change' })).toBeNull();
@@ -613,15 +634,15 @@ describe('StatementList, edited in a browser', () => {
 		const long = within(rows()[0]).getByLabelText('Value 1');
 		const tag = within(rows()[0]).getByRole('button', { name: 'Language en, change' });
 
-		await expect.poll(() => Math.round(long.getBoundingClientRect().height)).toBe(3 * 26);
-		expect(Math.round(within(rows()[1]).getByLabelText('Value 1').getBoundingClientRect().height)).toBe(26);
+		await expect.poll(() => Math.round(long.getBoundingClientRect().height)).toBe(3 * TEXT_LINE);
+		expect(Math.round(within(rows()[1]).getByLabelText('Value 1').getBoundingClientRect().height)).toBe(TEXT_LINE);
 		// The tag stays in view, on the last line shown.
 		expect(tag.getBoundingClientRect().bottom).toBeLessThanOrEqual(long.getBoundingClientRect().bottom);
-		expect(tag.getBoundingClientRect().top).toBeGreaterThan(long.getBoundingClientRect().top + 2 * 26 - 4);
+		expect(tag.getBoundingClientRect().top).toBeGreaterThan(long.getBoundingClientRect().top + 2 * TEXT_LINE - 4);
 
 		await userEvent.click(long);
 
-		await expect.poll(() => long.getBoundingClientRect().height).toBeGreaterThan(3 * 26);
+		await expect.poll(() => long.getBoundingClientRect().height).toBeGreaterThan(3 * TEXT_LINE);
 	});
 
 	it('puts the chevron and the ⋮ of a collapsed nested card on one axis, and shows neither the type nor a request for one where it has none, its summary in their place', async () => {
@@ -863,4 +884,188 @@ describe('StatementList, edited in a browser', () => {
 		expect(Math.round(row.getBoundingClientRect().height * 2) / 2).toBe(2.5 + 36 + 2.5 + 1 + 6 + 26);
 		expect([centreOf(box), centreOf(row.querySelector('.row-grip')!), centreOf(row.querySelector('.row-menu')!)]).toEqual([centre, centre, centre]);
 	});
+
+	it('shows the kind of the next value after the text typed into its input, and turns text that can no longer name a resource into a literal, keeping the caret', async () => {
+		const { host } = await renderList(MIXED);
+		const row = rows()[0];
+		const input = within(row).getByLabelText('New value');
+
+		expect(within(row).queryByRole('button', { name: /^New value/ })).toBeNull();
+
+		await userEvent.click(input);
+
+		// Focusing the empty input shows no kind: it comes with the first character.
+		expect(within(row).queryByRole('button', { name: /^New value/ })).toBeNull();
+
+		await userEvent.keyboard('ex:Oak');
+
+		expect(within(row).getByRole('button', { name: 'New value resource, change' }).textContent).toBe('resource');
+
+		await userEvent.keyboard('{Backspace}{Backspace}{Backspace}{Backspace}{Backspace}{Backspace}Tall');
+
+		const marker = within(row).getByRole('button', { name: 'New value string, change' });
+		const copy = row.querySelector('.combobox-suffix-copy')!;
+
+		// Right after the typed text: its copy starts where the text of the input starts.
+		const inner = (within(row).getByLabelText('New value') as unknown as { wrappedElement: HTMLInputElement }).wrappedElement;
+
+		expect(copy.textContent).toBe('Tall');
+		expect(Math.round(copy.getBoundingClientRect().left)).toBe(Math.round(inner.getBoundingClientRect().left + parseFloat(getComputedStyle(inner).paddingLeft)));
+		expect(marker.getBoundingClientRect().left).toBeGreaterThan(copy.getBoundingClientRect().right);
+		expect(marker.getBoundingClientRect().left).toBeLessThan(copy.getBoundingClientRect().right + 12);
+
+		await userEvent.keyboard(' oak');
+
+		const literal = within(row).getByLabelText('Value 3') as HTMLTextAreaElement;
+
+		expect(literal.value).toBe('Tall oak');
+		expect(document.activeElement).toBe(literal);
+		expect(within(row).getByLabelText<HTMLInputElement>('New value').value).toBe('');
+
+		await leaveList();
+
+		expect(host.submitted[0].operations[0]).toMatchObject({ op: 'setValues', values: [{ kind: 'existing' }, { kind: 'existing' }, { kind: 'term', term: RdfDataFactory.literal('Tall oak') }] });
+	});
+
+	it('starts a text value with " in the empty input, which suggests the datatype its text looks like', async () => {
+		await renderList(MIXED);
+
+		const row = rows()[0];
+
+		await userEvent.click(within(row).getByLabelText('New value'));
+		await userEvent.keyboard('"');
+
+		const literal = within(row).getByLabelText('Value 3') as HTMLTextAreaElement;
+
+		expect(document.activeElement).toBe(literal);
+		expect(literal.value).toBe('');
+
+		await userEvent.keyboard('2024-02-29');
+
+		expect(within(row).getByRole('button', { name: 'Suggested datatype date, accept' }).textContent).toBe('date?');
+
+		await userEvent.keyboard('{Tab}');
+
+		expect(within(row).getByRole('button', { name: 'Datatype date, change' })).toBeTruthy();
+		expect(document.activeElement).toBe(literal);
+	});
+
+	it('opens the tag picker of the kind with resource first, and makes the typed text a literal of the language picked', async () => {
+		const { host } = await renderList(MIXED);
+		const row = rows()[0];
+
+		await userEvent.click(within(row).getByLabelText('New value'));
+		await userEvent.keyboard('Oak');
+		await pressFreshTag(within(row).getByRole('button', { name: 'New value string, change' }));
+
+		expect(codesOf(row).slice(0, 3)).toEqual(['resource', 'string', 'boolean']);
+		expect(activeCodeOf(row)).toBe('string');
+
+		await userEvent.click(within(row.querySelector<HTMLElement>('.tag-picker')!).getByRole('tab', { name: 'Language' }));
+		await userEvent.click(within(row.querySelector<HTMLElement>('.tag-picker')!).getByRole('option', { name: /^de,/ }));
+
+		const literal = within(row).getByLabelText('Value 3') as HTMLTextAreaElement;
+
+		expect(literal.value).toBe('Oak');
+		expect(within(row).getByRole('button', { name: 'Language de, change' })).toBeTruthy();
+		await expect.poll(() => document.activeElement).toBe(literal);
+
+		await leaveList();
+
+		expect(host.submitted[0].operations[0]).toMatchObject({ values: [{ kind: 'existing' }, { kind: 'existing' }, { kind: 'term', term: RdfDataFactory.literal('Oak', 'de') }] });
+	});
+
+	it('keeps text a resource is picked for in the input, read as a resource', async () => {
+		await renderList(MIXED);
+
+		const row = rows()[0];
+
+		await userEvent.click(within(row).getByLabelText('New value'));
+		await userEvent.keyboard('Oak');
+		await pressFreshTag(within(row).getByRole('button', { name: 'New value string, change' }));
+		await userEvent.click(within(row.querySelector<HTMLElement>('.tag-picker')!).getByRole('option', { name: /^resource,/ }));
+
+		expect(document.activeElement).toBe(within(row).getByLabelText('New value'));
+		expect(within(row).getByRole('button', { name: 'New value resource, change' })).toBeTruthy();
+
+		await userEvent.keyboard(' tree');
+
+		expect(within(row).getByLabelText<HTMLInputElement>('New value').value).toBe('Oak tree');
+		expect(within(row).queryByLabelText('Value 3')).toBeNull();
+	});
+
+	it('makes a literal the resource its text names with resource in its tag picker, after the datatypes the fields know', async () => {
+		const cardBody = withAnchors(createTestCardBody([createProperty('ex:note', [{ term: RdfDataFactory.literal('ex:Tree'), editable: true }])]));
+		const { host } = await renderList(cardBody);
+		const row = rows()[0];
+
+		await userEvent.click(within(row).getByLabelText('Value 1'));
+		await pressFreshTag(within(row).getByRole('button', { name: 'Datatype string, change' }));
+
+		expect(codesOf(row).slice(7, 9)).toEqual(['anyURI', 'resource']);
+
+		await userEvent.click(within(row.querySelector<HTMLElement>('.tag-picker')!).getByRole('option', { name: /^resource,/ }));
+
+		expect(within(row).queryByLabelText('Value 1')).toBeNull();
+		expect(pillsOf(row)).toEqual(['ex:Tree']);
+		expect(document.activeElement).toBe(within(row).getByLabelText('New value'));
+
+		await leaveList();
+
+		expect(host.submitted[0].operations[0]).toMatchObject({ values: [{ kind: 'term', term: RdfDataFactory.namedNode(`${EXAMPLE_NAMESPACE}Tree`) }] });
+	});
+
+
+
+
+	it('lets a kind that just appeared under the pointer take no click until the pointer has moved away and a moment has passed', async () => {
+		await renderList(MIXED);
+
+		const row = rows()[0];
+		const input = within(row).getByLabelText('New value');
+
+		await userEvent.click(input);
+		await userEvent.keyboard('Oak');
+
+		const marker = within(row).getByRole('button', { name: 'New value string, change' });
+
+		// It looks the same, but the pointer goes through it to the text.
+		expect(marker.classList.contains('is-guarded')).toBe(true);
+		expect(getComputedStyle(marker).pointerEvents).toBe('none');
+
+		await new Promise(resolve => setTimeout(resolve, 450));
+
+		// The moment has passed, but the pointer has not moved away.
+		expect(marker.classList.contains('is-guarded')).toBe(true);
+
+		await userEvent.hover(row.querySelector<HTMLElement>('.statement-predicate')!);
+
+		expect(marker.classList.contains('is-guarded')).toBe(false);
+
+		await userEvent.click(marker);
+
+		expect(row.querySelector('.tag-picker')).not.toBeNull();
+	});
+
+	it('guards no tag shown at rest, and leaves the keyboard unguarded', async () => {
+		await renderList(MIXED);
+
+		const row = rows()[0];
+
+		await userEvent.click(within(row).getByLabelText('Value 1'));
+
+		expect(within(row).getByRole('button', { name: 'Datatype string, change' }).classList.contains('is-guarded')).toBe(true);
+
+		await userEvent.click(within(rows()[0]).getByLabelText('New value'));
+		await userEvent.keyboard('"42');
+
+		// Tab accepts the suggestion that just appeared at once.
+		expect(within(row).getByRole('button', { name: 'Suggested datatype integer, accept' }).classList.contains('is-guarded')).toBe(true);
+
+		await userEvent.keyboard('{Tab}');
+
+		expect(within(row).getByRole('button', { name: 'Datatype integer, change' }).classList.contains('is-guarded')).toBe(false);
+	});
+
+
 });

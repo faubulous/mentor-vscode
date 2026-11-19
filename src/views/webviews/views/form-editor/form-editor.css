@@ -479,6 +479,9 @@ body {
 	--predicate-column: 160px;
 	--col-gap: 24px;
 	--line-box: 26px;
+	/* The lines of a text that wraps or breaks, and the room above and under them that fills the line box of the row. */
+	--text-line: 20px;
+	--text-pad: calc((var(--line-box) - var(--text-line)) / 2);
 	/* A row of one line, its line under it included, and the space above and under the line box that makes it so tall. */
 	--row-min-h: 32px;
 	--row-pad: calc((var(--row-min-h) - var(--line-box) - 1px) / 2);
@@ -512,6 +515,7 @@ body {
 	--content-edge: 10px;
 	--col-gap: 8px;
 	--line-box: 18px;
+	--text-line: 18px;
 	--chip-h: 18px;
 	--chip-pad-start: 5px;
 	--chip-pad-end: 5px;
@@ -1045,6 +1049,8 @@ body {
 	gap: var(--col-gap);
 	width: 100%;
 	min-width: 0;
+	padding-block: var(--text-pad);
+	line-height: var(--text-line);
 }
 
 .literal-text {
@@ -1696,9 +1702,16 @@ body {
 	anchor-name: --literal-field;
 }
 
+/* The room the lines of the text leave in the line box of the row lies on the box, so a text cut at rest shows no part of the line after the cut. */
+.statement-cells .literal-field-box.input-field {
+	min-height: var(--text-line);
+	padding-block: calc(var(--row-pad) + var(--text-pad)) calc(var(--row-pad) + 1px + var(--text-pad));
+}
+
 .literal-field-text {
 	position: relative;
 	display: block;
+	line-height: var(--text-line);
 	white-space: pre-wrap;
 	overflow-wrap: anywhere;
 }
@@ -1709,7 +1722,7 @@ body {
 
 /* At rest a long text shows the lines its card allows; with the focus it shows whole. */
 .literal-field:not(:focus-within) > .literal-field-box > .literal-field-text {
-	max-height: calc(var(--clamp) * var(--line-box));
+	max-height: calc(var(--clamp) * var(--text-line));
 	overflow: hidden;
 }
 
@@ -1769,6 +1782,12 @@ body {
 	outline: none;
 }
 
+/* A tag that just appeared ignores the pointer for a moment, looking the same, so a click meant for the text does not land on it. */
+.literal-field-tag.is-guarded,
+.combobox-suffix > .literal-field-tag.is-guarded {
+	pointer-events: none;
+}
+
 /* The datatype a plain string looks like a value of, offered, not set: outlined and slanted. */
 .literal-field-tag.is-suggestion {
 	box-shadow: inset 0 0 0 1px var(--form-field-border);
@@ -1779,7 +1798,7 @@ body {
 .literal-field.is-clamped .literal-field-tag {
 	position: absolute;
 	right: 0;
-	bottom: 4px;
+	bottom: calc((var(--text-line) - 16px) / 2);
 	padding-inline-start: 28px;
 	border-radius: 0;
 	background: linear-gradient(to right, transparent, var(--card-surface) 20px);
@@ -2057,6 +2076,36 @@ body {
 	anchor-scope: --combobox;
 	position: relative;
 	display: block;
+}
+
+/*
+ * What follows the text of the field, laid over it: a hidden copy of the text, or of the
+ * placeholder, pushes the suffix to the end of the text. Only the suffix takes the pointer, and a
+ * text longer than the field hides it.
+ */
+.combobox-suffix {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	align-items: center;
+	padding-inline-start: var(--form-field-text-inset);
+	overflow: hidden;
+	white-space: pre;
+	pointer-events: none;
+}
+
+.combobox-suffix-copy {
+	visibility: hidden;
+}
+
+.combobox-suffix > .literal-field-tag,
+.combobox .tag-picker {
+	pointer-events: auto;
+}
+
+/* The tag picker of the kind of a new value opens under the field. */
+.combobox .tag-picker {
+	position-anchor: --combobox;
 }
 
 .combobox-list {

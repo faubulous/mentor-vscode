@@ -1,8 +1,9 @@
-import { ChangeEvent, FocusEvent, KeyboardEvent, MouseEvent, useId, useRef, useState } from 'react';
+import { ChangeEvent, FocusEvent, KeyboardEvent, useId, useRef, useState } from 'react';
 import { useOverflowing } from '../hooks/use-overflowing';
 import { useTagPicker } from '../hooks/use-tag-picker';
 import { LiteralTag } from '../state/literal-tag';
 import { LiteralTagData } from './datatype-labels';
+import { TagButton } from './tag-button';
 import { TagPicker } from './tag-picker';
 import { TagChoice } from './tag-picker-items';
 
@@ -72,6 +73,11 @@ export interface LiteralFieldProps {
 	languages: readonly string[];
 
 	/**
+	 * Whether the tag picker offers to make the value a resource.
+	 */
+	offersResource: boolean;
+
+	/**
 	 * Called with the text as it is typed.
 	 */
 	onInput: (text: string) => void;
@@ -107,24 +113,26 @@ export interface LiteralFieldProps {
  * height and puts the tag of the literal after the last character, so the tag wraps with the text.
  * At rest a long text shows as many lines as the density of the card allows, with the tag over the
  * end of the last line; with the focus the whole text shows. A plain string shows no tag at rest
- * and `string` while it has the focus, or the datatype its text looks like a value of, such as
- * `date?`, which Tab or a click accepts and nothing applies by itself. A text that does not fit the
+ * and `string` while it has the focus and text, or the datatype its text looks like a value of,
+ * such as `date?`, which Tab or a click accepts and nothing applies by itself; both ignore the
+ * pointer for a moment as they appear, so a click meant for the text does not land on them. A text that does not fit the
  * datatype shows the tag and the reason under the value in the colour of errors. The tag opens the
  * tag picker.
  * @param props The literal and its callbacks.
  * @returns The field.
  */
 export function LiteralField(props: LiteralFieldProps): React.JSX.Element {
-	const { index, text, tag, current, placeholder, problem, suggestion, numeric, languages, onInput, onTagPick, onAcceptSuggestion } = props;
+	const { index, text, tag, current, placeholder, problem, suggestion, numeric, languages, offersResource, onInput, onTagPick, onAcceptSuggestion } = props;
 	const [focused, setFocused] = useState(false);
 	const textRef = useRef<HTMLSpanElement>(null);
 	const inputRef = useRef<HTMLTextAreaElement>(null);
 	const problemId = useId();
 	const listId = useId();
-	const picker = useTagPicker({ current, languages, onPick: onTagPick, onDone: () => inputRef.current?.focus() });
+	const picker = useTagPicker({ current, languages, resourceItem: offersResource ? 'last' : undefined, onPick: onTagPick, onDone: () => inputRef.current?.focus() });
 	const clamped = useOverflowing(textRef, text) && !focused;
 	const suggested = focused && !picker.open ? suggestion : undefined;
-	const shownTag = tag ?? (focused ? PLAIN_TAG : undefined);
+	// A plain string shows string once it has text, so focusing an empty value shows the placeholder only.
+	const shownTag = tag ?? (focused && text !== '' ? PLAIN_TAG : undefined);
 
 	const handleBlur = (event: FocusEvent<HTMLSpanElement>): void => {
 		if (!(event.relatedTarget instanceof Node) || !event.currentTarget.contains(event.relatedTarget)) {
@@ -150,8 +158,8 @@ export function LiteralField(props: LiteralFieldProps): React.JSX.Element {
 				<span ref={textRef} className="literal-field-text">
 					<span className="literal-field-copy" aria-hidden="true">{`${text || placeholder}\u200b`}</span>
 					{suggested
-						? _tagButton(suggested, undefined, onAcceptSuggestion, 'is-suggestion')
-						: shownTag && _tagButton(shownTag, problem, togglePicker)}
+						? <TagButton key={suggested.text} tag={suggested} variant="is-suggestion" guarded onAct={onAcceptSuggestion} />
+						: shownTag && <TagButton key={shownTag.text} tag={shownTag} problem={problem} guarded={tag === undefined} onAct={togglePicker} />}
 					<textarea
 						ref={inputRef}
 						className="literal-field-input"
@@ -170,42 +178,6 @@ export function LiteralField(props: LiteralFieldProps): React.JSX.Element {
 			{problem && <span id={problemId} className="literal-field-problem">{problem}</span>}
 			{picker.open && <TagPicker picker={picker} listId={listId} />}
 		</span>
-	);
-}
-
-/**
- * The tag after the text, which opens and closes the tag picker, or accepts the suggested datatype.
- * It acts on the press of the mouse, whose default is prevented, so the focus never rests on the
- * tag; a click by the keyboard acts too.
- * @param tag The tag.
- * @param problem Why the text does not fit the datatype, if it does not.
- * @param onAct Opens or closes the picker, or accepts the suggestion.
- * @param variant The class of a tag that is a suggestion.
- * @returns The button.
- */
-function _tagButton(tag: LiteralTagData, problem: string | undefined, onAct: () => void, variant?: string): React.JSX.Element {
-	const handleMouseDown = (event: MouseEvent<HTMLButtonElement>): void => {
-		event.preventDefault();
-		onAct();
-	};
-
-	const handleClick = (event: MouseEvent<HTMLButtonElement>): void => {
-		if (event.detail === 0) {
-			onAct();
-		}
-	};
-
-	return (
-		<button
-			type="button"
-			className={variant ? `literal-field-tag ${variant}` : 'literal-field-tag'}
-			title={problem ?? tag.tooltip}
-			aria-label={tag.accessibleName}
-			onMouseDown={handleMouseDown}
-			onClick={handleClick}
-		>
-			{tag.text}
-		</button>
 	);
 }
 

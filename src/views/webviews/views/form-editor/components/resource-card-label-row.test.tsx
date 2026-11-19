@@ -89,7 +89,13 @@ describe('ResourceCard, its label row', () => {
 		expect((within(labelRow).getByLabelText('Predicate') as HTMLInputElement).value).toBe('rdfs:label');
 
 		typeInto(input, 'Oak');
-		await leave(input);
+
+		const literal = within(labelRow).getByLabelText('Value 1') as HTMLTextAreaElement;
+
+		expect(literal.value).toBe('Oak');
+		expect(within(labelRow).queryByLabelText('New value')).toBeNull();
+
+		await leave(literal);
 
 		expect(host.submitted.map(record => record.operations)).toEqual([[{ op: 'setValues', subject: TEST_SUBJECT, predicate: RDFS.label, values: [{ kind: 'term', term: RdfDataFactory.literal('Oak') }] }]]);
 	});

@@ -10,6 +10,7 @@ import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { EditWriter } from './edit-writer';
 import { IEditingController } from './editing-controller.interface';
 import { LiteralTag } from './literal-tag';
+import { NewValueKind } from './new-value-kind';
 import { PrefixProposal } from './prefix-proposal';
 import { RowValue } from './row-value';
 import { StatementDraft } from './statement-draft';
@@ -373,10 +374,66 @@ export class StatementRowEditor implements EditWriter {
 	}
 
 	/**
+	 * Start a literal after the values with text typed for a new value, as `"` in the empty input
+	 * does, or a datatype or language picked for the typed text, and empty the input. An empty
+	 * literal goes again when the row is left. Where the document declares no prefix for the
+	 * namespace of a datatype of the workspace, the edit writing it declares the one proposed.
+	 * @param text The text of the literal.
+	 * @param tag The language or datatype of the literal; neither for a plain string.
+	 * @param missingPrefix The prefix proposed for the datatype, if any.
+	 * @returns The index of the literal among the values.
+	 */
+	startLiteral(text: string, tag: LiteralTag = {}, missingPrefix?: PrefixProposal): number {
+		const index = this._state.draft.values.length;
+
+		this.addValue(RdfDataFactory.literal(text));
+
+		if (tag.datatype || tag.language) {
+			this.pickLiteralTag(index, tag, missingPrefix);
+		}
+
+		return index;
+	}
+
+	/**
+	 * Turn a literal into the resource its text names, as picking resource for it does: a
+	 * prefixed name, an `<iri>` or an IRI written without angle brackets. An empty literal is
+	 * removed, and a text that names no resource keeps the literal and shows why.
+	 * @param index The index of the literal.
+	 */
+	turnLiteralIntoResource(index: number): void {
+		const value = this._state.draft.values[index];
+		const term = value ? (value.kind === 'written' ? value.view.term : value.term) : undefined;
+
+		if (term?.termType !== 'Literal') {
+			return;
+		}
+
+		if (term.value.trim() === '') {
+			this.removeValue(index);
+
+			return;
+		}
+
+		const reading = this._data.reader.readResourceText(term.value);
+
+		this._update(reading.term ? this._state.withValueReplaced(index, reading.term) : this._state.withProblem(reading.problem));
+	}
+
+	/**
+	 * Choose the kind of value the text typed for a new value makes, as picking resource from its
+	 * tag picker does, until the field is emptied.
+	 * @param kind The kind.
+	 */
+	choosePendingKind(kind: NewValueKind): void {
+		this._update(this._state.withPendingKind(kind));
+	}
+
+	/**
 	 * Add the value the text typed for a new value reads as, or show why it reads as none.
 	 */
 	commitPending(): void {
-		const reading = this._data.reader.readValue(this._state.pendingText, this._range);
+		const reading = this._data.reader.readValue(this._state.pendingText, this._pendingRange);
 
 		if (reading?.term) {
 			this._update(this._state.withValueAppended(reading.term));
@@ -510,7 +567,7 @@ export class StatementRowEditor implements EditWriter {
 
 			return;
 		}
-		const reading = this._data.reader.readValue(this._state.pendingText, this._range);
+		const reading = this._data.reader.readValue(this._state.pendingText, this._pendingRange);
 		const withPending = reading?.term ? draft.withValueAppended(reading.term) : draft;
 		const next = this._state.withDraft(_withUnfittingLiteralsReverted(withPending));
 
@@ -573,6 +630,14 @@ export class StatementRowEditor implements EditWriter {
 	 */
 	private get _range(): ValueKind {
 		return this._data.property?.valueKind?.kind ?? 'any';
+	}
+
+	/**
+	 * What the text typed for a new value is read as: a resource where that kind was chosen for it,
+	 * else what the predicate takes.
+	 */
+	private get _pendingRange(): ValueKind {
+		return this._state.pendingKind ?? this._range;
 	}
 
 	/**
