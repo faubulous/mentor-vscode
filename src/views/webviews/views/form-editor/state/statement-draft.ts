@@ -135,6 +135,15 @@ export class StatementDraft {
 	}
 
 	/**
+	 * Drop the literals whose text was emptied while they were edited, as leaving the row does; an
+	 * empty literal the document writes stays.
+	 * @returns The draft without them.
+	 */
+	withoutEmptiedLiterals(): StatementDraft {
+		return this.values.some(_isEmptiedLiteral) ? new StatementDraft(this.predicate, this.values.filter(value => !_isEmptiedLiteral(value))) : this;
+	}
+
+	/**
 	 * Add values after the others, as they are.
 	 * @param values The values.
 	 * @returns The draft with the values.
@@ -316,6 +325,15 @@ export class StatementDraft {
  */
 function _isUntypedNode(value: RowValue): boolean {
 	return value.kind === 'term' && value.node !== undefined && value.node.type === undefined && value.node.copyOf === undefined;
+}
+
+/**
+ * Indicate whether a value is a literal whose text was emptied while it was edited.
+ * @param value The value.
+ * @returns `true` for such a literal.
+ */
+function _isEmptiedLiteral(value: RowValue): boolean {
+	return value.kind === 'term' && value.term.termType === 'Literal' && value.term.value === '';
 }
 
 /**

@@ -8,12 +8,13 @@ import { ResourceOptionData } from '../form-editor-model';
 import { StatementServices } from '../hooks/use-statement-services';
 import { useTermOptions } from '../hooks/use-term-options';
 import { useWorkspaceLanguages } from '../hooks/use-workspace-languages';
+import { LanguageTags } from '../services/statement/language-tags';
 import { LiteralDatatypes } from '../services/statement/literal-datatypes';
 import { narrowByMatch } from '../services/term-ranking';
 import { useFormEditorContext } from '../state/form-editor-context';
 import { LiteralTag } from '../state/literal-tag';
 import { Combobox, ComboboxOption } from './combobox';
-import { getDatatypeLabel } from './datatype-labels';
+import { getDatatypeName } from './datatype-labels';
 import { getTermOption } from './term-picker';
 
 /**
@@ -30,11 +31,6 @@ const LANGUAGE_ICON = 'globe';
  * The datatypes of the store no literal of the picker takes, as they need a language.
  */
 const LANGUAGE_DATATYPES: ReadonlySet<string> = new Set([RDF.langString, `${_RDF}dirLangString`]);
-
-/**
- * Names languages in the language of the editor.
- */
-const LANGUAGE_NAMES = new Intl.DisplayNames(undefined, { type: 'language' });
 
 /**
  * What picking an option of the picker yields: the tag, and the datatype of the workspace it was
@@ -161,8 +157,9 @@ export function TagPicker({ text, languages, services, onPick, onCancel }: TagPi
  */
 function _knownDatatypeEntriesOf(text: string, services: StatementServices): TagEntry[] {
 	return LiteralDatatypes.fitting(text).map(iri => {
-		const prefixedName = services.resolver.viewOf(RdfDataFactory.namedNode(iri)).prefixedName;
-		const label = getDatatypeLabel(iri) ?? prefixedName ?? iri;
+		const datatype = RdfDataFactory.namedNode(iri);
+		const prefixedName = services.resolver.viewOf(datatype).prefixedName;
+		const label = getDatatypeName(datatype, () => prefixedName);
 		const tag = iri === XSD.string ? {} : { datatype: iri };
 
 		return {
@@ -188,7 +185,7 @@ function _languageEntriesOf(languages: readonly string[]): TagEntry[] {
 			continue;
 		}
 
-		const name = _languageNameOf(language);
+		const name = LanguageTags.nameOf(language);
 
 		seen.add(key);
 		entries.push({ option: { label: language, detail: name ?? 'Language', iconName: LANGUAGE_ICON, value: { tag: { language } } }, names: [language, name] });
@@ -215,19 +212,4 @@ function _storeDatatypeEntriesOf(text: string, datatypes: readonly ResourceOptio
 			option: getTermOption(datatype, { tag: { datatype: datatype.subject.value }, datatype }),
 			names: [datatype.label, getLocalPartAndQuery(datatype.subject.value), datatype.prefixedName]
 		}));
-}
-
-/**
- * The name of a language in the language of the editor, such as English for `en`.
- * @param language The language tag.
- * @returns The name, or `undefined` where the tag names no language the editor knows.
- */
-function _languageNameOf(language: string): string | undefined {
-	try {
-		const name = LANGUAGE_NAMES.of(language);
-
-		return name && name.toLowerCase() !== language.toLowerCase() ? name : undefined;
-	} catch {
-		return undefined;
-	}
 }

@@ -5,7 +5,7 @@ import { RDFS } from '@faubulous/mentor-rdf';
 import { createEditingHostStub } from '@src/utilities/mocks/editing-host-fixtures';
 import { createResourceDataServiceStub } from '@src/utilities/mocks/resource-data-service-fixtures';
 import { TEST_NAMESPACES, TEST_SUBJECT, createLiteralView, createProperty, createTestCardBody, withAnchors } from '@src/utilities/mocks/statement-fixtures';
-import { renderWebview } from '@src/utilities/mocks/webview-test-utils';
+import { renderWebview, typeInto } from '@src/utilities/mocks/webview-test-utils';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { ResourceCardBodyData } from '../form-editor-model';
 import { EditingController } from '../state/editing-controller';
@@ -56,18 +56,10 @@ function rowOf(label: string): HTMLElement {
  */
 function literalsOf(row: HTMLElement): string[] {
 	return Array.from(row.querySelectorAll<HTMLElement>('.literal-field')).map(field => {
-		const input = field.querySelector<HTMLInputElement>('vscode-textfield, vscode-textarea')!;
+		const input = field.querySelector('textarea')!;
 
 		return `${input.value}@${field.querySelector('.literal-field-tag')?.textContent ?? ''}`;
 	});
-}
-
-/**
- * Type into a field, as the user does.
- */
-function type(field: HTMLElement, text: string): void {
-	(field as HTMLInputElement).value = text;
-	fireEvent.input(field);
 }
 
 /**
@@ -84,7 +76,7 @@ describe('StatementList, in one language', () => {
 		renderList('de');
 
 		expect(literalsOf(rowOf('rdfs:label'))).toEqual(['Baum@de']);
-		expect(literalsOf(rowOf('rdfs:comment'))).toEqual(['A plant@Text']);
+		expect(literalsOf(rowOf('rdfs:comment'))).toEqual(['A plant@']);
 	});
 
 	it('shows every literal for all languages', () => {
@@ -97,7 +89,7 @@ describe('StatementList, in one language', () => {
 		const { host } = renderList('de');
 		const row = rowOf('rdfs:label');
 
-		type(within(row).getByLabelText('Value 2'), 'Eiche');
+		typeInto(within(row).getByLabelText('Value 2'), 'Eiche');
 		await leave(row);
 
 		expect(host.submitted[0].operations).toEqual([{
@@ -114,9 +106,9 @@ describe('StatementList, in one language', () => {
 		const field = within(row).getByLabelText('Value 3');
 
 		expect(literalsOf(row)).toEqual(['@fr']);
-		expect(literalsOf(rowOf('rdfs:comment'))).toEqual(['A plant@Text']);
+		expect(literalsOf(rowOf('rdfs:comment'))).toEqual(['A plant@']);
 
-		type(field, 'Arbre');
+		typeInto(field, 'Arbre');
 
 		expect(within(row).getByLabelText('Value 3')).toBe(field);
 
@@ -135,8 +127,8 @@ describe('StatementList, in one language', () => {
 		const row = rowOf('rdfs:label');
 		const field = within(row).getByLabelText('Value 3');
 
-		type(field, 'Arbre');
-		type(field, '');
+		typeInto(field, 'Arbre');
+		typeInto(field, '');
 
 		expect(within(row).getByLabelText('Value 3')).toBe(field);
 		expect(literalsOf(row)).toEqual(['@fr']);

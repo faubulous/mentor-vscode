@@ -493,11 +493,11 @@ export class StatementRowEditor implements EditWriter {
 	 * Write the row as the focus leaves it: text typed for a new value is taken as one, literals
 	 * whose text their datatype does not take go back to what is stored, and text that reads as no
 	 * term stays with its problem shown rather than being lost. New blank nodes no type was chosen
-	 * for go. A row for a new statement left with nothing typed is handed back to the card, which
-	 * closes it.
+	 * for go, as do literals whose text was emptied. A row for a new statement left with nothing
+	 * typed is handed back to the card, which closes it.
 	 */
 	leave(): void {
-		const draft = this._state.draft.withoutUntypedNodes();
+		const draft = this._state.draft.withoutUntypedNodes().withoutEmptiedLiterals();
 
 		if (this.isOpen && this._state.predicateText === '' && this._state.pendingText === '' && draft.values.length === 0) {
 			this._owner.abandoned(this);

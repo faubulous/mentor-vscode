@@ -77,6 +77,15 @@ describe('StatementRowEditor', () => {
 		expect(editor.ready).toBe(false);
 	});
 
+	it('removes a literal whose text was emptied when the row is left, rather than writing it empty', () => {
+		const { editor } = createEditor();
+
+		editor.inputLiteral(0, '');
+		editor.leave();
+
+		expect(editor.takeEdit()).toEqual([{ op: 'setValues', subject: TEST_SUBJECT, predicate: RDFS.label, values: [] }]);
+	});
+
 	it('hands a row for a new statement back to the card when it is left with nothing typed, and on Escape', () => {
 		const abandoned = vi.fn();
 		const { editor, requested } = createEditor('new', { abandoned });

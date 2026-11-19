@@ -1,5 +1,5 @@
 import { ReactElement } from 'react';
-import { RenderResult, render } from '@testing-library/react';
+import { RenderResult, fireEvent, render } from '@testing-library/react';
 import { WebviewMessage } from '@src/views/webviews/webview-messaging';
 
 /**
@@ -189,4 +189,21 @@ export function coverPage(): HTMLElement {
 	document.body.append(cover);
 
 	return cover;
+}
+
+/**
+ * Type a text into a field, as the user does: a native text field or text area takes it as React
+ * sees a change, a VS Code text field as the input event the component announces.
+ * @param field The field.
+ * @param text The text the field holds afterwards.
+ */
+export function typeInto(field: HTMLElement, text: string): void {
+	if (field instanceof HTMLTextAreaElement || field instanceof HTMLInputElement) {
+		fireEvent.change(field, { target: { value: text } });
+
+		return;
+	}
+
+	(field as HTMLInputElement).value = text;
+	fireEvent.input(field);
 }

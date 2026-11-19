@@ -40,6 +40,7 @@ body {
 	--form-row-border: color-mix(in srgb, var(--vscode-foreground) 8%, transparent);
 	/* The text that stands back: datatype labels, add links, captions. */
 	--form-muted: var(--vscode-disabledForeground, var(--vscode-descriptionForeground));
+	--form-error: var(--vscode-errorForeground, #f2555a);
 	/* The box a field draws on intent: the border and the background of a VS Code input. */
 	--form-field-border: var(--vscode-input-border, var(--vscode-widget-border, #3a3d43));
 	--form-field-background: var(--vscode-input-background, #141517);
@@ -497,11 +498,12 @@ body {
 	--box-line-offset: calc((var(--nested-box-h) - var(--line-box)) / 2);
 	--icon-btn: 28px;
 	--clamp: 3;
+	--card-surface: var(--form-card-background);
 	position: relative;
 	padding: 0;
 	border: 1px solid var(--form-hairline);
 	border-radius: var(--card-radius);
-	background: var(--form-card-background);
+	background: var(--card-surface);
 	line-height: var(--line-box);
 }
 
@@ -1142,9 +1144,10 @@ body {
 	box-sizing: border-box;
 	margin: 0;
 	padding: 0;
+	--card-surface: var(--form-nested-background);
 	border: 1px solid var(--form-hairline);
 	border-radius: var(--card-radius);
-	background: var(--form-nested-background);
+	background: var(--card-surface);
 }
 
 /* The header of a box, and of the box of a new blank node: a row as high as the inside of the box of a collapsed node. */
@@ -1571,9 +1574,9 @@ body {
 	--clamp: 1;
 }
 
-.statement-line.is-card-label .literal-field > .input-field {
-	--vscode-font-size: var(--title-size);
-	--vscode-font-weight: 600;
+.statement-line.is-card-label .literal-field-text {
+	font-size: var(--title-size);
+	font-weight: 600;
 }
 
 .statement-line.is-card-label .literal-field-tag {
@@ -1641,7 +1644,7 @@ body {
 	--underline-color: var(--form-field-border);
 }
 
-/* A field of one line is one line box high, whatever its text makes of the box inside it, as the title does. */
+/* A text field is one line box high, whatever its text makes of the box inside it, as the title does. */
 .statement-cells vscode-textfield.input-field:not(.is-new, .is-tag) {
 	height: var(--line-box);
 }
@@ -1658,21 +1661,15 @@ body {
 }
 
 /* The text of a field stands after its border and padding, so the field starts before its column by that inset. */
-.statement-cells :is(.statement-predicate > .combobox, .literal-field) > .input-field {
+.statement-cells .statement-predicate > .combobox > .input-field {
 	--underline-inset: var(--field-text-inset);
 }
 
 .statement-predicate > .combobox > .input-field,
-.literal-field > .input-field,
 .resource-values > .combobox:first-child > .input-field {
 	--field-text-inset: var(--form-field-text-inset);
 	width: calc(100% + var(--field-text-inset));
 	margin-left: calc(-1 * var(--field-text-inset));
-}
-
-/* The text of an area of several lines stands after its border and the padding the browser gives a text area. */
-.literal-field > vscode-textarea.input-field {
-	--field-text-inset: 3px;
 }
 
 .input-field.is-predicate {
@@ -1683,45 +1680,115 @@ body {
 	--vscode-settings-textInputForeground: var(--vscode-foreground);
 }
 
-.input-field.is-numeric {
-	--vscode-font-family: var(--vscode-editor-font-family, monospace);
-}
-
-/* A literal: its field, and the muted tag of its language or datatype at the end, which opens its picker. */
+/*
+ * A literal: a text area laid over a hidden copy of its text. The copy gives the field its height
+ * and puts the tag of the literal after its last character, and both wrap alike, so the tag follows
+ * the text onto its last line. The tag stands over the area, so the pointer reaches it.
+ */
 .literal-field {
 	position: relative;
 	display: block;
+	width: 100%;
 }
 
-.literal-field.is-multiline {
-	display: grid;
-	grid-template-columns: minmax(0, 1fr) auto;
-	align-items: start;
+.literal-field-text {
+	position: relative;
+	display: block;
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
 }
 
-.literal-field-tag {
-	height: 22px;
-	margin: 0 0 0 var(--col-gap);
-	padding: 0 4px;
-	border: 1px solid transparent;
-	border-radius: var(--form-radius-field);
-	background: transparent;
-	color: var(--form-muted);
+.literal-field.is-numeric .literal-field-text {
+	font-family: var(--form-mono);
+}
+
+/* At rest a long text shows the lines its card allows; with the focus it shows whole. */
+.literal-field:not(:focus-within) > .literal-field-box > .literal-field-text {
+	max-height: calc(var(--clamp) * var(--line-box));
+	overflow: hidden;
+}
+
+.literal-field-copy {
+	visibility: hidden;
+}
+
+.literal-field-input {
+	position: absolute;
+	inset: 0;
+	z-index: 1;
+	box-sizing: border-box;
+	width: 100%;
+	height: 100%;
+	margin: 0;
+	padding: 0;
+	border: 0;
+	background: none;
+	color: var(--vscode-foreground);
 	font: inherit;
-	font-size: var(--tag-size);
+	letter-spacing: inherit;
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+	resize: none;
+	overflow: hidden;
+	outline: none;
+	caret-color: var(--form-accent);
+}
+
+.literal-field-input::placeholder {
+	color: var(--form-muted);
+}
+
+/* The tag: the language or datatype of the literal, muted and small, which opens its picker. */
+.literal-field-tag {
+	position: relative;
+	z-index: 2;
+	display: inline-block;
+	margin-inline-start: 8px;
+	padding: 0 4px;
+	border: 0;
+	border-radius: 3px;
+	background: none;
+	color: var(--form-muted);
+	font-family: var(--form-mono);
+	font-size: 11px;
+	font-weight: normal;
+	line-height: 16px;
 	white-space: nowrap;
 	cursor: pointer;
 }
 
 .literal-field-tag:hover,
 .literal-field-tag:focus-visible {
-	border-color: var(--form-field-border);
+	background: var(--form-pill-background);
 	color: var(--vscode-foreground);
 	outline: none;
 }
 
-.literal-field-tag.is-problem {
-	color: var(--vscode-errorForeground);
+/* A text cut at rest shows the tag over the end of its last line, the text fading out before it. */
+.literal-field.is-clamped .literal-field-tag {
+	position: absolute;
+	right: 0;
+	bottom: 4px;
+	padding-inline-start: 28px;
+	border-radius: 0;
+	background: linear-gradient(to right, transparent, var(--card-surface) 20px);
+}
+
+/* A text that does not fit its datatype: the tag, the reason under the value and the underline of the field in the colour of errors. */
+.literal-field.is-problem .literal-field-tag {
+	color: var(--form-error);
+}
+
+.literal-field-problem {
+	display: block;
+	margin-top: 2px;
+	color: var(--form-error);
+	font-size: 12px;
+	line-height: 18px;
+}
+
+.statement-cells .literal-field.is-problem > .literal-field-box.input-field {
+	--underline-accent: var(--form-error);
 }
 
 /* The picker of the tag opens over the end of the field, on a surface of its own that covers the text under it. */

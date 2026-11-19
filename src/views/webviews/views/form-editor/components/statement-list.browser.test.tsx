@@ -178,10 +178,10 @@ describe('StatementList, edited in a browser', () => {
 	it('changes the language of a literal with the tag picker', async () => {
 		const { host } = await renderList();
 
-		await userEvent.click(within(rows()[1]).getByRole('button', { name: /^en\./ }));
+		await userEvent.click(within(rows()[1]).getByRole('button', { name: 'Language en, change' }));
 		await userEvent.keyboard('de{Enter}');
 
-		expect(within(rows()[1]).getByRole('button', { name: /^de\./ })).toBeTruthy();
+		expect(within(rows()[1]).getByRole('button', { name: 'Language de, change' })).toBeTruthy();
 
 		await leaveList();
 
@@ -192,29 +192,30 @@ describe('StatementList, edited in a browser', () => {
 		const cardBody = withAnchors(createTestCardBody([createProperty('ex:count', [{ term: RdfDataFactory.literal('42', RdfDataFactory.namedNode(XSD.integer)), editable: true }])]));
 
 		await renderList(cardBody);
-		await userEvent.click(within(rows()[0]).getByRole('button', { name: /^Integer\./ }));
+		await userEvent.click(within(rows()[0]).getByRole('button', { name: 'Datatype integer, change' }));
 
-		await expect.poll(() => optionLabelsOf(rows()[0])).toEqual(['Text', 'Integer', 'Decimal', 'Double', 'Float', 'Markdown']);
+		await expect.poll(() => optionLabelsOf(rows()[0])).toEqual(['string', 'integer', 'decimal', 'double', 'anyURI']);
 		expect(getComputedStyle(rows()[0].querySelector('.tag-picker')!).backgroundColor).not.toBe('rgba(0, 0, 0, 0)');
 	});
 
 	it('offers the languages and datatypes of the workspace after those the fields know, and declares the prefix of a picked datatype', async () => {
-		const xsd = 'http://www.w3.org/2001/XMLSchema#';
-		const dateTime = createTermOption(XSD.dateTime, 'date time', { prefixedName: 'xsd:dateTime', source: 'workspace', missingPrefix: { prefix: 'xsd', namespace: xsd } });
-		const termSearch = createTermSearchStub({ datatype: [dateTime, createTermOption(XSD.integer, 'integer', { source: 'workspace' })] }, ['de', 'fr']);
-		const cardBody = withAnchors(createTestCardBody([createProperty('ex:created', [{ term: RdfDataFactory.literal('2026-11-18T12:00:00Z'), editable: true }])]));
+		const geo = 'http://www.opengis.net/ont/geosparql#';
+		const wktLiteral = createTermOption(`${geo}wktLiteral`, 'wkt literal', { prefixedName: 'geo:wktLiteral', source: 'workspace', missingPrefix: { prefix: 'geo', namespace: geo } });
+		const termSearch = createTermSearchStub({ datatype: [wktLiteral, createTermOption(XSD.integer, 'integer', { source: 'workspace' })] }, ['de', 'fr']);
+		const cardBody = withAnchors(createTestCardBody([createProperty('ex:location', [{ term: RdfDataFactory.literal('POINT(1 2)'), editable: true }])]));
 		const { host } = await renderList(cardBody, [], RESOURCES, 1000, false, termSearch);
 
-		await userEvent.click(within(rows()[0]).getByRole('button', { name: /^Text\./ }));
+		await userEvent.click(within(rows()[0]).getByLabelText('Value 1'));
+		await userEvent.click(within(rows()[0]).getByRole('button', { name: 'Datatype string, change' }));
 
-		await expect.poll(() => optionLabelsOf(rows()[0])).toEqual(['Text', 'Markdown', 'de', 'fr', 'date time']);
+		await expect.poll(() => optionLabelsOf(rows()[0])).toEqual(['string', 'de', 'fr', 'wkt literal']);
 
-		await userEvent.keyboard('date{Enter}');
+		await userEvent.keyboard('wkt{Enter}');
 		await leaveList();
 
 		expect(host.submitted.map(edit => edit.operations)).toEqual([[
-			{ op: 'declarePrefix', prefix: 'xsd', namespace: xsd },
-			{ op: 'setValues', subject: TEST_SUBJECT, predicate: `${EXAMPLE_NAMESPACE}created`, values: [{ kind: 'term', term: RdfDataFactory.literal('2026-11-18T12:00:00Z', RdfDataFactory.namedNode(XSD.dateTime)) }] }
+			{ op: 'declarePrefix', prefix: 'geo', namespace: geo },
+			{ op: 'setValues', subject: TEST_SUBJECT, predicate: `${EXAMPLE_NAMESPACE}location`, values: [{ kind: 'term', term: RdfDataFactory.literal('POINT(1 2)', RdfDataFactory.namedNode(`${geo}wktLiteral`)) }] }
 		]]);
 	});
 
@@ -228,28 +229,81 @@ describe('StatementList, edited in a browser', () => {
 		expect((field as unknown as { value: string }).value).toBe('43');
 	});
 
-	it('shows why a number does not fit its datatype in place of its tag, and writes nothing', async () => {
+	it('shows why a number does not fit its datatype under the value, its tag and underline in the colour of errors, and writes nothing', async () => {
 		const cardBody = withAnchors(createTestCardBody([createProperty('ex:count', [{ term: RdfDataFactory.literal('42', RdfDataFactory.namedNode(XSD.integer)), editable: true }])]));
 		const { host } = await renderList(cardBody);
+		const field = within(rows()[0]).getByLabelText('Value 1');
 
-		await userEvent.click(within(rows()[0]).getByLabelText('Value 1'));
+		await userEvent.click(field);
 		await userEvent.keyboard('{End}.5{Enter}');
 
-		expect(within(rows()[0]).getByRole('button', { name: /Whole numbers/ })).toBeTruthy();
+		const problem = within(rows()[0]).getByText('Not a valid integer — expected 42');
+		const tag = within(rows()[0]).getByRole('button', { name: 'Datatype integer, change' });
+		const box = field.closest<HTMLElement>('.literal-field-box')!;
+
+		expect(getComputedStyle(tag).color).toBe(getComputedStyle(problem).color);
+		expect(getComputedStyle(box).getPropertyValue('--underline-accent').trim()).toBe(getComputedStyle(box).getPropertyValue('--form-error').trim());
+		expect(problem.getBoundingClientRect().top).toBeGreaterThanOrEqual(field.getBoundingClientRect().bottom - 1);
 		expect(host.submitted).toEqual([]);
+	});
+
+	it('puts the tag of a literal after its last character, wrapping with the text, and shows a plain string as string only while it has the focus', async () => {
+		const text = Array.from({ length: 12 }, (_, index) => `word${index}`).join(' ');
+		const cardBody = withAnchors(createTestCardBody([createProperty('rdfs:comment', [{ term: RdfDataFactory.literal(text, 'en'), editable: true }]), createProperty('rdfs:label', [createLiteralView('Short')])]));
+
+		await renderList(cardBody, [], RESOURCES, 600);
+
+		const tag = within(rows()[0]).getByRole('button', { name: 'Language en, change' });
+		const field = within(rows()[0]).getByLabelText('Value 1');
+		const plain = within(rows()[1]).getByLabelText('Value 1');
+
+		// The text takes two lines, and the tag stands on the second one.
+		expect(field.getBoundingClientRect().height).toBeGreaterThan(40);
+		expect(tag.getBoundingClientRect().top).toBeGreaterThan(field.getBoundingClientRect().top + 20);
+		expect(tag.title).toBe('Language: English');
+		expect(within(rows()[1]).queryByRole('button', { name: 'Datatype string, change' })).toBeNull();
+
+		await userEvent.click(plain);
+
+		const plainTag = within(rows()[1]).getByRole('button', { name: 'Datatype string, change' });
+
+		// After the text of the short value, on its line.
+		expect(plainTag.getBoundingClientRect().left).toBeLessThan(plain.getBoundingClientRect().left + 120);
+		expect(Math.abs(plainTag.getBoundingClientRect().top - plain.getBoundingClientRect().top)).toBeLessThan(12);
+	});
+
+	it('goes on to the field of a new value with Enter, breaks the line with Shift+Enter, and removes an emptied value with Backspace', async () => {
+		const { host } = await renderList();
+		const field = within(rows()[1]).getByLabelText('Value 1') as HTMLTextAreaElement;
+
+		await userEvent.click(field);
+		await userEvent.keyboard('{End}{Shift>}{Enter}{/Shift}top');
+
+		expect(field.value).toBe('Tree\ntop');
+
+		await userEvent.keyboard('{Enter}');
+
+		expect(document.activeElement).toBe(within(rows()[1]).getByLabelText('New value'));
+		expect(host.submitted[0].operations[0]).toEqual({ op: 'setValues', subject: TEST_SUBJECT, predicate: RDFS.label, values: [{ kind: 'term', term: RdfDataFactory.literal('Tree\ntop', 'en') }] });
+
+		await userEvent.click(field);
+		await userEvent.keyboard('{Control>}a{/Control}{Backspace}{Backspace}');
+
+		expect(within(rows()[1]).queryByLabelText('Value 1')).toBeNull();
+		expect(document.activeElement).toBe(within(rows()[1]).getByLabelText('New value'));
 	});
 
 	it('draws no box around a field, but an underline on the line of its row on intent, quiet when pointed at and in the accent with the focus, moving nothing', async () => {
 		await renderList();
 
 		const row = rows()[1];
-		const field = within(row).getByLabelText('Value 1');
-		const input = field.shadowRoot!.querySelector('input')!;
+		const input = within(row).getByLabelText('Value 1');
+		const field = input.closest<HTMLElement>('.literal-field-box')!;
 		const underline = (): string => getComputedStyle(field).getPropertyValue('--underline-accent').trim() || getComputedStyle(field).getPropertyValue('--underline-color').trim();
 		const place = (): string => JSON.stringify(input.getBoundingClientRect());
 		const atRest = place();
 
-		expect(getComputedStyle(field).getPropertyValue('--vscode-settings-textInputBorder').trim()).toBe('transparent');
+		expect(getComputedStyle(input).borderTopWidth).toBe('0px');
 		expect(underline()).toBe('transparent');
 		// The field reaches down to the line of its row, so its underline lies on it.
 		expect(Math.round(field.getBoundingClientRect().bottom)).toBe(Math.round(row.querySelector('.statement-cells')!.getBoundingClientRect().bottom));
@@ -428,21 +482,24 @@ describe('StatementList, edited in a browser', () => {
 		expect(host.submitted.map(edit => edit.operations[0])).toEqual([{ op: 'setValues', subject: TEST_SUBJECT, predicate: RDFS.comment, values: [{ kind: 'existing', anchor: 110 }, { kind: 'copy', anchor: 110 }] }]);
 	});
 
-	it('wraps a text too long for its line in an area of three lines at rest, and shows it whole while it has the focus', async () => {
+	it('cuts a text too long for its card after three lines at rest, its tag over the end of the last one, and shows it whole while it has the focus', async () => {
 		const text = Array.from({ length: 30 }, (_, index) => `word${index}`).join(' ').repeat(4);
-		const cardBody = withAnchors(createTestCardBody([createProperty('rdfs:comment', [createLiteralView(text)]), createProperty('rdfs:label', [createLiteralView('Short')])]));
+		const cardBody = withAnchors(createTestCardBody([createProperty('rdfs:comment', [{ term: RdfDataFactory.literal(text, 'en'), editable: true }]), createProperty('rdfs:label', [createLiteralView('Short')])]));
 
 		await renderList(cardBody, [], RESOURCES, 600);
 
-		const long = within(rows()[0]).getByLabelText('Value 1') as HTMLElement & { rows: number };
+		const long = within(rows()[0]).getByLabelText('Value 1');
+		const tag = within(rows()[0]).getByRole('button', { name: 'Language en, change' });
 
-		await expect.poll(() => long.tagName.toLowerCase()).toBe('vscode-textarea');
-		expect(long.rows).toBe(3);
-		expect(within(rows()[1]).getByLabelText('Value 1').tagName.toLowerCase()).toBe('vscode-textfield');
+		await expect.poll(() => Math.round(long.getBoundingClientRect().height)).toBe(3 * 26);
+		expect(Math.round(within(rows()[1]).getByLabelText('Value 1').getBoundingClientRect().height)).toBe(26);
+		// The tag stays in view, on the last line shown.
+		expect(tag.getBoundingClientRect().bottom).toBeLessThanOrEqual(long.getBoundingClientRect().bottom);
+		expect(tag.getBoundingClientRect().top).toBeGreaterThan(long.getBoundingClientRect().top + 2 * 26 - 4);
 
 		await userEvent.click(long);
 
-		await expect.poll(() => (within(rows()[0]).getByLabelText('Value 1') as HTMLElement & { rows: number }).rows).toBeGreaterThan(3);
+		await expect.poll(() => long.getBoundingClientRect().height).toBeGreaterThan(3 * 26);
 	});
 
 	it('puts the chevron and the ⋮ of a collapsed nested card on one axis, and shows neither the type nor a request for one where it has none, its summary in their place', async () => {
@@ -516,7 +573,7 @@ describe('StatementList, edited in a browser', () => {
 		const xOf = (element: Element | null | undefined): number => Math.round(element!.getBoundingClientRect().left - left);
 		// The text of a field starts after its border and padding.
 		const textOf = (field: Element | null): number => {
-			const input = field!.shadowRoot!.querySelector('input')!;
+			const input = field!.shadowRoot?.querySelector('input') ?? field!;
 
 			return Math.round(xOf(input) + parseFloat(getComputedStyle(input).paddingLeft));
 		};
@@ -626,15 +683,16 @@ describe('StatementList, edited in a browser', () => {
 
 		const row = rows()[0];
 		const cells = row.querySelector('.statement-cells')!.getBoundingClientRect();
-		const fields = Array.from(row.querySelectorAll<HTMLElement>('vscode-textfield'));
+		const fields = [row.querySelector<HTMLElement>('vscode-textfield')!, row.querySelector<HTMLElement>('.literal-field-box')!];
 		const centreOf = (field: HTMLElement): number => {
-			const input = field.shadowRoot!.querySelector('input')!.getBoundingClientRect();
+			const input = (field.shadowRoot?.querySelector('input') ?? field.querySelector('textarea')!).getBoundingClientRect();
 
 			return Math.round(input.top + input.height / 2);
 		};
 
 		expect(Math.round(row.getBoundingClientRect().height)).toBe(32);
 		expect(fields.map(field => Math.round(field.getBoundingClientRect().bottom))).toEqual([Math.round(cells.bottom), Math.round(cells.bottom)]);
+		expect(getComputedStyle(row.querySelector('textarea')!).fontSize).toBe('17px');
 		expect(centreOf(fields[1])).toBe(centreOf(fields[0]));
 	});
 

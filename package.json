@@ -139,6 +139,7 @@
     "rdf-data-factory": "^2.1.0",
     "rdf-stores": "^2.8.0",
     "rdf-string": "^2.0.1",
+    "rdf-validation": "^0.1.2",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "reflect-metadata": "^0.2.2",

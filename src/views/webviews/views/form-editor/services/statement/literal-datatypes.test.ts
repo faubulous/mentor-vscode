@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { XSD } from '@faubulous/mentor-rdf';
-import { LiteralDatatypes, MARKDOWN_DATATYPE } from './literal-datatypes';
+import { XSD } from '@faubulous/mentor-rdf/ontologies';
+import { LiteralDatatypes } from './literal-datatypes';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 
 describe('LiteralDatatypes', () => {
@@ -9,13 +9,36 @@ describe('LiteralDatatypes', () => {
 		expect(LiteralDatatypes.isNumeric(XSD.string)).toBe(false);
 	});
 
-	it('tells whether a text fits a datatype', () => {
+	it('tells whether a text fits a datatype by the lexical rules of XSD', () => {
 		expect(LiteralDatatypes.fits(XSD.integer, '12')).toBe(true);
 		expect(LiteralDatatypes.fits(XSD.integer, '1.2')).toBe(false);
+		expect(LiteralDatatypes.fits(XSD.integer, '')).toBe(false);
 		expect(LiteralDatatypes.fits(XSD.boolean, 'yes')).toBe(false);
+		expect(LiteralDatatypes.fits(XSD.boolean, '0')).toBe(true);
 		expect(LiteralDatatypes.fits(XSD.double, '3.6E3')).toBe(true);
+		expect(LiteralDatatypes.fits(XSD.double, '-INF')).toBe(true);
+		expect(LiteralDatatypes.fits(XSD.gYear, '2019')).toBe(true);
 		expect(LiteralDatatypes.fits(XSD.string, 'anything')).toBe(true);
 		expect(LiteralDatatypes.fits('http://example.org/x', 'anything')).toBe(true);
+	});
+
+	it('takes a date or a date and time only on a day its month has', () => {
+		expect(LiteralDatatypes.fits(XSD.date, '2019-04-05')).toBe(true);
+		expect(LiteralDatatypes.fits(XSD.date, '2019-04-05Z')).toBe(true);
+		expect(LiteralDatatypes.fits(XSD.date, '2019-13-05')).toBe(false);
+		expect(LiteralDatatypes.fits(XSD.date, '2019-04-31')).toBe(false);
+		expect(LiteralDatatypes.fits(XSD.date, '2019-02-29')).toBe(false);
+		expect(LiteralDatatypes.fits(XSD.date, '2020-02-29')).toBe(true);
+		expect(LiteralDatatypes.fits(XSD.date, '1900-02-29')).toBe(false);
+		expect(LiteralDatatypes.fits(XSD.date, '2000-02-29')).toBe(true);
+		expect(LiteralDatatypes.fits(XSD.dateTime, '2019-04-05T10:30:00')).toBe(true);
+		expect(LiteralDatatypes.fits(XSD.dateTime, '2019-04-05T10:30')).toBe(false);
+		expect(LiteralDatatypes.fits(XSD.dateTime, '2019-02-30T10:30:00Z')).toBe(false);
+	});
+
+	it('takes a URI without white space', () => {
+		expect(LiteralDatatypes.fits(XSD.anyURI, 'https://example.org/a')).toBe(true);
+		expect(LiteralDatatypes.fits(XSD.anyURI, 'https://example.org/a b')).toBe(false);
 	});
 
 	it('tells whether a term fits its datatype', () => {
@@ -24,9 +47,10 @@ describe('LiteralDatatypes', () => {
 		expect(LiteralDatatypes.fitsTerm(RdfDataFactory.namedNode('http://x'))).toBe(true);
 	});
 
-	it('offers the datatypes a text fits, text first', () => {
-		expect(LiteralDatatypes.fitting('12')).toEqual([XSD.string, XSD.integer, XSD.decimal, XSD.double, XSD.float, MARKDOWN_DATATYPE]);
-		expect(LiteralDatatypes.fitting('true')).toEqual([XSD.string, XSD.boolean, MARKDOWN_DATATYPE]);
-		expect(LiteralDatatypes.fitting('https://x')).toEqual([XSD.string, XSD.anyURI, MARKDOWN_DATATYPE]);
+	it('offers the datatypes it knows that a text fits, in their order', () => {
+		expect(LiteralDatatypes.fitting('12')).toEqual([XSD.string, XSD.integer, XSD.decimal, XSD.double, XSD.anyURI]);
+		expect(LiteralDatatypes.fitting('true')).toEqual([XSD.string, XSD.boolean, XSD.anyURI]);
+		expect(LiteralDatatypes.fitting('2019-04-05')).toEqual([XSD.string, XSD.date, XSD.anyURI]);
+		expect(LiteralDatatypes.fitting('a b')).toEqual([XSD.string]);
 	});
 });

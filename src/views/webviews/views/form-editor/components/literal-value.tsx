@@ -1,6 +1,6 @@
 import { Literal } from '@rdfjs/types';
 import { useFormEditorContext } from '../state/form-editor-context';
-import { getLiteralTag } from './datatype-labels';
+import { getLiteralTag, getPrefixedNameIn } from './datatype-labels';
 import { getResourceTooltipAttributes } from './resource-tooltip';
 
 /**
@@ -15,14 +15,14 @@ export interface LiteralValueProps {
 
 /**
  * A literal as one block of text, wrapping like a paragraph, with its language tag or datatype
- * after it as a small tag, a datatype with its prefixed name and IRI in its tooltip. A plain
- * string carries no tag.
+ * after it as a small tag, a datatype by its name and with its IRI in its tooltip. A plain string
+ * carries no tag.
  * @param props The literal.
  * @returns The text.
  */
 export function LiteralValue({ term }: LiteralValueProps): React.JSX.Element {
-	const { namespaces, languageTags } = useFormEditorContext();
-	const tag = getLiteralTag(term, languageTags, namespaces);
+	const { namespaces } = useFormEditorContext();
+	const tag = getLiteralTag(term, getPrefixedNameIn(namespaces));
 
 	return (
 		<span className="literal-value">

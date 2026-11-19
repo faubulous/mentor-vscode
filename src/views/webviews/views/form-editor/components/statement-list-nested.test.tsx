@@ -6,7 +6,7 @@ import { RDF, RDFS } from '@faubulous/mentor-rdf';
 import { createEditingHostStub } from '@src/utilities/mocks/editing-host-fixtures';
 import { createResourceDataServiceStub } from '@src/utilities/mocks/resource-data-service-fixtures';
 import { TEST_NAMESPACES, TEST_SUBJECT, createIriView, createLiteralView, createProperty, createTestCardBody, withAnchors } from '@src/utilities/mocks/statement-fixtures';
-import { renderWebview } from '@src/utilities/mocks/webview-test-utils';
+import { renderWebview, typeInto } from '@src/utilities/mocks/webview-test-utils';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { ResourceCardBodyData, TermData } from '../form-editor-model';
 import { EditingController } from '../state/editing-controller';
@@ -109,14 +109,6 @@ function cardRowOf(label: string): HTMLElement {
 }
 
 /**
- * Type into a field, as the user does.
- */
-function type(field: HTMLElement, text: string): void {
-	(field as HTMLInputElement).value = text;
-	fireEvent.input(field);
-}
-
-/**
  * Move the focus out of a field to nowhere, as tabbing away from the card does.
  */
 async function leave(field: HTMLElement): Promise<void> {
@@ -130,7 +122,7 @@ describe('StatementList, with a blank node', () => {
 		const { host } = await renderCard();
 		const field = within(nestedRowOf('rdfs:label')).getByLabelText('Value 1');
 
-		type(field, 'Twig');
+		typeInto(field, 'Twig');
 		await leave(field);
 
 		expect(host.submitted.map(record => record.operations)).toEqual([[{
@@ -146,7 +138,7 @@ describe('StatementList, with a blank node', () => {
 		const outer = within(cardRowOf('rdfs:comment')).getAllByLabelText('Value 1').find(field => !nestedCard().contains(field))!;
 		const inner = within(nestedRowOf('rdfs:comment')).getByLabelText('Value 1');
 
-		type(outer, 'A tree');
+		typeInto(outer, 'A tree');
 		fireEvent.keyDown(inner, { key: 'Escape' });
 		fireEvent.keyDown(inner, { key: 'Enter' });
 
@@ -217,9 +209,9 @@ describe('StatementList, with a blank node', () => {
 
 		const row = within(nestedCard()).getByRole('group', { name: 'New statement' });
 
-		type(within(row).getByLabelText('Predicate'), 'rdfs:seeAlso');
+		typeInto(within(row).getByLabelText('Predicate'), 'rdfs:seeAlso');
 		fireEvent.focusOut(within(row).getByLabelText('Predicate'), { relatedTarget: within(row).getByLabelText('New value') });
-		type(within(row).getByLabelText('New value'), 'ex:Leaf');
+		typeInto(within(row).getByLabelText('New value'), 'ex:Leaf');
 		await leave(within(row).getByLabelText('New value'));
 
 		expect(host.submitted.map(record => record.operations)).toEqual([[{
@@ -266,7 +258,7 @@ describe('StatementList, with a blank node', () => {
 
 		expect(input.getAttribute('placeholder')).toBe('Choose type');
 
-		type(input, 'ex:Leaf');
+		typeInto(input, 'ex:Leaf');
 		await leave(input);
 
 		expect(host.submitted.map(record => record.operations)).toEqual([[{
