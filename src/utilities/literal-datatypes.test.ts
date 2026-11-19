@@ -46,11 +46,4 @@ describe('LiteralDatatypes', () => {
 		expect(LiteralDatatypes.fitsTerm(RdfDataFactory.literal('x', 'en'))).toBe(true);
 		expect(LiteralDatatypes.fitsTerm(RdfDataFactory.namedNode('http://x'))).toBe(true);
 	});
-
-	it('offers the datatypes it knows that a text fits, in their order', () => {
-		expect(LiteralDatatypes.fitting('12')).toEqual([XSD.string, XSD.integer, XSD.decimal, XSD.double, XSD.anyURI]);
-		expect(LiteralDatatypes.fitting('true')).toEqual([XSD.string, XSD.boolean, XSD.anyURI]);
-		expect(LiteralDatatypes.fitting('2019-04-05')).toEqual([XSD.string, XSD.date, XSD.anyURI]);
-		expect(LiteralDatatypes.fitting('a b')).toEqual([XSD.string]);
-	});
 });

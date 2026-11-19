@@ -2,7 +2,7 @@ import { Literal, NamedNode } from '@rdfjs/types';
 import { _XSD, XSD } from '@faubulous/mentor-rdf/ontologies';
 import { getLocalPartAndQuery } from '@src/utilities/uri';
 import { NamespaceData } from '../form-editor-model';
-import { LanguageTags } from '../services/statement/language-tags';
+import { LanguageTags } from '@src/utilities/language-tags';
 
 /**
  * Gives a datatype its prefixed name, where one is declared for its namespace.

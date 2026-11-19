@@ -7,15 +7,25 @@ import { useFormEditorContext } from '../state/form-editor-context';
 const NO_LANGUAGES: readonly string[] = [];
 
 /**
- * The languages the workspace tags its literals with, asked of the host once the component that
- * offers them appears, so they are read only where they are offered.
+ * The languages the workspace tags its literals with, asked of the host once the picker that
+ * offers them is first in use, so they are read only where they are offered.
+ * @param active Whether the picker is in use.
  * @returns The language tags, the most used first; none until the host answers.
  */
-export function useWorkspaceLanguages(): readonly string[] {
+export function useWorkspaceLanguages(active: boolean): readonly string[] {
 	const { termSearch } = useFormEditorContext();
 	const [languages, setLanguages] = useState<readonly string[]>(NO_LANGUAGES);
+	const [asked, setAsked] = useState(false);
+
+	if (active && !asked) {
+		setAsked(true);
+	}
 
 	useEffect(() => {
+		if (!asked) {
+			return undefined;
+		}
+
 		let current = true;
 
 		void termSearch?.getWorkspaceLanguages().then(answer => {
@@ -27,7 +37,7 @@ export function useWorkspaceLanguages(): readonly string[] {
 		return () => {
 			current = false;
 		};
-	}, [termSearch]);
+	}, [termSearch, asked]);
 
 	return languages;
 }

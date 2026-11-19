@@ -4,12 +4,13 @@ import { BlankNode, NamedNode } from '@rdfjs/types';
 import { ValueKind } from '@src/utilities/value-kind';
 import { PredicateData, ResourceOptionData, TermData } from '../form-editor-model';
 import { EditOutcome } from '../services/editing-host-service.interface';
-import { LiteralDatatypes } from '../services/statement/literal-datatypes';
+import { LiteralDatatypes } from '@src/utilities/literal-datatypes';
 import { IriReading } from '../services/statement/typed-term-reader';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { EditWriter } from './edit-writer';
 import { IEditingController } from './editing-controller.interface';
 import { LiteralTag } from './literal-tag';
+import { PrefixProposal } from './prefix-proposal';
 import { RowValue } from './row-value';
 import { StatementDraft } from './statement-draft';
 import { StatementRowData } from './statement-row-data';
@@ -110,7 +111,7 @@ export class StatementRowEditor implements EditWriter {
 	 * The prefix each term picked from a picker is written with, where the document declares none
 	 * for its namespace yet, by the IRI of the term; the edit that first writes one declares it.
 	 */
-	private readonly _proposedPrefixes = new Map<string, NonNullable<ResourceOptionData['missingPrefix']>>();
+	private readonly _proposedPrefixes = new Map<string, PrefixProposal>();
 
 	/**
 	 * Create the editor of a row.
@@ -317,14 +318,19 @@ export class StatementRowEditor implements EditWriter {
 	}
 
 	/**
-	 * Give a literal a datatype picked from the datatypes of the workspace. Where the document
-	 * declares no prefix for its namespace, the edit writing it declares the one proposed.
+	 * Give a literal the language or datatype picked from the tag picker. Where the document
+	 * declares no prefix for the namespace of a datatype of the workspace, the edit writing it
+	 * declares the one proposed.
 	 * @param index The index of the value.
-	 * @param option The option picked.
+	 * @param tag The tag.
+	 * @param missingPrefix The prefix proposed for the datatype, if any.
 	 */
-	pickLiteralDatatype(index: number, option: ResourceOptionData): void {
-		this._proposePrefixOf(option);
-		this.inputLiteralTag(index, { datatype: option.subject.value });
+	pickLiteralTag(index: number, tag: LiteralTag, missingPrefix?: PrefixProposal): void {
+		if (tag.datatype && missingPrefix) {
+			this._proposedPrefixes.set(tag.datatype, missingPrefix);
+		}
+
+		this.inputLiteralTag(index, tag);
 	}
 
 	/**

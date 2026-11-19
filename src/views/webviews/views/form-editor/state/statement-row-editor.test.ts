@@ -294,16 +294,27 @@ describe('StatementRowEditor', () => {
 
 	it('writes a literal with a datatype picked from the workspace and the declaration of its prefix', () => {
 		const { editor } = createEditor();
-		const dateTime = { ...PREF_LABEL, subject: RdfDataFactory.namedNode(XSD.dateTime), label: 'date time', prefixedName: 'xsd:dateTime', missingPrefix: { prefix: 'xsd', namespace: XSD_NAMESPACE } };
 
 		editor.inputLiteral(0, '2026-11-18T12:00:00Z');
-		editor.pickLiteralDatatype(0, dateTime);
+		editor.pickLiteralTag(0, { datatype: XSD.dateTime }, { prefix: 'xsd', namespace: XSD_NAMESPACE });
 		editor.leave();
 
 		expect(editor.takeEdit()).toEqual([
 			{ op: 'declarePrefix', prefix: 'xsd', namespace: XSD_NAMESPACE },
 			{ op: 'setValues', subject: TEST_SUBJECT, predicate: RDFS.label, values: [{ kind: 'term', term: RdfDataFactory.literal('2026-11-18T12:00:00Z', RdfDataFactory.namedNode(XSD.dateTime)) }] }
 		]);
+	});
+
+	it('gives a literal a picked language in place of its datatype, and a plain string neither', () => {
+		const { editor } = createEditor();
+
+		editor.pickLiteralTag(0, { language: 'de-DE' });
+
+		expect(editor.state.draft.values[0]).toMatchObject({ kind: 'term', term: RdfDataFactory.literal('Tree', 'de-DE') });
+
+		editor.pickLiteralTag(0, {});
+
+		expect(editor.state.draft.values[0]).toMatchObject({ kind: 'term', term: RdfDataFactory.literal('Tree') });
 	});
 
 	it('declares no prefix for a picked value that is removed before the row is written', () => {

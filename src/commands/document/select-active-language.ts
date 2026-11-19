@@ -4,6 +4,7 @@ import { ServiceToken } from '@src/services/tokens';
 import { ISettingsService } from '@src/services/core';
 import { IDocumentContextService } from '@src/services/document';
 import { IDocumentContext } from '@src/services/document/document-context.interface';
+import { LanguageTags } from '@src/utilities/language-tags';
 import { resolveActiveRdfDocument } from '@src/utilities/vscode/active-rdf-document';
 
 /**
@@ -126,12 +127,10 @@ function _itemsOf(context: IDocumentContext, options: SelectActiveLanguageOption
 		return [{ label: 'No language tagged literals found.' }];
 	}
 
-	// Note: We translate the language code into a readable name in the UI language of the editor.
-	const languageNames = new Intl.DisplayNames([vscode.env.language], { type: 'language' });
 	const languageItems = languageEntries.map(([key, count]): LanguageQuickPickItem => {
 		const language = key === NO_LANGUAGE_KEY ? undefined : key;
 		const values = count === 1 ? 'value' : 'values';
-		const displayName = language ? (languageNames.of(language) ?? language) : 'undefined';
+		const displayName = language ? (LanguageTags.nameOf(language, vscode.env.language) ?? language) : 'undefined';
 
 		return {
 			selection: { kind: 'language', language },

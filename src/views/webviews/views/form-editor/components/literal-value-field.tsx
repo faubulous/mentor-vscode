@@ -1,10 +1,11 @@
 import { Literal } from '@rdfjs/types';
 import { XSD } from '@faubulous/mentor-rdf/ontologies';
 import { TermData } from '../form-editor-model';
-import { LiteralDatatypes } from '../services/statement/literal-datatypes';
+import { LiteralDatatypes } from '@src/utilities/literal-datatypes';
 import { getDatatypeFormat, getDatatypeProblem, getLiteralTagData, PrefixedNameOf } from './datatype-labels';
 import { EditedRow } from './edited-row';
 import { LiteralField } from './literal-field';
+import { TagChoice } from './tag-picker-items';
 import { useFormEditorContext } from '../state/form-editor-context';
 import { LanguageFilter } from '../state/language-filter';
 
@@ -57,12 +58,12 @@ export function LiteralValueField({ view, index, edited }: LiteralValueFieldProp
 			index={index}
 			text={term.value}
 			tag={tag}
+			current={term.language ? { language: term.language } : { datatype: datatype }}
 			placeholder={_placeholderOf(term)}
 			problem={term.value !== '' && editor.unfittingLiterals.has(index) ? getDatatypeProblem(tag?.text ?? 'string', datatype) : undefined}
 			numeric={LiteralDatatypes.isNumeric(datatype)}
 			integer={datatype === XSD.integer}
 			languages={services.languages}
-			services={services}
 			onInput={text => _input(edited, index, term.language, text, languageFilter)}
 			onFinish={() => {
 				editor.confirm();
@@ -70,7 +71,7 @@ export function LiteralValueField({ view, index, edited }: LiteralValueFieldProp
 			}}
 			onLeave={edited.focusNewValue}
 			onRemove={() => _remove(edited, index)}
-			onTagPick={(picked, option) => option ? editor.pickLiteralDatatype(index, option) : editor.inputLiteralTag(index, picked)}
+			onTagPick={choice => _pickTag(edited, index, choice)}
 		/>
 	);
 }
@@ -104,6 +105,19 @@ function _input(edited: EditedRow, index: number, language: string, text: string
 		edited.editor.removeValue(index);
 	} else {
 		edited.editor.inputLiteral(index, text);
+	}
+}
+
+/**
+ * Give a literal the tag picked for it. The empty field of the language a row lacks is no value
+ * yet, and takes no other tag.
+ * @param edited The row.
+ * @param index The index of the value.
+ * @param choice What the item picked gives the literal.
+ */
+function _pickTag(edited: EditedRow, index: number, choice: TagChoice): void {
+	if (index < edited.editor.state.draft.values.length) {
+		edited.editor.pickLiteralTag(index, choice.tag, choice.missingPrefix);
 	}
 }
 

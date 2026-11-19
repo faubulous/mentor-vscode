@@ -79,6 +79,24 @@ async function renderList(cardBody: ResourceCardBodyData = SAMPLE, others: Resou
 }
 
 /**
+ * The codes of the items the tag picker in an element shows, on its open tab.
+ * @param element The element.
+ * @returns The codes, in order.
+ */
+function codesOf(element: HTMLElement): (string | null)[] {
+	return Array.from(element.querySelectorAll('.tag-picker-code')).map(code => code.textContent);
+}
+
+/**
+ * The code of the item the tag picker in an element highlights.
+ * @param element The element.
+ * @returns The code, or `undefined` while none is highlighted.
+ */
+function activeCodeOf(element: HTMLElement): string | null | undefined {
+	return element.querySelector('.tag-picker-item.is-active .tag-picker-code')?.textContent;
+}
+
+/**
  * The labels of the options a combobox in an element shows.
  * @param element The element.
  * @returns The labels, in order.
@@ -175,42 +193,146 @@ describe('StatementList, edited in a browser', () => {
 		expect((input as unknown as { value: string }).value).toBe('x');
 	});
 
-	it('changes the language of a literal with the tag picker', async () => {
+	it('changes the language of a literal with the tag picker, which opens on its Language tab under the value with the language highlighted', async () => {
 		const { host } = await renderList();
+		const field = within(rows()[1]).getByLabelText('Value 1');
 
+		await userEvent.click(field);
 		await userEvent.click(within(rows()[1]).getByRole('button', { name: 'Language en, change' }));
-		await userEvent.keyboard('de{Enter}');
+
+		const picker = rows()[1].querySelector<HTMLElement>('.tag-picker')!;
+
+		expect(within(picker).getByRole('tab', { name: 'Language' }).getAttribute('aria-selected')).toBe('true');
+		expect(activeCodeOf(rows()[1])).toBe('en');
+		expect(document.activeElement).toBe(within(picker).getByRole('combobox', { name: 'Search languages' }));
+		expect(document.activeElement?.getAttribute('aria-activedescendant')).toBe(within(picker).getByRole('option', { selected: true }).id);
+		// Under the value, from its start.
+		expect(picker.getBoundingClientRect().top).toBeGreaterThanOrEqual(field.getBoundingClientRect().bottom);
+		expect(Math.round(picker.getBoundingClientRect().left)).toBe(Math.round(field.closest('.literal-field-box')!.getBoundingClientRect().left));
+
+		await userEvent.click(within(picker).getByRole('option', { name: /^de,/ }));
 
 		expect(within(rows()[1]).getByRole('button', { name: 'Language de, change' })).toBeTruthy();
+		expect(document.activeElement).toBe(field);
 
 		await leaveList();
 
 		expect(host.submitted[0].operations[0]).toEqual({ op: 'setValues', subject: TEST_SUBJECT, predicate: RDFS.label, values: [{ kind: 'term', term: RdfDataFactory.literal('Tree', 'de') }] });
 	});
 
-	it('opens the tag picker over the text with the datatypes a number fits on offer', async () => {
+	it('moves the highlight of the tag picker round its items with the arrows, switches its tabs, and picks with Enter, the focus going back to the value', async () => {
 		const cardBody = withAnchors(createTestCardBody([createProperty('ex:count', [{ term: RdfDataFactory.literal('42', RdfDataFactory.namedNode(XSD.integer)), editable: true }])]));
 
 		await renderList(cardBody);
+
+		const field = within(rows()[0]).getByLabelText('Value 1');
+
+		await userEvent.click(field);
 		await userEvent.click(within(rows()[0]).getByRole('button', { name: 'Datatype integer, change' }));
 
-		await expect.poll(() => optionLabelsOf(rows()[0])).toEqual(['string', 'integer', 'decimal', 'double', 'anyURI']);
-		expect(getComputedStyle(rows()[0].querySelector('.tag-picker')!).backgroundColor).not.toBe('rgba(0, 0, 0, 0)');
+		expect(codesOf(rows()[0])).toEqual(['string', 'boolean', 'integer', 'decimal', 'double', 'date', 'dateTime', 'anyURI']);
+		expect(activeCodeOf(rows()[0])).toBe('integer');
+
+		await userEvent.keyboard('{ArrowUp}{ArrowUp}{ArrowUp}');
+
+		expect(activeCodeOf(rows()[0])).toBe('anyURI');
+
+		await userEvent.keyboard('{ArrowRight}');
+
+		expect(within(rows()[0]).getByRole('tab', { name: 'Language' }).getAttribute('aria-selected')).toBe('true');
+
+		await userEvent.keyboard('{ArrowLeft}{ArrowDown}{Enter}');
+
+		expect(within(rows()[0]).getByRole('button', { name: 'Datatype decimal, change' })).toBeTruthy();
+		expect(rows()[0].querySelector('.tag-picker')).toBeNull();
+		expect(document.activeElement).toBe(field);
+		expect((field as HTMLTextAreaElement).value).toBe('42');
 	});
 
-	it('offers the languages and datatypes of the workspace after those the fields know, and declares the prefix of a picked datatype', async () => {
+	it('closes the tag picker with Escape, keeping the text and the focus, and with a second press of the tag', async () => {
+		await renderList();
+
+		const field = within(rows()[1]).getByLabelText('Value 1');
+		const tag = within(rows()[1]).getByRole('button', { name: 'Language en, change' });
+
+		await userEvent.click(field);
+		await userEvent.click(tag);
+		await userEvent.keyboard('{Escape}');
+
+		expect(rows()[1].querySelector('.tag-picker')).toBeNull();
+		expect(document.activeElement).toBe(field);
+
+		await userEvent.click(tag);
+		await userEvent.click(tag);
+
+		expect(rows()[1].querySelector('.tag-picker')).toBeNull();
+		expect(document.activeElement).toBe(field);
+	});
+
+	it('narrows the items of the tag picker to those matching its search, offers a language tag it does not list in standard form, and switches tabs with the arrows only while the search is empty', async () => {
+		await renderList();
+
+		await userEvent.click(within(rows()[1]).getByLabelText('Value 1'));
+		await userEvent.click(within(rows()[1]).getByRole('button', { name: 'Language en, change' }));
+		await userEvent.keyboard('germ');
+
+		expect(codesOf(rows()[1])).toEqual(['de']);
+
+		await userEvent.keyboard('{ArrowLeft}');
+
+		expect(within(rows()[1]).getByRole('tab', { name: 'Language' }).getAttribute('aria-selected')).toBe('true');
+
+		await userEvent.keyboard('{Control>}a{/Control}gmail');
+
+		expect(within(rows()[1]).getByText('No matching languages')).toBeTruthy();
+
+		await userEvent.keyboard('{Control>}a{/Control}de-ch');
+
+		expect(within(rows()[1]).getByRole('option', { name: 'de-CH, Use this tag' })).toBeTruthy();
+
+		await userEvent.keyboard('{Enter}');
+
+		expect(within(rows()[1]).getByRole('button', { name: 'Language de-CH, change' })).toBeTruthy();
+		expect(document.activeElement).toBe(within(rows()[1]).getByLabelText('Value 1'));
+	});
+
+	it('searches the datatypes, those of the workspace by their names too', async () => {
+		const geo = 'http://www.opengis.net/ont/geosparql#';
+		const termSearch = createTermSearchStub({ datatype: [createTermOption(`${geo}wktLiteral`, 'wkt literal', { prefixedName: 'geo:wktLiteral', source: 'workspace' })] });
+		const cardBody = withAnchors(createTestCardBody([createProperty('ex:count', [{ term: RdfDataFactory.literal('42', RdfDataFactory.namedNode(XSD.integer)), editable: true }])]));
+
+		await renderList(cardBody, [], RESOURCES, 1000, false, termSearch);
+		await userEvent.click(within(rows()[0]).getByLabelText('Value 1'));
+		await userEvent.click(within(rows()[0]).getByRole('button', { name: 'Datatype integer, change' }));
+		await userEvent.keyboard('d');
+
+		expect(codesOf(rows()[0])).toEqual(['decimal', 'double', 'date', 'dateTime']);
+
+		await userEvent.keyboard('{Backspace}wkt');
+		await expect.poll(() => codesOf(rows()[0])).toEqual(['geo:wktLiteral']);
+	});
+
+	it('offers the languages and datatypes of the workspace after those of the card and those the fields know, and declares the prefix of a picked datatype', async () => {
 		const geo = 'http://www.opengis.net/ont/geosparql#';
 		const wktLiteral = createTermOption(`${geo}wktLiteral`, 'wkt literal', { prefixedName: 'geo:wktLiteral', source: 'workspace', missingPrefix: { prefix: 'geo', namespace: geo } });
-		const termSearch = createTermSearchStub({ datatype: [wktLiteral, createTermOption(XSD.integer, 'integer', { source: 'workspace' })] }, ['de', 'fr']);
-		const cardBody = withAnchors(createTestCardBody([createProperty('ex:location', [{ term: RdfDataFactory.literal('POINT(1 2)'), editable: true }])]));
+		const termSearch = createTermSearchStub({ datatype: [wktLiteral, createTermOption(XSD.integer, 'integer', { source: 'workspace' })] }, ['fr', 'EN']);
+		const cardBody = withAnchors(createTestCardBody([
+			createProperty('rdfs:label', [createLiteralView('Baum', 'de-de')]),
+			createProperty('ex:location', [{ term: RdfDataFactory.literal('POINT(1 2)'), editable: true }])
+		]));
 		const { host } = await renderList(cardBody, [], RESOURCES, 1000, false, termSearch);
 
-		await userEvent.click(within(rows()[0]).getByLabelText('Value 1'));
-		await userEvent.click(within(rows()[0]).getByRole('button', { name: 'Datatype string, change' }));
+		await userEvent.click(within(rows()[1]).getByLabelText('Value 1'));
+		await userEvent.click(within(rows()[1]).getByRole('button', { name: 'Datatype string, change' }));
+		await expect.poll(() => codesOf(rows()[1]).slice(8)).toEqual(['geo:wktLiteral']);
 
-		await expect.poll(() => optionLabelsOf(rows()[0])).toEqual(['string', 'de', 'fr', 'wkt literal']);
+		expect(within(rows()[1]).getByRole('option', { name: 'geo:wktLiteral, wkt literal · adds geo:' })).toBeTruthy();
 
-		await userEvent.keyboard('wkt{Enter}');
+		await userEvent.keyboard('{ArrowRight}');
+		await expect.poll(() => codesOf(rows()[1]).slice(0, 3)).toEqual(['de-DE', 'fr', 'en']);
+
+		await userEvent.keyboard('{ArrowLeft}');
+		await userEvent.click(within(rows()[1]).getByRole('option', { name: /geo:wktLiteral/ }));
 		await leaveList();
 
 		expect(host.submitted.map(edit => edit.operations)).toEqual([[

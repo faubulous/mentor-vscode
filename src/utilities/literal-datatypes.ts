@@ -4,17 +4,7 @@ import { XsdValidation } from 'rdf-validation';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 
 /**
- * The IRI of the Markdown media type, which text literals in Markdown are typed with.
- */
-export const MARKDOWN_DATATYPE = 'https://www.iana.org/assignments/media-types/text/markdown';
-
-/**
- * The datatypes the literal fields know and offer, in the order they are offered.
- */
-const KNOWN: readonly string[] = [XSD.string, XSD.boolean, XSD.integer, XSD.decimal, XSD.double, XSD.date, XSD.dateTime, XSD.anyURI];
-
-/**
- * The datatypes whose values are numbers, written in the editor font and stepped with the arrows.
+ * The XSD datatypes whose values are numbers.
  */
 const NUMERIC: ReadonlySet<string> = new Set([XSD.integer, XSD.decimal, XSD.double, XSD.float]);
 
@@ -39,8 +29,8 @@ const FURTHER_CHECKS: ReadonlyMap<string, (text: string) => boolean> = new Map([
 ]);
 
 /**
- * What the literal fields know about datatypes: which of them they offer, which are numbers, and
- * which text each takes. How they are named is the components' to say.
+ * What is known about the datatypes of literals: which of them are numbers, and which text each
+ * takes by the lexical rules of XSD, as SHACL validation checks them.
  */
 export class LiteralDatatypes {
 	/**
@@ -50,15 +40,6 @@ export class LiteralDatatypes {
 	 */
 	static isNumeric(iri: string): boolean {
 		return NUMERIC.has(iri);
-	}
-
-	/**
-	 * Indicate whether the literal fields know a datatype, and offer it themselves.
-	 * @param iri The IRI of the datatype.
-	 * @returns `true` for a datatype the fields know.
-	 */
-	static isKnown(iri: string): boolean {
-		return KNOWN.includes(iri);
 	}
 
 	/**
@@ -73,15 +54,6 @@ export class LiteralDatatypes {
 		const literal = RdfDataFactory.literal(text, RdfDataFactory.namedNode(iri));
 
 		return XSD_VALIDATION.validateSimple(literal) && (FURTHER_CHECKS.get(iri)?.(text) ?? true);
-	}
-
-	/**
-	 * The datatypes the fields know that a text fits, in the order they are offered.
-	 * @param text The text.
-	 * @returns The IRIs of the datatypes.
-	 */
-	static fitting(text: string): string[] {
-		return KNOWN.filter(iri => LiteralDatatypes.fits(iri, text));
 	}
 
 	/**
