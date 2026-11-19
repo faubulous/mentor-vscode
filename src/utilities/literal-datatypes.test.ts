@@ -46,10 +46,4 @@ describe('LiteralDatatypes', () => {
 		expect(LiteralDatatypes.fitsTerm(RdfDataFactory.literal('x', 'en'))).toBe(true);
 		expect(LiteralDatatypes.fitsTerm(RdfDataFactory.namedNode('http://x'))).toBe(true);
 	});
-
-	it('knows the datatypes it offers, string first', () => {
-		expect(LiteralDatatypes.known()).toEqual([XSD.string, XSD.boolean, XSD.integer, XSD.decimal, XSD.double, XSD.date, XSD.dateTime, XSD.anyURI]);
-		expect(LiteralDatatypes.isKnown(XSD.date)).toBe(true);
-		expect(LiteralDatatypes.isKnown(XSD.float)).toBe(false);
-	});
 });

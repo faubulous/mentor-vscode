@@ -1,7 +1,7 @@
 import { Literal } from '@rdfjs/types';
 import { XSD } from '@faubulous/mentor-rdf/ontologies';
 import { TermData } from '../form-editor-model';
-import { LiteralDatatypes } from '../services/statement/literal-datatypes';
+import { LiteralDatatypes } from '@src/utilities/literal-datatypes';
 import { getDatatypeFormat, getDatatypeProblem, getLiteralTagData, PrefixedNameOf } from './datatype-labels';
 import { EditedRow } from './edited-row';
 import { LiteralField } from './literal-field';

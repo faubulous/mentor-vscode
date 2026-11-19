@@ -1,7 +1,7 @@
 import { KeyboardEvent } from 'react';
 import { NamedNode } from '@rdfjs/types';
 import { PinnedProperty, PredicateData, ResourceCardBodyData, TermData } from '../form-editor-model';
-import { LiteralDatatypes } from '../services/statement/literal-datatypes';
+import { LiteralDatatypes } from '@src/utilities/literal-datatypes';
 import { useFormEditorContext } from '../state/form-editor-context';
 import { LanguageFilter } from '../state/language-filter';
 import { HighlightedText } from './highlighted-text';

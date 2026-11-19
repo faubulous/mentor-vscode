@@ -4,7 +4,7 @@ import { BlankNode, NamedNode } from '@rdfjs/types';
 import { ValueKind } from '@src/utilities/value-kind';
 import { PredicateData, ResourceOptionData, TermData } from '../form-editor-model';
 import { EditOutcome } from '../services/editing-host-service.interface';
-import { LiteralDatatypes } from '../services/statement/literal-datatypes';
+import { LiteralDatatypes } from '@src/utilities/literal-datatypes';
 import { IriReading } from '../services/statement/typed-term-reader';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { EditWriter } from './edit-writer';

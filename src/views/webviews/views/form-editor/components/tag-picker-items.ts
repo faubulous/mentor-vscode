@@ -1,9 +1,8 @@
 import { _RDF, RDF, XSD } from '@faubulous/mentor-rdf/ontologies';
+import { LanguageTags } from '@src/utilities/language-tags';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { getLocalPartAndQuery } from '@src/utilities/uri';
 import { ResourceOptionData } from '../form-editor-model';
-import { LanguageTags } from '../services/statement/language-tags';
-import { LiteralDatatypes } from '../services/statement/literal-datatypes';
 import { narrowByMatch } from '../services/term-ranking';
 import { LiteralTag } from '../state/literal-tag';
 import { PrefixProposal } from '../state/prefix-proposal';
@@ -66,25 +65,30 @@ export interface TagPickerItemData {
 const FREE_TAG_DESCRIPTION = 'Use this tag';
 
 /**
+ * The datatypes the literal fields offer themselves, in the order they are offered.
+ */
+const OFFERED_DATATYPES: readonly string[] = [XSD.string, XSD.boolean, XSD.integer, XSD.decimal, XSD.double, XSD.date, XSD.dateTime, XSD.anyURI];
+
+/**
  * The datatypes of the workspace no literal of the picker takes, as they need a language.
  */
 const LANGUAGE_DATATYPES: ReadonlySet<string> = new Set([RDF.langString, `${_RDF}dirLangString`]);
 
 /**
- * The datatypes the tag picker offers: those the literal fields know, string first, then the
+ * The datatypes the tag picker offers: those the literal fields offer themselves, string first, then the
  * other datatypes of the workspace, as the host ranked them.
  * @param storeDatatypes The datatypes of the workspace.
  * @returns The items.
  */
 export function getDatatypeItems(storeDatatypes: readonly ResourceOptionData[]): TagPickerItemData[] {
-	const known = LiteralDatatypes.known().map(iri => {
+	const known = OFFERED_DATATYPES.map(iri => {
 		const code = getDatatypeName(RdfDataFactory.namedNode(iri), () => undefined);
 
 		return { key: _datatypeKeyOf(iri), code, description: getDatatypeFormat(iri) ?? '', names: [code], choice: { tag: iri === XSD.string ? {} : { datatype: iri } } };
 	});
 
 	const others = storeDatatypes
-		.filter(option => !LiteralDatatypes.isKnown(option.subject.value) && !LANGUAGE_DATATYPES.has(option.subject.value))
+		.filter(option => !OFFERED_DATATYPES.includes(option.subject.value) && !LANGUAGE_DATATYPES.has(option.subject.value))
 		.map(option => {
 			const code = getDatatypeName(option.subject, () => option.prefixedName);
 

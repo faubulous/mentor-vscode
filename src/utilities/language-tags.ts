@@ -1,7 +1,8 @@
 /**
- * Names languages in the language of the editor.
+ * The names of languages by the locale they are written in, the runtime's under `undefined`; made
+ * once per locale.
  */
-const LANGUAGE_NAMES = new Intl.DisplayNames(undefined, { type: 'language', fallback: 'none' });
+const languageNamesByLocale = new Map<string | undefined, Intl.DisplayNames>();
 
 /**
  * The shape of a language tag by the grammar of BCP 47: a language of two or three letters with up
@@ -27,13 +28,13 @@ const ISO_639_1_CODES: readonly string[] = (
 let commonLanguages: readonly string[] | undefined;
 
 /**
- * What the literal fields know about language tags: how a tag is written in its standard form,
- * which language it names, and which languages are commonly tagged.
+ * What is known about language tags: how a tag is written in its standard form, whether a text is
+ * one, which language it names, and which languages are commonly tagged.
  */
 export class LanguageTags {
 	/**
 	 * The languages a tag most often names, those of ISO 639-1, ordered by their names in the
-	 * language of the editor; those the editor has no name for are left out.
+	 * locale of the runtime; those the editor has no name for are left out.
 	 * @returns The language tags.
 	 */
 	static common(): readonly string[] {
@@ -103,16 +104,33 @@ export class LanguageTags {
 	}
 
 	/**
-	 * The name of the language a tag names, in the language of the editor, such as German (Germany)
-	 * for `de-DE`.
+	 * The name of the language a tag names, such as German (Germany) for `de-DE`, in a locale or
+	 * else in that of the runtime, which in a webview is the language of the editor.
 	 * @param tag The language tag.
-	 * @returns The name, or `undefined` for a tag that names no language the editor knows.
+	 * @param locale The locale to name the language in, such as `vscode.env.language` on the host.
+	 * @returns The name, or `undefined` for a tag that names no language the runtime knows.
 	 */
-	static nameOf(tag: string): string | undefined {
+	static nameOf(tag: string, locale?: string): string | undefined {
 		try {
-			return LANGUAGE_NAMES.of(tag);
+			return _languageNamesIn(locale).of(tag);
 		} catch {
 			return undefined;
 		}
 	}
+}
+
+/**
+ * The names of languages in a locale, made on first use.
+ * @param locale The locale, or `undefined` for that of the runtime.
+ * @returns The names.
+ */
+function _languageNamesIn(locale: string | undefined): Intl.DisplayNames {
+	let names = languageNamesByLocale.get(locale);
+
+	if (!names) {
+		names = new Intl.DisplayNames(locale, { type: 'language', fallback: 'none' });
+		languageNamesByLocale.set(locale, names);
+	}
+
+	return names;
 }

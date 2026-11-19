@@ -14,6 +14,7 @@ describe('LanguageTags', () => {
 
 	it('names the language of a tag, and nothing for a tag it does not know', () => {
 		expect(LanguageTags.nameOf('en')).toBe(new Intl.DisplayNames(undefined, { type: 'language' }).of('en'));
+		expect(LanguageTags.nameOf('de', 'de')).toBe('Deutsch');
 		expect(LanguageTags.nameOf('qqq')).toBeUndefined();
 		expect(LanguageTags.nameOf('not a tag')).toBeUndefined();
 	});
