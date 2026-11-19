@@ -3,7 +3,8 @@ import { describe, expect, it, vi } from 'vitest';
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 
 import { OwlReasoner, Store, VocabularyRepository, _OWL, _RDF, _RDFS } from '@faubulous/mentor-rdf';
-import { IDocumentContext } from '@src/services/document/document-context.interface';
+import { RdfSyntax } from '@faubulous/mentor-rdf-parsers';
+import { ITokenizedDocumentContext } from '@src/services/document/document-context.interface';
 import { IPrefixLookupService } from '@src/services/document/prefix-lookup-service.interface';
 import { createResolvingDocumentContext } from '@src/utilities/mocks/factories';
 import { TermSearchKind } from '@src/views/webviews/views/form-editor/form-editor-model';
@@ -63,10 +64,11 @@ function createCatalogue(store = createStore(), whenIndexed = () => Promise.reso
 /**
  * The document the pickers edit.
  * @param namespaces The prefixes it declares.
+ * @param syntax The syntax it is written in.
  * @returns The context.
  */
-function createDocument(namespaces: Record<string, string> = { ex: EX }): IDocumentContext {
-	return { ...createResolvingDocumentContext({ namespaces, labels: LABELS }), graphs: [DOCUMENT_GRAPH] } as unknown as IDocumentContext;
+function createDocument(namespaces: Record<string, string> = { ex: EX }, syntax = RdfSyntax.Turtle): ITokenizedDocumentContext {
+	return { ...createResolvingDocumentContext({ namespaces, labels: LABELS }), syntax, graphs: [DOCUMENT_GRAPH] } as unknown as ITokenizedDocumentContext;
 }
 
 /**
@@ -76,7 +78,7 @@ function createDocument(namespaces: Record<string, string> = { ex: EX }): IDocum
  * @param options The catalogue and the document.
  * @returns The IRIs, best first.
  */
-async function find(kind: TermSearchKind, text: string, options: { catalogue?: TermCatalogueService; document?: IDocumentContext; limit?: number } = {}): Promise<string[]> {
+async function find(kind: TermSearchKind, text: string, options: { catalogue?: TermCatalogueService; document?: ITokenizedDocumentContext; limit?: number } = {}): Promise<string[]> {
 	const catalogue = options.catalogue ?? createCatalogue();
 	const found = await catalogue.search({ kind, text, limit: options.limit ?? 50 }, options.document ?? createDocument());
 
@@ -113,7 +115,7 @@ describe('TermCatalogueService', () => {
 			ex:Bed a ex:Planter .
 		`, gardenGraph, true);
 
-		const options = { catalogue: createCatalogue(store), document: { ...createDocument(), graphs: [DOCUMENT_GRAPH, gardenGraph] } as IDocumentContext };
+		const options = { catalogue: createCatalogue(store), document: { ...createDocument(), graphs: [DOCUMENT_GRAPH, gardenGraph] } as ITokenizedDocumentContext };
 
 		expect(await find('resource', 'gard', options)).toEqual([`${EX}Garden`]);
 		expect(await find('class', 'planter', options)).toEqual([`${EX}Planter`]);
@@ -125,6 +127,14 @@ describe('TermCatalogueService', () => {
 		const [tree] = await createCatalogue().search({ kind: 'class', text: 'Tree', limit: 1 }, createDocument());
 
 		expect(tree).toMatchObject({ label: 'Tree', prefixedName: 'v:Tree', source: 'workspace', missingPrefix: { prefix: 'v', namespace: V } });
+	});
+
+	it.each([RdfSyntax.NTriples, RdfSyntax.NQuads])('proposes no prefix in a document written in %s, which writes no prefixed names', async syntax => {
+		const [tree] = await createCatalogue().search({ kind: 'class', text: 'Tree', limit: 1 }, createDocument({}, syntax));
+
+		expect(tree).toMatchObject({ label: 'Tree', source: 'workspace' });
+		expect(tree.prefixedName).toBeUndefined();
+		expect(tree.missingPrefix).toBeUndefined();
 	});
 
 	it('writes a term by the prefixes of the document and ranks it as declared, where the document declares its namespace', async () => {
