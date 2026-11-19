@@ -3,21 +3,24 @@ import { userEvent } from 'vitest/browser';
 import { render } from '@testing-library/react';
 import { useState } from 'react';
 import { coverPage } from '@src/utilities/mocks/webview-test-utils';
+import { narrowByMatch } from '../services/term-ranking';
 import { Combobox, ComboboxOption } from './combobox';
 
 const OPTIONS: ComboboxOption<string>[] = [
-	{ label: 'Tree', detail: 'ex:Tree\nhttp://example.org/Tree', keywords: 'ex:Tree', value: 'tree' },
-	{ label: 'Apple tree', detail: 'ex:AppleTree\nhttp://example.org/AppleTree', keywords: 'ex:AppleTree', value: 'apple' },
-	{ label: 'Plant', detail: 'ex:Plant\nhttp://example.org/Plant', keywords: 'ex:Plant', value: 'plant' }
+	{ label: 'Tree', detail: 'http://example.org/Tree', value: 'ex:Tree' },
+	{ label: 'Apple tree', detail: 'http://example.org/AppleTree', value: 'ex:AppleTree' },
+	{ label: 'Plant', detail: 'http://example.org/Plant', value: 'ex:Plant' }
 ];
 
 /**
- * A combobox holding its own text, as a row does.
+ * A combobox holding its own text, as a row does, offering the options that match it by their
+ * labels and prefixed names, as the pickers match them.
  */
 function Harness(props: { onPick: (value: string) => void; onCreate: (text: string) => void; onCancel: () => void }): React.JSX.Element {
 	const [text, setText] = useState('');
+	const options = narrowByMatch(OPTIONS, text, option => [option.label, option.value]);
 
-	return <Combobox text={text} onTextChange={setText} options={OPTIONS} label="Resource" {...props} />;
+	return <Combobox text={text} onTextChange={setText} options={options} label="Resource" {...props} />;
 }
 
 /**
@@ -51,11 +54,11 @@ describe('Combobox', () => {
 
 		await userEvent.keyboard('{Enter}');
 
-		expect(onPick).toHaveBeenCalledWith('tree');
+		expect(onPick).toHaveBeenCalledWith('ex:Tree');
 		expect(shown(container)).toEqual([]);
 	});
 
-	it('moves the highlight with the arrows and matches the keywords as well, not the IRI', async () => {
+	it('moves the highlight with the arrows', async () => {
 		const { container, onPick } = await renderCombobox();
 
 		await userEvent.keyboard('ex:');
@@ -65,7 +68,7 @@ describe('Combobox', () => {
 
 		await userEvent.keyboard('{ArrowDown}{Enter}');
 
-		expect(onPick).toHaveBeenCalledWith('tree');
+		expect(onPick).toHaveBeenCalledWith('ex:Tree');
 
 		await userEvent.keyboard('{Control>}a{/Control}http');
 
@@ -123,7 +126,7 @@ describe('Combobox', () => {
 
 		await userEvent.click(container.querySelectorAll('.combobox-option')[0]);
 
-		expect(onPick).toHaveBeenCalledWith('plant');
+		expect(onPick).toHaveBeenCalledWith('ex:Plant');
 		expect(document.activeElement).toBe(field);
 	});
 });

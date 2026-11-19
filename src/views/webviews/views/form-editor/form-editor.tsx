@@ -92,6 +92,7 @@ function FormEditor(): React.JSX.Element {
 				hostService.accept(message);
 				break;
 			case 'TermSearchResult':
+			case 'WorkspaceLanguagesResponse':
 				termSearch.accept(message);
 				break;
 			case 'ScrollToResource':

@@ -54,7 +54,7 @@ export function LiteralValueField({ view, index, edited }: LiteralValueFieldProp
 			languages={services.languages}
 			services={services}
 			onInput={text => _input(edited, index, term.language, text, languageFilter)}
-			onTagPick={tag => editor.inputLiteralTag(index, tag)}
+			onTagPick={(tag, datatype) => datatype ? editor.pickLiteralDatatype(index, datatype) : editor.inputLiteralTag(index, tag)}
 		/>
 	);
 }

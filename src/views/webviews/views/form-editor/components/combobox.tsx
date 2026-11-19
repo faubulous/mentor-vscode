@@ -12,7 +12,7 @@ const MAX_OPTIONS = 50;
  */
 export interface ComboboxOption<T> {
 	/**
-	 * The text the option is shown and filtered by.
+	 * The text the option is shown by.
 	 */
 	label: string;
 
@@ -20,11 +20,6 @@ export interface ComboboxOption<T> {
 	 * What is shown after the label, muted, such as an IRI.
 	 */
 	detail?: string;
-
-	/**
-	 * What the typed text is matched against besides the label, such as a prefixed name.
-	 */
-	keywords?: string;
 
 	/**
 	 * The glyph shown before the label, such as that of the kind of a term.
@@ -57,15 +52,9 @@ export interface ComboboxProps<T> {
 	onTextChange: (text: string) => void;
 
 	/**
-	 * The options, which the typed text filters.
+	 * The options that match the typed text, best first, as the caller matched them.
 	 */
 	options: readonly ComboboxOption<T>[];
-
-	/**
-	 * Whether the options are filtered and ranked for the text already, as by a search, and are
-	 * shown as given rather than filtered by the typed text.
-	 */
-	ranked?: boolean;
 
 	/**
 	 * Whether the list opens when the field takes the focus, rather than once something is typed.
@@ -135,21 +124,21 @@ export interface ComboboxProps<T> {
 }
 
 /**
- * A text field with a list of options under it that the typed text filters, as a combobox does:
- * typing opens the list and highlights the best match, the arrows move the highlight, Enter picks
- * it or, with no match, takes the typed text, Escape closes the list and with the list closed
- * cancels, and a click picks an option. Options a search ranked already are shown as given, each
- * on one line. The focus stays in the field throughout; the list opens in the top layer of the
+ * A text field with a list of options under it, as a combobox does: the caller matches the options
+ * to the typed text and ranks them, and they are shown as given, each on one line. Typing opens
+ * the list and highlights the best match, the arrows move the highlight, Enter picks it or, with
+ * no match, takes the typed text, Escape closes the list and with the list closed cancels, and a
+ * click picks an option. The focus stays in the field throughout; the list opens in the top layer of the
  * page, so no card covers it, and is styled with the list colours of the theme.
  * @param props The text, the options and what to do with a pick.
  * @returns The combobox.
  */
 export function Combobox<T>(props: ComboboxProps<T>): React.JSX.Element {
-	const { text, onTextChange, options, ranked = false, openOnFocus = false, readOnly = false, onPick, onCreate, onCancel, onKeyDown, onFocus, onBlur, label, placeholder, title, className, fieldRef } = props;
+	const { text, onTextChange, options, openOnFocus = false, readOnly = false, onPick, onCreate, onCancel, onKeyDown, onFocus, onBlur, label, placeholder, title, className, fieldRef } = props;
 	const listId = useId();
 	const [open, setOpen] = useState(false);
 	const [active, setActive] = useState(0);
-	const matches = useMemo(() => (ranked ? [...options] : _rank(options, text)).slice(0, MAX_OPTIONS), [options, ranked, text]);
+	const matches = useMemo(() => options.slice(0, MAX_OPTIONS), [options]);
 	const shown = open && !readOnly && matches.length > 0;
 
 	// The best match is highlighted while typing and as the options arrive, so Enter picks it.
@@ -274,35 +263,4 @@ function _showAsPopover(list: HTMLUListElement | null): void {
 	if (list && typeof list.showPopover === 'function' && !list.matches(':popover-open')) {
 		list.showPopover();
 	}
-}
-
-/**
- * Rank the options a text matches: those whose label starts with it first, then those whose label
- * contains it, then those whose keywords do; all of them while nothing is typed.
- * @param options The options.
- * @param text The typed text.
- * @returns The matching options, best first.
- */
-function _rank<T>(options: readonly ComboboxOption<T>[], text: string): ComboboxOption<T>[] {
-	const query = text.trim().toLowerCase();
-
-	if (query === '') {
-		return [...options];
-	}
-
-	const score = (option: ComboboxOption<T>): number => {
-		const label = option.label.toLowerCase();
-
-		if (label.startsWith(query)) {
-			return 0;
-		}
-
-		if (label.includes(query)) {
-			return 1;
-		}
-
-		return option.keywords?.toLowerCase().includes(query) ? 2 : -1;
-	};
-
-	return options.map(option => ({ option, rank: score(option) })).filter(entry => entry.rank >= 0).sort((a, b) => a.rank - b.rank).map(entry => entry.option);
 }

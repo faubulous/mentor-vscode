@@ -188,17 +188,34 @@ describe('StatementList, edited in a browser', () => {
 		expect(host.submitted[0].operations[0]).toEqual({ op: 'setValues', subject: TEST_SUBJECT, predicate: RDFS.label, values: [{ kind: 'term', term: RdfDataFactory.literal('Tree', 'de') }] });
 	});
 
-	it('offers the datatypes a number fits', async () => {
+	it('opens the tag picker over the text with the datatypes a number fits on offer', async () => {
 		const cardBody = withAnchors(createTestCardBody([createProperty('ex:count', [{ term: RdfDataFactory.literal('42', RdfDataFactory.namedNode(XSD.integer)), editable: true }])]));
 
 		await renderList(cardBody);
 		await userEvent.click(within(rows()[0]).getByRole('button', { name: /^Integer\./ }));
 
-		expect(optionLabelsOf(rows()[0])).toEqual([]);
+		await expect.poll(() => optionLabelsOf(rows()[0])).toEqual(['Text', 'Integer', 'Decimal', 'Double', 'Float', 'Markdown']);
+		expect(getComputedStyle(rows()[0].querySelector('.tag-picker')!).backgroundColor).not.toBe('rgba(0, 0, 0, 0)');
+	});
 
-		await userEvent.keyboard('{ArrowDown}');
+	it('offers the languages and datatypes of the workspace after those the fields know, and declares the prefix of a picked datatype', async () => {
+		const xsd = 'http://www.w3.org/2001/XMLSchema#';
+		const dateTime = createTermOption(XSD.dateTime, 'date time', { prefixedName: 'xsd:dateTime', source: 'workspace', missingPrefix: { prefix: 'xsd', namespace: xsd } });
+		const termSearch = createTermSearchStub({ datatype: [dateTime, createTermOption(XSD.integer, 'integer', { source: 'workspace' })] }, ['de', 'fr']);
+		const cardBody = withAnchors(createTestCardBody([createProperty('ex:created', [{ term: RdfDataFactory.literal('2026-11-18T12:00:00Z'), editable: true }])]));
+		const { host } = await renderList(cardBody, [], RESOURCES, 1000, false, termSearch);
 
-		expect(optionLabelsOf(rows()[0])).toEqual(['Text', 'Integer', 'Decimal', 'Double', 'Float', 'Markdown']);
+		await userEvent.click(within(rows()[0]).getByRole('button', { name: /^Text\./ }));
+
+		await expect.poll(() => optionLabelsOf(rows()[0])).toEqual(['Text', 'Markdown', 'de', 'fr', 'date time']);
+
+		await userEvent.keyboard('date{Enter}');
+		await leaveList();
+
+		expect(host.submitted.map(edit => edit.operations)).toEqual([[
+			{ op: 'declarePrefix', prefix: 'xsd', namespace: xsd },
+			{ op: 'setValues', subject: TEST_SUBJECT, predicate: `${EXAMPLE_NAMESPACE}created`, values: [{ kind: 'term', term: RdfDataFactory.literal('2026-11-18T12:00:00Z', RdfDataFactory.namedNode(XSD.dateTime)) }] }
+		]]);
 	});
 
 	it('steps a whole number with the arrows', async () => {

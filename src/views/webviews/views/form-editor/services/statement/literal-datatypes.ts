@@ -60,6 +60,15 @@ export class LiteralDatatypes {
 	}
 
 	/**
+	 * Indicate whether the literal fields know a datatype, and name it themselves.
+	 * @param iri The IRI of the datatype.
+	 * @returns `true` for a datatype the fields know.
+	 */
+	static isKnown(iri: string): boolean {
+		return KNOWN.some(datatype => datatype.iri === iri);
+	}
+
+	/**
 	 * Indicate whether a text is a value of a datatype. A datatype the fields do not know takes
 	 * any text.
 	 * @param iri The IRI of the datatype.

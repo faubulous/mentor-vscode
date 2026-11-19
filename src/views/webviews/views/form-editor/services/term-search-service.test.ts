@@ -24,6 +24,20 @@ function createService(): { service: TermSearchService; posted: FormEditorWebvie
 }
 
 describe('TermSearchService', () => {
+	it('asks for the languages of the workspace and answers by the identifier of the request', async () => {
+		const { service, posted } = createService();
+		const search = service.search('datatype', '', 10);
+		const languages = service.getWorkspaceLanguages();
+
+		expect(posted[1]).toEqual({ id: 'WorkspaceLanguagesRequest', requestId: 2 });
+		expect(service.accept({ id: 'WorkspaceLanguagesResponse', requestId: 2, languages: ['de', 'fr'] })).toBe(true);
+		expect(await languages).toEqual(['de', 'fr']);
+
+		service.accept({ id: 'TermSearchResult', requestId: 1, options: [] });
+
+		expect(await search).toEqual([]);
+	});
+
 	it('sends each search with an identifier of its own and answers it by that identifier', async () => {
 		const { service, posted } = createService();
 		const first = service.search('predicate', 'la', 10);

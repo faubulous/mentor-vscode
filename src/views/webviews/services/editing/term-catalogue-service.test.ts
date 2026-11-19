@@ -186,4 +186,23 @@ describe('TermCatalogueService', () => {
 
 		expect(await find('class', 'shrub', { catalogue })).toEqual([`${V}Shrub`]);
 	});
+
+	it('tells the languages of the workspace, the most used first, read anew once the store changed', async () => {
+		const store = createStore();
+		const catalogue = createCatalogue(store);
+
+		store.loadTurtle(`${PREAMBLE} v:Tree rdfs:label "Baum"@de, "Arbre"@fr ; rdfs:comment "Ein Baum"@de .`, 'http://example.org/labels', true);
+
+		expect(await catalogue.getWorkspaceLanguages()).toEqual(['de', 'fr']);
+
+		store.loadTurtle(`${PREAMBLE} v:Oak rdfs:label "Chêne"@fr, "Rouvre"@fr ; rdfs:comment "Le chêne"@fr .`, 'http://example.org/more', true);
+
+		expect(await catalogue.getWorkspaceLanguages()).toEqual(['fr', 'de']);
+	});
+
+	it('offers the datatypes of the store by the shape of the values they hold', async () => {
+		const [length] = await createCatalogue().search({ kind: 'datatype', text: 'len', limit: 1 }, createDocument());
+
+		expect(length).toMatchObject({ subject: { value: `${V}Length` }, iconName: 'symbol-text' });
+	});
 });
