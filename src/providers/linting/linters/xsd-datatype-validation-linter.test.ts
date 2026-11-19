@@ -1,23 +1,19 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { TextDocument } from 'vscode-languageserver-textdocument';
-import { DiagnosticSeverity } from 'vscode-languageserver-types';
+import { Diagnostic, DiagnosticSeverity } from 'vscode-languageserver-types';
 import { XsdDatatypeValidationLinter } from './xsd-datatype-validation-linter';
 
 vi.mock('@faubulous/mentor-rdf-serializers', () => ({}));
 
-function runProvider(rule: any, ctx: { document: any; content: string; tokens: any[]; prefixes: any }) {
-	// Adapt the test's `document` to the LintingContext's `positionAt` mapper.
-	const context = { positionAt: (o: number) => ctx.document.positionAt(o), content: ctx.content, tokens: ctx.tokens, prefixes: ctx.prefixes };
-	rule.reset?.();
-	const result = ctx.tokens.flatMap((t: any, i: number) => rule.visitToken(context, t, i));
-	result.push(...(rule.finalize?.(context) ?? []));
-	return result;
-}
+const XSD_NAMESPACE = 'http://www.w3.org/2001/XMLSchema#';
 
-function makeDoc(content = '') {
-	return TextDocument.create('file:///test.ttl', 'turtle', 1, content);
-}
-
+/**
+ * A token as the linter reads it, at an offset of the document.
+ * @param name The name of the token type.
+ * @param image The text of the token.
+ * @param offset The offset of its first character.
+ * @returns The token.
+ */
 function makeToken(name: string, image: string, offset = 0) {
 	return {
 		tokenType: { name },
@@ -25,318 +21,152 @@ function makeToken(name: string, image: string, offset = 0) {
 		startOffset: offset,
 		endOffset: offset + image.length - 1,
 		startLine: 1,
-		startColumn: 1,
+		startColumn: offset + 1,
 		endLine: 1,
-		endColumn: image.length,
+		endColumn: offset + image.length
 	};
 }
 
 /**
- * Builds a [literal, ^^, <datatype>] token triple.
+ * The tokens `literal ^^ datatype`, the datatype written as given.
+ * @param literal The literal, with its quotes.
+ * @param datatype The datatype token, by its type name and text.
+ * @param literalType The name of the token type of the literal.
+ * @returns The tokens.
  */
-function xsdTokens(literalImage: string, xsdIri: string, tokenType = 'STRING_LITERAL_QUOTE') {
-	const lit = makeToken(tokenType, literalImage, 0);
-	const dc = makeToken('DCARET', '^^', literalImage.length);
-	const dt = makeToken('IRIREF', `<${xsdIri}>`, literalImage.length + 2);
-	return [lit, dc, dt];
+function typedLiteralTokens(literal: string, datatype: { name: string; image: string }, literalType = 'STRING_LITERAL_QUOTE') {
+	return [
+		makeToken(literalType, literal, 0),
+		makeToken('DCARET', '^^', literal.length),
+		makeToken(datatype.name, datatype.image, literal.length + 2)
+	];
+}
+
+/**
+ * Lint tokens with the XSD datatype linter.
+ * @param tokens The tokens.
+ * @param prefixes The prefixes the document declares.
+ * @returns The diagnostics.
+ */
+function lintTokens(tokens: ReturnType<typeof makeToken>[], prefixes: Record<string, string> = {}): Diagnostic[] {
+	const content = tokens.map(token => token.image).join('');
+	const document = TextDocument.create('file:///test.ttl', 'turtle', 1, content);
+	const context = { positionAt: (offset: number) => document.positionAt(offset), content, tokens, prefixes } as any;
+	const linter = new XsdDatatypeValidationLinter();
+
+	return tokens.flatMap((token, index) => linter.visitToken(context, token as any, index));
+}
+
+/**
+ * Lint a literal of an XSD datatype, written as a full IRI.
+ * @param literal The literal, with its quotes.
+ * @param localName The local name of the XSD datatype.
+ * @param literalType The name of the token type of the literal.
+ * @returns The diagnostics.
+ */
+function lint(literal: string, localName: string, literalType?: string): Diagnostic[] {
+	return lintTokens(typedLiteralTokens(literal, { name: 'IRIREF', image: `<${XSD_NAMESPACE}${localName}>` }, literalType));
 }
 
 describe('XsdDatatypeValidationLinter', () => {
-	let rule: XsdDatatypeValidationLinter;
-
-	beforeEach(() => {
-		rule = new XsdDatatypeValidationLinter();
+	it.each([
+		['"true"', 'boolean'],
+		['"0"', 'boolean'],
+		['"1"', 'boolean'],
+		['"42"', 'integer'],
+		['"+42"', 'integer'],
+		['"2147483647"', 'int'],
+		['"32767"', 'short'],
+		['"9223372036854775807"', 'long'],
+		['"-1"', 'negativeInteger'],
+		['"0"', 'nonNegativeInteger'],
+		['"0"', 'nonPositiveInteger'],
+		['"1"', 'positiveInteger'],
+		['"255"', 'unsignedByte'],
+		['"3.14"', 'decimal'],
+		['"1.5E3"', 'double'],
+		['"-INF"', 'float'],
+		['"2024-02-29"', 'date'],
+		['"2024-01-15+02:00"', 'date'],
+		['"2024-01-15T10:30:00Z"', 'dateTime'],
+		['"10:30:00Z"', 'time'],
+		['"10:30:00+02:00"', 'time'],
+		['"P1Y2M3DT4H5M6S"', 'duration'],
+		['"2024"', 'gYear'],
+		['"deadBEEF"', 'hexBinary'],
+		['"3q2+7w=="', 'base64Binary'],
+		['"https://example.org/a"', 'anyURI'],
+		['"anything"', 'string']
+	])('accepts %s as xsd:%s', (literal, localName) => {
+		expect(lint(literal, localName)).toHaveLength(0);
 	});
 
-	it('returns no diagnostics when there are no DoubleCaret tokens', () => {
-		const tokens = [makeToken('PNAME_LN', 'ex:Thing')];
-		const diags = runProvider(rule, { document: makeDoc(), content: '', tokens, prefixes: {} });
-		expect(diags).toHaveLength(0);
+	it.each([
+		['"yes"', 'boolean', 'true, false, 1 or 0'],
+		['"12abc"', 'integer', '[+|-]digits'],
+		['"1.5"', 'integer', '[+|-]digits'],
+		['"2147483648"', 'int', 'from -2147483648 to 2147483647'],
+		['"-2147483649"', 'int', 'from -2147483648 to 2147483647'],
+		['"40000"', 'short', 'from -32768 to 32767'],
+		['"0"', 'negativeInteger', 'below 0'],
+		['"-1"', 'nonNegativeInteger', '0 or more'],
+		['"1"', 'nonPositiveInteger', '0 or less'],
+		['"0"', 'positiveInteger', 'above 0'],
+		['"-1"', 'unsignedInt', 'from 0 to 4294967295'],
+		['"3.14abc"', 'decimal', '[+|-]digits[.digits]'],
+		['"1,5"', 'double', 'INF, -INF or NaN'],
+		['"x2024-01-15"', 'date', 'YYYY-MM-DD'],
+		['"2024-13-01"', 'date', 'YYYY-MM-DD'],
+		['"2023-02-29"', 'date', 'a day its month has'],
+		['"2024-04-31T10:00:00"', 'dateTime', 'a day its month has'],
+		['"2024-01-15T10:30"', 'dateTime', 'YYYY-MM-DDThh:mm:ss'],
+		['"10:30"', 'time', 'hh:mm:ss'],
+		['"1Y"', 'duration', 'PnYnMnDTnHnMnS'],
+		['"abc"', 'hexBinary', 'pairs of hexadecimal digits'],
+		['"xyz!"', 'base64Binary', 'Base64'],
+		['"abc"', 'base64Binary', 'Base64'],
+		['"https://example.org/a b"', 'anyURI', 'without white space']
+	])('warns about %s as xsd:%s, expecting %s', (literal, localName, expected) => {
+		const diagnostics = lint(literal, localName);
+
+		expect(diagnostics).toHaveLength(1);
+		expect(diagnostics[0].severity).toBe(DiagnosticSeverity.Warning);
+		expect(diagnostics[0].message).toContain(`xsd:${localName}`);
+		expect(diagnostics[0].message).toContain(expected);
 	});
 
-	it('skips DoubleCaret at end of token stream (boundary check)', () => {
-		const tokens = [
-			makeToken('STRING_LITERAL_QUOTE', '"hello"', 0),
-			makeToken('DCARET', '^^', 7),
-		];
-		const diags = runProvider(rule, { document: makeDoc(), content: '', tokens, prefixes: {} });
-		expect(diags).toHaveLength(0);
+	it('names a datatype it has no expected text for without one', () => {
+		expect(lint('"two words  "', 'token')[0].message).toBe('The value is not a valid xsd:token.');
 	});
 
-	it('returns no diagnostics for unknown datatypes', () => {
-		const tokens = xsdTokens('"anything"', 'http://example.org/myType');
-		const diags = runProvider(rule, { document: makeDoc(), content: '', tokens, prefixes: {} });
-		expect(diags).toHaveLength(0);
+	it('marks the literal, quotes included', () => {
+		expect(lint('"yes"', 'boolean')[0].range).toEqual({ start: { line: 0, character: 0 }, end: { line: 0, character: 5 } });
 	});
 
-	describe('xsd:boolean', () => {
-		it('returns no diagnostic for "true"', () => {
-			const tokens = xsdTokens('"true"', 'http://www.w3.org/2001/XMLSchema#boolean');
-			expect(runProvider(rule, { document: makeDoc(), content: '', tokens, prefixes: {} })).toHaveLength(0);
-		});
+	it('resolves a prefixed datatype', () => {
+		const tokens = typedLiteralTokens('"yes"', { name: 'PNAME_LN', image: 'xsd:boolean' });
 
-		it('returns no diagnostic for "false"', () => {
-			const tokens = xsdTokens('"false"', 'http://www.w3.org/2001/XMLSchema#boolean');
-			expect(runProvider(rule, { document: makeDoc(), content: '', tokens, prefixes: {} })).toHaveLength(0);
-		});
-
-		it('returns a warning for invalid boolean', () => {
-			const tokens = xsdTokens('"yes"', 'http://www.w3.org/2001/XMLSchema#boolean');
-			const diags = runProvider(rule, { document: makeDoc(), content: '', tokens, prefixes: {} });
-			expect(diags).toHaveLength(1);
-			expect(diags[0].severity).toBe(DiagnosticSeverity.Warning);
-			expect(diags[0].message).toContain('boolean');
-		});
+		expect(lintTokens(tokens, { xsd: XSD_NAMESPACE })).toHaveLength(1);
 	});
 
-	describe('xsd:integer', () => {
-		it('returns no diagnostic for a valid integer', () => {
-			const tokens = xsdTokens('"42"', 'http://www.w3.org/2001/XMLSchema#integer');
-			expect(runProvider(rule, { document: makeDoc(), content: '', tokens, prefixes: {} })).toHaveLength(0);
-		});
-
-		it('returns a warning for a non-numeric integer', () => {
-			const tokens = xsdTokens('"abc"', 'http://www.w3.org/2001/XMLSchema#integer');
-			const diags = runProvider(rule, { document: makeDoc(), content: '', tokens, prefixes: {} });
-			expect(diags).toHaveLength(1);
-			expect(diags[0].message).toContain('integer');
-		});
+	it('reads the text of long and single-quoted literals', () => {
+		expect(lint('"""true"""', 'boolean', 'STRING_LITERAL_LONG_QUOTE')).toHaveLength(0);
+		expect(lint("'42'", 'integer', 'STRING_LITERAL_SINGLE_QUOTE')).toHaveLength(0);
+		expect(lint("'''x'''", 'integer', 'STRING_LITERAL_LONG_SINGLE_QUOTE')).toHaveLength(1);
 	});
 
-	describe('xsd:int', () => {
-		it('returns no diagnostic for a value within range', () => {
-			const tokens = xsdTokens('"2147483647"', 'http://www.w3.org/2001/XMLSchema#int');
-			expect(runProvider(rule, { document: makeDoc(), content: '', tokens, prefixes: {} })).toHaveLength(0);
-		});
-
-		it('returns a warning for a value above the max', () => {
-			const tokens = xsdTokens('"2147483648"', 'http://www.w3.org/2001/XMLSchema#int');
-			const diags = runProvider(rule, { document: makeDoc(), content: '', tokens, prefixes: {} });
-			const range = diags.find(d => d.message.includes('[-2147483648, 2147483647]'));
-			expect(range).toBeDefined();
-		});
-
-		it('returns a warning for a value below the min', () => {
-			const tokens = xsdTokens('"-2147483649"', 'http://www.w3.org/2001/XMLSchema#int');
-			const diags = runProvider(rule, { document: makeDoc(), content: '', tokens, prefixes: {} });
-			expect(diags.find(d => d.message.includes('[-2147483648, 2147483647]'))).toBeDefined();
-		});
+	it('leaves datatypes of other vocabularies and undeclared prefixes alone', () => {
+		expect(lintTokens(typedLiteralTokens('"anything"', { name: 'IRIREF', image: '<http://example.org/myType>' }))).toHaveLength(0);
+		expect(lintTokens(typedLiteralTokens('"yes"', { name: 'PNAME_LN', image: 'xsd:boolean' }))).toHaveLength(0);
 	});
 
-	describe('xsd:short', () => {
-		it('returns no diagnostic for a valid short', () => {
-			const tokens = xsdTokens('"32767"', 'http://www.w3.org/2001/XMLSchema#short');
-			expect(runProvider(rule, { document: makeDoc(), content: '', tokens, prefixes: {} })).toHaveLength(0);
-		});
-
-		it('returns a warning for a value outside short range', () => {
-			const tokens = xsdTokens('"32768"', 'http://www.w3.org/2001/XMLSchema#short');
-			const diags = runProvider(rule, { document: makeDoc(), content: '', tokens, prefixes: {} });
-			expect(diags.find(d => d.message.includes('[-32768, 32767]'))).toBeDefined();
-		});
+	it('leaves a ^^ the parser reports alone: without a datatype after it, or without a string literal before it', () => {
+		expect(lintTokens([makeToken('STRING_LITERAL_QUOTE', '"hello"', 0), makeToken('DCARET', '^^', 7)])).toHaveLength(0);
+		expect(lintTokens([makeToken('DCARET', '^^', 0), makeToken('IRIREF', `<${XSD_NAMESPACE}integer>`, 2)])).toHaveLength(0);
+		expect(lintTokens(typedLiteralTokens('ex:thing', { name: 'IRIREF', image: `<${XSD_NAMESPACE}integer>` }, 'PNAME_LN'))).toHaveLength(0);
 	});
 
-	describe('xsd:long', () => {
-		it('returns no diagnostic for a valid long', () => {
-			const tokens = xsdTokens('"9223372036854775807"', 'http://www.w3.org/2001/XMLSchema#long');
-			expect(runProvider(rule, { document: makeDoc(), content: '', tokens, prefixes: {} })).toHaveLength(0);
-		});
-	});
-
-	describe('xsd:decimal / xsd:double / xsd:float', () => {
-		it('returns no diagnostic for a valid decimal', () => {
-			const tokens = xsdTokens('"3.14"', 'http://www.w3.org/2001/XMLSchema#decimal');
-			expect(runProvider(rule, { document: makeDoc(), content: '', tokens, prefixes: {} })).toHaveLength(0);
-		});
-
-		it('returns a warning for a non-numeric decimal', () => {
-			const tokens = xsdTokens('"abc"', 'http://www.w3.org/2001/XMLSchema#decimal');
-			const diags = runProvider(rule, { document: makeDoc(), content: '', tokens, prefixes: {} });
-			expect(diags).toHaveLength(1);
-		});
-
-		it('returns no diagnostic for a valid double', () => {
-			const tokens = xsdTokens('"1.5e10"', 'http://www.w3.org/2001/XMLSchema#double');
-			expect(runProvider(rule, { document: makeDoc(), content: '', tokens, prefixes: {} })).toHaveLength(0);
-		});
-
-		it('returns no diagnostic for a valid float', () => {
-			const tokens = xsdTokens('"1.5"', 'http://www.w3.org/2001/XMLSchema#float');
-			expect(runProvider(rule, { document: makeDoc(), content: '', tokens, prefixes: {} })).toHaveLength(0);
-		});
-	});
-
-	describe('xsd:date', () => {
-		it('returns no diagnostic for a valid date', () => {
-			const tokens = xsdTokens('"2024-01-15"', 'http://www.w3.org/2001/XMLSchema#date');
-			expect(runProvider(rule, { document: makeDoc(), content: '', tokens, prefixes: {} })).toHaveLength(0);
-		});
-
-		it('returns a warning for an invalid date', () => {
-			const tokens = xsdTokens('"not-a-date"', 'http://www.w3.org/2001/XMLSchema#date');
-			const diags = runProvider(rule, { document: makeDoc(), content: '', tokens, prefixes: {} });
-			expect(diags).toHaveLength(1);
-			expect(diags[0].message).toContain('YYYY-MM-DD');
-		});
-
-		it('accepts date with timezone', () => {
-			const tokens = xsdTokens('"2024-01-15Z"', 'http://www.w3.org/2001/XMLSchema#date');
-			expect(runProvider(rule, { document: makeDoc(), content: '', tokens, prefixes: {} })).toHaveLength(0);
-		});
-	});
-
-	describe('xsd:dateTime', () => {
-		it('returns no diagnostic for a valid dateTime', () => {
-			const tokens = xsdTokens('"2024-01-15T10:30:00"', 'http://www.w3.org/2001/XMLSchema#dateTime');
-			expect(runProvider(rule, { document: makeDoc(), content: '', tokens, prefixes: {} })).toHaveLength(0);
-		});
-
-		it('returns a warning for an invalid dateTime', () => {
-			const tokens = xsdTokens('"not-a-datetime"', 'http://www.w3.org/2001/XMLSchema#dateTime');
-			const diags = runProvider(rule, { document: makeDoc(), content: '', tokens, prefixes: {} });
-			expect(diags).toHaveLength(1);
-		});
-	});
-
-	describe('xsd:time', () => {
-		it('returns no diagnostic for a valid time with UTC timezone', () => {
-			const tokens = xsdTokens('"10:30:00Z"', 'http://www.w3.org/2001/XMLSchema#time');
-			expect(runProvider(rule, { document: makeDoc(), content: '', tokens, prefixes: {} })).toHaveLength(0);
-		});
-
-		it('returns no diagnostic for a valid time with offset timezone', () => {
-			const tokens = xsdTokens('"10:30:00+02:00"', 'http://www.w3.org/2001/XMLSchema#time');
-			expect(runProvider(rule, { document: makeDoc(), content: '', tokens, prefixes: {} })).toHaveLength(0);
-		});
-
-		it('returns a warning for an invalid time', () => {
-			const tokens = xsdTokens('"not-a-time"', 'http://www.w3.org/2001/XMLSchema#time');
-			const diags = runProvider(rule, { document: makeDoc(), content: '', tokens, prefixes: {} });
-			expect(diags).toHaveLength(1);
-			expect(diags[0].message).toContain('hh:mm:ss');
-		});
-	});
-
-	describe('xsd:duration', () => {
-		it('returns no diagnostic for a valid duration', () => {
-			const tokens = xsdTokens('"P1Y2M3DT4H5M6S"', 'http://www.w3.org/2001/XMLSchema#duration');
-			expect(runProvider(rule, { document: makeDoc(), content: '', tokens, prefixes: {} })).toHaveLength(0);
-		});
-
-		it('returns a warning for an invalid duration', () => {
-			const tokens = xsdTokens('"not-a-duration"', 'http://www.w3.org/2001/XMLSchema#duration');
-			const diags = runProvider(rule, { document: makeDoc(), content: '', tokens, prefixes: {} });
-			expect(diags).toHaveLength(1);
-			expect(diags[0].message).toContain('PnYnMnDTnHnMnS');
-		});
-	});
-
-	describe('xsd:negativeInteger', () => {
-		it('returns no diagnostic for -1', () => {
-			const tokens = xsdTokens('"-1"', 'http://www.w3.org/2001/XMLSchema#negativeInteger');
-			expect(runProvider(rule, { document: makeDoc(), content: '', tokens, prefixes: {} })).toHaveLength(0);
-		});
-
-		it('returns a warning for 0', () => {
-			const tokens = xsdTokens('"0"', 'http://www.w3.org/2001/XMLSchema#negativeInteger');
-			const diags = runProvider(rule, { document: makeDoc(), content: '', tokens, prefixes: {} });
-			expect(diags.find(d => d.message.includes('< 0'))).toBeDefined();
-		});
-
-		it('returns a warning for a positive number', () => {
-			const tokens = xsdTokens('"5"', 'http://www.w3.org/2001/XMLSchema#negativeInteger');
-			const diags = runProvider(rule, { document: makeDoc(), content: '', tokens, prefixes: {} });
-			expect(diags.find(d => d.message.includes('< 0'))).toBeDefined();
-		});
-	});
-
-	describe('xsd:nonNegativeInteger', () => {
-		it('returns no diagnostic for 0', () => {
-			const tokens = xsdTokens('"0"', 'http://www.w3.org/2001/XMLSchema#nonNegativeInteger');
-			expect(runProvider(rule, { document: makeDoc(), content: '', tokens, prefixes: {} })).toHaveLength(0);
-		});
-
-		it('returns a warning for -1', () => {
-			const tokens = xsdTokens('"-1"', 'http://www.w3.org/2001/XMLSchema#nonNegativeInteger');
-			const diags = runProvider(rule, { document: makeDoc(), content: '', tokens, prefixes: {} });
-			expect(diags.find(d => d.message.includes('>= 0'))).toBeDefined();
-		});
-	});
-
-	describe('xsd:nonPositiveInteger', () => {
-		it('returns no diagnostic for 0', () => {
-			const tokens = xsdTokens('"0"', 'http://www.w3.org/2001/XMLSchema#nonPositiveInteger');
-			expect(runProvider(rule, { document: makeDoc(), content: '', tokens, prefixes: {} })).toHaveLength(0);
-		});
-
-		it('returns a warning for 1', () => {
-			const tokens = xsdTokens('"1"', 'http://www.w3.org/2001/XMLSchema#nonPositiveInteger');
-			const diags = runProvider(rule, { document: makeDoc(), content: '', tokens, prefixes: {} });
-			expect(diags.find(d => d.message.includes('<= 0'))).toBeDefined();
-		});
-	});
-
-	describe('xsd:positiveInteger', () => {
-		it('returns no diagnostic for 1', () => {
-			const tokens = xsdTokens('"1"', 'http://www.w3.org/2001/XMLSchema#positiveInteger');
-			expect(runProvider(rule, { document: makeDoc(), content: '', tokens, prefixes: {} })).toHaveLength(0);
-		});
-
-		it('returns a warning for 0', () => {
-			const tokens = xsdTokens('"0"', 'http://www.w3.org/2001/XMLSchema#positiveInteger');
-			const diags = runProvider(rule, { document: makeDoc(), content: '', tokens, prefixes: {} });
-			expect(diags.find(d => d.message.includes('> 0'))).toBeDefined();
-		});
-
-		it('returns a warning for a negative integer', () => {
-			const tokens = xsdTokens('"-1"', 'http://www.w3.org/2001/XMLSchema#positiveInteger');
-			const diags = runProvider(rule, { document: makeDoc(), content: '', tokens, prefixes: {} });
-			expect(diags.find(d => d.message.includes('> 0'))).toBeDefined();
-		});
-	});
-
-	describe('xsd:base64Binary', () => {
-		it('returns no diagnostic for a valid hex string', () => {
-			const tokens = xsdTokens('"deadBEEF"', 'http://www.w3.org/2001/XMLSchema#base64Binary');
-			expect(runProvider(rule, { document: makeDoc(), content: '', tokens, prefixes: {} })).toHaveLength(0);
-		});
-
-		it('returns a warning for an invalid hex string', () => {
-			const tokens = xsdTokens('"xyz!"', 'http://www.w3.org/2001/XMLSchema#base64Binary');
-			const diags = runProvider(rule, { document: makeDoc(), content: '', tokens, prefixes: {} });
-			expect(diags).toHaveLength(1);
-		});
-	});
-
-	describe('prefixed datatype resolution', () => {
-		it('resolves boolean via prefixed name', () => {
-			const lit = makeToken('STRING_LITERAL_QUOTE', '"yes"', 0);
-			const dc = makeToken('DCARET', '^^', 5);
-			const dt = makeToken('PNAME_LN', 'xsd:boolean', 7);
-			const tokens = [lit, dc, dt];
-			const prefixes = { xsd: 'http://www.w3.org/2001/XMLSchema#' };
-
-			const diags = runProvider(rule, { document: makeDoc(), content: '', tokens, prefixes });
-			expect(diags).toHaveLength(1);
-			expect(diags[0].message).toContain('boolean');
-		});
-	});
-
-	describe('long string literal handling', () => {
-		it('strips triple-quote delimiters for STRING_LITERAL_LONG_QUOTE', () => {
-			const lit = makeToken('STRING_LITERAL_LONG_QUOTE', '"""true"""', 0);
-			const dc = makeToken('DCARET', '^^', 10);
-			const dt = makeToken('IRIREF', '<http://www.w3.org/2001/XMLSchema#boolean>', 12);
-			const tokens = [lit, dc, dt];
-			expect(runProvider(rule, { document: makeDoc(), content: '', tokens, prefixes: {} })).toHaveLength(0);
-		});
-
-		it('strips single-quote delimiters for STRING_LITERAL_SINGLE_QUOTE', () => {
-			const lit = makeToken('STRING_LITERAL_SINGLE_QUOTE', "'42'", 0);
-			const dc = makeToken('DCARET', '^^', 4);
-			const dt = makeToken('IRIREF', '<http://www.w3.org/2001/XMLSchema#integer>', 6);
-			const tokens = [lit, dc, dt];
-			expect(runProvider(rule, { document: makeDoc(), content: '', tokens, prefixes: {} })).toHaveLength(0);
-		});
+	it('returns no diagnostics without a ^^', () => {
+		expect(lintTokens([makeToken('PNAME_LN', 'ex:Thing')])).toHaveLength(0);
 	});
 });
