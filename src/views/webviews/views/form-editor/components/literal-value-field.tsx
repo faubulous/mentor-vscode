@@ -2,7 +2,8 @@ import { Literal } from '@rdfjs/types';
 import { XSD } from '@faubulous/mentor-rdf/ontologies';
 import { TermData } from '../form-editor-model';
 import { LiteralDatatypes } from '@src/utilities/literal-datatypes';
-import { getDatatypeFormat, getDatatypeProblem, getLiteralTagData, PrefixedNameOf } from './datatype-labels';
+import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
+import { getDatatypeFormat, getDatatypeProblem, getLiteralTagData, getSuggestedTagData, PrefixedNameOf } from './datatype-labels';
 import { EditedRow } from './edited-row';
 import { LiteralField } from './literal-field';
 import { TagChoice } from './tag-picker-items';
@@ -36,7 +37,8 @@ export interface LiteralValueFieldProps {
 
 /**
  * A literal value of an edited statement as its field. Enter writes the row and goes on to the
- * field of a new value, as Escape does without writing; Backspace in an empty value removes it.
+ * field of a new value, as Escape does without writing; Backspace in an empty value removes it. A
+ * plain string offers the datatype its text looks like a value of.
  * @param props The value and its row.
  * @returns The field, or nothing for a value that is no literal.
  */
@@ -52,6 +54,7 @@ export function LiteralValueField({ view, index, edited }: LiteralValueFieldProp
 	const datatype = term.datatype.value;
 	const prefixedNameOf: PrefixedNameOf = datatypeTerm => services.resolver.viewOf(datatypeTerm).prefixedName;
 	const tag = getLiteralTagData(term, prefixedNameOf);
+	const suggested = _suggestionOf(term, index < editor.state.draft.values.length);
 
 	return (
 		<LiteralField
@@ -61,6 +64,7 @@ export function LiteralValueField({ view, index, edited }: LiteralValueFieldProp
 			current={term.language ? { language: term.language } : { datatype: datatype }}
 			placeholder={_placeholderOf(term)}
 			problem={term.value !== '' && editor.unfittingLiterals.has(index) ? getDatatypeProblem(tag?.text ?? 'string', datatype) : undefined}
+			suggestion={suggested ? getSuggestedTagData(RdfDataFactory.namedNode(suggested), prefixedNameOf) : undefined}
 			numeric={LiteralDatatypes.isNumeric(datatype)}
 			integer={datatype === XSD.integer}
 			languages={services.languages}
@@ -72,8 +76,21 @@ export function LiteralValueField({ view, index, edited }: LiteralValueFieldProp
 			onLeave={edited.focusNewValue}
 			onRemove={() => _remove(edited, index)}
 			onTagPick={choice => _pickTag(edited, index, choice)}
+			onAcceptSuggestion={() => suggested && editor.pickLiteralTag(index, { datatype: suggested })}
 		/>
 	);
+}
+
+/**
+ * The datatype a literal is offered: the one the text of a plain string looks like a value of. A
+ * literal with a datatype or a language, and the empty field of a language the row lacks, are
+ * offered none.
+ * @param term The literal.
+ * @param isValue Whether the literal is a value of the row, not the field of a missing language.
+ * @returns The IRI of the datatype, or `undefined`.
+ */
+function _suggestionOf(term: Literal, isValue: boolean): string | undefined {
+	return isValue && term.language === '' && term.datatype.value === XSD.string ? LiteralDatatypes.suggest(term.value) : undefined;
 }
 
 /**

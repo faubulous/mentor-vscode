@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { RDF, XSD } from '@faubulous/mentor-rdf';
+import { RDF } from '@faubulous/mentor-rdf';
 import { EXAMPLE_NAMESPACE, TEST_NAMESPACES } from '@src/utilities/mocks/statement-fixtures';
 import { TypedTermReader } from './typed-term-reader';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
@@ -27,12 +27,9 @@ describe('TypedTermReader', () => {
 		expect(reader.readValue('   ', 'any')).toBeUndefined();
 	});
 
-	it('reads numbers and booleans as typed literals where the predicate takes more than text', () => {
-		expect(reader.readValue('42', 'any')).toEqual({ term: RdfDataFactory.literal('42', RdfDataFactory.namedNode(XSD.integer)) });
-		expect(reader.readValue('-1.5', 'any')).toEqual({ term: RdfDataFactory.literal('-1.5', RdfDataFactory.namedNode(XSD.decimal)) });
-		expect(reader.readValue('3.6E3', 'any')).toEqual({ term: RdfDataFactory.literal('3.6E3', RdfDataFactory.namedNode(XSD.double)) });
-		expect(reader.readValue('true', 'any')).toEqual({ term: RdfDataFactory.literal('true', RdfDataFactory.namedNode(XSD.boolean)) });
-		expect(reader.readValue('42', 'literal')).toEqual({ term: RdfDataFactory.literal('42') });
+	it.each(['42', '-1.5', '3.6E3', 'true'])('reads %s as a plain string, which its field suggests a datatype for', text => {
+		expect(reader.readValue(text, 'any')).toEqual({ term: RdfDataFactory.literal(text) });
+		expect(reader.readValue(text, 'literal')).toEqual({ term: RdfDataFactory.literal(text) });
 	});
 
 	it('takes text as typed, without reading quotes or escapes', () => {

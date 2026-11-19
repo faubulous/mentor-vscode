@@ -1769,6 +1769,12 @@ body {
 	outline: none;
 }
 
+/* The datatype a plain string looks like a value of, offered, not set: outlined and slanted. */
+.literal-field-tag.is-suggestion {
+	box-shadow: inset 0 0 0 1px var(--form-field-border);
+	font-style: italic;
+}
+
 /* A text cut at rest shows the tag over the end of its last line, the text fading out before it. */
 .literal-field.is-clamped .literal-field-tag {
 	position: absolute;

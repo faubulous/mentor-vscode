@@ -1,4 +1,4 @@
-import { RDF, XSD } from '@faubulous/mentor-rdf/ontologies';
+import { RDF } from '@faubulous/mentor-rdf/ontologies';
 import { getIriFromText, splitPrefixedName } from '@src/utilities/prefixed-name';
 import { ValueKind } from '@src/utilities/value-kind';
 import { Literal, NamedNode } from '@rdfjs/types';
@@ -18,20 +18,10 @@ export type TermReading<T extends NamedNode | Literal = NamedNode | Literal> =
 export type IriReading = TermReading<NamedNode>;
 
 /**
- * The datatypes a number or boolean typed without quotes stands for, with the shape of each, in
- * the order they are tried.
- */
-const BARE_LITERALS: readonly { pattern: RegExp; datatype: string }[] = [
-	{ pattern: /^[+-]?\d+$/, datatype: XSD.integer },
-	{ pattern: /^[+-]?\d*\.\d+$/, datatype: XSD.decimal },
-	{ pattern: /^[+-]?(\d+\.\d*|\.\d+|\d+)[eE][+-]?\d+$/, datatype: XSD.double },
-	{ pattern: /^(true|false)$/, datatype: XSD.boolean }
-];
-
-/**
  * Reads what is typed into a field of a statement row as a term: a prefixed name or an `<iri>`
- * as an IRI, a number or boolean as a typed literal where the predicate does not take text only,
- * and anything else as text. Text is never parsed as Turtle: a literal is the text as typed.
+ * as an IRI where the predicate takes resources, and anything else as text. Text is never parsed
+ * as Turtle: a literal is the text as typed, a plain string even where it looks like a number, whose
+ * field suggests the datatype instead.
  */
 export class TypedTermReader {
 	/**
@@ -104,8 +94,6 @@ export class TypedTermReader {
 			return { problem: { kind: 'notAName' } };
 		}
 
-		const bare = BARE_LITERALS.find(candidate => candidate.pattern.test(trimmed));
-
-		return { term: bare ? RdfDataFactory.literal(trimmed, RdfDataFactory.namedNode(bare.datatype)) : RdfDataFactory.literal(text) };
+		return { term: RdfDataFactory.literal(text) };
 	}
 }
