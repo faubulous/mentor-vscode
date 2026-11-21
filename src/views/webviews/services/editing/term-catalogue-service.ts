@@ -1,5 +1,6 @@
 import { RDF, RDFS, Uri, VocabularyRepository } from '@faubulous/mentor-rdf';
-import { IDocumentContext } from '@src/services/document/document-context.interface';
+import { TermSerializer } from '@faubulous/mentor-rdf-serializers';
+import { ITokenizedDocumentContext } from '@src/services/document/document-context.interface';
 import { IPrefixLookupService } from '@src/services/document/prefix-lookup-service.interface';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { getPrefixedName, isPlainLocalName, isValidPrefix } from '@src/utilities/prefixed-name';
@@ -67,12 +68,17 @@ interface DocumentTerms {
 	/**
 	 * The document the terms were read for.
 	 */
-	context: IDocumentContext;
+	context: ITokenizedDocumentContext;
 
 	/**
 	 * The prefixes the document declared, which the prefixed names were read by.
 	 */
 	namespacesKey: string;
+
+	/**
+	 * Whether the syntax of the document writes prefixed names, and so can declare a prefix.
+	 */
+	writesPrefixedNames: boolean;
 
 	/**
 	 * The IRIs the document describes or uses as predicates.
@@ -133,7 +139,7 @@ export class TermCatalogueService {
 	 * @param context The document the picker edits.
 	 * @returns The matching terms, best first.
 	 */
-	async search(search: TermSearch, context: IDocumentContext): Promise<ResourceOptionData[]> {
+	async search(search: TermSearch, context: ITokenizedDocumentContext): Promise<ResourceOptionData[]> {
 		await this._whenIndexed();
 
 		const documentTerms = this._getDocumentTerms(context);
@@ -206,7 +212,8 @@ export class TermCatalogueService {
 	/**
 	 * The prefixed name of a term whose namespace the document declares no prefix for, by the prefix
 	 * the workspace uses for the namespace, which the document would declare. The prefix is looked
-	 * up once per namespace.
+	 * up once per namespace. A document whose syntax writes no prefixed names, such as N-Triples,
+	 * is proposed none.
 	 * @param iri The IRI of the term.
 	 * @param documentTerms The terms of the document.
 	 * @returns The prefixed name and the prefix to declare, or nothing where the term is written by
@@ -216,7 +223,7 @@ export class TermCatalogueService {
 		const namespace = Uri.getNamespaceIri(iri);
 		const localName = iri.slice(namespace.length);
 
-		if (!isPlainLocalName(localName)) {
+		if (!documentTerms.writesPrefixedNames || !isPlainLocalName(localName)) {
 			return {};
 		}
 
@@ -236,7 +243,7 @@ export class TermCatalogueService {
 	 * @param context The document.
 	 * @returns The prefix and the namespace, or `undefined` when none is proposed.
 	 */
-	private _missingPrefixOf(namespace: string, context: IDocumentContext): ResourceOptionData['missingPrefix'] {
+	private _missingPrefixOf(namespace: string, context: ITokenizedDocumentContext): ResourceOptionData['missingPrefix'] {
 		const prefix = this._prefixLookup.getPrefixForIri(context.uri.toString(), namespace, '');
 
 		if (prefix === '' || !isValidPrefix(prefix) || context.namespaces[prefix] !== undefined) {
@@ -302,7 +309,7 @@ export class TermCatalogueService {
 	 * @param context The document.
 	 * @returns The terms.
 	 */
-	private _getDocumentTerms(context: IDocumentContext): DocumentTerms {
+	private _getDocumentTerms(context: ITokenizedDocumentContext): DocumentTerms {
 		const version = this._vocabulary.store.version;
 		const namespacesKey = JSON.stringify(Object.entries(context.namespaces));
 		const cached = this._documentTerms;
@@ -330,7 +337,9 @@ export class TermCatalogueService {
 		const described = new Set([...subjects, ...predicates]);
 		const uses = { predicate: Array.from(predicates), class: Array.from(types), resource: Array.from(new Set([...subjects, ...types])) };
 
-		this._documentTerms = { version, context, namespacesKey, described, uses, entries: new Map(), proposals: new Map() };
+		const writesPrefixedNames = TermSerializer.forSyntax(context.syntax).abbreviates;
+
+		this._documentTerms = { version, context, namespacesKey, writesPrefixedNames, described, uses, entries: new Map(), proposals: new Map() };
 
 		return this._documentTerms;
 	}
