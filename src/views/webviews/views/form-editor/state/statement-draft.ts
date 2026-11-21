@@ -196,7 +196,7 @@ export class StatementDraft {
 			return this;
 		}
 
-		return this._withLiteral(index, value, RdfDataFactory.literal(text, _tagOf(term)));
+		return this._withTerm(index, value, RdfDataFactory.literal(text, _tagOf(term)));
 	}
 
 	/**
@@ -219,22 +219,35 @@ export class StatementDraft {
 			? (direction ? { language: tag.language, direction } : tag.language)
 			: (tag.datatype ? RdfDataFactory.namedNode(tag.datatype) : undefined);
 
-		return this._withLiteral(index, value, RdfDataFactory.literal(term.value, languageOrDatatype));
+		return this._withTerm(index, value, RdfDataFactory.literal(term.value, languageOrDatatype));
 	}
 
 	/**
-	 * Put a changed literal in the place of a value. The written value is restored when the literal
-	 * equals it again.
+	 * Put another term in the place of a value, as a literal turned into the resource its text
+	 * names. The written value is restored when the term equals it again.
+	 * @param index The index of the value.
+	 * @param term The term.
+	 * @returns The draft with the term, the draft itself when there is no such value.
+	 */
+	withValueReplaced(index: number, term: NamedNode | Literal): StatementDraft {
+		const value = this.values[index];
+
+		return value ? this._withTerm(index, value, term) : this;
+	}
+
+	/**
+	 * Put a changed literal, or the term it turned into, in the place of a value. The written value
+	 * is restored when the term equals it again.
 	 * @param index The index of the value.
 	 * @param value The value.
-	 * @param literal The changed literal.
-	 * @returns The draft with the literal.
+	 * @param term The changed term.
+	 * @returns The draft with the term.
 	 */
-	private _withLiteral(index: number, value: RowValue, literal: Literal): StatementDraft {
+	private _withTerm(index: number, value: RowValue, term: NamedNode | Literal): StatementDraft {
 		const original = value.kind === 'written' ? value.view : value.replaces;
-		const next: RowValue = original?.term.equals(literal)
+		const next: RowValue = original?.term.equals(term)
 			? { kind: 'written', view: original }
-			: { kind: 'term', term: literal, replaces: original };
+			: { kind: 'term', term, replaces: original };
 
 		return new StatementDraft(this.predicate, this.values.map((existing, position) => position === index ? next : existing));
 	}

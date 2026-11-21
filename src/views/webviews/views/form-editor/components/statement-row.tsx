@@ -1,4 +1,4 @@
-import { FocusEvent, KeyboardEvent, useRef, useState } from 'react';
+import { FocusEvent, KeyboardEvent, useEffect, useRef, useState } from 'react';
 import { RDF } from '@faubulous/mentor-rdf/ontologies';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { ValueKind } from '@src/utilities/value-kind';
@@ -10,6 +10,7 @@ import { useRowEditorState } from '../hooks/use-row-editor-state';
 import { StatementServices } from '../hooks/use-statement-services';
 import { FormEditorShortcuts } from '../form-editor-shortcuts';
 import { LanguageFilter } from '../state/language-filter';
+import { getNewValueKind, startsLiteral } from '../state/new-value-kind';
 import { RowValue } from '../state/row-value';
 import { useFormEditorContext } from '../state/form-editor-context';
 import { StatementRowEditor } from '../state/statement-row-editor';
@@ -27,6 +28,7 @@ import { getRowErrorMessage } from './row-error-message';
 import { RowError } from './row-error';
 import { StatementRowContext } from './statement-row-context';
 import { StatementValueCell } from './statement-value-cell';
+import { TagChoice } from './tag-picker-items';
 import { getResourceTooltipAttributes } from './resource-tooltip';
 import { getTermLabel } from './term-labels';
 import { TermValue } from './term-value';
@@ -175,7 +177,10 @@ interface ShownValue {
 export function StatementRow({ property, editor, services, autoFocus = false, header, reorder, ...context }: StatementRowProps): React.JSX.Element {
 	const state = useRowEditorState(editor);
 	const rowRef = useRef<HTMLDivElement>(null);
-	const edited: EditedRow | undefined = editor && state && services ? { editor, state, services, focusNewValue: () => _focusNewValueField(rowRef.current) } : undefined;
+	const [valueFocus, setValueFocus] = useState<{ index: number; caret?: number }>();
+	const edited: EditedRow | undefined = editor && state && services
+		? { editor, state, services, focusNewValue: () => _focusNewValueField(rowRef.current), focusValue: (index, caret) => setValueFocus({ index, caret }) }
+		: undefined;
 	const { languageFilter = LanguageFilter.ALL, pinScopes = [], namespaces } = useFormEditorContext();
 	const { menuRef, openOnContextMenu } = useContextMenu();
 	const cardPins = usePinnedProperties();
@@ -196,6 +201,13 @@ export function StatementRow({ property, editor, services, autoFocus = false, he
 	// The label row is the title of its card: it offers the input of a new value only while the
 	// resource has no label, and the label of another language comes through the language picker.
 	const titled = header?.kind === 'label' && literals.length > 0;
+
+	// A literal just started takes the focus once it is shown.
+	useEffect(() => {
+		if (valueFocus && _focusLiteralField(rowRef.current, valueFocus.index, valueFocus.caret)) {
+			setValueFocus(undefined);
+		}
+	}, [valueFocus, state]);
 
 	const handleKeyDown = (event: KeyboardEvent<HTMLElement>): void => {
 		if (!_isOwnEvent(event)) {
@@ -376,6 +388,29 @@ function _isOwnEvent(event: KeyboardEvent<HTMLElement>): boolean {
 }
 
 /**
+ * Move the focus into the text of a literal of a row, not of a row nested in it, and put the caret
+ * in it.
+ * @param row The element of the row.
+ * @param index The index of the literal among the values.
+ * @param caret Where the caret goes; at the end of the text where absent.
+ * @returns Whether the literal was shown and took the focus.
+ */
+function _focusLiteralField(row: HTMLElement | null, index: number, caret: number | undefined): boolean {
+	const input = row?.querySelector<HTMLTextAreaElement>(`:scope > .statement-cells > .statement-values > .statement-value > .literal-field[data-value-index="${index}"] .literal-field-input`);
+
+	if (!input) {
+		return false;
+	}
+
+	const position = Math.min(caret ?? input.value.length, input.value.length);
+
+	input.focus();
+	input.setSelectionRange(position, position);
+
+	return true;
+}
+
+/**
  * Move the focus to the field of a new value of a row, not of a row nested in it, where the row
  * has one.
  * @param row The element of the row.
@@ -496,16 +531,49 @@ function _resourceBox(edited: EditedRow, resources: readonly ShownValue[], prope
 				pendingText={state.pendingText}
 				placeholder={awaitsPredicate ? 'Pick a property first' : _placeholderOf(state.draft.values.length, header, label)}
 				readOnly={awaitsPredicate}
-				onPendingInput={text => editor.inputPending(text)}
+				onPendingInput={(text, caret) => _inputPending(edited, isType ? 'resource' : range, text, caret)}
 				onPick={option => editor.pickValue(option)}
 				onCreate={() => editor.commitPending()}
 				onRemove={index => editor.removeValue(index)}
 				onMove={(from, to) => editor.moveValue(from, to)}
 				onStartNode={!header && range !== 'literal' ? () => editor.addNode() : undefined}
+				onStartText={isType ? undefined : () => edited.focusValue(editor.startLiteral(''))}
+				newValueKind={isType ? undefined : { kind: getNewValueKind(state.pendingText, range, state.pendingKind), languages: edited.services.languages, onPick: choice => _pickNewValueKind(edited, choice) }}
 				autoFocus={autoFocus}
 			/>
 		</span>
 	);
+}
+
+/**
+ * Take the text typed for a new value: text that starts a literal goes into a literal of its own,
+ * which takes the focus with the caret where it was, and other text stays in the input.
+ * @param edited The row.
+ * @param range What the input reads typed text as.
+ * @param text The text.
+ * @param caret Where the caret stands in the text.
+ */
+function _inputPending(edited: EditedRow, range: ValueKind, text: string, caret: number): void {
+	if (startsLiteral(text, range, edited.state.pendingKind)) {
+		edited.focusValue(edited.editor.startLiteral(text), caret);
+	} else {
+		edited.editor.inputPending(text);
+	}
+}
+
+/**
+ * Give the text typed for a new value what was picked for it from the tag picker of its kind: a
+ * resource keeps it in the input, read as a resource, while a datatype or a language makes a
+ * literal of it, which takes the focus.
+ * @param edited The row.
+ * @param choice What the item picked gives the text.
+ */
+function _pickNewValueKind(edited: EditedRow, choice: TagChoice): void {
+	if (choice.kind === 'resource') {
+		edited.editor.choosePendingKind('resource');
+	} else {
+		edited.focusValue(edited.editor.startLiteral(edited.state.pendingText.trim(), choice.tag, choice.missingPrefix));
+	}
 }
 
 /**

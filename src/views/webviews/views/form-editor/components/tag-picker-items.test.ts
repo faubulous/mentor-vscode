@@ -22,8 +22,8 @@ describe('tag picker items', () => {
 			['anyURI', 'https://…'],
 			['geo:wktLiteral', 'wkt literal · adds geo:']
 		]);
-		expect(items[0].choice).toEqual({ tag: {} });
-		expect(items[8].choice).toEqual({ tag: { datatype: `${GEO}wktLiteral` }, missingPrefix: { prefix: 'geo', namespace: GEO } });
+		expect(items[0].choice).toEqual({ kind: 'literal', tag: {} });
+		expect(items[8].choice).toEqual({ kind: 'literal', tag: { datatype: `${GEO}wktLiteral` }, missingPrefix: { prefix: 'geo', namespace: GEO } });
 	});
 
 	it('offers the languages in use first, each once in standard form, then the common languages', () => {
@@ -33,7 +33,7 @@ describe('tag picker items', () => {
 		expect(codes.slice(0, 3)).toEqual(['de-DE', 'fr', 'en']);
 		expect(codes.filter(code => code.toLowerCase() === 'en')).toHaveLength(1);
 		expect(codes).toContain('ja');
-		expect(items[0].choice).toEqual({ tag: { language: 'de-DE' } });
+		expect(items[0].choice).toEqual({ kind: 'literal', tag: { language: 'de-DE' } });
 		expect(items[0].description).toBe(new Intl.DisplayNames(undefined, { type: 'language' }).of('de-DE'));
 	});
 

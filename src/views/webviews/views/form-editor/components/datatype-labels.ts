@@ -141,3 +141,16 @@ export function getLiteralTagData(term: Literal, prefixedNameOf: PrefixedNameOf)
 
 	return { text, tooltip: term.datatype.value, accessibleName: `Datatype ${text}, change` };
 }
+
+/**
+ * The tag a plain string shows for the datatype its text looks like a value of, which Tab or a
+ * click gives it: the name of the datatype with a question mark.
+ * @param datatype The suggested datatype.
+ * @param prefixedNameOf Gives a datatype its prefixed name.
+ * @returns The tag.
+ */
+export function getSuggestedTagData(datatype: NamedNode, prefixedNameOf: PrefixedNameOf): LiteralTagData {
+	const name = getDatatypeName(datatype, prefixedNameOf);
+
+	return { text: `${name}?`, tooltip: `Make it a ${name} (Tab)`, accessibleName: `Suggested datatype ${name}, accept` };
+}

@@ -138,7 +138,7 @@ describe('StatementList, in one language', () => {
 		expect(host.submitted).toEqual([]);
 	});
 
-	it('highlights the language the card shows on the Language tab of a literal without one', () => {
+	it('offers the language the form shows first on the Language tab of a literal without one, highlighted', () => {
 		renderList('de');
 
 		const field = within(rowOf('rdfs:comment')).getByLabelText('Value 1');
@@ -149,5 +149,6 @@ describe('StatementList, in one language', () => {
 
 		// jsdom shows no popover, so the list is looked up by its markup.
 		expect(rowOf('rdfs:comment').querySelector('[role="option"][aria-selected="true"]')?.getAttribute('aria-label')).toMatch(/^de,/);
+		expect(rowOf('rdfs:comment').querySelector('[role="option"]')?.getAttribute('aria-label')).toMatch(/^de,/);
 	});
 });

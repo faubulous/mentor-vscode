@@ -46,4 +46,21 @@ describe('LiteralDatatypes', () => {
 		expect(LiteralDatatypes.fitsTerm(RdfDataFactory.literal('x', 'en'))).toBe(true);
 		expect(LiteralDatatypes.fitsTerm(RdfDataFactory.namedNode('http://x'))).toBe(true);
 	});
+
+	it.each([
+		['2024-02-29T10:30:00', XSD.dateTime],
+		['2024-02-29', XSD.date],
+		['2024-02-29+01:00', XSD.date],
+		['-42', XSD.integer],
+		['3.14', XSD.decimal],
+		['.5', XSD.decimal],
+		['true', XSD.boolean],
+		['https://example.org/a', XSD.anyURI]
+	])('suggests the datatype a plain string %s looks like a value of', (text, datatype) => {
+		expect(LiteralDatatypes.suggest(text)).toBe(datatype);
+	});
+
+	it.each(['', 'tree', '2023-02-29', '2024-02-29T10:30', '1.5E3', 'True', 'https://a b', 'ftp://example.org'])('suggests no datatype for %j', text => {
+		expect(LiteralDatatypes.suggest(text)).toBeUndefined();
+	});
 });

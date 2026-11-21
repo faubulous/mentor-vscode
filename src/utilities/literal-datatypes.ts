@@ -14,6 +14,19 @@ const NUMERIC: ReadonlySet<string> = new Set([XSD.integer, XSD.decimal, XSD.doub
 const DATE_START = /^-?(\d{4,})-(\d{2})-(\d{2})/;
 
 /**
+ * The shapes of text a plain string is offered a datatype for, in the order they are tried: a date
+ * and time before a date, a whole number before a decimal one.
+ */
+const SUGGESTIONS: readonly { pattern: RegExp; datatype: string }[] = [
+	{ pattern: /^-?\d{4,}-\d{2}-\d{2}T\d{2}:\d{2}/, datatype: XSD.dateTime },
+	{ pattern: /^-?\d{4,}-\d{2}-\d{2}(Z|[+-]\d{2}:\d{2})?$/, datatype: XSD.date },
+	{ pattern: /^[+-]?\d+$/, datatype: XSD.integer },
+	{ pattern: /^[+-]?(\d+\.\d*|\.\d+)$/, datatype: XSD.decimal },
+	{ pattern: /^(true|false)$/, datatype: XSD.boolean },
+	{ pattern: /^https?:\/\/\S+$/, datatype: XSD.anyURI }
+];
+
+/**
  * Checks the text of literals of the XSD datatypes, by the rules SHACL validation checks them with.
  */
 const XSD_VALIDATION = new XsdValidation();
@@ -64,6 +77,16 @@ export class LiteralDatatypes {
 	 */
 	static fitsTerm(term: Term): boolean {
 		return term.termType !== 'Literal' || LiteralDatatypes.fits(term.datatype.value, term.value);
+	}
+
+	/**
+	 * The datatype a plain string looks like a value of: a date and time, a date, a whole or a
+	 * decimal number, a boolean or a web address, where the text is a value of it.
+	 * @param text The text.
+	 * @returns The IRI of the datatype, or `undefined` where the text looks like none.
+	 */
+	static suggest(text: string): string | undefined {
+		return SUGGESTIONS.find(entry => entry.pattern.test(text) && LiteralDatatypes.fits(entry.datatype, text))?.datatype;
 	}
 }
 
