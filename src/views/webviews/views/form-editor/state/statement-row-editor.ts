@@ -50,6 +50,11 @@ interface PickedPredicate {
 	 * The IRI of the predicate.
 	 */
 	iri: string;
+
+	/**
+	 * The label of the predicate, as the option showed it.
+	 */
+	label: string;
 }
 
 /**
@@ -272,10 +277,20 @@ export class StatementRowEditor implements EditWriter {
 	pickPredicate(option: ResourceOptionData): void {
 		const text = option.prefixedName ?? `<${option.subject.value}>`;
 
-		this._pickedPredicate = { text, iri: option.subject.value };
+		this._pickedPredicate = { text, iri: option.subject.value, label: option.label };
 		this._proposePrefixOf(option);
 		this._update(this._state.withPredicateText(text));
 		this.commitPredicate();
+	}
+
+	/**
+	 * The label of a predicate picked from the options of the predicate field, which the row shows
+	 * for it where the document does not describe it.
+	 * @param iri The IRI of the predicate.
+	 * @returns The label, or `undefined` where the predicate was not picked.
+	 */
+	labelOfPicked(iri: string): string | undefined {
+		return this._pickedPredicate?.iri === iri ? this._pickedPredicate.label || undefined : undefined;
 	}
 
 	/**

@@ -178,6 +178,7 @@ export function StatementRow({ property, editor, services, autoFocus = false, he
 	const state = useRowEditorState(editor);
 	const rowRef = useRef<HTMLDivElement>(null);
 	const [valueFocus, setValueFocus] = useState<{ index: number; caret?: number }>();
+	const [newValueFocus, setNewValueFocus] = useState(false);
 	const range = usePredicateRange(editor?.subject, state?.draft.predicate, property);
 	const defaultType = getDefaultValueType(header?.kind, state?.draft.values ?? [], range);
 	const edited: EditedRow | undefined = editor && state && services
@@ -190,7 +191,7 @@ export function StatementRow({ property, editor, services, autoFocus = false, he
 	const literals = [...values.filter(entry => _kindOf(entry.view) === 'literal'), ..._missingLanguageField(edited, languageFilter)];
 	const resources = values.filter(entry => _kindOf(entry.view) === 'resource');
 	const wholes = values.filter(entry => _kindOf(entry.view) === 'whole');
-	const predicateView = edited ? _editedPredicateView(edited.state, edited.services) : property?.predicate;
+	const predicateView = edited ? _editedPredicateView(edited.editor, edited.state, edited.services) : property?.predicate;
 	const label = predicateView ? getTermLabel(predicateView) : state?.predicateText ?? '';
 	const error = state ? getRowErrorMessage(state) : undefined;
 	const rowKind = _rowKindOf(literals.length, resources.length, wholes.length);
@@ -210,6 +211,14 @@ export function StatementRow({ property, editor, services, autoFocus = false, he
 			setValueFocus(undefined);
 		}
 	}, [valueFocus, state]);
+
+	// The input of a new value takes the focus once the row has taken its predicate and rendered.
+	useEffect(() => {
+		if (newValueFocus) {
+			setNewValueFocus(false);
+			_focusNewValueField(rowRef.current);
+		}
+	}, [newValueFocus]);
 
 	const handleKeyDown = (event: KeyboardEvent<HTMLElement>): void => {
 		if (!_isOwnEvent(event)) {
@@ -258,7 +267,7 @@ export function StatementRow({ property, editor, services, autoFocus = false, he
 					? !typeless && _headerPredicateOf(header, edited, label)
 					: (
 						<span className={`statement-predicate${_isIriLabel(predicateView, label) ? ' is-iri' : ''}`} {...getResourceTooltipAttributes(edited ? undefined : predicateView?.term)}>
-							{edited ? <PredicateField editor={edited.editor} state={edited.state} label={label} autoFocus={autoFocus} /> : <span className="statement-predicate-text">{label}</span>}
+							{edited ? <PredicateField editor={edited.editor} state={edited.state} label={label} autoFocus={autoFocus} onPredicateTaken={() => setNewValueFocus(true)} /> : <span className="statement-predicate-text">{label}</span>}
 							{wholes.length > 0 && <span className="statement-predicate-count">{wholes.length}</span>}
 							<PredicateAnnotations
 								annotations={_annotationsOf(literals, edited, namespaces)}
@@ -698,11 +707,19 @@ function _kindOf(view: TermData): 'literal' | 'resource' | 'whole' {
 }
 
 /**
- * The view of the predicate an edited row names, once it names one.
+ * The view of the predicate an edited row names, once it names one, with the label of the option
+ * it was picked from where the document does not describe it.
+ * @param editor Edits the row, and keeps the label of a picked predicate.
  * @param state The state of the row.
  * @param services Gives the predicate its label.
  * @returns The view, or `undefined` while the row names no predicate.
  */
-function _editedPredicateView(state: StatementRowState, services: StatementServices): TermData | undefined {
-	return state.draft.predicate ? services.resolver.viewOf(RdfDataFactory.namedNode(state.draft.predicate)) : undefined;
+function _editedPredicateView(editor: StatementRowEditor, state: StatementRowState, services: StatementServices): TermData | undefined {
+	if (!state.draft.predicate) {
+		return undefined;
+	}
+
+	const view = services.resolver.viewOf(RdfDataFactory.namedNode(state.draft.predicate));
+
+	return view.label ? view : { ...view, label: editor.labelOfPicked(state.draft.predicate) };
 }

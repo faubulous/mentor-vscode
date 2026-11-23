@@ -507,8 +507,10 @@ describe('StatementList, edited in a browser', () => {
 		const row = rows()[3];
 
 		await expect.poll(() => document.activeElement).toBe(within(row).getByLabelText('Predicate'));
-		await userEvent.keyboard('rdfs:seeAlso');
-		await userEvent.click(within(row).getByLabelText('New value'));
+		await userEvent.keyboard('rdfs:seeAlso{Enter}');
+
+		// Enter takes the typed predicate and goes on to the value.
+		await expect.poll(() => document.activeElement).toBe(within(row).getByLabelText('New value'));
 
 		expect((within(row).getByLabelText('New value') as unknown as { placeholder: string }).placeholder).toBe('Add rdfs:seeAlso');
 
@@ -538,10 +540,9 @@ describe('StatementList, edited in a browser', () => {
 		await expect.poll(() => searched[searched.length - 1]).toBe('pref');
 		await userEvent.click(within(row).getByRole('option', { name: /preferred label/ }));
 
-		expect((within(row).getByLabelText('Predicate') as HTMLInputElement).value).toBe('skos:prefLabel');
-
-		await userEvent.click(within(row).getByLabelText('New value'));
-
+		// The pick goes on to the value, and the field shows the label of the predicate.
+		await expect.poll(() => document.activeElement).toBe(within(row).getByLabelText('New value'));
+		expect((within(row).getByLabelText('Predicate') as HTMLInputElement).value).toBe('preferred label');
 		expect(value.readonly).toBe(false);
 
 		// Nothing tells the range of the predicate, so its new value starts as text.
