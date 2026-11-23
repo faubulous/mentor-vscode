@@ -54,7 +54,7 @@ describe('parse-count budget', () => {
 			deliverTokens: () => deliveryEmitter.fire({ uri: document.uri.toString(), tokens: context.tokens, consumed: false }),
 			tokenizeSpy: vi.spyOn(lexer, 'tokenize'),
 			parseSpy: vi.spyOn(parser, 'parse'),
-			readSpy: vi.spyOn(TurtleQuadReader.prototype, 'read'),
+			readSpy: vi.spyOn(TurtleQuadReader.prototype, 'readStatements'),
 		};
 	}
 
@@ -102,6 +102,30 @@ describe('parse-count budget', () => {
 		expect(tokenizeSpy).toHaveBeenCalledTimes(1);
 		expect(readSpy).toHaveBeenCalledTimes(1);
 		expect(parseSpy).toHaveBeenCalledTimes(1);
+	});
+
+	it.each([
+		['TriG', RdfSyntax.TriG, 'trig', '@prefix ex: <http://example.org/> .\nex:g { ex:a ex:b ex:c . }'],
+		['N-Triples', RdfSyntax.NTriples, 'ntriples', '<http://e/a> <http://e/b> <http://e/c> .'],
+		['N-Quads', RdfSyntax.NQuads, 'nquads', '<http://e/a> <http://e/b> <http://e/c> <http://e/g> .']
+	])('a valid %s document costs no grammar parse either', async (_name, syntax, languageId, content) => {
+		const uri = 'file:///w/budget';
+		const document = createMockTextDocument(content, { uri, languageId });
+		const context = createTurtleDocument(uri, syntax);
+		const contexts: Record<string, any> = { [document.uri.toString()]: context };
+		const deliveryEmitter = new vscode.EventEmitter<TokenDelivery>();
+		const diagnostics = new DocumentDiagnosticsService({ onDidDeliverTokens: deliveryEmitter.event } as any, key => contexts[key]);
+		const parseSpy = vi.spyOn(ParserFactory.getParser(syntax), 'parse');
+
+		(vscode.workspace as any).textDocuments = [document];
+
+		context.parse(content);
+		deliveryEmitter.fire({ uri: document.uri.toString(), tokens: context.tokens, consumed: false });
+
+		await context.loadTriples(content);
+
+		expect(diagnostics).toBeDefined();
+		expect(parseSpy).not.toHaveBeenCalled();
 	});
 
 	it('falls back to a fresh tokenization when the content is stale', () => {
