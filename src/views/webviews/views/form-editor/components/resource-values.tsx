@@ -1,9 +1,9 @@
 import { DragEvent, FocusEvent, KeyboardEvent, MouseEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { VscodeTextfield } from '@vscode-elements/elements';
 import { ResourceOptionData, TermData, TermSearchKind } from '../form-editor-model';
-import { NewValueKind } from '../state/new-value-kind';
-import { NewValueKindMarker } from './new-value-kind-marker';
-import { TagChoice } from './tag-picker-items';
+import { NewValueType } from '../state/new-value-type';
+import { NewValueTypeMarker } from './new-value-type-marker';
+import { TagSelection } from './tag-picker-items';
 import { TermPicker } from './term-picker';
 import { ValuePill } from './value-pill';
 
@@ -39,14 +39,14 @@ interface PillDragState {
 }
 
 /**
- * The kind of value the input makes of the typed text, which it shows after the text, and what to
+ * The type of value the input makes of the typed text, which it shows after the text, and what to
  * do when another is picked.
  */
-interface NewValueKindControl {
+interface NewValueTypeControl {
 	/**
-	 * The kind.
+	 * The type.
 	 */
-	kind: NewValueKind;
+	type: NewValueType;
 
 	/**
 	 * The languages of the card, which the tag picker offers first.
@@ -56,7 +56,7 @@ interface NewValueKindControl {
 	/**
 	 * Called with what the item picked gives the typed text.
 	 */
-	onPick: (choice: TagChoice) => void;
+	onPick: (selection: TagSelection) => void;
 }
 
 /**
@@ -124,10 +124,10 @@ export interface ResourceValuesProps {
 	onStartText?: () => void;
 
 	/**
-	 * The kind of value the input makes, shown after its text while it has the focus and text;
-	 * absent where the input makes resources of one kind only, as types.
+	 * The type of value the input makes, shown after its text while it has the focus and text;
+	 * absent where the input makes only resources of one class, as the types of a resource.
 	 */
-	newValueKind?: NewValueKindControl;
+	newValueType?: NewValueTypeControl;
 
 	/**
 	 * Whether the input takes the focus when it appears.
@@ -148,14 +148,14 @@ export interface ResourceValuesProps {
  * input; the arrows walk the pills from it. On a pill Backspace and Delete remove it, Alt with an
  * arrow moves it one place, and typing continues in the input. Where the values can be moved, a
  * pill is dragged to another place among the pills, an accent bar showing where it is dropped.
- * Moving changes the order of the values only. Once text is typed into the input, the kind of
+ * Moving changes the order of the values only. Once text is typed into the input, the type of
  * value it makes stands after the text, and opens the tag picker; `"` in the empty input starts
  * text.
  * @param props The resources and their callbacks.
  * @returns The box.
  */
 export function ResourceValues(props: ResourceValuesProps): React.JSX.Element {
-	const { resources, kind, pendingText, placeholder, onPendingInput, onPick, onCreate, onRemove, onMove, onStartNode, onStartText, newValueKind, autoFocus = false, readOnly = false } = props;
+	const { resources, kind, pendingText, placeholder, onPendingInput, onPick, onCreate, onRemove, onMove, onStartNode, onStartText, newValueType, autoFocus = false, readOnly = false } = props;
 	const pills = useRef<(HTMLElement | null)[]>([]);
 	const fieldRef = useRef<VscodeTextfield>(null);
 	const [focusRequest, setFocusRequest] = useState<number>();
@@ -268,7 +268,7 @@ export function ResourceValues(props: ResourceValuesProps): React.JSX.Element {
 		}
 	};
 
-	// The kind shows while the input has the focus, or the tag picker the kind opened.
+	// The type shows while the input has the focus, or the tag picker the type opened.
 	const trackFocus = (event: FocusEvent<HTMLSpanElement>): void => {
 		const target = event.target as Element;
 
@@ -341,7 +341,7 @@ export function ResourceValues(props: ResourceValuesProps): React.JSX.Element {
 				readOnly={readOnly}
 				className="is-new"
 				fieldRef={fieldRef}
-				suffix={newValueKind && focused && !readOnly && pendingText !== '' ? <NewValueKindMarker {...newValueKind} onDone={() => _focusAtEnd(fieldRef.current)} /> : undefined}
+				suffix={newValueType && focused && !readOnly && pendingText !== '' ? <NewValueTypeMarker {...newValueType} onDone={() => _focusAtEnd(fieldRef.current)} /> : undefined}
 			/>
 		</span>
 	);

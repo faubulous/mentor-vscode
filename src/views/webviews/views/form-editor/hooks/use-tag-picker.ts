@@ -1,5 +1,5 @@
 import { KeyboardEvent, useMemo, useState } from 'react';
-import { filterTagPickerItems, getDatatypeItems, getLanguageItems, getTagItemKey, ResourceItemPlace, TagChoice, TagPickerItemData, TagPickerTab } from '../components/tag-picker-items';
+import { filterTagPickerItems, getDatatypeItems, getLanguageItems, getTagItemKey, ResourceItemPosition, TagSelection, TagPickerItemData, TagPickerTab } from '../components/tag-picker-items';
 import { useFormEditorContext } from '../state/form-editor-context';
 import { LanguageFilter } from '../state/language-filter';
 import { LiteralTag } from '../state/literal-tag';
@@ -42,14 +42,15 @@ export interface TagPickerOptions {
 	languages: readonly string[];
 
 	/**
-	 * Where the Datatype tab offers the item that makes the value a resource, if it does.
+	 * The position of the item that makes the value a resource in the Datatype tab: first, or after
+	 * the datatypes the literal fields offer; absent where the tab does not offer it.
 	 */
-	resourceItem?: ResourceItemPlace;
+	resourceItemPosition?: ResourceItemPosition;
 
 	/**
 	 * Called with what the item picked gives the literal.
 	 */
-	onPick: (choice: TagChoice) => void;
+	onPick: (selection: TagSelection) => void;
 
 	/**
 	 * Called when the picker is done with, by a pick or by Escape, so the text of the literal takes
@@ -143,7 +144,7 @@ export interface TagPickerControl {
  * @returns The picker.
  */
 export function useTagPicker(options: TagPickerOptions): TagPickerControl {
-	const { current, languages, resourceItem, onPick, onDone } = options;
+	const { current, languages, resourceItemPosition, onPick, onDone } = options;
 	const { languageFilter = LanguageFilter.ALL } = useFormEditorContext();
 	const [openPicker, setOpenPicker] = useState<OpenPicker>();
 	const open = openPicker !== undefined;
@@ -153,10 +154,10 @@ export function useTagPicker(options: TagPickerOptions): TagPickerControl {
 	const workspaceLanguages = useWorkspaceLanguages(open);
 	const items = useMemo(() => {
 		const selected = languageFilter.language ? [languageFilter.language] : [];
-		const all = tab === 'datatype' ? getDatatypeItems(storeDatatypes, resourceItem) : getLanguageItems([...selected, ...languages, ...workspaceLanguages]);
+		const all = tab === 'datatype' ? getDatatypeItems(storeDatatypes, resourceItemPosition) : getLanguageItems([...selected, ...languages, ...workspaceLanguages]);
 
 		return filterTagPickerItems(all, filter, tab);
-	}, [tab, filter, storeDatatypes, languages, workspaceLanguages, resourceItem, languageFilter]);
+	}, [tab, filter, storeDatatypes, languages, workspaceLanguages, resourceItemPosition, languageFilter]);
 	const active = Math.max(0, items.findIndex(item => item.key === openPicker?.activeKey));
 
 	// A tab opens with the tag of the literal highlighted, a filter with its best match.
@@ -170,7 +171,7 @@ export function useTagPicker(options: TagPickerOptions): TagPickerControl {
 	const pick = (item: TagPickerItemData): void => {
 		close();
 		onDone();
-		onPick(item.choice);
+		onPick(item.selection);
 	};
 
 	const handleKeyDown = (event: KeyboardEvent): boolean => {

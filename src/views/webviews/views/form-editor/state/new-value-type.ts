@@ -4,19 +4,19 @@ import { TypedTermReader } from '../services/statement/typed-term-reader';
 /**
  * What the text typed for a new value makes: a resource, or a literal.
  */
-export type NewValueKind = 'resource' | 'literal';
+export type NewValueType = 'resource' | 'literal';
 
 /**
  * What the input of a new value makes of the text typed into it, which the input shows after the
- * text: the kind chosen for it, else a resource where the predicate takes resources only, a
+ * text: the type chosen for it, else a resource where the predicate takes resources only, a
  * literal where it takes literals only, and otherwise a resource while the text is empty or names
  * one, a literal for any other text.
  * @param text The text typed so far.
  * @param range What the predicate takes.
- * @param chosen The kind chosen for the text, if any.
- * @returns The kind.
+ * @param chosen The type chosen for the text, if any.
+ * @returns The type.
  */
-export function getNewValueKind(text: string, range: ValueKind, chosen?: NewValueKind): NewValueKind {
+export function getNewValueType(text: string, range: ValueKind, chosen?: NewValueType): NewValueType {
 	if (chosen) {
 		return chosen;
 	}
@@ -37,10 +37,10 @@ export function getNewValueKind(text: string, range: ValueKind, chosen?: NewValu
  * space or a leading digit. Text a resource was chosen for stays in the input.
  * @param text The text typed so far.
  * @param range What the predicate takes.
- * @param chosen The kind chosen for the text, if any.
+ * @param chosen The type chosen for the text, if any.
  * @returns `true` when the text starts a literal.
  */
-export function startsLiteral(text: string, range: ValueKind, chosen?: NewValueKind): boolean {
+export function startsLiteral(text: string, range: ValueKind, chosen?: NewValueType): boolean {
 	if (text.trim() === '' || range === 'resource' || chosen === 'resource') {
 		return false;
 	}

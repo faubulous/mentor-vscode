@@ -5,7 +5,7 @@ import { LiteralTag } from '../state/literal-tag';
 import { LiteralTagData } from './datatype-labels';
 import { TagButton } from './tag-button';
 import { TagPicker } from './tag-picker';
-import { TagChoice } from './tag-picker-items';
+import { TagSelection } from './tag-picker-items';
 
 /**
  * The tag a plain string shows while its value has the focus, which chooses a datatype for it.
@@ -100,7 +100,7 @@ export interface LiteralFieldProps {
 	/**
 	 * Called with what the item picked from the tag picker gives the literal.
 	 */
-	onTagPick: (choice: TagChoice) => void;
+	onTagPick: (selection: TagSelection) => void;
 
 	/**
 	 * Called when the suggested datatype is accepted, as Tab does.
@@ -128,7 +128,7 @@ export function LiteralField(props: LiteralFieldProps): React.JSX.Element {
 	const inputRef = useRef<HTMLTextAreaElement>(null);
 	const problemId = useId();
 	const listId = useId();
-	const picker = useTagPicker({ current, languages, resourceItem: offersResource ? 'last' : undefined, onPick: onTagPick, onDone: () => inputRef.current?.focus() });
+	const picker = useTagPicker({ current, languages, resourceItemPosition: offersResource ? 'last' : undefined, onPick: onTagPick, onDone: () => inputRef.current?.focus() });
 	const clamped = useOverflowing(textRef, text) && !focused;
 	const suggested = focused && !picker.open ? suggestion : undefined;
 	// A plain string shows string once it has text, so focusing an empty value shows the placeholder only.

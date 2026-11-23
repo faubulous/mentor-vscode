@@ -10,7 +10,7 @@ import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { EditWriter } from './edit-writer';
 import { IEditingController } from './editing-controller.interface';
 import { LiteralTag } from './literal-tag';
-import { NewValueKind } from './new-value-kind';
+import { NewValueType } from './new-value-type';
 import { PrefixProposal } from './prefix-proposal';
 import { RowValue } from './row-value';
 import { StatementDraft } from './statement-draft';
@@ -421,12 +421,12 @@ export class StatementRowEditor implements EditWriter {
 	}
 
 	/**
-	 * Choose the kind of value the text typed for a new value makes, as picking resource from its
+	 * Choose the type of value the text typed for a new value makes, as picking resource from its
 	 * tag picker does, until the field is emptied.
-	 * @param kind The kind.
+	 * @param type The type.
 	 */
-	choosePendingKind(kind: NewValueKind): void {
-		this._update(this._state.withPendingKind(kind));
+	choosePendingType(type: NewValueType): void {
+		this._update(this._state.withPendingType(type));
 	}
 
 	/**
@@ -633,11 +633,11 @@ export class StatementRowEditor implements EditWriter {
 	}
 
 	/**
-	 * What the text typed for a new value is read as: a resource where that kind was chosen for it,
+	 * What the text typed for a new value is read as: a resource where that type was chosen for it,
 	 * else what the predicate takes.
 	 */
 	private get _pendingRange(): ValueKind {
-		return this._state.pendingKind ?? this._range;
+		return this._state.pendingType ?? this._range;
 	}
 
 	/**

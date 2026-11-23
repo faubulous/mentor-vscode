@@ -10,7 +10,7 @@ import { useRowEditorState } from '../hooks/use-row-editor-state';
 import { StatementServices } from '../hooks/use-statement-services';
 import { FormEditorShortcuts } from '../form-editor-shortcuts';
 import { LanguageFilter } from '../state/language-filter';
-import { getNewValueKind, startsLiteral } from '../state/new-value-kind';
+import { getNewValueType, startsLiteral } from '../state/new-value-type';
 import { RowValue } from '../state/row-value';
 import { useFormEditorContext } from '../state/form-editor-context';
 import { StatementRowEditor } from '../state/statement-row-editor';
@@ -28,7 +28,7 @@ import { getRowErrorMessage } from './row-error-message';
 import { RowError } from './row-error';
 import { StatementRowContext } from './statement-row-context';
 import { StatementValueCell } from './statement-value-cell';
-import { TagChoice } from './tag-picker-items';
+import { TagSelection } from './tag-picker-items';
 import { getResourceTooltipAttributes } from './resource-tooltip';
 import { getTermLabel } from './term-labels';
 import { TermValue } from './term-value';
@@ -538,7 +538,7 @@ function _resourceBox(edited: EditedRow, resources: readonly ShownValue[], prope
 				onMove={(from, to) => editor.moveValue(from, to)}
 				onStartNode={!header && range !== 'literal' ? () => editor.addNode() : undefined}
 				onStartText={isType ? undefined : () => edited.focusValue(editor.startLiteral(''))}
-				newValueKind={isType ? undefined : { kind: getNewValueKind(state.pendingText, range, state.pendingKind), languages: edited.services.languages, onPick: choice => _pickNewValueKind(edited, choice) }}
+				newValueType={isType ? undefined : { type: getNewValueType(state.pendingText, range, state.pendingType), languages: edited.services.languages, onPick: selection => _pickNewValueType(edited, selection) }}
 				autoFocus={autoFocus}
 			/>
 		</span>
@@ -554,7 +554,7 @@ function _resourceBox(edited: EditedRow, resources: readonly ShownValue[], prope
  * @param caret Where the caret stands in the text.
  */
 function _inputPending(edited: EditedRow, range: ValueKind, text: string, caret: number): void {
-	if (startsLiteral(text, range, edited.state.pendingKind)) {
+	if (startsLiteral(text, range, edited.state.pendingType)) {
 		edited.focusValue(edited.editor.startLiteral(text), caret);
 	} else {
 		edited.editor.inputPending(text);
@@ -562,17 +562,17 @@ function _inputPending(edited: EditedRow, range: ValueKind, text: string, caret:
 }
 
 /**
- * Give the text typed for a new value what was picked for it from the tag picker of its kind: a
+ * Give the text typed for a new value what was picked for it from the tag picker of its type: a
  * resource keeps it in the input, read as a resource, while a datatype or a language makes a
  * literal of it, which takes the focus.
  * @param edited The row.
- * @param choice What the item picked gives the text.
+ * @param selection What the item picked gives the text.
  */
-function _pickNewValueKind(edited: EditedRow, choice: TagChoice): void {
-	if (choice.kind === 'resource') {
-		edited.editor.choosePendingKind('resource');
+function _pickNewValueType(edited: EditedRow, selection: TagSelection): void {
+	if (selection.type === 'resource') {
+		edited.editor.choosePendingType('resource');
 	} else {
-		edited.focusValue(edited.editor.startLiteral(edited.state.pendingText.trim(), choice.tag, choice.missingPrefix));
+		edited.focusValue(edited.editor.startLiteral(edited.state.pendingText.trim(), selection.tag, selection.missingPrefix));
 	}
 }
 

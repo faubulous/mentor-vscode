@@ -885,7 +885,7 @@ describe('StatementList, edited in a browser', () => {
 		expect([centreOf(box), centreOf(row.querySelector('.row-grip')!), centreOf(row.querySelector('.row-menu')!)]).toEqual([centre, centre, centre]);
 	});
 
-	it('shows the kind of the next value after the text typed into its input, and turns text that can no longer name a resource into a literal, keeping the caret', async () => {
+	it('shows the type of the next value after the text typed into its input, and turns text that can no longer name a resource into a literal, keeping the caret', async () => {
 		const { host } = await renderList(MIXED);
 		const row = rows()[0];
 		const input = within(row).getByLabelText('New value');
@@ -894,7 +894,7 @@ describe('StatementList, edited in a browser', () => {
 
 		await userEvent.click(input);
 
-		// Focusing the empty input shows no kind: it comes with the first character.
+		// Focusing the empty input shows no type: it comes with the first character.
 		expect(within(row).queryByRole('button', { name: /^New value/ })).toBeNull();
 
 		await userEvent.keyboard('ex:Oak');
@@ -950,7 +950,7 @@ describe('StatementList, edited in a browser', () => {
 		expect(document.activeElement).toBe(literal);
 	});
 
-	it('opens the tag picker of the kind with resource first, and makes the typed text a literal of the language picked', async () => {
+	it('opens the tag picker of the type with resource first, and makes the typed text a literal of the language picked', async () => {
 		const { host } = await renderList(MIXED);
 		const row = rows()[0];
 
@@ -1018,7 +1018,7 @@ describe('StatementList, edited in a browser', () => {
 
 
 
-	it('lets a kind that just appeared under the pointer take no click until the pointer has moved away and a moment has passed', async () => {
+	it('lets a type that just appeared under the pointer take no click until the pointer has moved away and a moment has passed', async () => {
 		await renderList(MIXED);
 
 		const row = rows()[0];

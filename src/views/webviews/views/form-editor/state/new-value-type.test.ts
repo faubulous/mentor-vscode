@@ -1,21 +1,21 @@
 import { describe, expect, it } from 'vitest';
-import { getNewValueKind, startsLiteral } from './new-value-kind';
+import { getNewValueType, startsLiteral } from './new-value-type';
 
-describe('getNewValueKind', () => {
-	it('follows a predicate that takes one kind of values only', () => {
-		expect(getNewValueKind('a tree', 'resource')).toBe('resource');
-		expect(getNewValueKind('ex:Tree', 'literal')).toBe('literal');
+describe('getNewValueType', () => {
+	it('follows a predicate that takes one type of values only', () => {
+		expect(getNewValueType('a tree', 'resource')).toBe('resource');
+		expect(getNewValueType('ex:Tree', 'literal')).toBe('literal');
 	});
 
 	it('makes a resource of an empty text or a name, and a literal of any other text, where the predicate takes either', () => {
-		expect(getNewValueKind('', 'any')).toBe('resource');
-		expect(getNewValueKind('ex:Tree', 'any')).toBe('resource');
-		expect(getNewValueKind('<http://example.org/x>', 'any')).toBe('resource');
-		expect(getNewValueKind('Tree', 'any')).toBe('literal');
+		expect(getNewValueType('', 'any')).toBe('resource');
+		expect(getNewValueType('ex:Tree', 'any')).toBe('resource');
+		expect(getNewValueType('<http://example.org/x>', 'any')).toBe('resource');
+		expect(getNewValueType('Tree', 'any')).toBe('literal');
 	});
 
-	it('follows the kind chosen for the text', () => {
-		expect(getNewValueKind('Tree', 'any', 'resource')).toBe('resource');
+	it('follows the type chosen for the text', () => {
+		expect(getNewValueType('Tree', 'any', 'resource')).toBe('resource');
 	});
 });
 

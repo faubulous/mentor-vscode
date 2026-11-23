@@ -6,7 +6,7 @@ import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { getDatatypeFormat, getDatatypeProblem, getLiteralTagData, getSuggestedTagData, PrefixedNameOf } from './datatype-labels';
 import { EditedRow } from './edited-row';
 import { LiteralField } from './literal-field';
-import { TagChoice } from './tag-picker-items';
+import { TagSelection } from './tag-picker-items';
 import { useFormEditorContext } from '../state/form-editor-context';
 import { LanguageFilter } from '../state/language-filter';
 
@@ -76,7 +76,7 @@ export function LiteralValueField({ view, index, edited }: LiteralValueFieldProp
 			}}
 			onLeave={edited.focusNewValue}
 			onRemove={() => _remove(edited, index)}
-			onTagPick={choice => _pickTag(edited, index, choice)}
+			onTagPick={selection => _pickTag(edited, index, selection)}
 			onAcceptSuggestion={() => suggested && editor.pickLiteralTag(index, { datatype: suggested })}
 		/>
 	);
@@ -132,18 +132,18 @@ function _input(edited: EditedRow, index: number, language: string, text: string
  * other tag.
  * @param edited The row.
  * @param index The index of the value.
- * @param choice What the item picked gives the literal.
+ * @param selection What the item picked gives the literal.
  */
-function _pickTag(edited: EditedRow, index: number, choice: TagChoice): void {
+function _pickTag(edited: EditedRow, index: number, selection: TagSelection): void {
 	if (index >= edited.editor.state.draft.values.length) {
 		return;
 	}
 
-	if (choice.kind === 'resource') {
+	if (selection.type === 'resource') {
 		edited.editor.turnLiteralIntoResource(index);
 		edited.focusNewValue();
 	} else {
-		edited.editor.pickLiteralTag(index, choice.tag, choice.missingPrefix);
+		edited.editor.pickLiteralTag(index, selection.tag, selection.missingPrefix);
 	}
 }
 
