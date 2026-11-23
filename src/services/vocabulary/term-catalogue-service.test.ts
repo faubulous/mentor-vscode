@@ -135,6 +135,12 @@ describe('TermCatalogueService', () => {
 		expect(tree).toMatchObject({ label: 'Tree', prefixedName: 'v:Tree', source: 'workspace', missingPrefix: { prefix: 'v', namespace: V } });
 	});
 
+	it('proposes the prefix the workspace uses in a SPARQL query, which declares prefixes too', async () => {
+		const [tree] = await createCatalogue().search({ targetType: 'class', text: 'Tree', limit: 1 }, createDocument({}, RdfSyntax.Sparql));
+
+		expect(tree).toMatchObject({ prefixedName: 'v:Tree', missingPrefix: { prefix: 'v', namespace: V } });
+	});
+
 	it.each([RdfSyntax.NTriples, RdfSyntax.NQuads])('proposes no prefix in a document written in %s, which writes no prefixed names', async syntax => {
 		const [tree] = await createCatalogue().search({ targetType: 'class', text: 'Tree', limit: 1 }, createDocument({}, syntax));
 

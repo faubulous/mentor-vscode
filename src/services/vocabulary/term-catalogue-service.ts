@@ -1,4 +1,5 @@
 import { RDF, RDFS, Uri, VocabularyRepository, rdf } from '@faubulous/mentor-rdf';
+import { RdfSyntax } from '@faubulous/mentor-rdf-parsers';
 import { TermSerializer } from '@faubulous/mentor-rdf-serializers';
 import { ITokenizedDocumentContext } from '@src/services/document/document-context.interface';
 import { IPrefixLookupService } from '@src/services/document/prefix-lookup-service.interface';
@@ -63,7 +64,8 @@ interface DocumentTerms {
 	namespacesKey: string;
 
 	/**
-	 * Whether the syntax of the document writes prefixed names, and so can declare a prefix.
+	 * Whether the syntax of the document writes prefixed names, and so can declare a prefix: Turtle,
+	 * TriG, N3 and SPARQL do, N-Triples and N-Quads do not.
 	 */
 	writesPrefixedNames: boolean;
 
@@ -138,7 +140,8 @@ export class TermCatalogueService {
 	async search(search: TermSearch, context: ITokenizedDocumentContext, subjectTypes?: readonly string[]): Promise<ResourceOptionData[]> {
 		await this._whenIndexed();
 
-		const fitOf = search.statement ? this._fitOf(search.targetType, search.statement, subjectTypes ?? this._typesOf(search.statement.subject, context)) : undefined;
+		const statement = search.statement;
+		const fitOf = statement ? this._fitOf(search.targetType, statement, subjectTypes ?? (statement.subject ? this._typesOf(statement.subject, context) : [])) : undefined;
 		const documentTerms = this._getDocumentTerms(context);
 		const entries = Array.from(this._candidatesOf(search.targetType, documentTerms), iri => this._entryOf(iri, documentTerms));
 		const fits = new Map<string, TermFit | undefined>();
@@ -184,7 +187,7 @@ export class TermCatalogueService {
 	 * @param context The document.
 	 * @returns The type IRIs, each once.
 	 */
-	private _typesOf(subject: TermSearchStatement['subject'], context: ITokenizedDocumentContext): string[] {
+	private _typesOf(subject: NonNullable<TermSearchStatement['subject']>, context: ITokenizedDocumentContext): string[] {
 		const store = this._vocabulary.store;
 		const types = new Set<string>();
 
@@ -387,7 +390,8 @@ export class TermCatalogueService {
 		const described = new Set([...subjects, ...predicates]);
 		const uses = { predicate: Array.from(predicates), class: Array.from(types), resource: Array.from(new Set([...subjects, ...types])) };
 
-		const writesPrefixedNames = TermSerializer.forSyntax(context.syntax).abbreviates;
+		// A query declares prefixes as Turtle does, though its terms are not written by a serializer.
+		const writesPrefixedNames = context.syntax === RdfSyntax.Sparql || TermSerializer.forSyntax(context.syntax).abbreviates;
 
 		this._documentTerms = { version, context, namespacesKey, writesPrefixedNames, described, uses, entries: new Map(), proposals: new Map() };
 

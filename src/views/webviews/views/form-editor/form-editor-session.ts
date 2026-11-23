@@ -1006,7 +1006,7 @@ export class FormEditorSession implements vscode.Disposable {
 	private async _answerTermSearch(search: Extract<FormEditorWebviewMessage, { id: 'TermSearch' }>): Promise<void> {
 		const catalogue = _resolveIfRegistered<TermCatalogueService>(ServiceToken.TermCatalogueService);
 		const context = this._getTokenizedContext();
-		const entry = search.statement && this._index ? getEntry(this._index, search.statement.subject) : undefined;
+		const entry = search.statement?.subject && this._index ? getEntry(this._index, search.statement.subject) : undefined;
 		const options = catalogue && context ? await catalogue.search(search, context, entry ? this._typesOf(entry) : undefined) : [];
 
 		this._postMessage({ id: 'TermSearchResult', requestId: search.requestId, options });

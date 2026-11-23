@@ -91,6 +91,27 @@ export function getTokenIndexAtPosition(tokens: IToken[], position: { line: numb
 }
 
 /**
+ * Gets the index of the first token that starts at or after a position, as the first token after
+ * a word the lexer skipped.
+ * @param tokens The document tokens.
+ * @param position A zero-based position in the document.
+ * @returns The index, or the number of tokens where every token starts before the position.
+ */
+export function getTokenIndexAfterPosition(tokens: IToken[], position: { line: number; character: number }): number {
+	const line = position.line + 1;
+
+	for (let i = _getFirstTokenIndexEndingOnOrAfterLine(tokens, line); i < tokens.length; i++) {
+		const token = tokens[i];
+
+		if (token.startLine && token.startColumn && (token.startLine > line || (token.startLine === line && token.startColumn - 1 >= position.character))) {
+			return i;
+		}
+	}
+
+	return tokens.length;
+}
+
+/**
  * Gets the index of the first token that ends on or after the given line, by binary search
  * over tokens in document order. The tokens before it cannot contain a position on that
  * line, so a search for a position can start there instead of at the first token.

@@ -1,6 +1,11 @@
 import type { BlankNode, NamedNode } from '@rdfjs/types';
 
 /**
+ * How many terms a picker of the form editor and the completion of the text editor ask for.
+ */
+export const TERM_SEARCH_LIMIT = 50;
+
+/**
  * The type of terms a search targets, by the place the picked term takes in a statement: the
  * predicates of statements, the classes a resource is typed with, the resources a value refers to,
  * or the datatypes of literals. A picker of the form editor and the completion of the text editor
@@ -28,9 +33,9 @@ export type TermFit = 'fits' | 'general' | 'other';
  */
 export interface TermSearchStatement {
 	/**
-	 * The resource the statement is about.
+	 * The resource the statement is about, where it is named, as a variable of a query is not.
 	 */
-	subject: NamedNode | BlankNode;
+	subject?: NamedNode | BlankNode;
 
 	/**
 	 * The IRI of the predicate, where a value is picked.

@@ -1,14 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { termToString } from 'rdf-string';
 import { ResourceOptionData, TermSearchStatement, TermSearchTargetType } from '../form-editor-model';
+import { TERM_SEARCH_LIMIT } from '@src/services/vocabulary/term-search';
 import { SequentialTermSearch } from '../services/sequential-term-search';
 import { rankTermOptions } from '@src/utilities/term-ranking';
 import { useFormEditorContext } from '../state/form-editor-context';
-
-/**
- * How many terms a picker asks for.
- */
-const TERM_SEARCH_LIMIT = 50;
 
 /**
  * The last answer of the host, and the text it is for.

@@ -377,14 +377,14 @@ describe('SparqlCompletionItemProvider', () => {
             const context = {} as any;
             const tokens = [
                 makeToken(RdfToken.GRAPH.name, 'GRAPH'),
-                makeToken(RdfToken.IRIREF.name, '<'),
+                makeToken(RdfToken.IRIREF.name, '<', 7),
             ] as any;
             vi.spyOn(p, 'getGraphIriCompletionItems').mockResolvedValue([]);
-            await p.getCompletionItems(doc, context, tokens, 1);
+            await (p as any).getCompletionItems(doc, context, tokens, { line: 0, character: 7 });
             expect(p.getGraphIriCompletionItems).toHaveBeenCalledWith(doc, tokens, 1);
         });
 
-        it('calls super.getCompletionItems when not in graph definition context', () => {
+        it('calls super.getCompletionItems when not in graph definition context', async () => {
             const p = new SparqlCompletionItemProvider({} as any, {} as any, {} as any, {} as any, {} as any);
             const doc = makeDoc() as any;
             const context = {} as any;
@@ -393,7 +393,7 @@ describe('SparqlCompletionItemProvider', () => {
                 makeToken('PNAME_NS', 'ex:'),
             ] as any;
             // isGraphDefinitionContext returns false → parent mock returns null
-            const result = p.getCompletionItems(doc, context, tokens, 1);
+            const result = await (p as any).getCompletionItems(doc, context, tokens, { line: 0, character: 3 });
             expect(result).toBeNull();
         });
     });
@@ -412,7 +412,7 @@ describe('SparqlCompletionItemProvider', () => {
             expect(result).toBeNull();
         });
 
-        it('returns null when the tokens do not cover the position', async () => {
+        it('completes by the base provider where no token is at the position, which completes nothing in the mock', async () => {
             const p = new SparqlCompletionItemProvider({} as any, {} as any, {} as any, {} as any, {} as any);
             (p as any)._contextService = ({
                 isLoading: () => false,
@@ -439,14 +439,13 @@ describe('SparqlCompletionItemProvider', () => {
                 waitUntilLoaded: async () => {},
                 getDocumentContext: vi.fn(() => ({ tokenizeDocument })),
             });
-            const spy = vi.spyOn(p, 'getCompletionItems').mockReturnValue([]);
+            const spy = vi.spyOn(p as any, 'getCompletionItems').mockResolvedValue([]);
             const doc = makeDoc('file:///test.sparql', '. ex:') as any;
             // Position inside the 'ex:' token (0-based line 0, character 3 → 1-based col 3..5).
-            await p.provideCompletionItems(
-                doc, { line: 0, character: 3 } as any, {} as any, {} as any
-            );
+            const position = { line: 0, character: 3 } as any;
+            await p.provideCompletionItems(doc, position, {} as any, {} as any);
             expect(tokenizeDocument).toHaveBeenCalledWith(doc);
-            expect(spy).toHaveBeenCalledWith(doc, expect.anything(), tokens, 1);
+            expect(spy).toHaveBeenCalledWith(doc, expect.anything(), tokens, position);
         });
 
     });
