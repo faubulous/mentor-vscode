@@ -86,6 +86,13 @@ describe('TurtleCompletionItemProvider', () => {
 		expect(list!.items[1].insertText).toBe(`<${V}leaf>`);
 	});
 
+	it('searches by the whole word where the lexer reads its last letter as the keyword a', async () => {
+		const { list, searches } = await complete(`${PREAMBLE}ex:Oak ex:p ex:o ;\n\tla|`, [option('label')]);
+
+		expect(searches[0]).toMatchObject({ targetType: 'predicate', text: 'la', statement: { subject: RdfDataFactory.namedNode(EX + 'Oak') } });
+		expect(list!.items[0].range).toEqual(new vscode.Range(2, 1, 2, 3));
+	});
+
 	it('searches datatypes after ^^', async () => {
 		const { searches } = await complete(`${PREAMBLE}ex:Oak ex:planted "2024-02-29"^^xs|`);
 
@@ -99,8 +106,9 @@ describe('TurtleCompletionItemProvider', () => {
 		expect(list!.items[0].additionalTextEdits).toHaveLength(1);
 	});
 
-	it('completes nothing in a literal, after an object, or in a prefix declaration', async () => {
+	it('completes nothing in a literal, on the keyword a, after an object, or in a prefix declaration', async () => {
 		expect((await complete(`${PREAMBLE}ex:Oak ex:p "Tre|e" .`)).searches).toEqual([]);
+		expect((await complete(`${PREAMBLE}ex:Oak a|`)).list).toBeNull();
 		expect((await complete(`${PREAMBLE}ex:Oak ex:p ex:o |`)).list).toBeNull();
 		expect((await complete(`@prefix e|`)).list).toBeNull();
 	});

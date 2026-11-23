@@ -116,39 +116,48 @@ export class TurtleCompletionItemProvider extends TurtleFeatureProvider implemen
 
 		const options = await this._catalogue.search({ ...target, text: typed.text, limit: TERM_SEARCH_LIMIT }, context);
 		const items = await Promise.all(options.map((option, rank) => this._itemOf(document, context, option, rank, typed, target.targetType)));
-
 		return new vscode.CompletionList(items, true);
 	}
 
 	/**
-	 * The name typed at the cursor: the prefixed name the cursor is in, else the word the lexer
-	 * skipped there, else nothing typed yet.
+	 * The name typed at the cursor: the prefixed name the cursor is in, else the word there, which
+	 * the lexer skipped or split, else nothing typed yet.
 	 * @param document The document.
 	 * @param tokens The tokens of the document.
 	 * @param position The position of the cursor.
-	 * @returns The name, or `undefined` where the cursor is in another token, such as a literal.
+	 * @returns The name, or `undefined` where the cursor is in another token, such as a literal or
+	 * the keyword `a`.
 	 */
 	private _typedNameAt(document: vscode.TextDocument, tokens: IToken[], position: vscode.Position): TypedName | undefined {
 		const index = getTokenIndexAtPosition(tokens, position);
+		const word = document.getWordRangeAtPosition(position, NAME_PATTERN);
 
-		if (index >= 0) {
-			const token = tokens[index];
-
-			// Only a prefixed name is completed where the cursor is in a token.
-			if (token.tokenType.name !== RdfToken.PNAME_LN.name && token.tokenType.name !== RdfToken.PNAME_NS.name) {
-				return undefined;
-			}
-
-			const { start, end } = getTokenPosition(token);
-			const range = new vscode.Range(start.line, start.character, end.line, end.character);
-
-			return { text: document.getText(new vscode.Range(range.start, position)), range, end: index };
+		if (index >= 0 && !_splitsWord(document, tokens[index], word)) {
+			return this._typedPrefixedNameAt(document, tokens[index], index, position);
 		}
 
-		const word = document.getWordRangeAtPosition(position, NAME_PATTERN);
 		const range = word ?? new vscode.Range(position, position);
 
 		return { text: document.getText(new vscode.Range(range.start, position)), range, end: getTokenIndexAfterPosition(tokens, range.start) };
+	}
+
+	/**
+	 * The prefixed name typed in the token at the cursor.
+	 * @param document The document.
+	 * @param token The token at the cursor.
+	 * @param index The index of the token.
+	 * @param position The position of the cursor.
+	 * @returns The name, or `undefined` where the token is no prefixed name.
+	 */
+	private _typedPrefixedNameAt(document: vscode.TextDocument, token: IToken, index: number, position: vscode.Position): TypedName | undefined {
+		if (token.tokenType.name !== RdfToken.PNAME_LN.name && token.tokenType.name !== RdfToken.PNAME_NS.name) {
+			return undefined;
+		}
+
+		const { start, end } = getTokenPosition(token);
+		const range = new vscode.Range(start.line, start.character, end.line, end.character);
+
+		return { text: document.getText(new vscode.Range(range.start, position)), range, end: index };
 	}
 
 	/**
@@ -179,6 +188,18 @@ export class TurtleCompletionItemProvider extends TurtleFeatureProvider implemen
 
 		return item;
 	}
+}
+
+/**
+ * Whether the lexer split the word typed at the cursor: it skipped the start of the word, which is
+ * no term, and read the rest as a token of its own, as the keyword `a` at the end of `la`.
+ * @param document The document.
+ * @param token The token at the cursor.
+ * @param word The range of the word at the cursor.
+ * @returns `true` where the word begins before the token.
+ */
+function _splitsWord(document: vscode.TextDocument, token: IToken, word: vscode.Range | undefined): boolean {
+	return word !== undefined && document.offsetAt(word.start) < token.startOffset;
 }
 
 /**
