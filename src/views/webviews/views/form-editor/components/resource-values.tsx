@@ -1,6 +1,6 @@
 import { DragEvent, FocusEvent, KeyboardEvent, MouseEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { VscodeTextfield } from '@vscode-elements/elements';
-import { ResourceOptionData, TermData, TermSearchTargetType } from '../form-editor-model';
+import { ResourceOptionData, TermData, TermSearchStatement, TermSearchTargetType } from '../form-editor-model';
 import { NewValueTypeMarker } from './new-value-type-marker';
 import { LiteralAnnotationPickerSelection } from './literal-annotation-picker-items';
 import { TermPicker } from './term-picker';
@@ -67,6 +67,11 @@ export interface ResourceValuesProps {
 	 * takes text only.
 	 */
 	targetType?: TermSearchTargetType;
+
+	/**
+	 * The statement the input picks values for, whose fitting terms it offers first.
+	 */
+	statement?: TermSearchStatement;
 
 	/**
 	 * The text typed into the input.
@@ -150,7 +155,7 @@ export interface ResourceValuesProps {
  * @returns The box.
  */
 export function ResourceValues(props: ResourceValuesProps): React.JSX.Element {
-	const { resources, targetType, pendingText, placeholder, onPendingInput, onPick, onCreate, onRemove, onMove, onStartNode, onStartText, newValueType, autoFocus = false, readOnly = false } = props;
+	const { resources, targetType, statement, pendingText, placeholder, onPendingInput, onPick, onCreate, onRemove, onMove, onStartNode, onStartText, newValueType, autoFocus = false, readOnly = false } = props;
 	const pills = useRef<(HTMLElement | null)[]>([]);
 	const fieldRef = useRef<VscodeTextfield>(null);
 	const [focusRequest, setFocusRequest] = useState<number>();
@@ -325,6 +330,7 @@ export function ResourceValues(props: ResourceValuesProps): React.JSX.Element {
 			))}
 			<TermPicker
 				targetType={targetType}
+				statement={statement}
 				exclude={present}
 				text={pendingText}
 				onTextChange={text => onPendingInput(text, fieldRef.current?.wrappedElement?.selectionStart ?? text.length)}

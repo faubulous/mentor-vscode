@@ -7,7 +7,8 @@ import { RdfSyntax } from '@faubulous/mentor-rdf-parsers';
 import { ITokenizedDocumentContext } from '@src/services/document/document-context.interface';
 import { IPrefixLookupService } from '@src/services/document/prefix-lookup-service.interface';
 import { createResolvingDocumentContext } from '@src/utilities/mocks/factories';
-import { TermSearchTargetType } from '@src/views/webviews/views/form-editor/form-editor-model';
+import { TermFit, TermSearchTargetType } from '@src/views/webviews/views/form-editor/form-editor-model';
+import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { StoreIconResolver } from './store-icon-resolver';
 import { TermCatalogueService } from './term-catalogue-service';
 
@@ -214,5 +215,14 @@ describe('TermCatalogueService', () => {
 		const [length] = await createCatalogue().search({ targetType: 'datatype', text: 'len', limit: 1 }, createDocument());
 
 		expect(length).toMatchObject({ subject: { value: `${V}Length` }, iconName: 'symbol-text' });
+	});
+
+	it('ranks the terms that fit the statement first where their fit is told, and tells each its fit', async () => {
+		const catalogue = createCatalogue();
+		const fits: Record<string, TermFit> = { [`${V}height`]: 'fits' };
+		const options = await catalogue.search({ targetType: 'predicate', text: '', limit: 50 }, createDocument(), iri => fits[iri] ?? 'other');
+
+		expect(options[0]).toMatchObject({ subject: RdfDataFactory.namedNode(`${V}height`), fit: 'fits' });
+		expect(options.slice(1).every(entry => entry.fit === 'other')).toBe(true);
 	});
 });

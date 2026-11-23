@@ -537,6 +537,7 @@ function _resourceBox(edited: EditedRow, resources: readonly ShownValue[], optio
 			<ResourceValues
 				resources={resources.map(({ view, index }) => ({ view, index }))}
 				targetType={_targetTypeOf(isType, defaultType)}
+				statement={isType ? undefined : { subject: editor.subject, predicate: state.draft.predicate }}
 				pendingText={state.pendingText}
 				placeholder={awaitsPredicate ? 'Pick a property first' : _placeholderOf(state.draft.values.length, header, label)}
 				readOnly={awaitsPredicate}

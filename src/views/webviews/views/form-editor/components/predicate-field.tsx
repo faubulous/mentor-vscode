@@ -79,6 +79,7 @@ export function PredicateField({ editor, state, label, autoFocus = false, onPred
 	return (
 		<TermPicker
 			targetType="predicate"
+			statement={{ subject: editor.subject }}
 			text={focused || (editor.isNew && state.draft.predicate === undefined) ? state.predicateText : label}
 			onTextChange={text => editor.inputPredicate(text)}
 			openOnFocus={editor.isNew}

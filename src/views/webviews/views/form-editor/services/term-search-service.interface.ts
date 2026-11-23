@@ -1,5 +1,5 @@
 import { BlankNode, NamedNode } from '@rdfjs/types';
-import { PredicateRangeData, ResourceOptionData, TermSearchTargetType } from '../form-editor-model';
+import { PredicateRangeData, ResourceOptionData, TermSearchStatement, TermSearchTargetType } from '../form-editor-model';
 
 /**
  * Searches the terms the pickers of the form editor offer, and tells the languages they offer and
@@ -13,9 +13,10 @@ export interface ITermSearchService {
 	 * @param targetType The type of terms.
 	 * @param text The typed text.
 	 * @param limit How many terms are returned at most.
+	 * @param statement The statement the terms are picked for, whose fitting terms come first.
 	 * @returns The matching terms, best first.
 	 */
-	search(targetType: TermSearchTargetType, text: string, limit: number): Promise<ResourceOptionData[]>;
+	search(targetType: TermSearchTargetType, text: string, limit: number, statement?: TermSearchStatement): Promise<ResourceOptionData[]>;
 
 	/**
 	 * Tell the languages the workspace tags its literals with.

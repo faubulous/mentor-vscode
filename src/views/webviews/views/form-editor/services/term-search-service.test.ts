@@ -69,4 +69,13 @@ describe('TermSearchService', () => {
 
 		expect(service.accept({ id: 'EditApplied', editId: 'edit-1', version: 2 })).toBe(false);
 	});
+
+	it('sends the statement a search picks terms for', () => {
+		const { service, posted } = createService();
+		const statement = { subject: RdfDataFactory.namedNode('http://example.org/Oak'), predicate: 'http://example.org/height' };
+
+		void service.search('resource', 'tr', 10, statement);
+
+		expect(posted).toEqual([{ id: 'TermSearch', requestId: 1, targetType: 'resource', text: 'tr', limit: 10, statement }]);
+	});
 });

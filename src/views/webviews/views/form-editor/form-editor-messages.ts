@@ -8,7 +8,7 @@ import type { EditOperation } from '@src/services/editing/edit-operation';
 import type { EditProblem } from '@src/services/editing/edit-problem';
 import type { ExecuteCommandMessage } from '../../webview-messaging';
 import type { BlankNode, NamedNode } from '@rdfjs/types';
-import type { DocumentPosition, DocumentSnapshot, PredicateRangeData, ResourceCardBodyData, ResourceSource, ResourceCardHeaderData, ResourceOptionData, TermSearchTargetType } from './form-editor-model';
+import type { DocumentPosition, DocumentSnapshot, PredicateRangeData, ResourceCardBodyData, TermSearchStatement, ResourceSource, ResourceCardHeaderData, ResourceOptionData, TermSearchTargetType } from './form-editor-model';
 import type { ScopeKey } from '@src/utilities/config-scope';
 
 /**
@@ -111,10 +111,11 @@ export type FormEditorWebviewMessage =
 	 */
 	| { id: 'RemoveResource'; resource: NamedNode | BlankNode }
 	/**
-	 * Search the terms of a type the workspace knows for typed text, at most `limit` of them; the
-	 * host answers with a `TermSearchResult` of the same `requestId`.
+	 * Search the terms of a type the workspace knows for typed text, at most `limit` of them, those
+	 * that fit the statement they are picked for first, where it is given; the host answers with a
+	 * `TermSearchResult` of the same `requestId`.
 	 */
-	| { id: 'TermSearch'; requestId: number; targetType: TermSearchTargetType; text: string; limit: number }
+	| { id: 'TermSearch'; requestId: number; targetType: TermSearchTargetType; text: string; limit: number; statement?: TermSearchStatement }
 	/**
 	 * Ask for the languages the workspace tags its literals with; the host answers with a
 	 * `WorkspaceLanguagesResponse` of the same `requestId`.

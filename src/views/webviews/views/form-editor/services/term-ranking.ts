@@ -1,5 +1,5 @@
 import { getLocalPartAndQuery } from '@src/utilities/uri';
-import { ResourceOptionData, TermSource } from '../form-editor-model';
+import { ResourceOptionData, TermFit, TermSearchTargetType, TermSource } from '../form-editor-model';
 
 /**
  * What a term is matched and ranked by.
@@ -21,9 +21,15 @@ export interface TermRankingKeys {
 	prefixedName?: string;
 
 	/**
-	 * Where the term comes from.
+	 * Where the term comes from; absent where the source does not rank it, as for predicates, which
+	 * their fit ranks instead.
 	 */
-	source: TermSource;
+	source?: TermSource;
+
+	/**
+	 * How the term fits the statement it is picked for; absent where nothing tells.
+	 */
+	fit?: TermFit;
 }
 
 /**
@@ -48,6 +54,12 @@ interface TermMatch<T> {
 }
 
 /**
+ * The rank of each fit: the terms that fit the statement first, then those nothing tells about,
+ * then those that fit other statements.
+ */
+const FIT_RANK: Record<TermFit, number> = { fits: 0, general: 1, other: 2 };
+
+/**
  * The rank of each source: the document first, then the vocabularies it declares, then the rest.
  */
 const SOURCE_RANK: Record<TermSource, number> = { document: 0, declared: 1, workspace: 2 };
@@ -58,8 +70,8 @@ const SOURCE_RANK: Record<TermSource, number> = { document: 0, declared: 1, work
 const COLLATOR = new Intl.Collator();
 
 /**
- * The terms that match typed text, ranked: by source, then by how well they match, then by label
- * and IRI. The host ranks the terms of a search by it, and a picker the terms of its last answer
+ * The terms that match typed text, ranked: by how they fit the statement they are picked for, then
+ * by source where it ranks them, then by how well they match, then by label and IRI. The host ranks the terms of a search by it, and a picker the terms of its last answer
  * while the next is on its way, so both agree on the terms shown and their order.
  * @param terms The terms.
  * @param text The typed text; empty matches every term.
@@ -89,8 +101,23 @@ export function rankTerms<T>(terms: Iterable<T>, text: string, keysOf: (term: T)
  * @param text The typed text; empty matches every option.
  * @returns The matching options, best first.
  */
-export function rankTermOptions(options: Iterable<ResourceOptionData>, text: string): ResourceOptionData[] {
-	return rankTerms(options, text, option => ({ iri: option.subject.value, label: option.label, prefixedName: option.prefixedName, source: option.source }));
+export function rankTermOptions(options: Iterable<ResourceOptionData>, text: string, targetType: TermSearchTargetType): ResourceOptionData[] {
+	return rankTerms(options, text, option => getRankingKeys(targetType, option.subject.value, option.label, option.prefixedName, option.source, option.fit));
+}
+
+/**
+ * What a term of a search is ranked by: predicates by their fit, then by how well they match and
+ * alphabetically, as their domain tells what is relevant; other terms by their fit, then by source.
+ * @param targetType The type of terms searched.
+ * @param iri The IRI of the term.
+ * @param label The label of the term.
+ * @param prefixedName The prefixed name of the term, if it has one.
+ * @param source Where the term comes from.
+ * @param fit How the term fits the statement it is picked for, if anything tells.
+ * @returns The keys.
+ */
+export function getRankingKeys(targetType: TermSearchTargetType, iri: string, label: string, prefixedName: string | undefined, source: TermSource, fit: TermFit | undefined): TermRankingKeys {
+	return { iri, label, prefixedName, source: targetType === 'predicate' ? undefined : source, fit };
 }
 
 /**
@@ -160,8 +187,18 @@ function _qualityOfNames(needle: string, names: readonly (string | undefined)[])
  * @returns A negative number when `a` comes first, a positive one when `b` does.
  */
 function _compareMatches<T>(a: TermMatch<T>, b: TermMatch<T>): number {
-	return SOURCE_RANK[a.keys.source] - SOURCE_RANK[b.keys.source]
+	return FIT_RANK[a.keys.fit ?? 'general'] - FIT_RANK[b.keys.fit ?? 'general']
+		|| _sourceRankOf(a.keys) - _sourceRankOf(b.keys)
 		|| a.quality - b.quality
 		|| COLLATOR.compare(a.keys.label, b.keys.label)
 		|| COLLATOR.compare(a.keys.iri, b.keys.iri);
+}
+
+/**
+ * The rank of the source of a term, the same for every term where the source does not rank it.
+ * @param keys What the term is ranked by.
+ * @returns The rank.
+ */
+function _sourceRankOf(keys: TermRankingKeys): number {
+	return keys.source ? SOURCE_RANK[keys.source] : 0;
 }

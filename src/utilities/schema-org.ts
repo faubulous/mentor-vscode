@@ -5,11 +5,13 @@
 export const SCHEMA_ORG_NAMESPACES: readonly string[] = ['http://schema.org/', 'https://schema.org/'];
 
 /**
- * The local names of the schema.org terms the form editor reads: the property that names the
- * classes a property takes values of, and the data types, which are written as literals.
+ * The local names of the schema.org terms the form editor reads: the properties that name the
+ * classes a property takes values of and is used on, and the data types, which are written as
+ * literals.
  */
 export const SchemaOrg = {
 	rangeIncludes: 'rangeIncludes',
+	domainIncludes: 'domainIncludes',
 	DataType: 'DataType',
 	Text: 'Text',
 	Boolean: 'Boolean',

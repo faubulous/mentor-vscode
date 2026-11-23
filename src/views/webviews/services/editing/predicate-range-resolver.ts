@@ -1,8 +1,9 @@
 import { OWL, RDF, RDFS, SH, Store, XSD, _XSD } from '@faubulous/mentor-rdf';
-import { Quad_Object, Quad_Subject } from '@rdfjs/types';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { getSchemaOrgIris, getSchemaOrgLocalName, SchemaOrg } from '@src/utilities/schema-org';
+import { getObjectIris, isInstanceOf } from '@src/utilities/store-statements';
 import { PredicateRangeData } from '@src/views/webviews/views/form-editor/form-editor-model';
+import { PropertyShapeData, PropertyShapeIndex } from './property-shape-index';
 
 /**
  * What a range says about the values of a predicate, before it is known where it was read from.
@@ -79,8 +80,9 @@ export class PredicateRangeResolver {
 	/**
 	 * Create a resolver.
 	 * @param _store The store.
+	 * @param _shapes The property shapes of types, read from the store.
 	 */
-	constructor(private readonly _store: Store) { }
+	constructor(private readonly _store: Store, private readonly _shapes: PropertyShapeIndex) { }
 
 	/**
 	 * What values a predicate takes for a resource of the given types.
@@ -104,6 +106,23 @@ export class PredicateRangeResolver {
 	}
 
 	/**
+	 * The classes the values of a predicate are instances of for a resource of the given types: those
+	 * its property shapes name, else the classes among its ranges.
+	 * @param predicate The IRI of the predicate.
+	 * @param typeIris The types of the resource, asserted and inferred, whose shapes are read.
+	 * @returns The IRIs of the classes; none where no shape or range names one.
+	 */
+	rangeClassesOf(predicate: string, typeIris: readonly string[]): string[] {
+		const shaped = this._shapes.shapesOf(typeIris).flatMap(shape => shape.path === predicate && shape.class ? [shape.class] : []);
+
+		if (shaped.length > 0) {
+			return Array.from(new Set(shaped));
+		}
+
+		return this._rangesOf(predicate).filter(iri => this._classify(iri).type === 'resource');
+	}
+
+	/**
 	 * Read what values a predicate takes, by the order of the sources.
 	 * @param predicate The IRI of the predicate.
 	 * @param typeIris The types of the resource.
@@ -122,74 +141,21 @@ export class PredicateRangeResolver {
 	}
 
 	/**
-	 * What the property shapes of the types of a resource say about a predicate: those of the node
-	 * shapes that target a type, or that are the class themselves.
+	 * What the property shapes of the types of a resource say about a predicate.
 	 * @param predicate The IRI of the predicate.
 	 * @param typeIris The types of the resource.
 	 * @returns The range of the first shape that tells one, or `undefined`.
 	 */
 	private _fromShapes(predicate: string, typeIris: readonly string[]): ValueRange | undefined {
-		const path = RdfDataFactory.namedNode(predicate);
+		for (const shape of this._shapes.shapesOf(typeIris)) {
+			const range = shape.path === predicate ? _rangeOfShape(shape) : undefined;
 
-		for (const type of typeIris) {
-			for (const shape of this._nodeShapesOf(type)) {
-				for (const quad of this._store.matchAll(undefined, shape, RdfDataFactory.namedNode(SH.property), null)) {
-					const propertyShape = quad.object;
-
-					if (_isSubject(propertyShape) && this._holds(propertyShape, SH.path, path)) {
-						const range = this._rangeOfShape(propertyShape);
-
-						if (range) {
-							return range;
-						}
-					}
-				}
+			if (range) {
+				return range;
 			}
 		}
 
 		return undefined;
-	}
-
-	/**
-	 * The node shapes of a class: those that target it, and the class itself where it is a shape.
-	 * @param type The IRI of the class.
-	 * @returns The shapes.
-	 */
-	private _nodeShapesOf(type: string): Quad_Subject[] {
-		const typeNode = RdfDataFactory.namedNode(type);
-		const shapes: Quad_Subject[] = Array.from(this._store.matchAll(undefined, null, RdfDataFactory.namedNode(SH.targetClass), typeNode), quad => quad.subject);
-
-		if (this._holds(typeNode, RDF.type, RdfDataFactory.namedNode(SH.NodeShape))) {
-			shapes.push(typeNode);
-		}
-
-		return shapes;
-	}
-
-	/**
-	 * What a property shape says about its values: a datatype gives literals of it, a class or a
-	 * node kind of IRIs or blank nodes resources, the node kind of literals literals.
-	 * @param shape The property shape.
-	 * @returns The range, or `undefined` where the shape tells none.
-	 */
-	private _rangeOfShape(shape: Quad_Subject): ValueRange | undefined {
-		const datatype = this._objectOf(shape, SH.datatype);
-
-		if (datatype) {
-			return { type: 'literal', datatype };
-		}
-
-		if (this._objectOf(shape, SH.class)) {
-			return { type: 'resource' };
-		}
-
-		const nodeKind = this._objectOf(shape, SH.nodeKind);
-
-		if (nodeKind && RESOURCE_NODE_KINDS.has(nodeKind)) {
-			return { type: 'resource' };
-		}
-
-		return nodeKind === SH.Literal ? { type: 'literal' } : undefined;
 	}
 
 	/**
@@ -199,10 +165,19 @@ export class PredicateRangeResolver {
 	 * @returns The range, or `undefined` where there is none or the ranges mix literals and resources.
 	 */
 	private _fromRanges(predicate: string): ValueRange | undefined {
-		const ranges = this._objectsOf(predicate, [RDFS.range]);
-		const named = ranges.length > 0 ? ranges : this._objectsOf(predicate, getSchemaOrgIris(SchemaOrg.rangeIncludes));
+		return _combine(this._rangesOf(predicate).map(iri => this._classify(iri)));
+	}
 
-		return _combine(named.map(iri => this._classify(iri)));
+	/**
+	 * The ranges of a predicate: its `rdfs:range`, else its `schema:rangeIncludes`.
+	 * @param predicate The IRI of the predicate.
+	 * @returns The IRIs of the ranges.
+	 */
+	private _rangesOf(predicate: string): string[] {
+		const subject = RdfDataFactory.namedNode(predicate);
+		const ranges = getObjectIris(this._store, subject, [RDFS.range]);
+
+		return ranges.length > 0 ? ranges : getObjectIris(this._store, subject, getSchemaOrgIris(SchemaOrg.rangeIncludes));
 	}
 
 	/**
@@ -216,7 +191,7 @@ export class PredicateRangeResolver {
 			return { type: 'literal' };
 		}
 
-		if (iri.startsWith(_XSD) || RDF_DATATYPES.has(iri) || this._isTypedAs(iri, [RDFS.Datatype])) {
+		if (iri.startsWith(_XSD) || RDF_DATATYPES.has(iri) || isInstanceOf(this._store, iri, [RDFS.Datatype])) {
 			return { type: 'literal', datatype: iri };
 		}
 
@@ -226,7 +201,7 @@ export class PredicateRangeResolver {
 			return { type: 'literal', datatype: SCHEMA_ORG_DATATYPES.get(schemaOrgName) };
 		}
 
-		if (this._isTypedAs(iri, getSchemaOrgIris(SchemaOrg.DataType))) {
+		if (isInstanceOf(this._store, iri, getSchemaOrgIris(SchemaOrg.DataType))) {
 			return { type: 'literal' };
 		}
 
@@ -241,75 +216,11 @@ export class PredicateRangeResolver {
 	 * @returns The range, or `undefined`.
 	 */
 	private _fromPropertyType(predicate: string): ValueRange | undefined {
-		if (KNOWN_OBJECT_PROPERTIES.has(predicate) || this._isTypedAs(predicate, [OWL.ObjectProperty])) {
+		if (KNOWN_OBJECT_PROPERTIES.has(predicate) || isInstanceOf(this._store, predicate, [OWL.ObjectProperty])) {
 			return { type: 'resource' };
 		}
 
-		return this._isTypedAs(predicate, [OWL.DatatypeProperty]) ? { type: 'literal' } : undefined;
-	}
-
-	/**
-	 * The IRI a resource has as the value of a predicate, the first where it has several.
-	 * @param subject The resource.
-	 * @param predicate The IRI of the predicate.
-	 * @returns The IRI, or `undefined`.
-	 */
-	private _objectOf(subject: Quad_Subject, predicate: string): string | undefined {
-		for (const quad of this._store.matchAll(undefined, subject, RdfDataFactory.namedNode(predicate), null)) {
-			if (quad.object.termType === 'NamedNode') {
-				return quad.object.value;
-			}
-		}
-
-		return undefined;
-	}
-
-	/**
-	 * The IRIs an IRI has as the values of any of the given predicates.
-	 * @param iri The IRI.
-	 * @param predicates The IRIs of the predicates.
-	 * @returns The IRIs, each once.
-	 */
-	private _objectsOf(iri: string, predicates: readonly string[]): string[] {
-		const subject = RdfDataFactory.namedNode(iri);
-		const objects = new Set<string>();
-
-		for (const predicate of predicates) {
-			for (const quad of this._store.matchAll(undefined, subject, RdfDataFactory.namedNode(predicate), null)) {
-				if (quad.object.termType === 'NamedNode') {
-					objects.add(quad.object.value);
-				}
-			}
-		}
-
-		return Array.from(objects);
-	}
-
-	/**
-	 * Indicate whether the store holds a statement in any of its graphs.
-	 * @param subject The subject.
-	 * @param predicate The IRI of the predicate.
-	 * @param object The object.
-	 * @returns `true` when it does.
-	 */
-	private _holds(subject: Quad_Subject, predicate: string, object: Quad_Object): boolean {
-		for (const _quad of this._store.matchAll(undefined, subject, RdfDataFactory.namedNode(predicate), object)) {
-			return true;
-		}
-
-		return false;
-	}
-
-	/**
-	 * Indicate whether an IRI is an instance of any of the given classes.
-	 * @param iri The IRI.
-	 * @param classes The IRIs of the classes.
-	 * @returns `true` when it is.
-	 */
-	private _isTypedAs(iri: string, classes: readonly string[]): boolean {
-		const subject = RdfDataFactory.namedNode(iri);
-
-		return classes.some(type => this._holds(subject, RDF.type, RdfDataFactory.namedNode(type)));
+		return isInstanceOf(this._store, predicate, [OWL.DatatypeProperty]) ? { type: 'literal' } : undefined;
 	}
 }
 
@@ -337,10 +248,19 @@ function _combine(ranges: readonly ValueRange[]): ValueRange | undefined {
 }
 
 /**
- * Indicate whether a term can be the subject of a statement, as a property shape is.
- * @param term The term.
- * @returns `true` for an IRI or a blank node.
+ * What a property shape says about its values: a datatype gives literals of it, a class or a node
+ * kind of IRIs or blank nodes resources, the node kind of literals literals.
+ * @param shape The property shape.
+ * @returns The range, or `undefined` where the shape tells none.
  */
-function _isSubject(term: Quad_Object): term is Quad_Subject & Quad_Object {
-	return term.termType === 'NamedNode' || term.termType === 'BlankNode';
+function _rangeOfShape(shape: PropertyShapeData): ValueRange | undefined {
+	if (shape.datatype) {
+		return { type: 'literal', datatype: shape.datatype };
+	}
+
+	if (shape.class || (shape.nodeKind && RESOURCE_NODE_KINDS.has(shape.nodeKind))) {
+		return { type: 'resource' };
+	}
+
+	return shape.nodeKind === SH.Literal ? { type: 'literal' } : undefined;
 }

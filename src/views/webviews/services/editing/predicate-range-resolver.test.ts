@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { OwlReasoner, RDF, RDFS, Store, XSD, _OWL, _RDFS, _SH, _XSD } from '@faubulous/mentor-rdf';
 import { PredicateRangeResolver } from './predicate-range-resolver';
+import { PropertyShapeIndex } from './property-shape-index';
 
 const V = 'http://example.org/vocabulary#';
 
@@ -44,7 +45,7 @@ function createResolver(): PredicateRangeResolver {
 			sh:property [ sh:path v:height ; sh:nodeKind sh:IRI ] .
 	`, 'http://example.org/shapes', true);
 
-	return new PredicateRangeResolver(store);
+	return new PredicateRangeResolver(store, new PropertyShapeIndex(store));
 }
 
 describe('PredicateRangeResolver', () => {
@@ -89,5 +90,14 @@ describe('PredicateRangeResolver', () => {
 		expect(resolver.resolve(RDFS.seeAlso, [])).toEqual({ type: 'resource', source: 'propertyType' });
 		expect(resolver.resolve(RDF.type, [])).toEqual({ type: 'resource', source: 'propertyType' });
 		expect(resolver.resolve(`${V}untyped`, [])).toBeUndefined();
+	});
+
+	it('tells the classes the values of a predicate are instances of: those its shapes name, else the classes among its ranges', () => {
+		const resolver = createResolver();
+
+		expect(resolver.rangeClassesOf(`${V}hasLeaf`, [])).toEqual([`${V}Leaf`]);
+		expect(resolver.rangeClassesOf(`${V}untyped`, [`${V}Tree`])).toEqual([`${V}Leaf`]);
+		expect(resolver.rangeClassesOf(`${SCHEMA}author`, [])).toEqual([`${SCHEMA}Person`, `${SCHEMA}Organization`]);
+		expect(resolver.rangeClassesOf(`${V}planted`, [])).toEqual([]);
 	});
 });
