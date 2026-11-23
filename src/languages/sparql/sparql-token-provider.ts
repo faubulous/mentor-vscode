@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
-import { VocabularyRepository } from '@faubulous/mentor-rdf';
 import { ServiceToken } from '@src/services/tokens';
 import { IDocumentContextService, IPrefixLookupService, IPresetDocumentService } from '@src/services/document';
 import { IWorkspaceIndexerService, IWorkspaceRenameService } from '@src/services/core';
@@ -30,6 +29,7 @@ import {
 	SparqlRenameProvider
 } from '@src/languages/sparql/providers';
 import { SparqlPrefixDefinitionService } from '@src/languages/sparql/services/sparql-prefix-definition-service';
+import { TermCatalogueService } from '@src/services/vocabulary/term-catalogue-service';
 
 /**
  * Registers the language feature providers for the SPARQL language.
@@ -40,7 +40,7 @@ import { SparqlPrefixDefinitionService } from '@src/languages/sparql/services/sp
 export class SparqlTokenProvider {
 	constructor() {
 		const contextService = container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
-		const vocabulary = container.resolve<VocabularyRepository>(ServiceToken.VocabularyRepository);
+		const catalogue = container.resolve<TermCatalogueService>(ServiceToken.TermCatalogueService);
 		const prefixLookup = container.resolve<IPrefixLookupService>(ServiceToken.PrefixLookupService);
 		const connectionRegistry = container.resolve<ISparqlConnectionRegistry>(ServiceToken.SparqlConnectionRegistry);
 		const documentConnectionService = container.resolve<IDocumentConnectionService>(ServiceToken.DocumentConnectionService);
@@ -54,7 +54,7 @@ export class SparqlTokenProvider {
 		const codeActionsProvider = new TurtleCodeActionsProvider(contextService);
 		const codeLensProvider = new SparqlCodeLensProvider(connectionRegistry, documentConnectionService, storeConfigService, queryService);
 		const notebookSlugCodelensProvider = new NotebookCellSlugCodeLensProvider(contextService);
-		const completionProvider = new SparqlCompletionItemProvider(contextService, vocabulary, connectionRegistry, documentConnectionService, graphService);
+		const completionProvider = new SparqlCompletionItemProvider(contextService, catalogue, connectionRegistry, documentConnectionService, graphService);
 		const definitionProvider = new ResourceDefinitionProvider(contextService, workspaceIndexer, presetDocuments);
 		const workspaceGraphDefinitionProvider = new WorkspaceGraphDefinitionProvider(contextService);
 		const formattingProvider = new SparqlCodeFormattingProvider();

@@ -1,10 +1,11 @@
 import * as vscode from "vscode";
 import { IToken, RdfToken } from "@faubulous/mentor-rdf-parsers";
 import { getTokenIndexAtPosition } from '@src/utilities';
-import { VocabularyRepository } from '@faubulous/mentor-rdf';
+import { TermCatalogueService } from '@src/services/vocabulary/term-catalogue-service';
 import { IDocumentContextService } from '@src/services/document';
 import { ISparqlConnectionRegistry, IGraphManagementService, IDocumentConnectionService } from '@src/languages/sparql/services';
 import { TurtleCompletionItemProvider } from "@src/languages/turtle/providers";
+import { PrefixDeclarationEdits } from '@src/languages/turtle/providers/turtle-completion-item-provider';
 import { TurtleDocument } from "@src/languages/turtle";
 
 export class SparqlCompletionItemProvider extends TurtleCompletionItemProvider {
@@ -21,14 +22,24 @@ export class SparqlCompletionItemProvider extends TurtleCompletionItemProvider {
 	 */
 	public readonly triggerCharacters = new Set([':', '<', '/']);
 
+	/**
+	 * Create the provider.
+	 * @param contextService Gives the document contexts.
+	 * @param catalogue Searches the terms of the workspace.
+	 * @param _connectionRegistry Gives the SPARQL connections.
+	 * @param _documentConnectionService Tells the connection of a query.
+	 * @param _graphService Gives the graphs of a connection.
+	 * @param prefixEdits Gives the edits that declare a prefix in a query.
+	 */
 	constructor(
 		contextService: IDocumentContextService,
-		vocabulary: VocabularyRepository,
+		catalogue: TermCatalogueService,
 		private readonly _connectionRegistry: ISparqlConnectionRegistry,
 		private readonly _documentConnectionService: IDocumentConnectionService,
-		private readonly _graphService: IGraphManagementService
+		private readonly _graphService: IGraphManagementService,
+		prefixEdits?: PrefixDeclarationEdits
 	) {
-		super(contextService, vocabulary);
+		super(contextService, catalogue, prefixEdits);
 	}
 
 	override async provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, t: vscode.CancellationToken, completion: vscode.CompletionContext): Promise<vscode.CompletionItem[] | vscode.CompletionList | null> {
@@ -47,21 +58,26 @@ export class SparqlCompletionItemProvider extends TurtleCompletionItemProvider {
 		// with the other providers that run on the same keystroke.
 		const tokens = context.tokenizeDocument(document);
 
-		const n = getTokenIndexAtPosition(tokens, position);
-
-		if (n < 1) {
-			return null;
-		}
-
-		return this.getCompletionItems(document, context, tokens, n) as Promise<vscode.CompletionItem[] | vscode.CompletionList | null>;
+		return this.getCompletionItems(document, context, tokens, position);
 	}
 
-	override getCompletionItems(document: vscode.TextDocument, context: TurtleDocument, tokens: IToken[], tokenIndex: number): vscode.ProviderResult<vscode.CompletionItem[] | vscode.CompletionList> {
-		if (this.isGraphDefinitionContext(tokens, tokenIndex)) {
+	/**
+	 * Complete the IRI of a graph after `FROM` or `GRAPH`, and the terms of the workspace that fit
+	 * the place anywhere else, as in a Turtle document.
+	 * @param document The document.
+	 * @param context The context of the document.
+	 * @param tokens The tokens of the document.
+	 * @param position The position of the cursor.
+	 * @returns The completion items, or `null` where nothing is completed.
+	 */
+	protected override async getCompletionItems(document: vscode.TextDocument, context: TurtleDocument, tokens: IToken[], position: vscode.Position): Promise<vscode.CompletionItem[] | vscode.CompletionList | null> {
+		const tokenIndex = getTokenIndexAtPosition(tokens, position);
+
+		if (tokenIndex >= 1 && this.isGraphDefinitionContext(tokens, tokenIndex)) {
 			return this.getGraphIriCompletionItems(document, tokens, tokenIndex);
-		} else {
-			return super.getCompletionItems(document, context, tokens, tokenIndex);
 		}
+
+		return super.getCompletionItems(document, context, tokens, position);
 	}
 
 	/**

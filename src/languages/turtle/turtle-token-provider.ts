@@ -27,6 +27,7 @@ import {
 import {
 	TurtlePrefixDefinitionService
 } from '@src/languages/turtle/services/turtle-prefix-definition-service';
+import { TermCatalogueService } from '@src/services/vocabulary/term-catalogue-service';
 
 /**
  * Registers the language feature providers for the Turtle language family.
@@ -51,6 +52,7 @@ export class TurtleTokenProvider {
 	constructor() {
 		const contextService = container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
 		const vocabulary = container.resolve<VocabularyRepository>(ServiceToken.VocabularyRepository);
+		const catalogue = container.resolve<TermCatalogueService>(ServiceToken.TermCatalogueService);
 		const prefixLookup = container.resolve<IPrefixLookupService>(ServiceToken.PrefixLookupService);
 		const workspaceIndexer = container.resolve<IWorkspaceIndexerService>(ServiceToken.WorkspaceIndexerService);
 		const presetDocuments = container.resolve<IPresetDocumentService>(ServiceToken.PresetDocumentService);
@@ -61,7 +63,7 @@ export class TurtleTokenProvider {
 
 		this._codeActionsProvider = new TurtleCodeActionsProvider(contextService);
 		this._codelensProvider = new TurtleUsageCodeLensProvider(contextService, workspaceIndexer, vocabulary);
-		this._completionProvider = new TurtleCompletionItemProvider(contextService, vocabulary);
+		this._completionProvider = new TurtleCompletionItemProvider(contextService, catalogue);
 		this._definitionProvider = new ResourceDefinitionProvider(contextService, workspaceIndexer, presetDocuments);
 		this._notebookSlugCodelensProvider = new NotebookCellSlugCodeLensProvider(contextService);
 		this._workspaceGraphDefinitionProvider = new WorkspaceGraphDefinitionProvider(contextService);

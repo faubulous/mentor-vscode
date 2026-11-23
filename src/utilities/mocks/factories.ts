@@ -305,10 +305,33 @@ export function createMockTextDocument(content = '', options?: { uri?: string | 
 
 			return content.substring(offsetAt(range.start), offsetAt(range.end));
 		},
-		getWordRangeAtPosition: () => undefined,
+		getWordRangeAtPosition: (position: vscode.Position, pattern?: RegExp) => _getWordRange(lines[position.line] ?? '', position, pattern),
 		validateRange: range => range,
 		validatePosition: position => position,
 	};
+}
+
+/**
+ * The range of the word at a position of a line, as VS Code finds it: the match of the pattern
+ * that contains the position or ends at it.
+ * @param text The text of the line.
+ * @param position The position.
+ * @param pattern The pattern of a word; a run of letters, digits and underscores where absent.
+ * @returns The range, or `undefined` where no word is at the position.
+ */
+function _getWordRange(text: string, position: vscode.Position, pattern = /\w+/): vscode.Range | undefined {
+	const global = new RegExp(pattern.source, pattern.flags.includes('g') ? pattern.flags : `${pattern.flags}g`);
+
+	for (const match of text.matchAll(global)) {
+		const start = match.index ?? 0;
+		const end = start + match[0].length;
+
+		if (start <= position.character && position.character <= end) {
+			return new vscode.Range(position.line, start, position.line, end);
+		}
+	}
+
+	return undefined;
 }
 
 /**
