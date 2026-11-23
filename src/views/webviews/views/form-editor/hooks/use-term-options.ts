@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { termToString } from 'rdf-string';
 import { ResourceOptionData, TermSearchStatement, TermSearchTargetType } from '../form-editor-model';
 import { SequentialTermSearch } from '../services/sequential-term-search';
-import { rankTermOptions } from '../services/term-ranking';
+import { rankTermOptions } from '@src/utilities/term-ranking';
 import { useFormEditorContext } from '../state/form-editor-context';
 
 /**

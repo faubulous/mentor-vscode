@@ -2,7 +2,7 @@ import { OWL, RDF, RDFS, Store } from '@faubulous/mentor-rdf';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { getSchemaOrgIris, SchemaOrg } from '@src/utilities/schema-org';
 import { getObjectIris } from '@src/utilities/store-statements';
-import { TermFit } from '@src/views/webviews/views/form-editor/form-editor-model';
+import { TermFit } from './term-search';
 import { PropertyShapeIndex } from './property-shape-index';
 
 /**

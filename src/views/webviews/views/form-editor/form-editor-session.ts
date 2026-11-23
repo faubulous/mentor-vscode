@@ -28,17 +28,13 @@ import { ResourceIndexBuilder } from '../../services/editing/resource-index-buil
 import { ResourceViewBuilder } from '../../services/editing/resource-view-builder';
 import { PinChange, PinnedPropertiesService } from '../../services/editing/pinned-properties-service';
 import { EditorSnapshotService } from '../../services/editing/editor-snapshot-service';
-import { PredicateRangeResolver } from '../../services/editing/predicate-range-resolver';
-import { PropertyShapeIndex } from '../../services/editing/property-shape-index';
-import { TermFitResolver } from '../../services/editing/term-fit-resolver';
-import { StoreIconResolver } from '../../services/editing/store-icon-resolver';
-import { TermCatalogueService } from '../../services/editing/term-catalogue-service';
-import { IPrefixLookupService } from '@src/services/document/prefix-lookup-service.interface';
-import { IWorkspaceIndexerService } from '@src/services/core/workspace-indexer.interface';
+import { PredicateRangeResolver } from '@src/services/vocabulary/predicate-range-resolver';
+import { StoreIconResolver } from '@src/services/vocabulary/store-icon-resolver';
+import { TermCatalogueService } from '@src/services/vocabulary/term-catalogue-service';
 import { EditOutcome, FormEditorEditHandler } from './form-editor-edit-handler';
 import { FormEditorHostMessage, FormEditorWebviewMessage } from './form-editor-messages';
 import { getFormReadOnlyReason } from './form-editor-read-only';
-import { DocumentProblem, DocumentSnapshot, ReadOnlyReason, ResourceCardBodyData, ResourceCardHeaderData, TermFit, TermSearchStatement, TermSearchTargetType } from './form-editor-model';
+import { DocumentProblem, DocumentSnapshot, ReadOnlyReason, ResourceCardBodyData, ResourceCardHeaderData } from './form-editor-model';
 import { ScopeKey } from '@src/utilities/config-scope';
 import { QuadContextCache } from './quad-context-cache';
 import { reviveTerms } from '@src/utilities/rdf-terms';
@@ -166,15 +162,6 @@ export class FormEditorSession implements vscode.Disposable {
 	 */
 	private _sentSnapshot?: DocumentSnapshot;
 
-	private _iconResolver?: StoreIconResolver;
-
-	private _rangeResolver?: PredicateRangeResolver;
-
-	private _fitResolver?: TermFitResolver;
-
-	private _shapeIndex?: PropertyShapeIndex;
-
-	private _termCatalogue?: TermCatalogueService;
 
 	private _inferredTypes?: InferredTypeCache;
 
@@ -818,15 +805,12 @@ export class FormEditorSession implements vscode.Disposable {
 	 * @returns The options.
 	 */
 	private _getIndexOptions(): ResourceIndexOptions {
-		const vocabulary = this._getVocabulary();
-
-		if (!vocabulary) {
-			return {};
-		}
+		const icons = _resolveIfRegistered<StoreIconResolver>(ServiceToken.StoreIconResolver);
+		const ranges = _resolveIfRegistered<PredicateRangeResolver>(ServiceToken.PredicateRangeResolver);
 
 		return {
-			resolveObjectIcon: iri => this._getIconResolver(vocabulary).resolve(iri),
-			resolvePredicateRange: (predicate, entry) => this._getRangeResolver(vocabulary).resolve(predicate, this._typesOf(entry))
+			resolveObjectIcon: icons ? iri => icons.resolve(iri) : undefined,
+			resolvePredicateRange: ranges ? (predicate, entry) => ranges.resolve(predicate, this._typesOf(entry)) : undefined
 		};
 	}
 
@@ -1014,45 +998,18 @@ export class FormEditorSession implements vscode.Disposable {
 
 	/**
 	 * Answer a search of a picker with the terms of the workspace that match it, best first: those
-	 * that fit the statement they are picked for before the others, where the search tells it.
-	 * Without a store or a document context, the answer offers none, so the picker does not wait
-	 * for it.
+	 * that fit the statement they are picked for before the others, where the search tells it, by
+	 * the types of its resource as the document states them. Without a term catalogue or a document
+	 * context, the answer offers none, so the picker does not wait for it.
 	 * @param search The search.
 	 */
 	private async _answerTermSearch(search: Extract<FormEditorWebviewMessage, { id: 'TermSearch' }>): Promise<void> {
-		const vocabulary = this._getVocabulary();
+		const catalogue = _resolveIfRegistered<TermCatalogueService>(ServiceToken.TermCatalogueService);
 		const context = this._getTokenizedContext();
-		const fitOf = vocabulary && search.statement ? this._fitOf(vocabulary, search.targetType, search.statement) : undefined;
-		const options = vocabulary && context ? await this._getTermCatalogue(vocabulary).search(search, context, fitOf) : [];
+		const entry = search.statement && this._index ? getEntry(this._index, search.statement.subject) : undefined;
+		const options = catalogue && context ? await catalogue.search(search, context, entry ? this._typesOf(entry) : undefined) : [];
 
 		this._postMessage({ id: 'TermSearchResult', requestId: search.requestId, options });
-	}
-
-	/**
-	 * How the terms of a search fit the statement they are picked for: a predicate by its domain and
-	 * the shapes of the types of the resource; a resource for a value by the classes the range of
-	 * the predicate names.
-	 * @param vocabulary The vocabulary repository over the store.
-	 * @param targetType The type of terms searched.
-	 * @param statement The statement the terms are picked for.
-	 * @returns Tells the fit of a term, or `undefined` where nothing tells how terms of the type fit.
-	 */
-	private _fitOf(vocabulary: VocabularyRepository, targetType: TermSearchTargetType, statement: TermSearchStatement): ((iri: string) => TermFit) | undefined {
-		const entry = this._index ? getEntry(this._index, statement.subject) : undefined;
-		const types = entry ? this._typesOf(entry) : [];
-		const fits = this._getFitResolver(vocabulary);
-
-		if (targetType === 'predicate') {
-			return iri => fits.predicateFit(iri, types);
-		}
-
-		if (targetType === 'resource' && statement.predicate) {
-			const rangeClasses = this._getRangeResolver(vocabulary).rangeClassesOf(statement.predicate, types);
-
-			return rangeClasses.length > 0 ? iri => fits.valueFit(iri, rangeClasses) : undefined;
-		}
-
-		return undefined;
 	}
 
 	/**
@@ -1061,8 +1018,8 @@ export class FormEditorSession implements vscode.Disposable {
 	 * @param requestId The request.
 	 */
 	private async _answerWorkspaceLanguages(requestId: number): Promise<void> {
-		const vocabulary = this._getVocabulary();
-		const languages = vocabulary ? await this._getTermCatalogue(vocabulary).getWorkspaceLanguages() : [];
+		const catalogue = _resolveIfRegistered<TermCatalogueService>(ServiceToken.TermCatalogueService);
+		const languages = catalogue ? await catalogue.getWorkspaceLanguages() : [];
 
 		this._postMessage({ id: 'WorkspaceLanguagesResponse', requestId, languages: [...languages] });
 	}
@@ -1074,63 +1031,11 @@ export class FormEditorSession implements vscode.Disposable {
 	 * @param request The request.
 	 */
 	private _answerPredicateRange(request: Extract<FormEditorWebviewMessage, { id: 'PredicateRangeRequest' }>): void {
-		const vocabulary = this._getVocabulary();
+		const ranges = _resolveIfRegistered<PredicateRangeResolver>(ServiceToken.PredicateRangeResolver);
 		const entry = this._index ? getEntry(this._index, request.subject) : undefined;
-		const range = vocabulary ? this._getRangeResolver(vocabulary).resolve(request.predicate, entry ? this._typesOf(entry) : []) : undefined;
+		const range = ranges?.resolve(request.predicate, entry ? this._typesOf(entry) : []);
 
 		this._postMessage({ id: 'PredicateRangeResponse', requestId: request.requestId, range });
-	}
-
-	/**
-	 * The catalogue of the terms of the workspace the pickers search.
-	 * @param vocabulary The vocabulary repository over the store.
-	 * @returns The catalogue.
-	 */
-	private _getTermCatalogue(vocabulary: VocabularyRepository): TermCatalogueService {
-		if (!this._termCatalogue) {
-			const prefixLookup = container.resolve<IPrefixLookupService>(ServiceToken.PrefixLookupService);
-			const indexer = container.resolve<IWorkspaceIndexerService>(ServiceToken.WorkspaceIndexerService);
-
-			this._termCatalogue = new TermCatalogueService(vocabulary, prefixLookup, this._getIconResolver(vocabulary), () => indexer.waitForIndexed());
-		}
-
-		return this._termCatalogue;
-	}
-
-	/**
-	 * The resolver of the glyphs of IRIs the document does not describe, over the store.
-	 * @param vocabulary The vocabulary repository over the store.
-	 * @returns The resolver.
-	 */
-	private _getIconResolver(vocabulary: VocabularyRepository): StoreIconResolver {
-		return this._iconResolver ??= new StoreIconResolver(vocabulary.store);
-	}
-
-	/**
-	 * The resolver of what values predicates take, created once.
-	 * @param vocabulary The vocabulary repository over the store.
-	 * @returns The resolver.
-	 */
-	private _getRangeResolver(vocabulary: VocabularyRepository): PredicateRangeResolver {
-		return this._rangeResolver ??= new PredicateRangeResolver(vocabulary.store, this._getShapeIndex(vocabulary));
-	}
-
-	/**
-	 * The resolver of how terms fit the statement they are picked for, created once.
-	 * @param vocabulary The vocabulary repository over the store.
-	 * @returns The resolver.
-	 */
-	private _getFitResolver(vocabulary: VocabularyRepository): TermFitResolver {
-		return this._fitResolver ??= new TermFitResolver(vocabulary.store, this._getShapeIndex(vocabulary));
-	}
-
-	/**
-	 * The index of the property shapes of types, created once and shared by the resolvers.
-	 * @param vocabulary The vocabulary repository over the store.
-	 * @returns The index.
-	 */
-	private _getShapeIndex(vocabulary: VocabularyRepository): PropertyShapeIndex {
-		return this._shapeIndex ??= new PropertyShapeIndex(vocabulary.store);
 	}
 
 	/**
@@ -1316,4 +1221,14 @@ async function _writePins(change: PinChange): Promise<void> {
  */
 function _pinScopes(): ScopeKey[] {
 	return (vscode.workspace.workspaceFolders?.length ?? 0) > 0 ? ['user', 'workspace'] : ['user'];
+}
+
+/**
+ * Resolve a service of the container where it is registered, as the services over the store are
+ * where Mentor has a store.
+ * @param token The token of the service.
+ * @returns The service, or `undefined` where it is not registered.
+ */
+function _resolveIfRegistered<T>(token: ServiceToken): T | undefined {
+	return container.isRegistered(token) ? container.resolve<T>(token) : undefined;
 }

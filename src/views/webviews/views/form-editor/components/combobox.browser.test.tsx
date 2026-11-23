@@ -3,7 +3,7 @@ import { userEvent } from 'vitest/browser';
 import { render } from '@testing-library/react';
 import { useState } from 'react';
 import { coverPage } from '@src/utilities/mocks/webview-test-utils';
-import { narrowByMatch } from '../services/term-ranking';
+import { narrowByMatch } from '@src/utilities/term-ranking';
 import { Combobox, ComboboxOption } from './combobox';
 
 const OPTIONS: ComboboxOption<string>[] = [

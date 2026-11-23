@@ -1,5 +1,5 @@
 import { getLocalPartAndQuery } from '@src/utilities/uri';
-import { ResourceOptionData, TermFit, TermSearchTargetType, TermSource } from '../form-editor-model';
+import { ResourceOptionData, TermFit, TermSearchTargetType, TermSource } from '@src/services/vocabulary/term-search';
 
 /**
  * What a term is matched and ranked by.

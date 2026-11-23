@@ -76,5 +76,11 @@ export enum ServiceToken {
 	/** Service that runs registered settings migrations on activation. */
 	SettingsMigrationService = "SettingsMigrationService",
 	/** Controller for the Mentor Notebook kernel. */
-	NotebookController = "NotebookController"
+	NotebookController = "NotebookController",
+	/** Tells the glyphs of IRIs from what the store says about them. */
+	StoreIconResolver = "StoreIconResolver",
+	/** Tells what values a predicate takes for a resource, from its ranges and shapes. */
+	PredicateRangeResolver = "PredicateRangeResolver",
+	/** Searches the terms of the workspace, as the form editor's pickers and the completion of the text editor do. */
+	TermCatalogueService = "TermCatalogueService"
 }
