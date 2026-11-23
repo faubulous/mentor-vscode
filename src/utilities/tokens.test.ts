@@ -29,7 +29,7 @@ import {
 	getIriFromIriReference,
 	getIriFromToken,
 	getNamespaceDefinition,
-	getTripleComponentType,
+	getTriplePosition,
 	getUnquotedLiteralValue,
 	isTypeAssertionObject,
 	getTokenIndexAtPosition,
@@ -173,24 +173,24 @@ describe('getNamespaceDefinition', () => {
 	});
 });
 
-describe('getTripleComponentType', () => {
+describe('getTriplePosition', () => {
 	it('returns "subject" when tokenIndex is 0', () => {
-		expect(getTripleComponentType([], 0)).toBe('subject');
+		expect(getTriplePosition([], 0)).toBe('subject');
 	});
 
 	it('returns "subject" after a PERIOD token', () => {
 		const tokens = [makeToken('PERIOD', '.'), makeToken('IRIREF', '<http://example.org/Thing>')];
-		expect(getTripleComponentType(tokens, 1)).toBe('subject');
+		expect(getTriplePosition(tokens, 1)).toBe('subject');
 	});
 
 	it('returns "predicate" after a SEMICOLON token', () => {
 		const tokens = [makeToken('SEMICOLON', ';'), makeToken('IRIREF', '<http://example.org/prop>')];
-		expect(getTripleComponentType(tokens, 1)).toBe('predicate');
+		expect(getTriplePosition(tokens, 1)).toBe('predicate');
 	});
 
 	it('returns "object" after an A token', () => {
 		const tokens = [makeToken('A', 'a'), makeToken('IRIREF', '<http://example.org/Class>')];
-		expect(getTripleComponentType(tokens, 1)).toBe('object');
+		expect(getTriplePosition(tokens, 1)).toBe('object');
 	});
 
 	it('returns "object" when preceded by IRIREF after SEMICOLON', () => {
@@ -200,7 +200,7 @@ describe('getTripleComponentType', () => {
 			makeToken('IRIREF', '<http://example.org/prop>'),
 			makeToken('IRIREF', '<http://example.org/value>'),
 		];
-		expect(getTripleComponentType(tokens, 2)).toBe('object');
+		expect(getTriplePosition(tokens, 2)).toBe('object');
 	});
 
 	it('returns "object" when preceded by IRIREF after LBRACKET', () => {
@@ -209,7 +209,7 @@ describe('getTripleComponentType', () => {
 			makeToken('IRIREF', '<http://example.org/prop>'),
 			makeToken('IRIREF', '<http://example.org/value>'),
 		];
-		expect(getTripleComponentType(tokens, 2)).toBe('object');
+		expect(getTriplePosition(tokens, 2)).toBe('object');
 	});
 
 	it('returns "predicate" when preceded by IRIREF after PERIOD', () => {
@@ -218,18 +218,18 @@ describe('getTripleComponentType', () => {
 			makeToken('IRIREF', '<http://example.org/subject>'),
 			makeToken('IRIREF', '<http://example.org/predicate>'),
 		];
-		expect(getTripleComponentType(tokens, 2)).toBe('predicate');
+		expect(getTriplePosition(tokens, 2)).toBe('predicate');
 	});
 
 	it('returns undefined for unrecognised preceding token', () => {
 		const tokens = [makeToken('STRING_LITERAL', '"hello"'), makeToken('IRIREF', '<http://example.org/>')];
-		expect(getTripleComponentType(tokens, 1)).toBeUndefined();
+		expect(getTriplePosition(tokens, 1)).toBeUndefined();
 	});
 
 	it('returns "subject" after an LCURLY token (SPARQL group graph pattern)', () => {
 		// WHERE { nexus:
 		const tokens = [makeToken('LCURLY', '{'), makeToken('PNAME_NS', 'nexus:')];
-		expect(getTripleComponentType(tokens, 1)).toBe('subject');
+		expect(getTriplePosition(tokens, 1)).toBe('subject');
 	});
 
 	it('returns "predicate" after a variable that opens a group graph pattern', () => {
@@ -239,7 +239,7 @@ describe('getTripleComponentType', () => {
 			makeToken('VAR1', '?s'),
 			makeToken('PNAME_NS', 'nexus:'),
 		];
-		expect(getTripleComponentType(tokens, 2)).toBe('predicate');
+		expect(getTriplePosition(tokens, 2)).toBe('predicate');
 	});
 
 	it('returns "predicate" after a variable that follows a PERIOD', () => {
@@ -249,7 +249,7 @@ describe('getTripleComponentType', () => {
 			makeToken('VAR1', '?s'),
 			makeToken('PNAME_NS', 'nexus:'),
 		];
-		expect(getTripleComponentType(tokens, 2)).toBe('predicate');
+		expect(getTriplePosition(tokens, 2)).toBe('predicate');
 	});
 
 	it('returns "predicate" after a variable at the start of the token stream', () => {
@@ -258,7 +258,7 @@ describe('getTripleComponentType', () => {
 			makeToken('VAR1', '?s'),
 			makeToken('PNAME_NS', 'nexus:'),
 		];
-		expect(getTripleComponentType(tokens, 1)).toBe('predicate');
+		expect(getTriplePosition(tokens, 1)).toBe('predicate');
 	});
 
 	it('returns "object" after a variable that follows another variable', () => {
@@ -268,7 +268,7 @@ describe('getTripleComponentType', () => {
 			makeToken('VAR2', '$p'),
 			makeToken('PNAME_NS', 'nexus:'),
 		];
-		expect(getTripleComponentType(tokens, 2)).toBe('object');
+		expect(getTriplePosition(tokens, 2)).toBe('object');
 	});
 
 	it('returns "object" after a variable that follows a SEMICOLON', () => {
@@ -278,7 +278,7 @@ describe('getTripleComponentType', () => {
 			makeToken('VAR1', '?p'),
 			makeToken('PNAME_NS', 'nexus:'),
 		];
-		expect(getTripleComponentType(tokens, 2)).toBe('object');
+		expect(getTriplePosition(tokens, 2)).toBe('object');
 	});
 
 	it('returns "object" after a prefixed name predicate that follows a variable subject', () => {
@@ -288,7 +288,7 @@ describe('getTripleComponentType', () => {
 			makeToken('PNAME_LN', 'nexus:p'),
 			makeToken('PNAME_NS', 'nexus:'),
 		];
-		expect(getTripleComponentType(tokens, 2)).toBe('object');
+		expect(getTriplePosition(tokens, 2)).toBe('object');
 	});
 });
 

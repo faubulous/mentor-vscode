@@ -65,7 +65,7 @@ export function DraftResourceCard({ type, index, edited }: DraftResourceCardProp
 							<span className="statement-value is-adder">
 								<ResourceValues
 									resources={types}
-									kind="class"
+									targetType="class"
 									pendingText={text}
 									placeholder="Choose type"
 									onPendingInput={setText}

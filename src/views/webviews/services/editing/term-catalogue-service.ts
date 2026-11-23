@@ -4,7 +4,7 @@ import { ITokenizedDocumentContext } from '@src/services/document/document-conte
 import { IPrefixLookupService } from '@src/services/document/prefix-lookup-service.interface';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { getPrefixedName, isPlainLocalName, isValidPrefix } from '@src/utilities/prefixed-name';
-import { ResourceOptionData, TermSearchKind } from '@src/views/webviews/views/form-editor/form-editor-model';
+import { ResourceOptionData, TermSearchTargetType } from '@src/views/webviews/views/form-editor/form-editor-model';
 import { TermRankingKeys, rankTerms } from '@src/views/webviews/views/form-editor/services/term-ranking';
 import { StoreIconResolver } from './store-icon-resolver';
 
@@ -13,9 +13,9 @@ import { StoreIconResolver } from './store-icon-resolver';
  */
 export interface TermSearch {
 	/**
-	 * The kind of terms searched for.
+	 * The type of terms searched for.
 	 */
-	kind: TermSearchKind;
+	targetType: TermSearchTargetType;
 
 	/**
 	 * The typed text, matched against the label, the local name and the prefixed name of a term.
@@ -29,7 +29,7 @@ export interface TermSearch {
 }
 
 /**
- * The terms of the store by kind, read at one version of it.
+ * The terms of the store by type, read at one version of it.
  */
 interface TermIndex {
 	/**
@@ -38,9 +38,9 @@ interface TermIndex {
 	version: number;
 
 	/**
-	 * The IRIs of the terms of each kind.
+	 * The IRIs of the terms of each type.
 	 */
-	terms: Record<TermSearchKind, readonly string[]>;
+	terms: Record<TermSearchTargetType, readonly string[]>;
 }
 
 /**
@@ -56,7 +56,7 @@ interface TermEntry extends TermRankingKeys {
 
 /**
  * The terms of the store as one document sees them, read at one version of the store and by the
- * prefixes the document declared then: those the document describes, those it uses by kind, and
+ * prefixes the document declared then: those the document describes, those it uses by type, and
  * the entries of the terms searched so far.
  */
 interface DocumentTerms {
@@ -86,11 +86,11 @@ interface DocumentTerms {
 	described: ReadonlySet<string>;
 
 	/**
-	 * The IRIs the document uses as terms of each kind, which a search of the kind offers though
+	 * The IRIs the document uses as terms of each type, which a search of the type offers though
 	 * the store may not say they are: its predicates, the classes it types resources with, and the
 	 * resources it describes or types.
 	 */
-	uses: Partial<Record<TermSearchKind, readonly string[]>>;
+	uses: Partial<Record<TermSearchTargetType, readonly string[]>>;
 
 	/**
 	 * The entry of each term searched so far.
@@ -134,7 +134,7 @@ export class TermCatalogueService {
 	) { }
 
 	/**
-	 * Search the terms of a kind for typed text, for a document.
+	 * Search the terms of a type for typed text, for a document.
 	 * @param search The search.
 	 * @param context The document the picker edits.
 	 * @returns The matching terms, best first.
@@ -143,7 +143,7 @@ export class TermCatalogueService {
 		await this._whenIndexed();
 
 		const documentTerms = this._getDocumentTerms(context);
-		const entries = Array.from(this._candidatesOf(search.kind, documentTerms), iri => this._entryOf(iri, documentTerms));
+		const entries = Array.from(this._candidatesOf(search.targetType, documentTerms), iri => this._entryOf(iri, documentTerms));
 		const ranked = rankTerms(entries, search.text, entry => entry);
 
 		return ranked.slice(0, Math.max(0, search.limit)).map(entry => this._optionOf(entry));
@@ -171,14 +171,14 @@ export class TermCatalogueService {
 	}
 
 	/**
-	 * The IRIs a search of a kind looks at: the terms of the store of that kind, and those the
-	 * document uses as that kind besides.
-	 * @param kind The kind of terms.
+	 * The IRIs a search of a type looks at: the terms of the store of that type, and those the
+	 * document uses as that type besides.
+	 * @param targetType The type of terms.
 	 * @param documentTerms The terms of the document.
 	 * @returns The IRIs, each once.
 	 */
-	private _candidatesOf(kind: TermSearchKind, documentTerms: DocumentTerms): Set<string> {
-		return new Set([...this._getIndex().terms[kind], ...documentTerms.uses[kind] ?? []]);
+	private _candidatesOf(targetType: TermSearchTargetType, documentTerms: DocumentTerms): Set<string> {
+		return new Set([...this._getIndex().terms[targetType], ...documentTerms.uses[targetType] ?? []]);
 	}
 
 	/**
@@ -270,7 +270,7 @@ export class TermCatalogueService {
 	}
 
 	/**
-	 * The terms of the store by kind, read anew once the store changed.
+	 * The terms of the store by type, read anew once the store changed.
 	 * @returns The index.
 	 */
 	private _getIndex(): TermIndex {
@@ -284,10 +284,10 @@ export class TermCatalogueService {
 	}
 
 	/**
-	 * Read the terms of each kind from all graphs of the store.
-	 * @returns The IRIs of the terms of each kind.
+	 * Read the terms of each type from all graphs of the store.
+	 * @returns The IRIs of the terms of each type.
 	 */
-	private _readTerms(): Record<TermSearchKind, readonly string[]> {
+	private _readTerms(): Record<TermSearchTargetType, readonly string[]> {
 		const vocabulary = this._vocabulary;
 		const predicate = Array.from(vocabulary.getProperties(undefined));
 		const classes = Array.from(vocabulary.getClasses(undefined));

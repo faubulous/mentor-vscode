@@ -276,7 +276,7 @@ describe('FormEditorSession', () => {
 
 		const { posted, receive } = await createSession('ex:A a ex:Class .\n');
 
-		await receive({ id: 'TermSearch', requestId: 7, kind: 'predicate', text: 'hei', limit: 10 });
+		await receive({ id: 'TermSearch', requestId: 7, targetType: 'predicate', text: 'hei', limit: 10 });
 
 		const [result] = postedOf(posted, 'TermSearchResult');
 

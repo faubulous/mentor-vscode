@@ -1,6 +1,6 @@
 import { DragEvent, FocusEvent, KeyboardEvent, MouseEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { VscodeTextfield } from '@vscode-elements/elements';
-import { ResourceOptionData, TermData, TermSearchKind } from '../form-editor-model';
+import { ResourceOptionData, TermData, TermSearchTargetType } from '../form-editor-model';
 import { NewValueTypeMarker } from './new-value-type-marker';
 import { LiteralAnnotationPickerSelection } from './literal-annotation-picker-items';
 import { TermPicker } from './term-picker';
@@ -63,9 +63,10 @@ export interface ResourceValuesProps {
 	resources: readonly ResourceValueEntry[];
 
 	/**
-	 * The kind of terms the input offers, such as classes for a type; none where it takes text only.
+	 * The type of terms the input offers, such as classes for the type of a resource; none where it
+	 * takes text only.
 	 */
-	kind?: TermSearchKind;
+	targetType?: TermSearchTargetType;
 
 	/**
 	 * The text typed into the input.
@@ -149,7 +150,7 @@ export interface ResourceValuesProps {
  * @returns The box.
  */
 export function ResourceValues(props: ResourceValuesProps): React.JSX.Element {
-	const { resources, kind, pendingText, placeholder, onPendingInput, onPick, onCreate, onRemove, onMove, onStartNode, onStartText, newValueType, autoFocus = false, readOnly = false } = props;
+	const { resources, targetType, pendingText, placeholder, onPendingInput, onPick, onCreate, onRemove, onMove, onStartNode, onStartText, newValueType, autoFocus = false, readOnly = false } = props;
 	const pills = useRef<(HTMLElement | null)[]>([]);
 	const fieldRef = useRef<VscodeTextfield>(null);
 	const [focusRequest, setFocusRequest] = useState<number>();
@@ -323,7 +324,7 @@ export function ResourceValues(props: ResourceValuesProps): React.JSX.Element {
 				</span>
 			))}
 			<TermPicker
-				kind={kind}
+				targetType={targetType}
 				exclude={present}
 				text={pendingText}
 				onTextChange={text => onPendingInput(text, fieldRef.current?.wrappedElement?.selectionStart ?? text.length)}

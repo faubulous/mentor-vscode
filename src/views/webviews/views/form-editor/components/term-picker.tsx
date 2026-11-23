@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { ResourceOptionData, TermSearchKind } from '../form-editor-model';
+import { ResourceOptionData, TermSearchTargetType } from '../form-editor-model';
 import { useTermOptions } from '../hooks/use-term-options';
 import { Combobox, ComboboxOption, ComboboxProps } from './combobox';
 
@@ -8,9 +8,9 @@ import { Combobox, ComboboxOption, ComboboxProps } from './combobox';
  */
 export interface TermPickerProps extends Omit<ComboboxProps<ResourceOptionData>, 'options'> {
 	/**
-	 * The kind of terms offered; none are offered where it is absent, as for a field that takes text.
+	 * The type of terms offered; none are offered where it is absent, as for a field that takes text.
 	 */
-	kind?: TermSearchKind;
+	targetType?: TermSearchTargetType;
 
 	/**
 	 * The IRIs of terms not offered, such as the values a statement has already.
@@ -19,18 +19,18 @@ export interface TermPickerProps extends Omit<ComboboxProps<ResourceOptionData>,
 }
 
 /**
- * A combobox offering the terms of a kind from the document, the vocabularies it declares and the
+ * A combobox offering the terms of a type from the document, the vocabularies it declares and the
  * rest of the workspace, searched by the host as they are typed while the field has the focus and
  * ranked in that order. Each term shows its glyph, its label and its IRI, and the prefix picking it
  * declares where the document declares none for its namespace. The predicate field, the field of
  * a new value and the type of a new blank node all pick their terms with it.
- * @param props The kind of terms, the terms not offered, and the properties of the combobox.
+ * @param props The type of terms, the terms not offered, and the properties of the combobox.
  * @returns The picker.
  */
 export function TermPicker(props: TermPickerProps): React.JSX.Element {
-	const { kind, exclude, text, onFocus, onBlur, ...comboboxProps } = props;
+	const { targetType, exclude, text, onFocus, onBlur, ...comboboxProps } = props;
 	const [focused, setFocused] = useState(false);
-	const terms = useTermOptions(kind, text, focused);
+	const terms = useTermOptions(targetType, text, focused);
 	const options = useMemo(() => _optionsOf(terms, exclude), [terms, exclude]);
 
 	const handleFocus = (): void => {
