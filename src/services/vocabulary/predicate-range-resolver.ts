@@ -2,7 +2,7 @@ import { OWL, RDF, RDFS, SH, Store, XSD, _XSD } from '@faubulous/mentor-rdf';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { getSchemaOrgIris, getSchemaOrgLocalName, SchemaOrg } from '@src/utilities/schema-org';
 import { getObjectIris, isInstanceOf } from '@src/utilities/store-statements';
-import { PredicateRangeData } from '@src/views/webviews/views/form-editor/form-editor-model';
+import { PredicateRangeData } from './predicate-range';
 import { PropertyShapeData, PropertyShapeIndex } from './property-shape-index';
 
 /**

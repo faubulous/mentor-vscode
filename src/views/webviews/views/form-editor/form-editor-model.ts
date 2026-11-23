@@ -7,6 +7,12 @@
 
 import type { BlankNode, Literal, NamedNode } from '@rdfjs/types';
 import type { ScopeKey } from '@src/utilities/config-scope';
+import type { PredicateRangeData } from '@src/services/vocabulary/predicate-range';
+
+// The terms the pickers search and the ranges of predicates are shared with the text editor's
+// completion; the form editor exchanges them as they are.
+export type { ResourceOptionData, TermFit, TermSearch, TermSearchStatement, TermSearchTargetType, TermSource } from '@src/services/vocabulary/term-search';
+export type { PredicateRangeData } from '@src/services/vocabulary/predicate-range';
 
 /**
  * A position in the document, used to reveal a term in the text editor.
@@ -108,29 +114,6 @@ interface CollectionData {
 	 * The items of the collection, in order.
 	 */
 	items: TermData[];
-}
-
-/**
- * What values a predicate takes for a resource, as the store tells it: by a range or a shape, or
- * only by the type of the property.
- */
-export interface PredicateRangeData {
-	/**
-	 * Whether the predicate takes literals or resources.
-	 */
-	type: 'literal' | 'resource';
-
-	/**
-	 * The IRI of the datatype of its literals, where the range names one.
-	 */
-	datatype?: string;
-
-	/**
-	 * Where it was read from: a range of the predicate, its `schema:rangeIncludes`, or a SHACL shape
-	 * of the resource, which decide the type of a new value before its other values do; or only the
-	 * type of the property, such as an object property, which decides it after them.
-	 */
-	source: 'range' | 'propertyType';
 }
 
 /**
@@ -267,95 +250,6 @@ export interface ResourceListItemData extends ResourceCardHeaderData {
 	 * How many properties the resource has.
 	 */
 	propertyCount: number;
-}
-
-/**
- * The type of terms a search targets, by the place the picked term takes in a statement: the
- * predicates of statements, the classes a resource is typed with, the resources a value refers to,
- * or the datatypes of literals. A picker of the form editor and the completion of the text editor
- * search by it.
- */
-export type TermSearchTargetType = 'predicate' | 'class' | 'resource' | 'datatype';
-
-/**
- * Where a term a picker offers comes from, which ranks it: the document itself, a vocabulary whose
- * namespace the document declares, or another vocabulary of the workspace.
- */
-export type TermSource = 'document' | 'declared' | 'workspace';
-
-/**
- * How a term a picker offers fits the statement it is picked for, which ranks it before anything
- * else: it fits, as a predicate whose domain is a type of the resource or a value of a class the
- * range of the predicate names; nothing tells, as a predicate without a domain; or it fits other
- * statements, as a predicate whose domain is another class.
- */
-export type TermFit = 'fits' | 'general' | 'other';
-
-/**
- * The statement a picker picks a term for: the resource, and for a value its predicate, by which
- * the terms that fit it are ranked first.
- */
-export interface TermSearchStatement {
-	/**
-	 * The resource the statement is about.
-	 */
-	subject: NamedNode | BlankNode;
-
-	/**
-	 * The IRI of the predicate, where a value is picked.
-	 */
-	predicate?: string;
-}
-
-/**
- * A term as an option of a picker shows it.
- */
-export interface ResourceOptionData {
-	/**
-	 * The IRI of the term.
-	 */
-	subject: NamedNode;
-
-	/**
-	 * The label of the term, as the cards show it.
-	 */
-	label: string;
-
-	/**
-	 * The prefixed name of the term, with the prefixes of the document or the one it would declare.
-	 */
-	prefixedName?: string;
-
-	/**
-	 * The glyph of the term, by its types.
-	 */
-	iconName?: string;
-
-	/**
-	 * Where the term comes from.
-	 */
-	source: TermSource;
-
-	/**
-	 * How the term fits the statement it is picked for, where the search was told the statement.
-	 */
-	fit?: TermFit;
-
-	/**
-	 * The prefix the document would declare for the namespace of the term to write it by its
-	 * prefixed name, where the document declares none for it.
-	 */
-	missingPrefix?: {
-		/**
-		 * The prefix, without the colon.
-		 */
-		prefix: string;
-
-		/**
-		 * The namespace IRI.
-		 */
-		namespace: string;
-	};
 }
 
 /**

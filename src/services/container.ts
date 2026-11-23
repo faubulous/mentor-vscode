@@ -40,6 +40,11 @@ import { WorkspaceRenameService } from './core/workspace-rename-service';
 import { WorkspaceFileOperationService } from '@src/services/core/workspace-file-operation-service';
 import { SettingsMigrationService } from './core/settings-migration-service';
 import { DocumentQueryTemplateMigration, IndexExcludeFilesMigration, LegacyTemplateFormatMigration } from './core/migrations/';
+import { PredicateRangeResolver } from './vocabulary/predicate-range-resolver';
+import { PropertyShapeIndex } from './vocabulary/property-shape-index';
+import { StoreIconResolver } from './vocabulary/store-icon-resolver';
+import { TermCatalogueService } from './vocabulary/term-catalogue-service';
+import { TermFitResolver } from './vocabulary/term-fit-resolver';
 
 /**
  * Configures the service container with all necessary services and dependencies for the extension.
@@ -153,6 +158,19 @@ export function configureServiceContainer(context: vscode.ExtensionContext): voi
 
 	const sparqlPrefixDefinitionService = new SparqlPrefixDefinitionService(documentContextService, prefixLookupService);
 	container.registerInstance(ServiceToken.SparqlPrefixDefinitionService, sparqlPrefixDefinitionService);
+
+	// The term search the form editor's pickers and the completion of the text editor share, with
+	// the resolvers of glyphs, ranges and fits it ranks by, each read once per version of the store.
+	const storeIconResolver = new StoreIconResolver(store);
+	container.registerInstance(ServiceToken.StoreIconResolver, storeIconResolver);
+
+	const propertyShapeIndex = new PropertyShapeIndex(store);
+	const predicateRangeResolver = new PredicateRangeResolver(store, propertyShapeIndex);
+	container.registerInstance(ServiceToken.PredicateRangeResolver, predicateRangeResolver);
+
+	const termFitResolver = new TermFitResolver(store, propertyShapeIndex);
+	const termCatalogueService = new TermCatalogueService(vocabularyRepository, prefixLookupService, storeIconResolver, predicateRangeResolver, termFitResolver, () => workspaceIndexerService.waitForIndexed());
+	container.registerInstance(ServiceToken.TermCatalogueService, termCatalogueService);
 
 	// Register the SHACL profile settings service and the shape graph service the
 	// validation service resolves its shape graphs through.

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
-import { ResourceOptionData, TermFit, TermSource } from '../form-editor-model';
+import { ResourceOptionData, TermFit, TermSource } from '@src/services/vocabulary/term-search';
 import { rankTermOptions } from './term-ranking';
 
 /**

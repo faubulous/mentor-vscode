@@ -1,7 +1,7 @@
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { PredicateRangeData, ResourceOptionData, TermSearchTargetType } from '@src/views/webviews/views/form-editor/form-editor-model';
 import { ITermSearchService } from '@src/views/webviews/views/form-editor/services/term-search-service.interface';
-import { rankTermOptions } from '@src/views/webviews/views/form-editor/services/term-ranking';
+import { rankTermOptions } from '@src/utilities/term-ranking';
 
 /**
  * A term search over fixed terms, which records the texts searched.

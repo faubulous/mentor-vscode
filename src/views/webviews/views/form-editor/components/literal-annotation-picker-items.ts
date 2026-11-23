@@ -3,7 +3,7 @@ import { LanguageTags } from '@src/utilities/language-tags';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { getLocalPartAndQuery } from '@src/utilities/uri';
 import { ResourceOptionData } from '../form-editor-model';
-import { narrowByMatch } from '../services/term-ranking';
+import { narrowByMatch } from '@src/utilities/term-ranking';
 import { LiteralAnnotation } from '../state/literal-annotation';
 import { PrefixProposal } from '../state/prefix-proposal';
 import { getDatatypeFormat, getDatatypeName } from './datatype-labels';

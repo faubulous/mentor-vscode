@@ -1,32 +1,14 @@
-import { RDF, RDFS, Uri, VocabularyRepository } from '@faubulous/mentor-rdf';
+import { RDF, RDFS, Uri, VocabularyRepository, rdf } from '@faubulous/mentor-rdf';
 import { TermSerializer } from '@faubulous/mentor-rdf-serializers';
 import { ITokenizedDocumentContext } from '@src/services/document/document-context.interface';
 import { IPrefixLookupService } from '@src/services/document/prefix-lookup-service.interface';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { getPrefixedName, isPlainLocalName, isValidPrefix } from '@src/utilities/prefixed-name';
-import { ResourceOptionData, TermFit, TermSearchTargetType, TermSource } from '@src/views/webviews/views/form-editor/form-editor-model';
-import { TermRankingKeys, getRankingKeys, rankTerms } from '@src/views/webviews/views/form-editor/services/term-ranking';
+import { PredicateRangeResolver } from './predicate-range-resolver';
+import { ResourceOptionData, TermFit, TermSearch, TermSearchStatement, TermSearchTargetType, TermSource } from './term-search';
+import { TermFitResolver } from './term-fit-resolver';
+import { TermRankingKeys, getRankingKeys, rankTerms } from '@src/utilities/term-ranking';
 import { StoreIconResolver } from './store-icon-resolver';
-
-/**
- * A search of the terms a picker offers.
- */
-export interface TermSearch {
-	/**
-	 * The type of terms searched for.
-	 */
-	targetType: TermSearchTargetType;
-
-	/**
-	 * The typed text, matched against the label, the local name and the prefixed name of a term.
-	 */
-	text: string;
-
-	/**
-	 * How many terms are returned at most.
-	 */
-	limit: number;
-}
 
 /**
  * The terms of the store by type, read at one version of it.
@@ -129,26 +111,34 @@ export class TermCatalogueService {
 	 * @param _vocabulary The vocabulary repository over the store.
 	 * @param _prefixLookup Tells the prefixes the workspace uses for namespaces the document does not declare.
 	 * @param _icons Tells the glyphs of terms.
+	 * @param _ranges Tells the classes the values of a predicate are instances of.
+	 * @param _fits Tells how terms fit the statement they are picked for.
 	 * @param _whenIndexed Resolves once the workspace is indexed.
 	 */
 	constructor(
 		private readonly _vocabulary: VocabularyRepository,
 		private readonly _prefixLookup: IPrefixLookupService,
 		private readonly _icons: StoreIconResolver,
+		private readonly _ranges: PredicateRangeResolver,
+		private readonly _fits: TermFitResolver,
 		private readonly _whenIndexed: () => Promise<void>
 	) { }
 
 	/**
 	 * Search the terms of a type for typed text, for a document, those that fit the statement they
-	 * are picked for first where their fit is told.
+	 * are picked for first where the search tells the statement: a predicate by its domain and the
+	 * shapes of the types of the resource, a resource for a value by the classes the range of the
+	 * predicate names.
 	 * @param search The search.
-	 * @param context The document the picker edits.
-	 * @param fitOf Tells how a term fits the statement it is picked for, where the statement is known.
+	 * @param context The document the terms are picked for.
+	 * @param subjectTypes The types of the resource of the statement, where the caller knows them
+	 * from the document; else they are read from the store.
 	 * @returns The matching terms, best first.
 	 */
-	async search(search: TermSearch, context: ITokenizedDocumentContext, fitOf?: (iri: string) => TermFit | undefined): Promise<ResourceOptionData[]> {
+	async search(search: TermSearch, context: ITokenizedDocumentContext, subjectTypes?: readonly string[]): Promise<ResourceOptionData[]> {
 		await this._whenIndexed();
 
+		const fitOf = search.statement ? this._fitOf(search.targetType, search.statement, subjectTypes ?? this._typesOf(search.statement.subject, context)) : undefined;
 		const documentTerms = this._getDocumentTerms(context);
 		const entries = Array.from(this._candidatesOf(search.targetType, documentTerms), iri => this._entryOf(iri, documentTerms));
 		const fits = new Map<string, TermFit | undefined>();
@@ -162,6 +152,49 @@ export class TermCatalogueService {
 		const ranked = rankTerms(entries, search.text, entry => getRankingKeys(search.targetType, entry.iri, entry.label, entry.prefixedName, entry.source, fitOfEntry(entry)));
 
 		return ranked.slice(0, Math.max(0, search.limit)).map(entry => this._optionOf(entry, fitOfEntry(entry)));
+	}
+
+	/**
+	 * How the terms of a search fit the statement they are picked for: a predicate by its domain and
+	 * the shapes of the types of the resource; a resource for a value by the classes the range of
+	 * the predicate names.
+	 * @param targetType The type of terms searched.
+	 * @param statement The statement the terms are picked for.
+	 * @param types The types of the resource of the statement.
+	 * @returns Tells the fit of a term, or `undefined` where nothing tells how terms of the type fit.
+	 */
+	private _fitOf(targetType: TermSearchTargetType, statement: TermSearchStatement, types: readonly string[]): ((iri: string) => TermFit) | undefined {
+		if (targetType === 'predicate') {
+			return iri => this._fits.predicateFit(iri, types);
+		}
+
+		if (targetType === 'resource' && statement.predicate) {
+			const rangeClasses = this._ranges.rangeClassesOf(statement.predicate, types);
+
+			return rangeClasses.length > 0 ? iri => this._fits.valueFit(iri, rangeClasses) : undefined;
+		}
+
+		return undefined;
+	}
+
+	/**
+	 * The types of a resource the store knows in the graphs of a document, inferred ones included
+	 * where the store has a reasoner.
+	 * @param subject The resource.
+	 * @param context The document.
+	 * @returns The type IRIs, each once.
+	 */
+	private _typesOf(subject: TermSearchStatement['subject'], context: ITokenizedDocumentContext): string[] {
+		const store = this._vocabulary.store;
+		const types = new Set<string>();
+
+		for (const quad of store.matchAll(context.graphs, subject, rdf.type, null, store.reasoner ? true : false)) {
+			if (quad.object.termType === 'NamedNode') {
+				types.add(quad.object.value);
+			}
+		}
+
+		return Array.from(types);
 	}
 
 	/**

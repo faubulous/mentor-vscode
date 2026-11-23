@@ -7,9 +7,12 @@ import { RdfSyntax } from '@faubulous/mentor-rdf-parsers';
 import { ITokenizedDocumentContext } from '@src/services/document/document-context.interface';
 import { IPrefixLookupService } from '@src/services/document/prefix-lookup-service.interface';
 import { createResolvingDocumentContext } from '@src/utilities/mocks/factories';
-import { TermFit, TermSearchTargetType } from '@src/views/webviews/views/form-editor/form-editor-model';
+import { TermSearchTargetType } from './term-search';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
+import { PredicateRangeResolver } from './predicate-range-resolver';
+import { PropertyShapeIndex } from './property-shape-index';
 import { StoreIconResolver } from './store-icon-resolver';
+import { TermFitResolver } from './term-fit-resolver';
 import { TermCatalogueService } from './term-catalogue-service';
 
 const EX = 'http://example.org/';
@@ -59,7 +62,9 @@ function createStore(): Store {
 function createCatalogue(store = createStore(), whenIndexed = () => Promise.resolve()): TermCatalogueService {
 	const prefixLookup = { getPrefixForIri: (_document: string, namespace: string, fallback: string) => namespace === V ? 'v' : fallback } as IPrefixLookupService;
 
-	return new TermCatalogueService(new VocabularyRepository(store), prefixLookup, new StoreIconResolver(store), whenIndexed);
+	const shapes = new PropertyShapeIndex(store);
+
+	return new TermCatalogueService(new VocabularyRepository(store), prefixLookup, new StoreIconResolver(store), new PredicateRangeResolver(store, shapes), new TermFitResolver(store, shapes), whenIndexed);
 }
 
 /**
@@ -217,12 +222,34 @@ describe('TermCatalogueService', () => {
 		expect(length).toMatchObject({ subject: { value: `${V}Length` }, iconName: 'symbol-text' });
 	});
 
-	it('ranks the terms that fit the statement first where their fit is told, and tells each its fit', async () => {
-		const catalogue = createCatalogue();
-		const fits: Record<string, TermFit> = { [`${V}height`]: 'fits' };
-		const options = await catalogue.search({ targetType: 'predicate', text: '', limit: 50 }, createDocument(), iri => fits[iri] ?? 'other');
+	it('ranks the predicates whose domain the resource of the statement is in first, by the types the caller tells, and tells each its fit', async () => {
+		const store = createStore();
 
-		expect(options[0]).toMatchObject({ subject: RdfDataFactory.namedNode(`${V}height`), fit: 'fits' });
-		expect(options.slice(1).every(entry => entry.fit === 'other')).toBe(true);
+		store.loadTurtle(`${PREAMBLE}
+			v:height rdfs:domain v:Tree .
+			v:hasLeaf rdfs:domain ex:Plant .
+		`, 'http://example.org/domains', true);
+
+		const search = { targetType: 'predicate' as const, text: '', limit: 50, statement: { subject: RdfDataFactory.namedNode(`${EX}Elm`) } };
+		const options = await createCatalogue(store).search(search, createDocument(), [`${V}Tree`]);
+		const fits = Object.fromEntries(options.map(entry => [entry.subject.value, entry.fit]));
+
+		expect(options[0].subject.value).toBe(`${V}height`);
+		expect(fits).toMatchObject({ [`${V}height`]: 'fits', [`${V}hasLeaf`]: 'other', [`${EX}grows`]: 'general' });
+	});
+
+	it('reads the types of the resource of the statement from the document where the caller tells none', async () => {
+		const store = createStore();
+
+		store.loadTurtle(`${PREAMBLE}
+			v:height rdfs:domain v:Tree .
+		`, 'http://example.org/domains', true);
+		store.loadTurtle(`${PREAMBLE}
+			ex:Elm a v:Tree .
+		`, DOCUMENT_GRAPH, true);
+
+		const search = { targetType: 'predicate' as const, text: 'hei', limit: 5, statement: { subject: RdfDataFactory.namedNode(`${EX}Elm`) } };
+
+		expect((await createCatalogue(store).search(search, createDocument()))[0]).toMatchObject({ subject: { value: `${V}height` }, fit: 'fits' });
 	});
 });

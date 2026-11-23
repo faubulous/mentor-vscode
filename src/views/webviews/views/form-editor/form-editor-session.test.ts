@@ -19,6 +19,12 @@ import { FormEditorSession } from './form-editor-session';
 import { ResourceCardBodyData } from './form-editor-model';
 import { BlankNode, NamedNode } from '@rdfjs/types';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
+import { IPrefixLookupService } from '@src/services/document/prefix-lookup-service.interface';
+import { PredicateRangeResolver } from '@src/services/vocabulary/predicate-range-resolver';
+import { PropertyShapeIndex } from '@src/services/vocabulary/property-shape-index';
+import { StoreIconResolver } from '@src/services/vocabulary/store-icon-resolver';
+import { TermCatalogueService } from '@src/services/vocabulary/term-catalogue-service';
+import { TermFitResolver } from '@src/services/vocabulary/term-fit-resolver';
 
 const EX = 'http://example.org/';
 const PREAMBLE = `@prefix ex: <${EX}> .\n\n`;
@@ -188,14 +194,21 @@ function lastResponseOf(panel: TestPanel): Extract<FormEditorHostMessage, { id: 
 }
 
 /**
- * Register the services the term catalogue of a session reads from: a repository over a store, a
- * prefix lookup that proposes no prefix, and an index that is complete.
+ * Register the term catalogue a session searches, as Mentor registers it: over a repository of a
+ * store, with a prefix lookup that proposes no prefix and an index that is complete.
  * @param store The store.
  */
 function registerCatalogueServices(store: Store): void {
-	container.registerInstance(ServiceToken.VocabularyRepository, new VocabularyRepository(store));
-	container.registerInstance(ServiceToken.PrefixLookupService, { getPrefixForIri: (_document: string, _namespace: string, fallback: string) => fallback } as never);
-	container.registerInstance(ServiceToken.WorkspaceIndexerService, { waitForIndexed: () => Promise.resolve() } as never);
+	const vocabulary = new VocabularyRepository(store);
+	const prefixLookup = { getPrefixForIri: (_document: string, _namespace: string, fallback: string) => fallback } as unknown as IPrefixLookupService;
+	const icons = new StoreIconResolver(store);
+	const shapes = new PropertyShapeIndex(store);
+	const ranges = new PredicateRangeResolver(store, shapes);
+
+	container.registerInstance(ServiceToken.VocabularyRepository, vocabulary);
+	container.registerInstance(ServiceToken.StoreIconResolver, icons);
+	container.registerInstance(ServiceToken.PredicateRangeResolver, ranges);
+	container.registerInstance(ServiceToken.TermCatalogueService, new TermCatalogueService(vocabulary, prefixLookup, icons, ranges, new TermFitResolver(store, shapes), () => Promise.resolve()));
 }
 
 describe('FormEditorSession', () => {
