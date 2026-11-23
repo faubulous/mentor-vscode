@@ -1,6 +1,6 @@
 import { FormEditorMessages, FormEditorWebviewMessage } from '../form-editor-messages';
 import { BlankNode, NamedNode } from '@rdfjs/types';
-import { PredicateRangeData, ResourceOptionData, TermSearchTargetType } from '../form-editor-model';
+import { PredicateRangeData, ResourceOptionData, TermSearchStatement, TermSearchTargetType } from '../form-editor-model';
 import { ITermSearchService } from './term-search-service.interface';
 
 /**
@@ -18,8 +18,8 @@ export class TermSearchService implements ITermSearchService {
 	 */
 	constructor(private readonly _post: (message: FormEditorWebviewMessage) => void) { }
 
-	search(targetType: TermSearchTargetType, text: string, limit: number): Promise<ResourceOptionData[]> {
-		return this._request<ResourceOptionData[]>(requestId => ({ id: 'TermSearch', requestId, targetType, text, limit }));
+	search(targetType: TermSearchTargetType, text: string, limit: number, statement?: TermSearchStatement): Promise<ResourceOptionData[]> {
+		return this._request<ResourceOptionData[]>(requestId => ({ id: 'TermSearch', requestId, targetType, text, limit, statement }));
 	}
 
 	getWorkspaceLanguages(): Promise<string[]> {

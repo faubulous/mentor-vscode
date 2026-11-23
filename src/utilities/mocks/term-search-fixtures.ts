@@ -40,7 +40,7 @@ export function createTermSearchStub(terms: Partial<Record<TermSearchTargetType,
 		search: async (targetType, text, limit) => {
 			searched.push(text);
 
-			return rankTermOptions(terms[targetType] ?? [], text).slice(0, limit);
+			return rankTermOptions(terms[targetType] ?? [], text, targetType).slice(0, limit);
 		},
 		getWorkspaceLanguages: async () => [...languages],
 		getPredicateRange: async (_subject, predicate) => ranges[predicate]

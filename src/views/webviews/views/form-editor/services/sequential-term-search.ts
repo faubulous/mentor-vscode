@@ -1,4 +1,4 @@
-import { ResourceOptionData, TermSearchTargetType } from '../form-editor-model';
+import { ResourceOptionData, TermSearchStatement, TermSearchTargetType } from '../form-editor-model';
 import { ITermSearchService } from './term-search-service.interface';
 
 /**
@@ -20,12 +20,14 @@ export class SequentialTermSearch {
 	 * @param _targetType The type of terms the picker offers.
 	 * @param _limit How many terms are asked for.
 	 * @param _onAnswer Called with each answer and the text it is for.
+	 * @param _statement The statement the picker picks terms for, if it tells one.
 	 */
 	constructor(
 		private readonly _service: ITermSearchService,
 		private readonly _targetType: TermSearchTargetType,
 		private readonly _limit: number,
-		private readonly _onAnswer: (text: string, options: readonly ResourceOptionData[]) => void
+		private readonly _onAnswer: (text: string, options: readonly ResourceOptionData[]) => void,
+		private readonly _statement?: TermSearchStatement
 	) { }
 
 	/**
@@ -55,7 +57,7 @@ export class SequentialTermSearch {
 	private _send(text: string): void {
 		this._searching = true;
 
-		void this._service.search(this._targetType, text, this._limit).then(options => {
+		void this._service.search(this._targetType, text, this._limit, this._statement).then(options => {
 			this._searching = false;
 
 			if (this._disposed) {

@@ -4,8 +4,8 @@ import { ITokenizedDocumentContext } from '@src/services/document/document-conte
 import { IPrefixLookupService } from '@src/services/document/prefix-lookup-service.interface';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { getPrefixedName, isPlainLocalName, isValidPrefix } from '@src/utilities/prefixed-name';
-import { ResourceOptionData, TermSearchTargetType } from '@src/views/webviews/views/form-editor/form-editor-model';
-import { TermRankingKeys, rankTerms } from '@src/views/webviews/views/form-editor/services/term-ranking';
+import { ResourceOptionData, TermFit, TermSearchTargetType, TermSource } from '@src/views/webviews/views/form-editor/form-editor-model';
+import { TermRankingKeys, getRankingKeys, rankTerms } from '@src/views/webviews/views/form-editor/services/term-ranking';
 import { StoreIconResolver } from './store-icon-resolver';
 
 /**
@@ -48,6 +48,11 @@ interface TermIndex {
  * where it comes from.
  */
 interface TermEntry extends TermRankingKeys {
+	/**
+	 * Where the term comes from.
+	 */
+	source: TermSource;
+
 	/**
 	 * The prefix the document would declare to write the term by its prefixed name.
 	 */
@@ -134,19 +139,29 @@ export class TermCatalogueService {
 	) { }
 
 	/**
-	 * Search the terms of a type for typed text, for a document.
+	 * Search the terms of a type for typed text, for a document, those that fit the statement they
+	 * are picked for first where their fit is told.
 	 * @param search The search.
 	 * @param context The document the picker edits.
+	 * @param fitOf Tells how a term fits the statement it is picked for, where the statement is known.
 	 * @returns The matching terms, best first.
 	 */
-	async search(search: TermSearch, context: ITokenizedDocumentContext): Promise<ResourceOptionData[]> {
+	async search(search: TermSearch, context: ITokenizedDocumentContext, fitOf?: (iri: string) => TermFit | undefined): Promise<ResourceOptionData[]> {
 		await this._whenIndexed();
 
 		const documentTerms = this._getDocumentTerms(context);
 		const entries = Array.from(this._candidatesOf(search.targetType, documentTerms), iri => this._entryOf(iri, documentTerms));
-		const ranked = rankTerms(entries, search.text, entry => entry);
+		const fits = new Map<string, TermFit | undefined>();
+		const fitOfEntry = (entry: TermEntry): TermFit | undefined => {
+			if (!fits.has(entry.iri)) {
+				fits.set(entry.iri, fitOf?.(entry.iri));
+			}
 
-		return ranked.slice(0, Math.max(0, search.limit)).map(entry => this._optionOf(entry));
+			return fits.get(entry.iri);
+		};
+		const ranked = rankTerms(entries, search.text, entry => getRankingKeys(search.targetType, entry.iri, entry.label, entry.prefixedName, entry.source, fitOfEntry(entry)));
+
+		return ranked.slice(0, Math.max(0, search.limit)).map(entry => this._optionOf(entry, fitOfEntry(entry)));
 	}
 
 	/**
@@ -256,15 +271,17 @@ export class TermCatalogueService {
 	/**
 	 * The option of a term.
 	 * @param entry The entry of the term.
+	 * @param fit How the term fits the statement it is picked for, if anything tells.
 	 * @returns The option.
 	 */
-	private _optionOf(entry: TermEntry): ResourceOptionData {
+	private _optionOf(entry: TermEntry, fit: TermFit | undefined): ResourceOptionData {
 		return {
 			subject: RdfDataFactory.namedNode(entry.iri),
 			label: entry.label,
 			prefixedName: entry.prefixedName,
 			iconName: this._icons.resolve(entry.iri),
 			source: entry.source,
+			fit,
 			missingPrefix: entry.missingPrefix
 		};
 	}

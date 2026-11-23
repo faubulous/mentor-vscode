@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { ResourceOptionData, TermSearchTargetType } from '../form-editor-model';
+import { ResourceOptionData, TermSearchStatement, TermSearchTargetType } from '../form-editor-model';
 import { useTermOptions } from '../hooks/use-term-options';
 import { Combobox, ComboboxOption, ComboboxProps } from './combobox';
 
@@ -16,6 +16,11 @@ export interface TermPickerProps extends Omit<ComboboxProps<ResourceOptionData>,
 	 * The IRIs of terms not offered, such as the values a statement has already.
 	 */
 	exclude?: ReadonlySet<string>;
+
+	/**
+	 * The statement the terms are picked for, whose fitting terms are offered first.
+	 */
+	statement?: TermSearchStatement;
 }
 
 /**
@@ -28,9 +33,9 @@ export interface TermPickerProps extends Omit<ComboboxProps<ResourceOptionData>,
  * @returns The picker.
  */
 export function TermPicker(props: TermPickerProps): React.JSX.Element {
-	const { targetType, exclude, text, onFocus, onBlur, ...comboboxProps } = props;
+	const { targetType, exclude, statement, text, onFocus, onBlur, ...comboboxProps } = props;
 	const [focused, setFocused] = useState(false);
-	const terms = useTermOptions(targetType, text, focused);
+	const terms = useTermOptions(targetType, text, focused, statement);
 	const options = useMemo(() => _optionsOf(terms, exclude), [terms, exclude]);
 
 	const handleFocus = (): void => {

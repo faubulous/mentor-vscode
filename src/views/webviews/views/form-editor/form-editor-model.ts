@@ -284,6 +284,30 @@ export type TermSearchTargetType = 'predicate' | 'class' | 'resource' | 'datatyp
 export type TermSource = 'document' | 'declared' | 'workspace';
 
 /**
+ * How a term a picker offers fits the statement it is picked for, which ranks it before anything
+ * else: it fits, as a predicate whose domain is a type of the resource or a value of a class the
+ * range of the predicate names; nothing tells, as a predicate without a domain; or it fits other
+ * statements, as a predicate whose domain is another class.
+ */
+export type TermFit = 'fits' | 'general' | 'other';
+
+/**
+ * The statement a picker picks a term for: the resource, and for a value its predicate, by which
+ * the terms that fit it are ranked first.
+ */
+export interface TermSearchStatement {
+	/**
+	 * The resource the statement is about.
+	 */
+	subject: NamedNode | BlankNode;
+
+	/**
+	 * The IRI of the predicate, where a value is picked.
+	 */
+	predicate?: string;
+}
+
+/**
  * A term as an option of a picker shows it.
  */
 export interface ResourceOptionData {
@@ -311,6 +335,11 @@ export interface ResourceOptionData {
 	 * Where the term comes from.
 	 */
 	source: TermSource;
+
+	/**
+	 * How the term fits the statement it is picked for, where the search was told the statement.
+	 */
+	fit?: TermFit;
 
 	/**
 	 * The prefix the document would declare for the namespace of the term to write it by its
