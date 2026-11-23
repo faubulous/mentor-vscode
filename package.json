@@ -593,22 +593,54 @@
     ],
     "configurationDefaults": {
       "[ntriples]": {
+        "editor.quickSuggestions": {
+          "other": "on",
+          "comments": "off",
+          "strings": "off"
+        },
         "editor.wordBasedSuggestionsMode": "allDocuments",
         "editor.semanticHighlighting.enabled": true
       },
       "[nquads]": {
+        "editor.quickSuggestions": {
+          "other": "on",
+          "comments": "off",
+          "strings": "off"
+        },
         "editor.wordBasedSuggestionsMode": "allDocuments",
         "editor.semanticHighlighting.enabled": true
       },
       "[turtle]": {
+        "editor.quickSuggestions": {
+          "other": "on",
+          "comments": "off",
+          "strings": "off"
+        },
         "editor.wordBasedSuggestionsMode": "allDocuments",
         "editor.semanticHighlighting.enabled": true
       },
+      "[n3]": {
+        "editor.quickSuggestions": {
+          "other": "on",
+          "comments": "off",
+          "strings": "off"
+        }
+      },
       "[trig]": {
+        "editor.quickSuggestions": {
+          "other": "on",
+          "comments": "off",
+          "strings": "off"
+        },
         "editor.wordBasedSuggestionsMode": "allDocuments",
         "editor.semanticHighlighting.enabled": true
       },
       "[sparql]": {
+        "editor.quickSuggestions": {
+          "other": "on",
+          "comments": "off",
+          "strings": "off"
+        },
         "editor.wordBasedSuggestionsMode": "allDocuments",
         "editor.semanticHighlighting.enabled": true
       },
