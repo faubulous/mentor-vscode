@@ -255,7 +255,7 @@ describe('StatementRowEditor', () => {
 		const { editor } = createEditor('new');
 
 		editor.pickPredicate(PREF_LABEL);
-		editor.inputPending('Oak');
+		editor.startLiteral('Oak');
 		editor.leave();
 
 		expect(editor.takeEdit()).toEqual([
@@ -345,7 +345,7 @@ describe('StatementRowEditor', () => {
 
 		editor.inputPredicate('rdfs:label');
 		editor.commitPredicate();
-		editor.inputPending('Baum');
+		editor.startLiteral('Baum');
 		editor.leave();
 
 		expect(editor.isOpen).toBe(false);
@@ -360,7 +360,7 @@ describe('StatementRowEditor', () => {
 
 		editor.inputPredicate('rdfs:label');
 		editor.commitPredicate();
-		editor.inputPending('Baum');
+		editor.startLiteral('Baum');
 		editor.leave();
 
 		expect(editor.takeEdit()).toBeUndefined();

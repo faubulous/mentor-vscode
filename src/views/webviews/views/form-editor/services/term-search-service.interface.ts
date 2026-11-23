@@ -1,7 +1,9 @@
-import { ResourceOptionData, TermSearchKind } from '../form-editor-model';
+import { BlankNode, NamedNode } from '@rdfjs/types';
+import { PredicateRangeData, ResourceOptionData, TermSearchKind } from '../form-editor-model';
 
 /**
- * Searches the terms the pickers of the form editor offer, and tells the languages they offer. The form editor implements it over the
+ * Searches the terms the pickers of the form editor offer, and tells the languages they offer and
+ * what values a predicate takes. The form editor implements it over the
  * webview message channel; another host can answer from anywhere else, and one that offers no
  * terms besides those of the document provides none.
  */
@@ -20,4 +22,12 @@ export interface ITermSearchService {
 	 * @returns The language tags, the most used first.
 	 */
 	getWorkspaceLanguages(): Promise<string[]>;
+
+	/**
+	 * Tell what values a predicate takes for a resource, as the ranges and shapes of the workspace say.
+	 * @param subject The resource.
+	 * @param predicate The IRI of the predicate.
+	 * @returns The range, or `undefined` where nothing tells it.
+	 */
+	getPredicateRange(subject: NamedNode | BlankNode, predicate: string): Promise<PredicateRangeData | undefined>;
 }

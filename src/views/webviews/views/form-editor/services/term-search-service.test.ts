@@ -54,6 +54,16 @@ describe('TermSearchService', () => {
 		expect(await second).toEqual([option('Tree')]);
 	});
 
+	it('asks what values a predicate takes for a resource and answers by the identifier of the request', async () => {
+		const { service, posted } = createService();
+		const subject = RdfDataFactory.namedNode('http://example.org/Account');
+		const range = service.getPredicateRange(subject, 'http://example.org/endsAt');
+
+		expect(posted).toEqual([{ id: 'PredicateRangeRequest', requestId: 1, subject, predicate: 'http://example.org/endsAt' }]);
+		expect(service.accept({ id: 'PredicateRangeResponse', requestId: 1, range: { type: 'literal', datatype: 'http://www.w3.org/2001/XMLSchema#dateTime', source: 'range' } })).toBe(true);
+		expect(await range).toEqual({ type: 'literal', datatype: 'http://www.w3.org/2001/XMLSchema#dateTime', source: 'range' });
+	});
+
 	it('leaves the other messages of the host to others', () => {
 		const { service } = createService();
 

@@ -6,6 +6,7 @@ import { RDF, RDFS } from '@faubulous/mentor-rdf';
 import { createEditingHostStub } from '@src/utilities/mocks/editing-host-fixtures';
 import { createResourceDataServiceStub } from '@src/utilities/mocks/resource-data-service-fixtures';
 import { TEST_NAMESPACES, TEST_SUBJECT, createIriView, createLiteralView, createProperty, createTestCardBody, withAnchors } from '@src/utilities/mocks/statement-fixtures';
+import { createTermSearchStub } from '@src/utilities/mocks/term-search-fixtures';
 import { renderWebview, typeInto } from '@src/utilities/mocks/webview-test-utils';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { ResourceCardBodyData, TermData } from '../form-editor-model';
@@ -51,7 +52,9 @@ async function renderCard(nodeCardBody: ResourceCardBodyData = NODE_CARD_BODY, e
 	const host = createEditingHostStub();
 	const editing = new EditingController(host);
 	const dataService = createResourceDataServiceStub([CARD_BODY, nodeCardBody]);
-	const context: FormEditorContextValue = { readOnly: false, editing, namespaces: NAMESPACES, languageTags: {}, resources: [] };
+	// The host tells that rdfs:seeAlso takes resources, as it knows it to.
+	const termSearch = createTermSearchStub({}, [], { [RDFS.seeAlso]: { type: 'resource', source: 'propertyType' } });
+	const context: FormEditorContextValue = { readOnly: false, editing, termSearch, namespaces: NAMESPACES, languageTags: {}, resources: [] };
 
 	renderWebview(
 		<FormEditorContext.Provider value={context}>
@@ -211,6 +214,8 @@ describe('StatementList, with a blank node', () => {
 
 		typeInto(within(row).getByLabelText('Predicate'), 'rdfs:seeAlso');
 		fireEvent.focusOut(within(row).getByLabelText('Predicate'), { relatedTarget: within(row).getByLabelText('New value') });
+		// The answer of the host about the range of the predicate arrives.
+		await act(async () => { });
 		typeInto(within(row).getByLabelText('New value'), 'ex:Leaf');
 		await leave(within(row).getByLabelText('New value'));
 

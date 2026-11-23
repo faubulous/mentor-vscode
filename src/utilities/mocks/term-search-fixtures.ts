@@ -1,5 +1,5 @@
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
-import { ResourceOptionData, TermSearchKind } from '@src/views/webviews/views/form-editor/form-editor-model';
+import { PredicateRangeData, ResourceOptionData, TermSearchKind } from '@src/views/webviews/views/form-editor/form-editor-model';
 import { ITermSearchService } from '@src/views/webviews/views/form-editor/services/term-search-service.interface';
 import { rankTermOptions } from '@src/views/webviews/views/form-editor/services/term-ranking';
 
@@ -26,12 +26,13 @@ export function createTermOption(iri: string, label: string, overrides: Partial<
 
 /**
  * Make a term search that answers with the given terms of each kind that match the text, ranked as
- * the host ranks them, and with the given languages of the workspace.
+ * the host ranks them, with the given languages of the workspace and the given ranges of predicates.
  * @param terms The terms of each kind.
  * @param languages The languages of the workspace, the most used first.
+ * @param ranges What values each predicate takes, by its IRI.
  * @returns The search.
  */
-export function createTermSearchStub(terms: Partial<Record<TermSearchKind, readonly ResourceOptionData[]>>, languages: readonly string[] = []): TermSearchStub {
+export function createTermSearchStub(terms: Partial<Record<TermSearchKind, readonly ResourceOptionData[]>>, languages: readonly string[] = [], ranges: Readonly<Record<string, PredicateRangeData>> = {}): TermSearchStub {
 	const searched: string[] = [];
 
 	return {
@@ -41,6 +42,7 @@ export function createTermSearchStub(terms: Partial<Record<TermSearchKind, reado
 
 			return rankTermOptions(terms[kind] ?? [], text).slice(0, limit);
 		},
-		getWorkspaceLanguages: async () => [...languages]
+		getWorkspaceLanguages: async () => [...languages],
+		getPredicateRange: async (_subject, predicate) => ranges[predicate]
 	};
 }

@@ -498,7 +498,9 @@ describe('StatementList, edited in a browser', () => {
 	});
 
 	it('adds a new statement typed into the row Add property opens, with the focus in its predicate', async () => {
-		const { host } = await renderList();
+		// The host tells that rdfs:seeAlso takes resources, as it knows it to.
+		const termSearch = createTermSearchStub({}, [], { [RDFS.seeAlso]: { type: 'resource', source: 'propertyType' } });
+		const { host } = await renderList(SAMPLE, [], RESOURCES, 1000, false, termSearch);
 
 		await userEvent.click(document.querySelector<HTMLElement>('.statement-list-add')!);
 
@@ -542,12 +544,13 @@ describe('StatementList, edited in a browser', () => {
 
 		expect(value.readonly).toBe(false);
 
-		await userEvent.keyboard('ex:Plant{Enter}');
+		// Nothing tells the range of the predicate, so its new value starts as text.
+		await userEvent.keyboard('Oak');
 		await leaveList();
 
 		expect(host.submitted.map(edit => edit.operations)).toEqual([[
 			{ op: 'declarePrefix', prefix: 'skos', namespace: skos },
-			{ op: 'setValues', subject: TEST_SUBJECT, predicate: `${skos}prefLabel`, values: [{ kind: 'term', term: RdfDataFactory.namedNode(`${EXAMPLE_NAMESPACE}Plant`) }] }
+			{ op: 'setValues', subject: TEST_SUBJECT, predicate: `${skos}prefLabel`, values: [{ kind: 'term', term: RdfDataFactory.literal('Oak') }] }
 		]]);
 	});
 
@@ -886,36 +889,44 @@ describe('StatementList, edited in a browser', () => {
 		expect([centreOf(box), centreOf(row.querySelector('.row-grip')!), centreOf(row.querySelector('.row-menu')!)]).toEqual([centre, centre, centre]);
 	});
 
-	it('shows the type of the next value after the text typed into its input, and turns text that can no longer name a resource into a literal, keeping the caret', async () => {
-		const { host } = await renderList(MIXED);
+	it('keeps text typed into the input of a row of resources, with resource right after it, and shows no type before the first character', async () => {
+		await renderList(MIXED);
+
 		const row = rows()[0];
 		const input = within(row).getByLabelText('New value');
-
-		expect(within(row).queryByRole('button', { name: /^New value/ })).toBeNull();
 
 		await userEvent.click(input);
 
 		// Focusing the empty input shows no type: it comes with the first character.
 		expect(within(row).queryByRole('button', { name: /^New value/ })).toBeNull();
 
-		await userEvent.keyboard('ex:Oak');
+		await userEvent.keyboard('Tall');
 
-		expect(within(row).getByRole('button', { name: 'New value resource, change' }).textContent).toBe('resource');
-
-		await userEvent.keyboard('{Backspace}{Backspace}{Backspace}{Backspace}{Backspace}{Backspace}Tall');
-
-		const marker = within(row).getByRole('button', { name: 'New value string, change' });
+		const marker = within(row).getByRole('button', { name: 'New value resource, change' });
 		const copy = row.querySelector('.combobox-suffix-copy')!;
 
 		// Right after the typed text: its copy starts where the text of the input starts.
 		const inner = (within(row).getByLabelText('New value') as unknown as { wrappedElement: HTMLInputElement }).wrappedElement;
 
+		expect(marker.textContent).toBe('resource');
 		expect(copy.textContent).toBe('Tall');
 		expect(Math.round(copy.getBoundingClientRect().left)).toBe(Math.round(inner.getBoundingClientRect().left + parseFloat(getComputedStyle(inner).paddingLeft)));
 		expect(marker.getBoundingClientRect().left).toBeGreaterThan(copy.getBoundingClientRect().right);
 		expect(marker.getBoundingClientRect().left).toBeLessThan(copy.getBoundingClientRect().right + 12);
 
 		await userEvent.keyboard(' oak');
+
+		expect(within(row).getByLabelText<HTMLInputElement>('New value').value).toBe('Tall oak');
+		expect(within(row).queryByLabelText('Value 3')).toBeNull();
+	});
+
+	it('starts a literal at the first character typed into the input of a row of literals, keeping the caret', async () => {
+		const cardBody = withAnchors(createTestCardBody([createProperty('ex:note', [createIriView('ex:A', 'A'), createLiteralView('First')])]));
+		const { host } = await renderList(cardBody);
+		const row = rows()[0];
+
+		await userEvent.click(within(row).getByLabelText('New value'));
+		await userEvent.keyboard('Tall oak');
 
 		const literal = within(row).getByLabelText('Value 3') as HTMLTextAreaElement;
 
@@ -926,6 +937,30 @@ describe('StatementList, edited in a browser', () => {
 		await leaveList();
 
 		expect(host.submitted[0].operations[0]).toMatchObject({ op: 'setValues', values: [{ kind: 'existing' }, { kind: 'existing' }, { kind: 'term', term: RdfDataFactory.literal('Tall oak') }] });
+	});
+
+	it('starts a literal of the datatype the range of the predicate names, before the type of its values, and suggests no other datatype', async () => {
+		const cardBody = withAnchors(createTestCardBody([
+			{ ...createProperty('ex:planted', [createIriView('ex:A', 'A')]), range: { type: 'literal', datatype: XSD.date, source: 'range' } },
+			{ ...createProperty('ex:note', [createLiteralView('First')]), range: { type: 'literal', datatype: XSD.string, source: 'range' } }
+		]));
+
+		await renderList(cardBody);
+
+		await userEvent.click(within(rows()[0]).getByLabelText('New value'));
+		await userEvent.keyboard('2024-02-29');
+
+		expect((within(rows()[0]).getByLabelText('Value 2') as HTMLTextAreaElement).value).toBe('2024-02-29');
+		expect(within(rows()[0]).getByRole('button', { name: 'Datatype date, change' })).toBeTruthy();
+
+		// A row of literals shows the input of a new value while it has the focus.
+		await userEvent.click(within(rows()[1]).getByLabelText('Value 1'));
+		await userEvent.click(within(rows()[1]).getByLabelText('New value'));
+		await userEvent.keyboard('42');
+
+		expect((within(rows()[1]).getByLabelText('Value 2') as HTMLTextAreaElement).value).toBe('42');
+		expect(within(rows()[1]).queryByRole('button', { name: /^Suggested datatype/ })).toBeNull();
+		expect(within(rows()[1]).getByRole('button', { name: 'Datatype string, change' })).toBeTruthy();
 	});
 
 	it('starts a text value with " in the empty input, which suggests the datatype its text looks like', async () => {
@@ -951,16 +986,16 @@ describe('StatementList, edited in a browser', () => {
 		expect(document.activeElement).toBe(literal);
 	});
 
-	it('opens the annotation picker of the type with resource first, and makes the typed text a literal of the language picked', async () => {
+	it('opens the annotation picker of the type with resource first and highlighted, and makes the typed text a literal of the language picked', async () => {
 		const { host } = await renderList(MIXED);
 		const row = rows()[0];
 
 		await userEvent.click(within(row).getByLabelText('New value'));
 		await userEvent.keyboard('Oak');
-		await pressFreshAnnotation(within(row).getByRole('button', { name: 'New value string, change' }));
+		await pressFreshAnnotation(within(row).getByRole('button', { name: 'New value resource, change' }));
 
 		expect(codesOf(row).slice(0, 3)).toEqual(['resource', 'string', 'boolean']);
-		expect(activeCodeOf(row)).toBe('string');
+		expect(activeCodeOf(row)).toBe('resource');
 
 		await userEvent.click(within(row.querySelector<HTMLElement>('.literal-annotation-picker')!).getByRole('tab', { name: 'Language' }));
 		await userEvent.click(within(row.querySelector<HTMLElement>('.literal-annotation-picker')!).getByRole('option', { name: /^de,/ }));
@@ -974,25 +1009,6 @@ describe('StatementList, edited in a browser', () => {
 		await leaveList();
 
 		expect(host.submitted[0].operations[0]).toMatchObject({ values: [{ kind: 'existing' }, { kind: 'existing' }, { kind: 'term', term: RdfDataFactory.literal('Oak', 'de') }] });
-	});
-
-	it('keeps text a resource is picked for in the input, read as a resource', async () => {
-		await renderList(MIXED);
-
-		const row = rows()[0];
-
-		await userEvent.click(within(row).getByLabelText('New value'));
-		await userEvent.keyboard('Oak');
-		await pressFreshAnnotation(within(row).getByRole('button', { name: 'New value string, change' }));
-		await userEvent.click(within(row.querySelector<HTMLElement>('.literal-annotation-picker')!).getByRole('option', { name: /^resource,/ }));
-
-		expect(document.activeElement).toBe(within(row).getByLabelText('New value'));
-		expect(within(row).getByRole('button', { name: 'New value resource, change' })).toBeTruthy();
-
-		await userEvent.keyboard(' tree');
-
-		expect(within(row).getByLabelText<HTMLInputElement>('New value').value).toBe('Oak tree');
-		expect(within(row).queryByLabelText('Value 3')).toBeNull();
 	});
 
 	it('makes a literal the resource its text names with resource in its annotation picker, after the datatypes the fields know', async () => {
@@ -1016,9 +1032,6 @@ describe('StatementList, edited in a browser', () => {
 		expect(host.submitted[0].operations[0]).toMatchObject({ values: [{ kind: 'term', term: RdfDataFactory.namedNode(`${EXAMPLE_NAMESPACE}Tree`) }] });
 	});
 
-
-
-
 	it('lets a type that just appeared under the pointer take no click until the pointer has moved away and a moment has passed', async () => {
 		await renderList(MIXED);
 
@@ -1028,7 +1041,7 @@ describe('StatementList, edited in a browser', () => {
 		await userEvent.click(input);
 		await userEvent.keyboard('Oak');
 
-		const marker = within(row).getByRole('button', { name: 'New value string, change' });
+		const marker = within(row).getByRole('button', { name: 'New value resource, change' });
 
 		// It looks the same, but the pointer goes through it to the text.
 		expect(marker.classList.contains('is-guarded')).toBe(true);

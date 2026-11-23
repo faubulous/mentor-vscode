@@ -54,7 +54,8 @@ export function LiteralValueField({ view, index, edited }: LiteralValueFieldProp
 	const datatype = term.datatype.value;
 	const prefixedNameOf: PrefixedNameOf = datatypeTerm => services.resolver.viewOf(datatypeTerm).prefixedName;
 	const annotation = getLiteralAnnotationData(term, prefixedNameOf);
-	const suggested = _suggestionOf(term, index < editor.state.draft.values.length);
+	// A range that names the datatype of the values is not overridden by a suggestion.
+	const suggested = _suggestionOf(term, index < editor.state.draft.values.length && edited.defaultType.datatype === undefined);
 
 	return (
 		<LiteralField
@@ -84,14 +85,15 @@ export function LiteralValueField({ view, index, edited }: LiteralValueFieldProp
 
 /**
  * The datatype a literal is offered: the one the text of a plain string looks like a value of. A
- * literal with a datatype or a language, and the empty field of a language the row lacks, are
- * offered none.
+ * literal with a datatype or a language, the empty field of a language the row lacks, and a value
+ * whose datatype a range names are offered none.
  * @param term The literal.
- * @param isValue Whether the literal is a value of the row, not the field of a missing language.
+ * @param offered Whether the literal may be offered one: a value of the row, not the field of a
+ * missing language, of a predicate whose range names no datatype.
  * @returns The IRI of the datatype, or `undefined`.
  */
-function _suggestionOf(term: Literal, isValue: boolean): string | undefined {
-	return isValue && term.language === '' && term.datatype.value === XSD.string ? LiteralDatatypes.suggest(term.value) : undefined;
+function _suggestionOf(term: Literal, offered: boolean): string | undefined {
+	return offered && term.language === '' && term.datatype.value === XSD.string ? LiteralDatatypes.suggest(term.value) : undefined;
 }
 
 /**

@@ -1,5 +1,7 @@
-import { ValueKind } from '@src/utilities/value-kind';
-import { TypedTermReader } from '../services/statement/typed-term-reader';
+import { XSD } from '@faubulous/mentor-rdf/ontologies';
+import { PredicateRangeData } from '../form-editor-model';
+import { LiteralAnnotation } from './literal-annotation';
+import { RowValue } from './row-value';
 
 /**
  * What the text typed for a new value makes: a resource, or a literal.
@@ -7,43 +9,67 @@ import { TypedTermReader } from '../services/statement/typed-term-reader';
 export type NewValueType = 'resource' | 'literal';
 
 /**
- * What the input of a new value makes of the text typed into it, which the input shows after the
- * text: the type chosen for it, else a resource where the predicate takes resources only, a
- * literal where it takes literals only, and otherwise a resource while the text is empty or names
- * one, a literal for any other text.
- * @param text The text typed so far.
- * @param range What the predicate takes.
- * @param chosen The type chosen for the text, if any.
+ * The type a new value of a property starts as, and the datatype of a literal where a range names
+ * one.
+ */
+export interface DefaultValueType {
+	/**
+	 * Whether a new value starts as a literal or as a resource.
+	 */
+	type: NewValueType;
+
+	/**
+	 * The IRI of the datatype a range gives the literal, `xsd:string` included; absent where no range
+	 * names one.
+	 */
+	datatype?: string;
+}
+
+/**
+ * The type a new value of a row starts as, by the first rule that applies: the type of a resource
+ * takes resources and its label text; a range or shape of the predicate decides; else the type of
+ * the last value of the row; else the type of the property, as of an object property; else text.
+ * @param header The kind of header the row is, if it is one.
+ * @param values The values of the row.
+ * @param range What the store tells about the values of the predicate, if anything.
  * @returns The type.
  */
-export function getNewValueType(text: string, range: ValueKind, chosen?: NewValueType): NewValueType {
-	if (chosen) {
-		return chosen;
+export function getDefaultValueType(header: 'type' | 'label' | undefined, values: readonly RowValue[], range: PredicateRangeData | undefined): DefaultValueType {
+	if (header) {
+		return { type: header === 'type' ? 'resource' : 'literal' };
 	}
 
-	if (range !== 'any') {
-		return range;
+	if (range?.source === 'range') {
+		return range.type === 'literal' && range.datatype ? { type: 'literal', datatype: range.datatype } : { type: range.type };
 	}
 
-	const trimmed = text.trim();
+	const last = values[values.length - 1];
 
-	return trimmed === '' || TypedTermReader.isName(trimmed) ? 'resource' : 'literal';
+	if (last) {
+		return { type: (last.kind === 'written' ? last.view.term : last.term).termType === 'Literal' ? 'literal' : 'resource' };
+	}
+
+	return { type: range?.type ?? 'literal' };
 }
 
 /**
  * Indicate whether the text typed for a new value starts a literal at once, which then takes the
- * text in its own field: where the predicate takes literals only, from the first character, and
- * where it takes either, once the text can no longer become the name of a resource, as with a
- * space or a leading digit. Text a resource was chosen for stays in the input.
+ * text in its own field: where a new value starts as a literal, from the first character. Text
+ * for a resource stays in the input.
  * @param text The text typed so far.
- * @param range What the predicate takes.
- * @param chosen The type chosen for the text, if any.
+ * @param defaultType The type a new value starts as.
  * @returns `true` when the text starts a literal.
  */
-export function startsLiteral(text: string, range: ValueKind, chosen?: NewValueType): boolean {
-	if (text.trim() === '' || range === 'resource' || chosen === 'resource') {
-		return false;
-	}
+export function startsLiteral(text: string, defaultType: DefaultValueType): boolean {
+	return defaultType.type === 'literal' && text.trim() !== '';
+}
 
-	return range === 'literal' || !TypedTermReader.couldBeName(text.trimStart());
+/**
+ * The annotation a literal started for a new value gets: the datatype a range names, where it is
+ * not plain text.
+ * @param defaultType The type a new value starts as.
+ * @returns The annotation.
+ */
+export function getDefaultAnnotation(defaultType: DefaultValueType): LiteralAnnotation {
+	return defaultType.datatype && defaultType.datatype !== XSD.string ? { datatype: defaultType.datatype } : {};
 }

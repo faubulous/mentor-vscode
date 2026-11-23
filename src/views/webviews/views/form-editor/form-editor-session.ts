@@ -28,6 +28,7 @@ import { ResourceIndexBuilder } from '../../services/editing/resource-index-buil
 import { ResourceViewBuilder } from '../../services/editing/resource-view-builder';
 import { PinChange, PinnedPropertiesService } from '../../services/editing/pinned-properties-service';
 import { EditorSnapshotService } from '../../services/editing/editor-snapshot-service';
+import { PredicateRangeResolver } from '../../services/editing/predicate-range-resolver';
 import { StoreIconResolver } from '../../services/editing/store-icon-resolver';
 import { TermCatalogueService } from '../../services/editing/term-catalogue-service';
 import { IPrefixLookupService } from '@src/services/document/prefix-lookup-service.interface';
@@ -164,6 +165,8 @@ export class FormEditorSession implements vscode.Disposable {
 	private _sentSnapshot?: DocumentSnapshot;
 
 	private _iconResolver?: StoreIconResolver;
+
+	private _rangeResolver?: PredicateRangeResolver;
 
 	private _termCatalogue?: TermCatalogueService;
 
@@ -525,6 +528,9 @@ export class FormEditorSession implements vscode.Disposable {
 			case 'WorkspaceLanguagesRequest':
 				await this._answerWorkspaceLanguages(message.requestId);
 				break;
+			case 'PredicateRangeRequest':
+				this._answerPredicateRange(message);
+				break;
 			case 'ExecuteCommand': {
 				const command = message as ExecuteCommandMessage;
 
@@ -801,14 +807,31 @@ export class FormEditorSession implements vscode.Disposable {
 	}
 
 	/**
-	 * Options for building the statements about resources: the glyphs of the IRIs the document only mentions
-	 * come from the store, when there is one.
+	 * Options for building the statements about resources: the glyphs of the IRIs the document only
+	 * mentions, and what values the predicates take, come from the store, when there is one.
 	 * @returns The options.
 	 */
 	private _getIndexOptions(): ResourceIndexOptions {
 		const vocabulary = this._getVocabulary();
 
-		return { resolveObjectIcon: vocabulary ? iri => this._getIconResolver(vocabulary).resolve(iri) : undefined };
+		if (!vocabulary) {
+			return {};
+		}
+
+		return {
+			resolveObjectIcon: iri => this._getIconResolver(vocabulary).resolve(iri),
+			resolvePredicateRange: (predicate, entry) => this._getRangeResolver(vocabulary).resolve(predicate, this._typesOf(entry))
+		};
+	}
+
+	/**
+	 * The types of a resource the document defines, asserted and inferred, whose shapes tell what
+	 * values its predicates take.
+	 * @param entry The resource.
+	 * @returns The type IRIs, each once.
+	 */
+	private _typesOf(entry: ResourceIndexEntry): string[] {
+		return Array.from(new Set([...typeIrisOf(entry), ...this._inferredTypesOf(this._getTokenizedContext()?.graphs, entry.term)]));
 	}
 
 	/**
@@ -1009,6 +1032,20 @@ export class FormEditorSession implements vscode.Disposable {
 	}
 
 	/**
+	 * Answer a request for what values a predicate takes for a resource, as a row for a new statement
+	 * asks once its predicate is picked. Without a store or with a resource the document does not
+	 * define, the answer tells what the predicate alone says.
+	 * @param request The request.
+	 */
+	private _answerPredicateRange(request: Extract<FormEditorWebviewMessage, { id: 'PredicateRangeRequest' }>): void {
+		const vocabulary = this._getVocabulary();
+		const entry = this._index ? getEntry(this._index, request.subject) : undefined;
+		const range = vocabulary ? this._getRangeResolver(vocabulary).resolve(request.predicate, entry ? this._typesOf(entry) : []) : undefined;
+
+		this._postMessage({ id: 'PredicateRangeResponse', requestId: request.requestId, range });
+	}
+
+	/**
 	 * The catalogue of the terms of the workspace the pickers search.
 	 * @param vocabulary The vocabulary repository over the store.
 	 * @returns The catalogue.
@@ -1031,6 +1068,15 @@ export class FormEditorSession implements vscode.Disposable {
 	 */
 	private _getIconResolver(vocabulary: VocabularyRepository): StoreIconResolver {
 		return this._iconResolver ??= new StoreIconResolver(vocabulary.store);
+	}
+
+	/**
+	 * The resolver of what values predicates take, created once.
+	 * @param vocabulary The vocabulary repository over the store.
+	 * @returns The resolver.
+	 */
+	private _getRangeResolver(vocabulary: VocabularyRepository): PredicateRangeResolver {
+		return this._rangeResolver ??= new PredicateRangeResolver(vocabulary.store);
 	}
 
 	/**
