@@ -961,13 +961,13 @@ body {
 	text-align: left;
 }
 
-/* The count of the nested cards of a row and the tags of its literals, which no layout shows by the label. */
+/* The count of the nested cards of a row and the annotations of its literals, which no layout shows by the label. */
 .statement-predicate-count,
-.statement-predicate-tags {
+.statement-predicate-annotations {
 	display: none;
 }
 
-.statement-predicate-tag {
+.statement-predicate-annotation {
 	margin: 0 6px 0 0;
 	padding: 0;
 	border: 0;
@@ -1041,7 +1041,7 @@ body {
 
 /*
  * A literal that is read: its text from the edge of the value column, wrapping and cut after a few
- * lines, and its language or datatype as a muted tag at the end of the column, on the first line.
+ * lines, and its language or datatype as a muted annotation at the end of the column, on the first line.
  */
 .literal-value {
 	display: flex;
@@ -1064,7 +1064,7 @@ body {
 	overflow-wrap: anywhere;
 }
 
-.literal-tag {
+.literal-annotation {
 	flex: none;
 	margin-left: auto;
 	color: var(--form-muted);
@@ -1574,7 +1574,7 @@ body {
 
 /*
  * The label row leads an expanded card: the label is the title of the card, in the size and weight
- * of the title on the line box of every row, with its tag shown only while it is edited.
+ * of the title on the line box of every row, with its annotation shown only while it is edited.
  */
 .statement-line.is-card-label .literal-field {
 	--clamp: 1;
@@ -1585,11 +1585,11 @@ body {
 	font-weight: 600;
 }
 
-.statement-line.is-card-label .literal-field-tag {
+.statement-line.is-card-label .literal-field-annotation {
 	display: none;
 }
 
-.statement-line.is-card-label .literal-field:focus-within .literal-field-tag {
+.statement-line.is-card-label .literal-field:focus-within .literal-field-annotation {
 	display: inline-block;
 }
 
@@ -1688,8 +1688,9 @@ body {
 
 /*
  * A literal: a text area laid over a hidden copy of its text. The copy gives the field its height
- * and puts the tag of the literal after its last character, and both wrap alike, so the tag follows
- * the text onto its last line. The tag stands over the area, so the pointer reaches it.
+ * and puts the annotation of the literal after its last character, and both wrap alike, so the
+ * annotation follows the text onto its last line. The annotation stands over the area, so the
+ * pointer reaches it.
  */
 .literal-field {
 	anchor-scope: --literal-field;
@@ -1756,8 +1757,8 @@ body {
 	color: var(--form-muted);
 }
 
-/* The tag: the language or datatype of the literal, muted and small, which opens its picker. */
-.literal-field-tag {
+/* The annotation: the language or datatype of the literal, muted and small, which opens its picker. */
+.literal-field-annotation {
 	position: relative;
 	z-index: 2;
 	display: inline-block;
@@ -1775,27 +1776,27 @@ body {
 	cursor: pointer;
 }
 
-.literal-field-tag:hover,
-.literal-field-tag:focus-visible {
+.literal-field-annotation:hover,
+.literal-field-annotation:focus-visible {
 	background: var(--form-pill-background);
 	color: var(--vscode-foreground);
 	outline: none;
 }
 
-/* A tag that just appeared ignores the pointer for a moment, looking the same, so a click meant for the text does not land on it. */
-.literal-field-tag.is-guarded,
-.combobox-suffix > .literal-field-tag.is-guarded {
+/* An annotation that just appeared ignores the pointer for a moment, looking the same, so a click meant for the text does not land on it. */
+.literal-field-annotation.is-guarded,
+.combobox-suffix > .literal-field-annotation.is-guarded {
 	pointer-events: none;
 }
 
 /* The datatype a plain string looks like a value of, offered, not set: outlined and slanted. */
-.literal-field-tag.is-suggestion {
+.literal-field-annotation.is-suggestion {
 	box-shadow: inset 0 0 0 1px var(--form-field-border);
 	font-style: italic;
 }
 
-/* A text cut at rest shows the tag over the end of its last line, the text fading out before it. */
-.literal-field.is-clamped .literal-field-tag {
+/* A text cut at rest shows the annotation over the end of its last line, the text fading out before it. */
+.literal-field.is-clamped .literal-field-annotation {
 	position: absolute;
 	right: 0;
 	bottom: calc((var(--text-line) - 16px) / 2);
@@ -1804,8 +1805,8 @@ body {
 	background: linear-gradient(to right, transparent, var(--card-surface) 20px);
 }
 
-/* A text that does not fit its datatype: the tag, the reason under the value and the underline of the field in the colour of errors. */
-.literal-field.is-problem .literal-field-tag {
+/* A text that does not fit its datatype: the annotation, the reason under the value and the underline of the field in the colour of errors. */
+.literal-field.is-problem .literal-field-annotation {
 	color: var(--form-error);
 }
 
@@ -1822,12 +1823,12 @@ body {
 }
 
 /*
- * The tag picker: a pop-up in the top layer under the value, from its start, with a tab for the
+ * The annotation picker: a pop-up in the top layer under the value, from its start, with a tab for the
  * datatypes and one for the languages, a filter, and the list of the items of the tab that match
  * it, each its code and what it is. It keeps its width on both tabs; the list scrolls once it is
  * taller than eight items.
  */
-.tag-picker {
+.literal-annotation-picker {
 	position: fixed;
 	position-anchor: --literal-field;
 	inset: auto;
@@ -1848,7 +1849,7 @@ body {
 	line-height: 16px;
 }
 
-.tag-picker-tabs {
+.literal-annotation-picker-tabs {
 	display: flex;
 	gap: 2px;
 	margin-bottom: 4px;
@@ -1856,7 +1857,7 @@ body {
 	border-bottom: 1px solid var(--form-hairline);
 }
 
-.tag-picker-tab {
+.literal-annotation-picker-tab {
 	flex: 1;
 	height: 26px;
 	padding: 0;
@@ -1868,17 +1869,17 @@ body {
 	cursor: pointer;
 }
 
-.tag-picker-tab:hover {
+.literal-annotation-picker-tab:hover {
 	color: var(--vscode-foreground);
 }
 
-.tag-picker-tab.is-active {
+.literal-annotation-picker-tab.is-active {
 	background: var(--form-pill-background);
 	color: var(--vscode-foreground);
 }
 
 /* The filter under the tabs, a field of its own on the surface of the pop-up. */
-.tag-picker-filter {
+.literal-annotation-picker-filter {
 	display: block;
 	box-sizing: border-box;
 	width: 100%;
@@ -1893,25 +1894,25 @@ body {
 	outline: none;
 }
 
-.tag-picker-filter:focus {
+.literal-annotation-picker-filter:focus {
 	border-color: var(--form-accent);
 }
 
-.tag-picker-filter::placeholder {
+.literal-annotation-picker-filter::placeholder {
 	color: var(--vscode-input-placeholderForeground, var(--form-muted));
 }
 
-.tag-picker-list {
+.literal-annotation-picker-list {
 	max-height: 232px;
 	overflow-y: auto;
 }
 
-.tag-picker-empty {
+.literal-annotation-picker-empty {
 	padding: 6px 8px;
 	color: var(--form-muted);
 }
 
-.tag-picker-item {
+.literal-annotation-picker-item {
 	display: flex;
 	align-items: center;
 	gap: 10px;
@@ -1922,16 +1923,16 @@ body {
 	cursor: pointer;
 }
 
-.tag-picker-item.is-active {
+.literal-annotation-picker-item.is-active {
 	background: var(--form-pill-background);
 }
 
-.tag-picker-code {
+.literal-annotation-picker-code {
 	flex: none;
 	font-family: var(--form-mono);
 }
 
-.tag-picker-description {
+.literal-annotation-picker-description {
 	min-width: 0;
 	overflow: hidden;
 	color: var(--form-muted);
@@ -2098,13 +2099,13 @@ body {
 	visibility: hidden;
 }
 
-.combobox-suffix > .literal-field-tag,
-.combobox .tag-picker {
+.combobox-suffix > .literal-field-annotation,
+.combobox .literal-annotation-picker {
 	pointer-events: auto;
 }
 
-/* The tag picker of the kind of a new value opens under the field. */
-.combobox .tag-picker {
+/* The annotation picker of the type of a new value opens under the field. */
+.combobox .literal-annotation-picker {
 	position-anchor: --combobox;
 }
 

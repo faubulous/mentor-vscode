@@ -1,16 +1,16 @@
 import { ChangeEvent, FocusEvent, KeyboardEvent, useId, useRef, useState } from 'react';
 import { useOverflowing } from '../hooks/use-overflowing';
-import { useTagPicker } from '../hooks/use-tag-picker';
-import { LiteralTag } from '../state/literal-tag';
-import { LiteralTagData } from './datatype-labels';
-import { TagButton } from './tag-button';
-import { TagPicker } from './tag-picker';
-import { TagSelection } from './tag-picker-items';
+import { useLiteralAnnotationPicker } from '../hooks/use-literal-annotation-picker';
+import { LiteralAnnotation } from '../state/literal-annotation';
+import { LiteralAnnotationData } from './datatype-labels';
+import { LiteralAnnotationButton } from './literal-annotation-button';
+import { LiteralAnnotationPicker } from './literal-annotation-picker';
+import { LiteralAnnotationPickerSelection } from './literal-annotation-picker-items';
 
 /**
- * The tag a plain string shows while its value has the focus, which chooses a datatype for it.
+ * The annotation a plain string shows while its value has the focus, which chooses a datatype for it.
  */
-const PLAIN_TAG: LiteralTagData = { text: 'string', tooltip: 'Choose a datatype or language', accessibleName: 'Datatype string, change' };
+const PLAIN_ANNOTATION: LiteralAnnotationData = { text: 'string', tooltip: 'Choose a datatype or language', accessibleName: 'Datatype string, change' };
 
 /**
  * A whole number, which ↑ and ↓ step by one.
@@ -32,14 +32,14 @@ export interface LiteralFieldProps {
 	text: string;
 
 	/**
-	 * The tag of the literal as its field shows it after the text; none for a plain string.
+	 * The annotation of the literal as its field shows it after the text; none for a plain string.
 	 */
-	tag?: LiteralTagData;
+	annotation?: LiteralAnnotationData;
 
 	/**
-	 * The language or datatype of the literal, which the tag picker highlights.
+	 * The language or datatype of the literal, which the annotation picker highlights.
 	 */
-	current: LiteralTag;
+	current: LiteralAnnotation;
 
 	/**
 	 * What an empty value shows: the text a value of its datatype is written as.
@@ -52,10 +52,10 @@ export interface LiteralFieldProps {
 	problem?: string;
 
 	/**
-	 * The tag of the datatype a plain string looks like a value of, which the focused value shows in
-	 * place of its own tag and Tab or a click accepts.
+	 * The annotation of the datatype a plain string looks like a value of, which the focused value
+	 * shows in place of its own annotation and Tab or a click accepts.
 	 */
-	suggestion?: LiteralTagData;
+	suggestion?: LiteralAnnotationData;
 
 	/**
 	 * Whether the value is a number, written in the editor font.
@@ -68,12 +68,12 @@ export interface LiteralFieldProps {
 	integer: boolean;
 
 	/**
-	 * The languages of the card, which the tag picker offers first.
+	 * The languages of the card, which the annotation picker offers first.
 	 */
 	languages: readonly string[];
 
 	/**
-	 * Whether the tag picker offers to make the value a resource.
+	 * Whether the annotation picker offers to make the value a resource.
 	 */
 	offersResource: boolean;
 
@@ -98,9 +98,9 @@ export interface LiteralFieldProps {
 	onRemove: () => void;
 
 	/**
-	 * Called with what the item picked from the tag picker gives the literal.
+	 * Called with what the item picked from the annotation picker gives the literal.
 	 */
-	onTagPick: (selection: TagSelection) => void;
+	onAnnotationPick: (selection: LiteralAnnotationPickerSelection) => void;
 
 	/**
 	 * Called when the suggested datatype is accepted, as Tab does.
@@ -110,29 +110,30 @@ export interface LiteralFieldProps {
 
 /**
  * A literal being edited: a text area laid over a hidden copy of its text, which gives the area its
- * height and puts the tag of the literal after the last character, so the tag wraps with the text.
- * At rest a long text shows as many lines as the density of the card allows, with the tag over the
- * end of the last line; with the focus the whole text shows. A plain string shows no tag at rest
+ * height and puts the annotation of the literal after the last character, so the annotation wraps
+ * with the text. At rest a long text shows as many lines as the density of the card allows, with the
+ * annotation over the end of the last line; with the focus the whole text shows. A plain string shows
+ * no annotation at rest
  * and `string` while it has the focus and text, or the datatype its text looks like a value of,
  * such as `date?`, which Tab or a click accepts and nothing applies by itself; both ignore the
  * pointer for a moment as they appear, so a click meant for the text does not land on them. A text that does not fit the
- * datatype shows the tag and the reason under the value in the colour of errors. The tag opens the
- * tag picker.
+ * datatype shows the annotation and the reason under the value in the colour of errors. The
+ * annotation opens the annotation picker.
  * @param props The literal and its callbacks.
  * @returns The field.
  */
 export function LiteralField(props: LiteralFieldProps): React.JSX.Element {
-	const { index, text, tag, current, placeholder, problem, suggestion, numeric, languages, offersResource, onInput, onTagPick, onAcceptSuggestion } = props;
+	const { index, text, annotation, current, placeholder, problem, suggestion, numeric, languages, offersResource, onInput, onAnnotationPick, onAcceptSuggestion } = props;
 	const [focused, setFocused] = useState(false);
 	const textRef = useRef<HTMLSpanElement>(null);
 	const inputRef = useRef<HTMLTextAreaElement>(null);
 	const problemId = useId();
 	const listId = useId();
-	const picker = useTagPicker({ current, languages, resourceItemPosition: offersResource ? 'last' : undefined, onPick: onTagPick, onDone: () => inputRef.current?.focus() });
+	const picker = useLiteralAnnotationPicker({ current, languages, resourceItemPosition: offersResource ? 'last' : undefined, onPick: onAnnotationPick, onDone: () => inputRef.current?.focus() });
 	const clamped = useOverflowing(textRef, text) && !focused;
 	const suggested = focused && !picker.open ? suggestion : undefined;
 	// A plain string shows string once it has text, so focusing an empty value shows the placeholder only.
-	const shownTag = tag ?? (focused && text !== '' ? PLAIN_TAG : undefined);
+	const shownAnnotation = annotation ?? (focused && text !== '' ? PLAIN_ANNOTATION : undefined);
 
 	const handleBlur = (event: FocusEvent<HTMLSpanElement>): void => {
 		if (!(event.relatedTarget instanceof Node) || !event.currentTarget.contains(event.relatedTarget)) {
@@ -141,7 +142,7 @@ export function LiteralField(props: LiteralFieldProps): React.JSX.Element {
 		}
 	};
 
-	// The filter of the picker takes the focus as it opens, and gives it back to the text as the tag closes it.
+	// The filter of the picker takes the focus as it opens, and gives it back to the text as the annotation closes it.
 	const togglePicker = (): void => {
 		if (picker.open) {
 			inputRef.current?.focus();
@@ -158,8 +159,8 @@ export function LiteralField(props: LiteralFieldProps): React.JSX.Element {
 				<span ref={textRef} className="literal-field-text">
 					<span className="literal-field-copy" aria-hidden="true">{`${text || placeholder}\u200b`}</span>
 					{suggested
-						? <TagButton key={suggested.text} tag={suggested} variant="is-suggestion" guarded onAct={onAcceptSuggestion} />
-						: shownTag && <TagButton key={shownTag.text} tag={shownTag} problem={problem} guarded={tag === undefined} onAct={togglePicker} />}
+						? <LiteralAnnotationButton key={suggested.text} annotation={suggested} variant="is-suggestion" guarded onAct={onAcceptSuggestion} />
+						: shownAnnotation && <LiteralAnnotationButton key={shownAnnotation.text} annotation={shownAnnotation} problem={problem} guarded={annotation === undefined} onAct={togglePicker} />}
 					<textarea
 						ref={inputRef}
 						className="literal-field-input"
@@ -176,7 +177,7 @@ export function LiteralField(props: LiteralFieldProps): React.JSX.Element {
 				</span>
 			</span>
 			{problem && <span id={problemId} className="literal-field-problem">{problem}</span>}
-			{picker.open && <TagPicker picker={picker} listId={listId} />}
+			{picker.open && <LiteralAnnotationPicker picker={picker} listId={listId} />}
 		</span>
 	);
 }

@@ -16,19 +16,19 @@ import { useFormEditorContext } from '../state/form-editor-context';
 import { StatementRowEditor } from '../state/statement-row-editor';
 import { StatementRowState } from '../state/statement-row-state';
 import { PinnedProperties, usePinnedProperties } from '../state/pinned-properties-context';
-import { getLiteralTag, getPrefixedNameIn, PrefixedNameOf } from './datatype-labels';
+import { getLiteralAnnotation, getPrefixedNameIn, PrefixedNameOf } from './datatype-labels';
 import { EditedRow } from './edited-row';
 import { RowGrip } from './row-grip';
 import { RowMenu } from './row-menu';
 import { PredicateField } from './predicate-field';
-import { PredicateTags } from './predicate-tags';
+import { PredicateAnnotations } from './predicate-annotations';
 import { PropertyComments } from './property-comments';
 import { ResourceValues } from './resource-values';
 import { getRowErrorMessage } from './row-error-message';
 import { RowError } from './row-error';
 import { StatementRowContext } from './statement-row-context';
 import { StatementValueCell } from './statement-value-cell';
-import { TagSelection } from './tag-picker-items';
+import { LiteralAnnotationPickerSelection } from './literal-annotation-picker-items';
 import { getResourceTooltipAttributes } from './resource-tooltip';
 import { getTermLabel } from './term-labels';
 import { TermValue } from './term-value';
@@ -258,9 +258,9 @@ export function StatementRow({ property, editor, services, autoFocus = false, he
 						<span className={`statement-predicate${_isIriLabel(predicateView, label) ? ' is-iri' : ''}`} {...getResourceTooltipAttributes(edited ? undefined : predicateView?.term)}>
 							{edited ? <PredicateField editor={edited.editor} state={edited.state} label={label} autoFocus={autoFocus} /> : <span className="statement-predicate-text">{label}</span>}
 							{wholes.length > 0 && <span className="statement-predicate-count">{wholes.length}</span>}
-							<PredicateTags
-								tags={_tagsOf(literals, edited, namespaces)}
-								onOpen={edited ? index => rowRef.current?.querySelector<HTMLElement>(`[data-value-index="${index}"] .literal-field-tag`)?.click() : undefined}
+							<PredicateAnnotations
+								annotations={_annotationsOf(literals, edited, namespaces)}
+								onOpen={edited ? index => rowRef.current?.querySelector<HTMLElement>(`[data-value-index="${index}"] .literal-field-annotation`)?.click() : undefined}
 							/>
 						</span>
 					)}
@@ -354,15 +354,15 @@ function _predicateIriOf(predicateView: TermData | undefined): string | undefine
  * @param literals The literals of the row.
  * @param edited The row, where it is edited.
  * @param namespaces The namespace declarations of the document.
- * @returns The tags, by the index of their values.
+ * @returns The annotations, by the index of their values.
  */
-function _tagsOf(literals: readonly ShownValue[], edited: EditedRow | undefined, namespaces: readonly NamespaceData[]): { index: number; tag: string }[] {
+function _annotationsOf(literals: readonly ShownValue[], edited: EditedRow | undefined, namespaces: readonly NamespaceData[]): { index: number; annotation: string }[] {
 	const prefixedNameOf: PrefixedNameOf = edited ? datatype => edited.services.resolver.viewOf(datatype).prefixedName : getPrefixedNameIn(namespaces);
 
 	return literals.flatMap(({ view, index }) => {
-		const tag = view.term.termType === 'Literal' ? getLiteralTag(view.term, prefixedNameOf) : undefined;
+		const annotation = view.term.termType === 'Literal' ? getLiteralAnnotation(view.term, prefixedNameOf) : undefined;
 
-		return tag ? [{ index, tag }] : [];
+		return annotation ? [{ index, annotation }] : [];
 	});
 }
 
@@ -562,17 +562,17 @@ function _inputPending(edited: EditedRow, range: ValueKind, text: string, caret:
 }
 
 /**
- * Give the text typed for a new value what was picked for it from the tag picker of its type: a
+ * Give the text typed for a new value what was picked for it from the annotation picker of its type: a
  * resource keeps it in the input, read as a resource, while a datatype or a language makes a
  * literal of it, which takes the focus.
  * @param edited The row.
  * @param selection What the item picked gives the text.
  */
-function _pickNewValueType(edited: EditedRow, selection: TagSelection): void {
+function _pickNewValueType(edited: EditedRow, selection: LiteralAnnotationPickerSelection): void {
 	if (selection.type === 'resource') {
 		edited.editor.choosePendingType('resource');
 	} else {
-		edited.focusValue(edited.editor.startLiteral(edited.state.pendingText.trim(), selection.tag, selection.missingPrefix));
+		edited.focusValue(edited.editor.startLiteral(edited.state.pendingText.trim(), selection.annotation, selection.missingPrefix));
 	}
 }
 

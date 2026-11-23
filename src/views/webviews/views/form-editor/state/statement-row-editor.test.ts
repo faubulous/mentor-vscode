@@ -296,7 +296,7 @@ describe('StatementRowEditor', () => {
 		const { editor } = createEditor();
 
 		editor.inputLiteral(0, '2026-11-18T12:00:00Z');
-		editor.pickLiteralTag(0, { datatype: XSD.dateTime }, { prefix: 'xsd', namespace: XSD_NAMESPACE });
+		editor.pickLiteralAnnotation(0, { datatype: XSD.dateTime }, { prefix: 'xsd', namespace: XSD_NAMESPACE });
 		editor.leave();
 
 		expect(editor.takeEdit()).toEqual([
@@ -308,11 +308,11 @@ describe('StatementRowEditor', () => {
 	it('gives a literal a picked language in place of its datatype, and a plain string neither', () => {
 		const { editor } = createEditor();
 
-		editor.pickLiteralTag(0, { language: 'de-DE' });
+		editor.pickLiteralAnnotation(0, { language: 'de-DE' });
 
 		expect(editor.state.draft.values[0]).toMatchObject({ kind: 'term', term: RdfDataFactory.literal('Tree', 'de-DE') });
 
-		editor.pickLiteralTag(0, {});
+		editor.pickLiteralAnnotation(0, {});
 
 		expect(editor.state.draft.values[0]).toMatchObject({ kind: 'term', term: RdfDataFactory.literal('Tree') });
 	});

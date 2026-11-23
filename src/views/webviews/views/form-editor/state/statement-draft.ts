@@ -3,7 +3,7 @@ import { Literal, NamedNode } from '@rdfjs/types';
 import { RDF } from '@faubulous/mentor-rdf/ontologies';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { PredicateData, TermData } from '../form-editor-model';
-import { LiteralTag } from './literal-tag';
+import { LiteralAnnotation } from './literal-annotation';
 import { RowValue } from './row-value';
 
 /**
@@ -200,13 +200,13 @@ export class StatementDraft {
 	}
 
 	/**
-	 * Give a literal value another language tag or datatype, keeping its text. Giving it the tag of
-	 * the written value again restores the written value.
+	 * Give a literal value another language tag or datatype, keeping its text. Giving it the
+	 * annotation of the written value again restores the written value.
 	 * @param index The index of the value.
-	 * @param tag The language tag, or the IRI of the datatype; neither for plain text.
-	 * @returns The draft with the tag, the draft itself when the value is no literal.
+	 * @param annotation The language tag, or the IRI of the datatype; neither for plain text.
+	 * @returns The draft with the annotation, the draft itself when the value is no literal.
 	 */
-	withLiteralTag(index: number, tag: LiteralTag): StatementDraft {
+	withLiteralAnnotation(index: number, annotation: LiteralAnnotation): StatementDraft {
 		const value = this.values[index];
 		const term = value ? _termOf(value) : undefined;
 
@@ -214,10 +214,10 @@ export class StatementDraft {
 			return this;
 		}
 
-		const direction = tag.language && tag.language.toLowerCase() === term.language ? term.direction : undefined;
-		const languageOrDatatype = tag.language
-			? (direction ? { language: tag.language, direction } : tag.language)
-			: (tag.datatype ? RdfDataFactory.namedNode(tag.datatype) : undefined);
+		const direction = annotation.language && annotation.language.toLowerCase() === term.language ? term.direction : undefined;
+		const languageOrDatatype = annotation.language
+			? (direction ? { language: annotation.language, direction } : annotation.language)
+			: (annotation.datatype ? RdfDataFactory.namedNode(annotation.datatype) : undefined);
 
 		return this._withTerm(index, value, RdfDataFactory.literal(term.value, languageOrDatatype));
 	}

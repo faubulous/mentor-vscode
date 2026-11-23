@@ -4,29 +4,29 @@ import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { getLocalPartAndQuery } from '@src/utilities/uri';
 import { ResourceOptionData } from '../form-editor-model';
 import { narrowByMatch } from '../services/term-ranking';
-import { LiteralTag } from '../state/literal-tag';
+import { LiteralAnnotation } from '../state/literal-annotation';
 import { PrefixProposal } from '../state/prefix-proposal';
 import { getDatatypeFormat, getDatatypeName } from './datatype-labels';
 
 /**
- * The tabs of the tag picker.
+ * The tabs of the annotation picker.
  */
-export type TagPickerTab = 'datatype' | 'language';
+export type LiteralAnnotationPickerTab = 'datatype' | 'language';
 
 /**
- * What picking an item of the tag picker gives a literal: its tag, and the prefix to declare for
+ * What picking an item of the annotation picker gives a literal: its annotation, and the prefix to declare for
  * the datatype, if any.
  */
-export interface LiteralTagSelection {
+export interface LiteralAnnotationSelection {
 	/**
-	 * Tells the selection of a tag from the selection of a resource.
+	 * Tells the selection of an annotation from the selection of a resource.
 	 */
 	type: 'literal';
 
 	/**
-	 * The tag: a language, a datatype, or neither for a plain string.
+	 * The annotation: a language, a datatype, or neither for a plain string.
 	 */
-	tag: LiteralTag;
+	annotation: LiteralAnnotation;
 
 	/**
 	 * The prefix to declare for the datatype, where the document declares none for its namespace.
@@ -35,10 +35,10 @@ export interface LiteralTagSelection {
 }
 
 /**
- * What picking an item of the tag picker gives a value: a tag for a literal, or a resource
+ * What picking an item of the annotation picker gives a value: an annotation for a literal, or a resource
  * instead of a literal.
  */
-export type TagSelection = LiteralTagSelection | { type: 'resource' };
+export type LiteralAnnotationPickerSelection = LiteralAnnotationSelection | { type: 'resource' };
 
 /**
  * The position of the item that makes a value a resource in the Datatype tab: first for the text
@@ -47,9 +47,9 @@ export type TagSelection = LiteralTagSelection | { type: 'resource' };
 export type ResourceItemPosition = 'first' | 'last';
 
 /**
- * An item of the tag picker: its code, what it is, and what picking it gives.
+ * An item of the annotation picker: its code, what it is, and what picking it gives.
  */
-export interface TagPickerItemData {
+export interface LiteralAnnotationPickerItemData {
 	/**
 	 * Identifies the item among the items of its tab.
 	 */
@@ -73,7 +73,7 @@ export interface TagPickerItemData {
 	/**
 	 * What picking the item gives the literal.
 	 */
-	selection: TagSelection;
+	selection: LiteralAnnotationPickerSelection;
 }
 
 /**
@@ -89,7 +89,7 @@ const RESOURCE_KEY = 'resource';
 /**
  * The item that makes a value a resource, named by what its text is then read as.
  */
-const RESOURCE_ITEM: TagPickerItemData = { key: RESOURCE_KEY, code: 'resource', description: 'IRI', names: ['resource', 'IRI'], selection: { type: 'resource' } };
+const RESOURCE_ITEM: LiteralAnnotationPickerItemData = { key: RESOURCE_KEY, code: 'resource', description: 'IRI', names: ['resource', 'IRI'], selection: { type: 'resource' } };
 
 /**
  * The datatypes the literal fields offer themselves, in the order they are offered.
@@ -102,18 +102,18 @@ const OFFERED_DATATYPES: readonly string[] = [XSD.string, XSD.boolean, XSD.integ
 const LANGUAGE_DATATYPES: ReadonlySet<string> = new Set([RDF.langString, `${_RDF}dirLangString`]);
 
 /**
- * The datatypes the tag picker offers: those the literal fields offer themselves, string first, then the
+ * The datatypes the annotation picker offers: those the literal fields offer themselves, string first, then the
  * other datatypes of the workspace, as the host ranked them. Where a value may be a resource, the
  * resource item stands first or after the datatypes of the literal fields.
  * @param storeDatatypes The datatypes of the workspace.
  * @param resourceItemPosition The position of the resource item, if it is offered.
  * @returns The items.
  */
-export function getDatatypeItems(storeDatatypes: readonly ResourceOptionData[], resourceItemPosition?: ResourceItemPosition): TagPickerItemData[] {
-	const known: TagPickerItemData[] = OFFERED_DATATYPES.map(iri => {
+export function getDatatypeItems(storeDatatypes: readonly ResourceOptionData[], resourceItemPosition?: ResourceItemPosition): LiteralAnnotationPickerItemData[] {
+	const known: LiteralAnnotationPickerItemData[] = OFFERED_DATATYPES.map(iri => {
 		const code = getDatatypeName(RdfDataFactory.namedNode(iri), () => undefined);
 
-		return { key: _datatypeKeyOf(iri), code, description: getDatatypeFormat(iri) ?? '', names: [code], selection: { type: 'literal', tag: iri === XSD.string ? {} : { datatype: iri } } };
+		return { key: _datatypeKeyOf(iri), code, description: getDatatypeFormat(iri) ?? '', names: [code], selection: { type: 'literal', annotation: iri === XSD.string ? {} : { datatype: iri } } };
 	});
 
 	const others = storeDatatypes
@@ -126,8 +126,8 @@ export function getDatatypeItems(storeDatatypes: readonly ResourceOptionData[], 
 				code,
 				description: option.missingPrefix ? `${option.label} · adds ${option.missingPrefix.prefix}:` : option.label,
 				names: [code, option.label, getLocalPartAndQuery(option.subject.value)],
-				selection: { type: 'literal', tag: { datatype: option.subject.value }, missingPrefix: option.missingPrefix }
-			} satisfies TagPickerItemData;
+				selection: { type: 'literal', annotation: { datatype: option.subject.value }, missingPrefix: option.missingPrefix }
+			} satisfies LiteralAnnotationPickerItemData;
 		});
 
 	if (resourceItemPosition === 'first') {
@@ -138,24 +138,24 @@ export function getDatatypeItems(storeDatatypes: readonly ResourceOptionData[], 
 }
 
 /**
- * The languages the tag picker offers: those in use first, the languages of the card before those
+ * The languages the annotation picker offers: those in use first, the languages of the card before those
  * of the workspace, then the other common languages by their names; each once, in standard form.
  * @param usedLanguages The language tags in use, the most used first.
  * @returns The items.
  */
-export function getLanguageItems(usedLanguages: readonly string[]): TagPickerItemData[] {
-	const items: TagPickerItemData[] = [];
+export function getLanguageItems(usedLanguages: readonly string[]): LiteralAnnotationPickerItemData[] {
+	const items: LiteralAnnotationPickerItemData[] = [];
 	const seen = new Set<string>();
 
 	for (const language of [...usedLanguages, ...LanguageTags.common()]) {
-		const tag = LanguageTags.normalize(language);
-		const key = _languageKeyOf(tag);
+		const languageTag = LanguageTags.normalize(language);
+		const key = _languageKeyOf(languageTag);
 
 		if (!seen.has(key)) {
 			seen.add(key);
-			const name = LanguageTags.nameOf(tag);
+			const name = LanguageTags.nameOf(languageTag);
 
-			items.push({ key, code: tag, description: name ?? 'Language', names: [tag, name], selection: { type: 'literal', tag: { language: tag } } });
+			items.push({ key, code: languageTag, description: name ?? 'Language', names: [languageTag, name], selection: { type: 'literal', annotation: { language: languageTag } } });
 		}
 	}
 
@@ -171,7 +171,7 @@ export function getLanguageItems(usedLanguages: readonly string[]): TagPickerIte
  * @param tab The tab.
  * @returns The items that match.
  */
-export function filterTagPickerItems(items: readonly TagPickerItemData[], filter: string, tab: TagPickerTab): TagPickerItemData[] {
+export function filterLiteralAnnotationPickerItems(items: readonly LiteralAnnotationPickerItemData[], filter: string, tab: LiteralAnnotationPickerTab): LiteralAnnotationPickerItemData[] {
 	const matches = narrowByMatch(items, filter, item => item.names);
 	const typed = filter.trim();
 
@@ -179,23 +179,23 @@ export function filterTagPickerItems(items: readonly TagPickerItemData[], filter
 		return matches;
 	}
 
-	const tag = LanguageTags.normalize(typed);
+	const languageTag = LanguageTags.normalize(typed);
 
-	return [...matches, { key: _languageKeyOf(tag), code: tag, description: FREE_TAG_DESCRIPTION, names: [tag], selection: { type: 'literal', tag: { language: tag } } }];
+	return [...matches, { key: _languageKeyOf(languageTag), code: languageTag, description: FREE_TAG_DESCRIPTION, names: [languageTag], selection: { type: 'literal', annotation: { language: languageTag } } }];
 }
 
 /**
- * The key of the item that stands for a tag: the item of its language or of its datatype, and
+ * The key of the item that stands for an annotation: the item of its language or of its datatype, and
  * that of string for a plain string; the resource item for a value that is to be a resource.
- * @param tag The tag, or `resource`.
+ * @param annotation The annotation, or `resource`.
  * @returns The key.
  */
-export function getTagItemKey(tag: LiteralTag | 'resource'): string {
-	if (tag === 'resource') {
+export function getLiteralAnnotationItemKey(annotation: LiteralAnnotation | 'resource'): string {
+	if (annotation === 'resource') {
 		return RESOURCE_KEY;
 	}
 
-	return tag.language ? _languageKeyOf(tag.language) : _datatypeKeyOf(tag.datatype ?? XSD.string);
+	return annotation.language ? _languageKeyOf(annotation.language) : _datatypeKeyOf(annotation.datatype ?? XSD.string);
 }
 
 /**
@@ -209,9 +209,9 @@ function _datatypeKeyOf(iri: string): string {
 
 /**
  * The key of the item of a language, the same for every spelling of its tag.
- * @param tag The language tag.
+ * @param languageTag The language tag.
  * @returns The key.
  */
-function _languageKeyOf(tag: string): string {
-	return `language:${tag.toLowerCase()}`;
+function _languageKeyOf(languageTag: string): string {
+	return `language:${languageTag.toLowerCase()}`;
 }

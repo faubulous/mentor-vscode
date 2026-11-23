@@ -29,7 +29,7 @@ export interface TermValueProps extends StatementRowContext {
 
 /**
  * One value as it is read: a pill for a resource that leads to it, the text of a literal with
- * its tag, the items of a list, or the card of a blank node.
+ * its annotation, the items of a list, or the card of a blank node.
  * @param props The value and where it stands.
  * @returns The value.
  */

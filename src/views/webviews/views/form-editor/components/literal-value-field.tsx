@@ -3,10 +3,10 @@ import { XSD } from '@faubulous/mentor-rdf/ontologies';
 import { TermData } from '../form-editor-model';
 import { LiteralDatatypes } from '@src/utilities/literal-datatypes';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
-import { getDatatypeFormat, getDatatypeProblem, getLiteralTagData, getSuggestedTagData, PrefixedNameOf } from './datatype-labels';
+import { getDatatypeFormat, getDatatypeProblem, getLiteralAnnotationData, getSuggestedAnnotationData, PrefixedNameOf } from './datatype-labels';
 import { EditedRow } from './edited-row';
 import { LiteralField } from './literal-field';
-import { TagSelection } from './tag-picker-items';
+import { LiteralAnnotationPickerSelection } from './literal-annotation-picker-items';
 import { useFormEditorContext } from '../state/form-editor-context';
 import { LanguageFilter } from '../state/language-filter';
 
@@ -53,18 +53,18 @@ export function LiteralValueField({ view, index, edited }: LiteralValueFieldProp
 
 	const datatype = term.datatype.value;
 	const prefixedNameOf: PrefixedNameOf = datatypeTerm => services.resolver.viewOf(datatypeTerm).prefixedName;
-	const tag = getLiteralTagData(term, prefixedNameOf);
+	const annotation = getLiteralAnnotationData(term, prefixedNameOf);
 	const suggested = _suggestionOf(term, index < editor.state.draft.values.length);
 
 	return (
 		<LiteralField
 			index={index}
 			text={term.value}
-			tag={tag}
+			annotation={annotation}
 			current={term.language ? { language: term.language } : { datatype: datatype }}
 			placeholder={_placeholderOf(term)}
-			problem={term.value !== '' && editor.unfittingLiterals.has(index) ? getDatatypeProblem(tag?.text ?? 'string', datatype) : undefined}
-			suggestion={suggested ? getSuggestedTagData(RdfDataFactory.namedNode(suggested), prefixedNameOf) : undefined}
+			problem={term.value !== '' && editor.unfittingLiterals.has(index) ? getDatatypeProblem(annotation?.text ?? 'string', datatype) : undefined}
+			suggestion={suggested ? getSuggestedAnnotationData(RdfDataFactory.namedNode(suggested), prefixedNameOf) : undefined}
 			numeric={LiteralDatatypes.isNumeric(datatype)}
 			integer={datatype === XSD.integer}
 			languages={services.languages}
@@ -76,8 +76,8 @@ export function LiteralValueField({ view, index, edited }: LiteralValueFieldProp
 			}}
 			onLeave={edited.focusNewValue}
 			onRemove={() => _remove(edited, index)}
-			onTagPick={selection => _pickTag(edited, index, selection)}
-			onAcceptSuggestion={() => suggested && editor.pickLiteralTag(index, { datatype: suggested })}
+			onAnnotationPick={selection => _pickAnnotation(edited, index, selection)}
+			onAcceptSuggestion={() => suggested && editor.pickLiteralAnnotation(index, { datatype: suggested })}
 		/>
 	);
 }
@@ -127,14 +127,14 @@ function _input(edited: EditedRow, index: number, language: string, text: string
 }
 
 /**
- * Give a literal the tag picked for it, or make it the resource its text names and go on to the
+ * Give a literal the annotation picked for it, or make it the resource its text names and go on to the
  * field of a new value. The empty field of the language a row lacks is no value yet, and takes no
- * other tag.
+ * other annotation.
  * @param edited The row.
  * @param index The index of the value.
  * @param selection What the item picked gives the literal.
  */
-function _pickTag(edited: EditedRow, index: number, selection: TagSelection): void {
+function _pickAnnotation(edited: EditedRow, index: number, selection: LiteralAnnotationPickerSelection): void {
 	if (index >= edited.editor.state.draft.values.length) {
 		return;
 	}
@@ -143,7 +143,7 @@ function _pickTag(edited: EditedRow, index: number, selection: TagSelection): vo
 		edited.editor.turnLiteralIntoResource(index);
 		edited.focusNewValue();
 	} else {
-		edited.editor.pickLiteralTag(index, selection.tag, selection.missingPrefix);
+		edited.editor.pickLiteralAnnotation(index, selection.annotation, selection.missingPrefix);
 	}
 }
 

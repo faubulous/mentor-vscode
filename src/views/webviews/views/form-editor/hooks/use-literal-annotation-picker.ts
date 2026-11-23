@@ -1,8 +1,8 @@
 import { KeyboardEvent, useMemo, useState } from 'react';
-import { filterTagPickerItems, getDatatypeItems, getLanguageItems, getTagItemKey, ResourceItemPosition, TagSelection, TagPickerItemData, TagPickerTab } from '../components/tag-picker-items';
+import { filterLiteralAnnotationPickerItems, getDatatypeItems, getLanguageItems, getLiteralAnnotationItemKey, ResourceItemPosition, LiteralAnnotationPickerSelection, LiteralAnnotationPickerItemData, LiteralAnnotationPickerTab } from '../components/literal-annotation-picker-items';
 import { useFormEditorContext } from '../state/form-editor-context';
 import { LanguageFilter } from '../state/language-filter';
-import { LiteralTag } from '../state/literal-tag';
+import { LiteralAnnotation } from '../state/literal-annotation';
 import { useTermOptions } from './use-term-options';
 import { useWorkspaceLanguages } from './use-workspace-languages';
 
@@ -13,7 +13,7 @@ interface OpenPicker {
 	/**
 	 * The tab shown.
 	 */
-	tab: TagPickerTab;
+	tab: LiteralAnnotationPickerTab;
 
 	/**
 	 * The key of the highlighted item; the first item is highlighted where no item has it.
@@ -27,14 +27,14 @@ interface OpenPicker {
 }
 
 /**
- * What the tag picker of a literal is told.
+ * What the annotation picker of a literal is told.
  */
-export interface TagPickerOptions {
+export interface LiteralAnnotationPickerOptions {
 	/**
-	 * The tag of the literal, which the picker highlights, or `resource` for a value that is a
+	 * The annotation of the literal, which the picker highlights, or `resource` for a value that is a
 	 * resource now.
 	 */
-	current: LiteralTag | 'resource';
+	current: LiteralAnnotation | 'resource';
 
 	/**
 	 * The languages of the card, offered before those of the workspace.
@@ -50,7 +50,7 @@ export interface TagPickerOptions {
 	/**
 	 * Called with what the item picked gives the literal.
 	 */
-	onPick: (selection: TagSelection) => void;
+	onPick: (selection: LiteralAnnotationPickerSelection) => void;
 
 	/**
 	 * Called when the picker is done with, by a pick or by Escape, so the text of the literal takes
@@ -60,10 +60,10 @@ export interface TagPickerOptions {
 }
 
 /**
- * The tag picker of a literal, as its field drives it: whether it is open, the tab it shows with
+ * The annotation picker of a literal, as its field drives it: whether it is open, the tab it shows with
  * its items and the highlighted one, and what the field does with it.
  */
-export interface TagPickerControl {
+export interface LiteralAnnotationPickerControl {
 	/**
 	 * Whether the picker is open.
 	 */
@@ -72,12 +72,12 @@ export interface TagPickerControl {
 	/**
 	 * The tab shown.
 	 */
-	tab: TagPickerTab;
+	tab: LiteralAnnotationPickerTab;
 
 	/**
 	 * The items of the tab that match the filter, best first.
 	 */
-	items: readonly TagPickerItemData[];
+	items: readonly LiteralAnnotationPickerItemData[];
 
 	/**
 	 * The text typed into the filter.
@@ -96,7 +96,7 @@ export interface TagPickerControl {
 	active: number;
 
 	/**
-	 * Open the picker on the tab of the literal, or close it, as the tag of the literal does.
+	 * Open the picker on the tab of the literal, or close it, as the annotation of the literal does.
 	 */
 	toggle: () => void;
 
@@ -109,7 +109,7 @@ export interface TagPickerControl {
 	 * Show a tab.
 	 * @param tab The tab.
 	 */
-	showTab: (tab: TagPickerTab) => void;
+	showTab: (tab: LiteralAnnotationPickerTab) => void;
 
 	/**
 	 * Highlight an item, as pointing at it does.
@@ -121,7 +121,7 @@ export interface TagPickerControl {
 	 * Pick an item and close the picker.
 	 * @param item The item.
 	 */
-	pick: (item: TagPickerItemData) => void;
+	pick: (item: LiteralAnnotationPickerItemData) => void;
 
 	/**
 	 * Handle a key pressed in the filter: ↑ and ↓ move the highlight round the items, ← and →
@@ -134,16 +134,16 @@ export interface TagPickerControl {
 }
 
 /**
- * The tag picker of a literal: one pop-up with a Datatype and a Language tab and a filter. It opens
- * on the tab of the literal with its tag highlighted, and highlights the language the form shows
+ * The annotation picker of a literal: one pop-up with a Datatype and a Language tab and a filter. It opens
+ * on the tab of the literal with its annotation highlighted, and highlights the language the form shows
  * where the literal has none, which the Language tab offers first, before the languages of the
  * card and of the workspace; typing into the filter narrows both tabs to the matches and
  * highlights the best one. The datatypes and languages of the workspace are asked for once the
  * picker opens, the datatypes as the filter is typed.
- * @param options The tag of the literal, the languages of the card, and what to do with a pick.
+ * @param options The annotation of the literal, the languages of the card, and what to do with a pick.
  * @returns The picker.
  */
-export function useTagPicker(options: TagPickerOptions): TagPickerControl {
+export function useLiteralAnnotationPicker(options: LiteralAnnotationPickerOptions): LiteralAnnotationPickerControl {
 	const { current, languages, resourceItemPosition, onPick, onDone } = options;
 	const { languageFilter = LanguageFilter.ALL } = useFormEditorContext();
 	const [openPicker, setOpenPicker] = useState<OpenPicker>();
@@ -156,19 +156,19 @@ export function useTagPicker(options: TagPickerOptions): TagPickerControl {
 		const selected = languageFilter.language ? [languageFilter.language] : [];
 		const all = tab === 'datatype' ? getDatatypeItems(storeDatatypes, resourceItemPosition) : getLanguageItems([...selected, ...languages, ...workspaceLanguages]);
 
-		return filterTagPickerItems(all, filter, tab);
+		return filterLiteralAnnotationPickerItems(all, filter, tab);
 	}, [tab, filter, storeDatatypes, languages, workspaceLanguages, resourceItemPosition, languageFilter]);
 	const active = Math.max(0, items.findIndex(item => item.key === openPicker?.activeKey));
 
-	// A tab opens with the tag of the literal highlighted, a filter with its best match.
-	const openTab = (next: TagPickerTab, text: string): void => setOpenPicker({ tab: next, filter: text, activeKey: text ? undefined : _initialKeyOf(next, current, languageFilter) });
-	const showTab = (next: TagPickerTab): void => openTab(next, filter);
+	// A tab opens with the annotation of the literal highlighted, a filter with its best match.
+	const openTab = (next: LiteralAnnotationPickerTab, text: string): void => setOpenPicker({ tab: next, filter: text, activeKey: text ? undefined : _initialKeyOf(next, current, languageFilter) });
+	const showTab = (next: LiteralAnnotationPickerTab): void => openTab(next, filter);
 	const close = (): void => setOpenPicker(undefined);
 	const highlight = (index: number): void => setOpenPicker({ tab, filter, activeKey: items[index]?.key });
 	const setFilter = (text: string): void => setOpenPicker({ tab, filter: text });
 
 	// The focus goes back to the value before the pick, which may move it on, as to a resource made of the value.
-	const pick = (item: TagPickerItemData): void => {
+	const pick = (item: LiteralAnnotationPickerItemData): void => {
 		close();
 		onDone();
 		onPick(item.selection);
@@ -247,20 +247,20 @@ function _actionOf(event: KeyboardEvent, filter: string): 'next' | 'previous' | 
 }
 
 /**
- * The item a tab highlights as it opens: the tag of the literal where the tab has it, or the
+ * The item a tab highlights as it opens: the annotation of the literal where the tab has it, or the
  * resource item for a value that is a resource, else on the Language tab the language the card
  * shows, else string on the Datatype tab.
  * @param tab The tab.
- * @param current The tag of the literal, or `resource`.
+ * @param current The annotation of the literal, or `resource`.
  * @param languageFilter The language the card shows.
  * @returns The key of the item, or `undefined` for the first item.
  */
-function _initialKeyOf(tab: TagPickerTab, current: LiteralTag | 'resource', languageFilter: LanguageFilter): string | undefined {
+function _initialKeyOf(tab: LiteralAnnotationPickerTab, current: LiteralAnnotation | 'resource', languageFilter: LanguageFilter): string | undefined {
 	if (tab === 'datatype') {
-		return getTagItemKey(current !== 'resource' && current.language ? {} : current);
+		return getLiteralAnnotationItemKey(current !== 'resource' && current.language ? {} : current);
 	}
 
 	const language = (current === 'resource' ? undefined : current.language) ?? languageFilter.language;
 
-	return language ? getTagItemKey({ language }) : undefined;
+	return language ? getLiteralAnnotationItemKey({ language }) : undefined;
 }

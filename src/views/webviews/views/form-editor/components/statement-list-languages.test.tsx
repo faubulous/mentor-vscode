@@ -58,7 +58,7 @@ function literalsOf(row: HTMLElement): string[] {
 	return Array.from(row.querySelectorAll<HTMLElement>('.literal-field')).map(field => {
 		const input = field.querySelector('textarea')!;
 
-		return `${input.value}@${field.querySelector('.literal-field-tag')?.textContent ?? ''}`;
+		return `${input.value}@${field.querySelector('.literal-field-annotation')?.textContent ?? ''}`;
 	});
 }
 
@@ -145,7 +145,7 @@ describe('StatementList, in one language', () => {
 
 		fireEvent.focus(field);
 		fireEvent.mouseDown(within(rowOf('rdfs:comment')).getByRole('button', { name: 'Datatype string, change' }));
-		fireEvent.keyDown(rowOf('rdfs:comment').querySelector('.tag-picker-filter')!, { key: 'ArrowRight' });
+		fireEvent.keyDown(rowOf('rdfs:comment').querySelector('.literal-annotation-picker-filter')!, { key: 'ArrowRight' });
 
 		// jsdom shows no popover, so the list is looked up by its markup.
 		expect(rowOf('rdfs:comment').querySelector('[role="option"][aria-selected="true"]')?.getAttribute('aria-label')).toMatch(/^de,/);

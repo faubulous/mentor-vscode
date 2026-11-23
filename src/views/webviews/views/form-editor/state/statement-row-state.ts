@@ -1,7 +1,7 @@
 import { Literal, NamedNode } from '@rdfjs/types';
 import { TermData } from '../form-editor-model';
 import { TermProblem } from '../services/statement/term-problem';
-import { LiteralTag } from './literal-tag';
+import { LiteralAnnotation } from './literal-annotation';
 import { NewValueType } from './new-value-type';
 import { RowRejection } from './row-rejection';
 import { StatementDraft } from './statement-draft';
@@ -116,11 +116,11 @@ export class StatementRowState {
 	/**
 	 * Give a literal value another language tag or datatype.
 	 * @param index The index of the value.
-	 * @param tag The tag.
+	 * @param annotation The annotation.
 	 * @returns The next state.
 	 */
-	withLiteralTag(index: number, tag: LiteralTag): StatementRowState {
-		return this.withDraft(this.draft.withLiteralTag(index, tag));
+	withLiteralAnnotation(index: number, annotation: LiteralAnnotation): StatementRowState {
+		return this.withDraft(this.draft.withLiteralAnnotation(index, annotation));
 	}
 
 	/**

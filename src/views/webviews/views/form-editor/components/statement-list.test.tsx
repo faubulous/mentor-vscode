@@ -41,11 +41,11 @@ describe('StatementList', () => {
 		expect(screen.getAllByRole('group').map(row => row.getAttribute('aria-label'))).toEqual(['rdf:type', 'rdfs:label', 'rdfs:subClassOf']);
 		expect(screen.getByText('Class').closest('.value-pill')?.getAttribute('data-tooltip-iri')).toBe(OWL.Class);
 		expect(screen.getByText('Tree').classList.contains('literal-text')).toBe(true);
-		expect(screen.getByText('en', { selector: '.literal-tag' })).toBeTruthy();
-		expect(screen.getByText('en', { selector: '.statement-predicate-tag' })).toBeTruthy();
+		expect(screen.getByText('en', { selector: '.literal-annotation' })).toBeTruthy();
+		expect(screen.getByText('en', { selector: '.statement-predicate-annotation' })).toBeTruthy();
 	});
 
-	it('shows the datatype of a literal as a tag by its name, XSD ones without their prefix, and none for a plain string', () => {
+	it('shows the datatype of a literal as an annotation by its name, XSD ones without their prefix, and none for a plain string', () => {
 		const cardBody = createTestCardBody([createProperty('ex:p', [
 			{ term: RdfDataFactory.literal('42', RdfDataFactory.namedNode(XSD.integer)), editable: true },
 			{ term: RdfDataFactory.literal('plain', RdfDataFactory.namedNode(XSD.string)), editable: true }
@@ -53,8 +53,8 @@ describe('StatementList', () => {
 
 		renderList(cardBody);
 
-		expect(screen.getByText('integer', { selector: '.literal-tag' })).toBeTruthy();
-		expect(screen.getAllByText(/./, { selector: '.literal-tag' })).toHaveLength(1);
+		expect(screen.getByText('integer', { selector: '.literal-annotation' })).toBeTruthy();
+		expect(screen.getAllByText(/./, { selector: '.literal-annotation' })).toHaveLength(1);
 	});
 
 	it('puts the comment lines of a property under its values, and those of a later value above the value', () => {

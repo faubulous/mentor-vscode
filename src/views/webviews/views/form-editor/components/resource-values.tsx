@@ -3,7 +3,7 @@ import { VscodeTextfield } from '@vscode-elements/elements';
 import { ResourceOptionData, TermData, TermSearchKind } from '../form-editor-model';
 import { NewValueType } from '../state/new-value-type';
 import { NewValueTypeMarker } from './new-value-type-marker';
-import { TagSelection } from './tag-picker-items';
+import { LiteralAnnotationPickerSelection } from './literal-annotation-picker-items';
 import { TermPicker } from './term-picker';
 import { ValuePill } from './value-pill';
 
@@ -49,14 +49,14 @@ interface NewValueTypeControl {
 	type: NewValueType;
 
 	/**
-	 * The languages of the card, which the tag picker offers first.
+	 * The languages of the card, which the annotation picker offers first.
 	 */
 	languages: readonly string[];
 
 	/**
 	 * Called with what the item picked gives the typed text.
 	 */
-	onPick: (selection: TagSelection) => void;
+	onPick: (selection: LiteralAnnotationPickerSelection) => void;
 }
 
 /**
@@ -149,7 +149,7 @@ export interface ResourceValuesProps {
  * arrow moves it one place, and typing continues in the input. Where the values can be moved, a
  * pill is dragged to another place among the pills, an accent bar showing where it is dropped.
  * Moving changes the order of the values only. Once text is typed into the input, the type of
- * value it makes stands after the text, and opens the tag picker; `"` in the empty input starts
+ * value it makes stands after the text, and opens the annotation picker; `"` in the empty input starts
  * text.
  * @param props The resources and their callbacks.
  * @returns The box.
@@ -268,7 +268,7 @@ export function ResourceValues(props: ResourceValuesProps): React.JSX.Element {
 		}
 	};
 
-	// The type shows while the input has the focus, or the tag picker the type opened.
+	// The type shows while the input has the focus, or the annotation picker the type opened.
 	const trackFocus = (event: FocusEvent<HTMLSpanElement>): void => {
 		const target = event.target as Element;
 

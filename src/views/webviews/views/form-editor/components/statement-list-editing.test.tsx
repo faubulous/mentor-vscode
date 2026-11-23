@@ -104,8 +104,8 @@ describe('StatementList, edited', () => {
 		expect(rowLabels()).toEqual(['rdf:type', 'rdfs:label', 'rdfs:subClassOf']);
 		expect(screen.getByRole('button', { name: 'Add property' })).toBeTruthy();
 		expect((within(rows()[1]).getByLabelText('Value 1') as HTMLInputElement).value).toBe('Tree');
-		expect(within(rows()[1]).getByText('en', { selector: '.literal-field-tag' })).toBeTruthy();
-		expect(within(rows()[1]).getByRole('button', { name: 'en' }).classList.contains('statement-predicate-tag')).toBe(true);
+		expect(within(rows()[1]).getByText('en', { selector: '.literal-field-annotation' })).toBeTruthy();
+		expect(within(rows()[1]).getByRole('button', { name: 'en' }).classList.contains('statement-predicate-annotation')).toBe(true);
 		expect(within(rows()[0]).getByText('Class').closest('.value-pill')).not.toBeNull();
 	});
 
@@ -248,7 +248,7 @@ describe('StatementList, edited', () => {
 			fireEvent.focus(within(rows()[0]).getByLabelText(label));
 		}
 
-		expect(document.querySelector('.literal-field-tag.is-suggestion')).toBeNull();
+		expect(document.querySelector('.literal-field-annotation.is-suggestion')).toBeNull();
 	});
 
 	it('writes a new predicate as soon as its field is left', () => {

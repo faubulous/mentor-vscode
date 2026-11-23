@@ -89,21 +89,21 @@ async function renderList(cardBody: ResourceCardBodyData = SAMPLE, others: Resou
 }
 
 /**
- * The codes of the items the tag picker in an element shows, on its open tab.
+ * The codes of the items the annotation picker in an element shows, on its open tab.
  * @param element The element.
  * @returns The codes, in order.
  */
 function codesOf(element: HTMLElement): (string | null)[] {
-	return Array.from(element.querySelectorAll('.tag-picker-code')).map(code => code.textContent);
+	return Array.from(element.querySelectorAll('.literal-annotation-picker-code')).map(code => code.textContent);
 }
 
 /**
- * The code of the item the tag picker in an element highlights.
+ * The code of the item the annotation picker in an element highlights.
  * @param element The element.
  * @returns The code, or `undefined` while none is highlighted.
  */
 function activeCodeOf(element: HTMLElement): string | null | undefined {
-	return element.querySelector('.tag-picker-item.is-active .tag-picker-code')?.textContent;
+	return element.querySelector('.literal-annotation-picker-item.is-active .literal-annotation-picker-code')?.textContent;
 }
 
 /**
@@ -134,14 +134,15 @@ function iriTextOf(card: HTMLElement): number {
 }
 
 /**
- * Press a tag that just appeared, as a person does: the pointer moves away from where it clicked,
- * here to the predicate of the row, and the tag takes the press once a moment has passed.
- * @param tag The tag.
+ * Press an annotation that just appeared, as a person does: the pointer moves away from where it
+ * clicked, here to the predicate of the row, and the annotation takes the press once a moment has
+ * passed.
+ * @param annotation The annotation.
  */
-async function pressFreshTag(tag: HTMLElement): Promise<void> {
-	await userEvent.hover(tag.closest('.statement-line')!.querySelector<HTMLElement>('.statement-predicate')!);
-	await expect.poll(() => tag.classList.contains('is-guarded'), { timeout: 2000 }).toBe(false);
-	await userEvent.click(tag);
+async function pressFreshAnnotation(annotation: HTMLElement): Promise<void> {
+	await userEvent.hover(annotation.closest('.statement-line')!.querySelector<HTMLElement>('.statement-predicate')!);
+	await expect.poll(() => annotation.classList.contains('is-guarded'), { timeout: 2000 }).toBe(false);
+	await userEvent.click(annotation);
 }
 
 /**
@@ -214,14 +215,14 @@ describe('StatementList, edited in a browser', () => {
 		expect((input as unknown as { value: string }).value).toBe('x');
 	});
 
-	it('changes the language of a literal with the tag picker, which opens on its Language tab under the value with the language highlighted', async () => {
+	it('changes the language of a literal with the annotation picker, which opens on its Language tab under the value with the language highlighted', async () => {
 		const { host } = await renderList();
 		const field = within(rows()[1]).getByLabelText('Value 1');
 
 		await userEvent.click(field);
 		await userEvent.click(within(rows()[1]).getByRole('button', { name: 'Language en, change' }));
 
-		const picker = rows()[1].querySelector<HTMLElement>('.tag-picker')!;
+		const picker = rows()[1].querySelector<HTMLElement>('.literal-annotation-picker')!;
 
 		expect(within(picker).getByRole('tab', { name: 'Language' }).getAttribute('aria-selected')).toBe('true');
 		expect(activeCodeOf(rows()[1])).toBe('en');
@@ -241,7 +242,7 @@ describe('StatementList, edited in a browser', () => {
 		expect(host.submitted[0].operations[0]).toEqual({ op: 'setValues', subject: TEST_SUBJECT, predicate: RDFS.label, values: [{ kind: 'term', term: RdfDataFactory.literal('Tree', 'de') }] });
 	});
 
-	it('moves the highlight of the tag picker round its items with the arrows, switches its tabs, and picks with Enter, the focus going back to the value', async () => {
+	it('moves the highlight of the annotation picker round its items with the arrows, switches its tabs, and picks with Enter, the focus going back to the value', async () => {
 		const cardBody = withAnchors(createTestCardBody([createProperty('ex:count', [{ term: RdfDataFactory.literal('42', RdfDataFactory.namedNode(XSD.integer)), editable: true }])]));
 
 		await renderList(cardBody);
@@ -265,32 +266,32 @@ describe('StatementList, edited in a browser', () => {
 		await userEvent.keyboard('{ArrowLeft}{ArrowDown}{Enter}');
 
 		expect(within(rows()[0]).getByRole('button', { name: 'Datatype decimal, change' })).toBeTruthy();
-		expect(rows()[0].querySelector('.tag-picker')).toBeNull();
+		expect(rows()[0].querySelector('.literal-annotation-picker')).toBeNull();
 		expect(document.activeElement).toBe(field);
 		expect((field as HTMLTextAreaElement).value).toBe('42');
 	});
 
-	it('closes the tag picker with Escape, keeping the text and the focus, and with a second press of the tag', async () => {
+	it('closes the annotation picker with Escape, keeping the text and the focus, and with a second press of the annotation', async () => {
 		await renderList();
 
 		const field = within(rows()[1]).getByLabelText('Value 1');
-		const tag = within(rows()[1]).getByRole('button', { name: 'Language en, change' });
+		const annotation = within(rows()[1]).getByRole('button', { name: 'Language en, change' });
 
 		await userEvent.click(field);
-		await userEvent.click(tag);
+		await userEvent.click(annotation);
 		await userEvent.keyboard('{Escape}');
 
-		expect(rows()[1].querySelector('.tag-picker')).toBeNull();
+		expect(rows()[1].querySelector('.literal-annotation-picker')).toBeNull();
 		expect(document.activeElement).toBe(field);
 
-		await userEvent.click(tag);
-		await userEvent.click(tag);
+		await userEvent.click(annotation);
+		await userEvent.click(annotation);
 
-		expect(rows()[1].querySelector('.tag-picker')).toBeNull();
+		expect(rows()[1].querySelector('.literal-annotation-picker')).toBeNull();
 		expect(document.activeElement).toBe(field);
 	});
 
-	it('narrows the items of the tag picker to those matching its search, offers a language tag it does not list in standard form, and switches tabs with the arrows only while the search is empty', async () => {
+	it('narrows the items of the annotation picker to those matching its search, offers a language tag it does not list in standard form, and switches tabs with the arrows only while the search is empty', async () => {
 		await renderList();
 
 		await userEvent.click(within(rows()[1]).getByLabelText('Value 1'));
@@ -344,7 +345,7 @@ describe('StatementList, edited in a browser', () => {
 		const { host } = await renderList(cardBody, [], RESOURCES, 1000, false, termSearch);
 
 		await userEvent.click(within(rows()[1]).getByLabelText('Value 1'));
-		await pressFreshTag(within(rows()[1]).getByRole('button', { name: 'Datatype string, change' }));
+		await pressFreshAnnotation(within(rows()[1]).getByRole('button', { name: 'Datatype string, change' }));
 		await expect.poll(() => codesOf(rows()[1]).slice(9)).toEqual(['geo:wktLiteral']);
 
 		expect(within(rows()[1]).getByRole('option', { name: 'geo:wktLiteral, wkt literal · adds geo:' })).toBeTruthy();
@@ -372,7 +373,7 @@ describe('StatementList, edited in a browser', () => {
 		expect((field as unknown as { value: string }).value).toBe('43');
 	});
 
-	it('shows why a number does not fit its datatype under the value, its tag and underline in the colour of errors, and writes nothing', async () => {
+	it('shows why a number does not fit its datatype under the value, its annotation and underline in the colour of errors, and writes nothing', async () => {
 		const cardBody = withAnchors(createTestCardBody([createProperty('ex:count', [{ term: RdfDataFactory.literal('42', RdfDataFactory.namedNode(XSD.integer)), editable: true }])]));
 		const { host } = await renderList(cardBody);
 		const field = within(rows()[0]).getByLabelText('Value 1');
@@ -381,29 +382,29 @@ describe('StatementList, edited in a browser', () => {
 		await userEvent.keyboard('{End}.5{Enter}');
 
 		const problem = within(rows()[0]).getByText('Not a valid integer — expected 42');
-		const tag = within(rows()[0]).getByRole('button', { name: 'Datatype integer, change' });
+		const annotation = within(rows()[0]).getByRole('button', { name: 'Datatype integer, change' });
 		const box = field.closest<HTMLElement>('.literal-field-box')!;
 
-		expect(getComputedStyle(tag).color).toBe(getComputedStyle(problem).color);
+		expect(getComputedStyle(annotation).color).toBe(getComputedStyle(problem).color);
 		expect(getComputedStyle(box).getPropertyValue('--underline-accent').trim()).toBe(getComputedStyle(box).getPropertyValue('--form-error').trim());
 		expect(problem.getBoundingClientRect().top).toBeGreaterThanOrEqual(field.getBoundingClientRect().bottom - 1);
 		expect(host.submitted).toEqual([]);
 	});
 
-	it('puts the tag of a literal after its last character, wrapping with the text, and shows a plain string as string only while it has the focus', async () => {
+	it('puts the annotation of a literal after its last character, wrapping with the text, and shows a plain string as string only while it has the focus', async () => {
 		const text = Array.from({ length: 12 }, (_, index) => `word${index}`).join(' ');
 		const cardBody = withAnchors(createTestCardBody([createProperty('rdfs:comment', [{ term: RdfDataFactory.literal(text, 'en'), editable: true }]), createProperty('rdfs:label', [createLiteralView('Short')])]));
 
 		await renderList(cardBody, [], RESOURCES, 600);
 
-		const tag = within(rows()[0]).getByRole('button', { name: 'Language en, change' });
+		const annotation = within(rows()[0]).getByRole('button', { name: 'Language en, change' });
 		const field = within(rows()[0]).getByLabelText('Value 1');
 		const plain = within(rows()[1]).getByLabelText('Value 1');
 
-		// The text takes two lines of text, single spaced, and the tag stands on the second one.
+		// The text takes two lines of text, single spaced, and the annotation stands on the second one.
 		expect(Math.round(field.getBoundingClientRect().height)).toBe(2 * TEXT_LINE);
-		expect(tag.getBoundingClientRect().top).toBeGreaterThan(field.getBoundingClientRect().top + 20);
-		expect(tag.title).toBe('Language: English');
+		expect(annotation.getBoundingClientRect().top).toBeGreaterThan(field.getBoundingClientRect().top + 20);
+		expect(annotation.title).toBe('Language: English');
 		expect(within(rows()[1]).queryByRole('button', { name: 'Datatype string, change' })).toBeNull();
 
 		await userEvent.click(plain);
@@ -625,20 +626,20 @@ describe('StatementList, edited in a browser', () => {
 		expect(host.submitted.map(edit => edit.operations[0])).toEqual([{ op: 'setValues', subject: TEST_SUBJECT, predicate: RDFS.comment, values: [{ kind: 'existing', anchor: 110 }, { kind: 'copy', anchor: 110 }] }]);
 	});
 
-	it('cuts a text too long for its card after three lines at rest, its tag over the end of the last one, and shows it whole while it has the focus', async () => {
+	it('cuts a text too long for its card after three lines at rest, its annotation over the end of the last one, and shows it whole while it has the focus', async () => {
 		const text = Array.from({ length: 30 }, (_, index) => `word${index}`).join(' ').repeat(4);
 		const cardBody = withAnchors(createTestCardBody([createProperty('rdfs:comment', [{ term: RdfDataFactory.literal(text, 'en'), editable: true }]), createProperty('rdfs:label', [createLiteralView('Short')])]));
 
 		await renderList(cardBody, [], RESOURCES, 600);
 
 		const long = within(rows()[0]).getByLabelText('Value 1');
-		const tag = within(rows()[0]).getByRole('button', { name: 'Language en, change' });
+		const annotation = within(rows()[0]).getByRole('button', { name: 'Language en, change' });
 
 		await expect.poll(() => Math.round(long.getBoundingClientRect().height)).toBe(3 * TEXT_LINE);
 		expect(Math.round(within(rows()[1]).getByLabelText('Value 1').getBoundingClientRect().height)).toBe(TEXT_LINE);
-		// The tag stays in view, on the last line shown.
-		expect(tag.getBoundingClientRect().bottom).toBeLessThanOrEqual(long.getBoundingClientRect().bottom);
-		expect(tag.getBoundingClientRect().top).toBeGreaterThan(long.getBoundingClientRect().top + 2 * TEXT_LINE - 4);
+		// The annotation stays in view, on the last line shown.
+		expect(annotation.getBoundingClientRect().bottom).toBeLessThanOrEqual(long.getBoundingClientRect().bottom);
+		expect(annotation.getBoundingClientRect().top).toBeGreaterThan(long.getBoundingClientRect().top + 2 * TEXT_LINE - 4);
 
 		await userEvent.click(long);
 
@@ -680,7 +681,7 @@ describe('StatementList, edited in a browser', () => {
 		expect(iriTextOf(card)).toBe(CONTENT_EDGE);
 		expect(xOf(rows()[2].querySelector('.statement-values'))).toBe(CONTENT_EDGE);
 		expect(rows()[2].querySelector('.statement-values')!.getBoundingClientRect().top).toBeGreaterThanOrEqual(rows()[2].querySelector('.statement-predicate')!.getBoundingClientRect().bottom - 1);
-		expect(getComputedStyle(within(label).getByText('en', { selector: '.literal-field-tag' })).display).not.toBe('none');
+		expect(getComputedStyle(within(label).getByText('en', { selector: '.literal-field-annotation' })).display).not.toBe('none');
 	});
 
 	it.each([1000, 500])('lets the values of a row run to the inset of the row and a nested card to the inset of its row, in a card %ipx wide', async width => {
@@ -950,19 +951,19 @@ describe('StatementList, edited in a browser', () => {
 		expect(document.activeElement).toBe(literal);
 	});
 
-	it('opens the tag picker of the type with resource first, and makes the typed text a literal of the language picked', async () => {
+	it('opens the annotation picker of the type with resource first, and makes the typed text a literal of the language picked', async () => {
 		const { host } = await renderList(MIXED);
 		const row = rows()[0];
 
 		await userEvent.click(within(row).getByLabelText('New value'));
 		await userEvent.keyboard('Oak');
-		await pressFreshTag(within(row).getByRole('button', { name: 'New value string, change' }));
+		await pressFreshAnnotation(within(row).getByRole('button', { name: 'New value string, change' }));
 
 		expect(codesOf(row).slice(0, 3)).toEqual(['resource', 'string', 'boolean']);
 		expect(activeCodeOf(row)).toBe('string');
 
-		await userEvent.click(within(row.querySelector<HTMLElement>('.tag-picker')!).getByRole('tab', { name: 'Language' }));
-		await userEvent.click(within(row.querySelector<HTMLElement>('.tag-picker')!).getByRole('option', { name: /^de,/ }));
+		await userEvent.click(within(row.querySelector<HTMLElement>('.literal-annotation-picker')!).getByRole('tab', { name: 'Language' }));
+		await userEvent.click(within(row.querySelector<HTMLElement>('.literal-annotation-picker')!).getByRole('option', { name: /^de,/ }));
 
 		const literal = within(row).getByLabelText('Value 3') as HTMLTextAreaElement;
 
@@ -982,8 +983,8 @@ describe('StatementList, edited in a browser', () => {
 
 		await userEvent.click(within(row).getByLabelText('New value'));
 		await userEvent.keyboard('Oak');
-		await pressFreshTag(within(row).getByRole('button', { name: 'New value string, change' }));
-		await userEvent.click(within(row.querySelector<HTMLElement>('.tag-picker')!).getByRole('option', { name: /^resource,/ }));
+		await pressFreshAnnotation(within(row).getByRole('button', { name: 'New value string, change' }));
+		await userEvent.click(within(row.querySelector<HTMLElement>('.literal-annotation-picker')!).getByRole('option', { name: /^resource,/ }));
 
 		expect(document.activeElement).toBe(within(row).getByLabelText('New value'));
 		expect(within(row).getByRole('button', { name: 'New value resource, change' })).toBeTruthy();
@@ -994,17 +995,17 @@ describe('StatementList, edited in a browser', () => {
 		expect(within(row).queryByLabelText('Value 3')).toBeNull();
 	});
 
-	it('makes a literal the resource its text names with resource in its tag picker, after the datatypes the fields know', async () => {
+	it('makes a literal the resource its text names with resource in its annotation picker, after the datatypes the fields know', async () => {
 		const cardBody = withAnchors(createTestCardBody([createProperty('ex:note', [{ term: RdfDataFactory.literal('ex:Tree'), editable: true }])]));
 		const { host } = await renderList(cardBody);
 		const row = rows()[0];
 
 		await userEvent.click(within(row).getByLabelText('Value 1'));
-		await pressFreshTag(within(row).getByRole('button', { name: 'Datatype string, change' }));
+		await pressFreshAnnotation(within(row).getByRole('button', { name: 'Datatype string, change' }));
 
 		expect(codesOf(row).slice(7, 9)).toEqual(['anyURI', 'resource']);
 
-		await userEvent.click(within(row.querySelector<HTMLElement>('.tag-picker')!).getByRole('option', { name: /^resource,/ }));
+		await userEvent.click(within(row.querySelector<HTMLElement>('.literal-annotation-picker')!).getByRole('option', { name: /^resource,/ }));
 
 		expect(within(row).queryByLabelText('Value 1')).toBeNull();
 		expect(pillsOf(row)).toEqual(['ex:Tree']);
@@ -1044,10 +1045,10 @@ describe('StatementList, edited in a browser', () => {
 
 		await userEvent.click(marker);
 
-		expect(row.querySelector('.tag-picker')).not.toBeNull();
+		expect(row.querySelector('.literal-annotation-picker')).not.toBeNull();
 	});
 
-	it('guards no tag shown at rest, and leaves the keyboard unguarded', async () => {
+	it('guards no annotation shown at rest, and leaves the keyboard unguarded', async () => {
 		await renderList(MIXED);
 
 		const row = rows()[0];

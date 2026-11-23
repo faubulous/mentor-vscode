@@ -9,7 +9,7 @@ import { IriReading } from '../services/statement/typed-term-reader';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { EditWriter } from './edit-writer';
 import { IEditingController } from './editing-controller.interface';
-import { LiteralTag } from './literal-tag';
+import { LiteralAnnotation } from './literal-annotation';
 import { NewValueType } from './new-value-type';
 import { PrefixProposal } from './prefix-proposal';
 import { RowValue } from './row-value';
@@ -312,26 +312,26 @@ export class StatementRowEditor implements EditWriter {
 	/**
 	 * Give a literal another language tag or datatype, as the tag picker does.
 	 * @param index The index of the value.
-	 * @param tag The tag.
+	 * @param annotation The annotation.
 	 */
-	inputLiteralTag(index: number, tag: LiteralTag): void {
-		this._update(this._state.withLiteralTag(index, tag));
+	inputLiteralAnnotation(index: number, annotation: LiteralAnnotation): void {
+		this._update(this._state.withLiteralAnnotation(index, annotation));
 	}
 
 	/**
-	 * Give a literal the language or datatype picked from the tag picker. Where the document
+	 * Give a literal the language or datatype picked from the annotation picker. Where the document
 	 * declares no prefix for the namespace of a datatype of the workspace, the edit writing it
 	 * declares the one proposed.
 	 * @param index The index of the value.
-	 * @param tag The tag.
+	 * @param annotation The annotation.
 	 * @param missingPrefix The prefix proposed for the datatype, if any.
 	 */
-	pickLiteralTag(index: number, tag: LiteralTag, missingPrefix?: PrefixProposal): void {
-		if (tag.datatype && missingPrefix) {
-			this._proposedPrefixes.set(tag.datatype, missingPrefix);
+	pickLiteralAnnotation(index: number, annotation: LiteralAnnotation, missingPrefix?: PrefixProposal): void {
+		if (annotation.datatype && missingPrefix) {
+			this._proposedPrefixes.set(annotation.datatype, missingPrefix);
 		}
 
-		this.inputLiteralTag(index, tag);
+		this.inputLiteralAnnotation(index, annotation);
 	}
 
 	/**
@@ -379,17 +379,17 @@ export class StatementRowEditor implements EditWriter {
 	 * literal goes again when the row is left. Where the document declares no prefix for the
 	 * namespace of a datatype of the workspace, the edit writing it declares the one proposed.
 	 * @param text The text of the literal.
-	 * @param tag The language or datatype of the literal; neither for a plain string.
+	 * @param annotation The language or datatype of the literal; neither for a plain string.
 	 * @param missingPrefix The prefix proposed for the datatype, if any.
 	 * @returns The index of the literal among the values.
 	 */
-	startLiteral(text: string, tag: LiteralTag = {}, missingPrefix?: PrefixProposal): number {
+	startLiteral(text: string, annotation: LiteralAnnotation = {}, missingPrefix?: PrefixProposal): number {
 		const index = this._state.draft.values.length;
 
 		this.addValue(RdfDataFactory.literal(text));
 
-		if (tag.datatype || tag.language) {
-			this.pickLiteralTag(index, tag, missingPrefix);
+		if (annotation.datatype || annotation.language) {
+			this.pickLiteralAnnotation(index, annotation, missingPrefix);
 		}
 
 		return index;
@@ -422,7 +422,7 @@ export class StatementRowEditor implements EditWriter {
 
 	/**
 	 * Choose the type of value the text typed for a new value makes, as picking resource from its
-	 * tag picker does, until the field is emptied.
+	 * annotation picker does, until the field is emptied.
 	 * @param type The type.
 	 */
 	choosePendingType(type: NewValueType): void {
