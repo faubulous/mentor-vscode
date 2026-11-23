@@ -26,4 +26,12 @@ export interface EditedRow {
 	 * Move the focus to the field of a new value of the row, where the row has one.
 	 */
 	focusNewValue: () => void;
+
+	/**
+	 * Move the focus into the text of a literal of the row once it is shown, as into a literal just
+	 * started.
+	 * @param index The index of the literal among the values.
+	 * @param caret Where the caret goes in the text; at its end where absent.
+	 */
+	focusValue: (index: number, caret?: number) => void;
 }

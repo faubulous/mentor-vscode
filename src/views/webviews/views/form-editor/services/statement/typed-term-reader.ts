@@ -1,4 +1,4 @@
-import { RDF, XSD } from '@faubulous/mentor-rdf/ontologies';
+import { RDF } from '@faubulous/mentor-rdf/ontologies';
 import { getIriFromText, splitPrefixedName } from '@src/utilities/prefixed-name';
 import { ValueKind } from '@src/utilities/value-kind';
 import { Literal, NamedNode } from '@rdfjs/types';
@@ -18,20 +18,21 @@ export type TermReading<T extends NamedNode | Literal = NamedNode | Literal> =
 export type IriReading = TermReading<NamedNode>;
 
 /**
- * The datatypes a number or boolean typed without quotes stands for, with the shape of each, in
- * the order they are tried.
+ * The prefix of a prefixed name as it is typed: empty, or a letter followed by the characters a
+ * prefix takes, a dot or a dash at its end too, as more is still to come.
  */
-const BARE_LITERALS: readonly { pattern: RegExp; datatype: string }[] = [
-	{ pattern: /^[+-]?\d+$/, datatype: XSD.integer },
-	{ pattern: /^[+-]?\d*\.\d+$/, datatype: XSD.decimal },
-	{ pattern: /^[+-]?(\d+\.\d*|\.\d+|\d+)[eE][+-]?\d+$/, datatype: XSD.double },
-	{ pattern: /^(true|false)$/, datatype: XSD.boolean }
-];
+const PREFIX_AS_TYPED = /^([A-Za-z][\w.-]*)?$/;
+
+/**
+ * An IRI written without angle brackets: one with an authority, such as `https://…`, or a URN.
+ */
+const BARE_IRI = /^([A-Za-z][A-Za-z\d+.-]*:\/\/|urn:)[^\s<>"{}|\\^`]+$/i;
 
 /**
  * Reads what is typed into a field of a statement row as a term: a prefixed name or an `<iri>`
- * as an IRI, a number or boolean as a typed literal where the predicate does not take text only,
- * and anything else as text. Text is never parsed as Turtle: a literal is the text as typed.
+ * as an IRI where the predicate takes resources, and anything else as text. Text is never parsed
+ * as Turtle: a literal is the text as typed, a plain string even where it looks like a number, whose
+ * field suggests the datatype instead.
  */
 export class TypedTermReader {
 	/**
@@ -47,6 +48,37 @@ export class TypedTermReader {
 	 */
 	static isName(text: string): boolean {
 		return /^<[^<>\s]*>$/.test(text) || (!/\s/.test(text) && splitPrefixedName(text) !== undefined);
+	}
+
+	/**
+	 * Indicate whether a text may still become the name of a resource as more is typed after it: a
+	 * beginning of an `<iri>`, or of a prefixed name, whose prefix may still be missing its colon.
+	 * @param text The text typed so far.
+	 * @returns `true` while the text may become a name.
+	 */
+	static couldBeName(text: string): boolean {
+		if (/\s/.test(text)) {
+			return false;
+		}
+
+		if (text.startsWith('<')) {
+			return /^<[^<>]*>?$/.test(text);
+		}
+
+		return PREFIX_AS_TYPED.test(splitPrefixedName(text)?.prefix ?? text);
+	}
+
+	/**
+	 * Read the text of a literal as the resource it names: a prefixed name, an `<iri>`, or an IRI
+	 * written without angle brackets, such as `https://example.org/oak`.
+	 * @param text The text.
+	 * @returns The IRI, or why the text names none.
+	 */
+	readResourceText(text: string): IriReading {
+		const trimmed = text.trim();
+		const reading = this.readIri(trimmed);
+
+		return reading.problem && BARE_IRI.test(trimmed) ? { term: RdfDataFactory.namedNode(trimmed) } : reading;
 	}
 
 	/**
@@ -104,8 +136,6 @@ export class TypedTermReader {
 			return { problem: { kind: 'notAName' } };
 		}
 
-		const bare = BARE_LITERALS.find(candidate => candidate.pattern.test(trimmed));
-
-		return { term: bare ? RdfDataFactory.literal(trimmed, RdfDataFactory.namedNode(bare.datatype)) : RdfDataFactory.literal(text) };
+		return { term: RdfDataFactory.literal(text) };
 	}
 }

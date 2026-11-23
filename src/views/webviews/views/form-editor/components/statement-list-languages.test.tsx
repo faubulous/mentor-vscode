@@ -58,7 +58,7 @@ function literalsOf(row: HTMLElement): string[] {
 	return Array.from(row.querySelectorAll<HTMLElement>('.literal-field')).map(field => {
 		const input = field.querySelector('textarea')!;
 
-		return `${input.value}@${field.querySelector('.literal-field-tag')?.textContent ?? ''}`;
+		return `${input.value}@${field.querySelector('.literal-field-annotation')?.textContent ?? ''}`;
 	});
 }
 
@@ -138,16 +138,17 @@ describe('StatementList, in one language', () => {
 		expect(host.submitted).toEqual([]);
 	});
 
-	it('highlights the language the card shows on the Language tab of a literal without one', () => {
+	it('offers the language the form shows first on the Language tab of a literal without one, highlighted', () => {
 		renderList('de');
 
 		const field = within(rowOf('rdfs:comment')).getByLabelText('Value 1');
 
 		fireEvent.focus(field);
 		fireEvent.mouseDown(within(rowOf('rdfs:comment')).getByRole('button', { name: 'Datatype string, change' }));
-		fireEvent.keyDown(rowOf('rdfs:comment').querySelector('.tag-picker-filter')!, { key: 'ArrowRight' });
+		fireEvent.keyDown(rowOf('rdfs:comment').querySelector('.literal-annotation-picker-filter')!, { key: 'ArrowRight' });
 
 		// jsdom shows no popover, so the list is looked up by its markup.
 		expect(rowOf('rdfs:comment').querySelector('[role="option"][aria-selected="true"]')?.getAttribute('aria-label')).toMatch(/^de,/);
+		expect(rowOf('rdfs:comment').querySelector('[role="option"]')?.getAttribute('aria-label')).toMatch(/^de,/);
 	});
 });

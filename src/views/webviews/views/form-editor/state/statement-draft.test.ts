@@ -42,13 +42,13 @@ describe('StatementDraft', () => {
 
 	it('gives a literal another tag, keeping its text, and restores the written value for its original tag', () => {
 		const stored = StatementDraft.fromProperty(createLabelProperty());
-		const german = stored.withLiteralTag(0, { language: 'de' });
-		const typed = stored.withLiteralTag(0, { datatype: XSD.string });
+		const german = stored.withLiteralAnnotation(0, { language: 'de' });
+		const typed = stored.withLiteralAnnotation(0, { datatype: XSD.string });
 
 		expect(german.values[0]).toMatchObject({ kind: 'term', term: RdfDataFactory.literal('Tree', 'de') });
-		expect(german.withLiteralTag(0, { language: 'en' }).hasSameValues(stored)).toBe(true);
+		expect(german.withLiteralAnnotation(0, { language: 'en' }).hasSameValues(stored)).toBe(true);
 		expect(typed.values[0]).toMatchObject({ kind: 'term', term: RdfDataFactory.literal('Tree', RdfDataFactory.namedNode(XSD.string)) });
-		expect(stored.withLiteralTag(2, { language: 'de' })).toBe(stored);
+		expect(stored.withLiteralAnnotation(2, { language: 'de' })).toBe(stored);
 	});
 
 	it('moves a value to another place among the values, and changes nothing where it stays', () => {

@@ -479,6 +479,9 @@ body {
 	--predicate-column: 160px;
 	--col-gap: 24px;
 	--line-box: 26px;
+	/* The lines of a text that wraps or breaks, and the room above and under them that fills the line box of the row. */
+	--text-line: 20px;
+	--text-pad: calc((var(--line-box) - var(--text-line)) / 2);
 	/* A row of one line, its line under it included, and the space above and under the line box that makes it so tall. */
 	--row-min-h: 32px;
 	--row-pad: calc((var(--row-min-h) - var(--line-box) - 1px) / 2);
@@ -512,6 +515,7 @@ body {
 	--content-edge: 10px;
 	--col-gap: 8px;
 	--line-box: 18px;
+	--text-line: 18px;
 	--chip-h: 18px;
 	--chip-pad-start: 5px;
 	--chip-pad-end: 5px;
@@ -957,13 +961,13 @@ body {
 	text-align: left;
 }
 
-/* The count of the nested cards of a row and the tags of its literals, which no layout shows by the label. */
+/* The count of the nested cards of a row and the annotations of its literals, which no layout shows by the label. */
 .statement-predicate-count,
-.statement-predicate-tags {
+.statement-predicate-annotations {
 	display: none;
 }
 
-.statement-predicate-tag {
+.statement-predicate-annotation {
 	margin: 0 6px 0 0;
 	padding: 0;
 	border: 0;
@@ -1037,7 +1041,7 @@ body {
 
 /*
  * A literal that is read: its text from the edge of the value column, wrapping and cut after a few
- * lines, and its language or datatype as a muted tag at the end of the column, on the first line.
+ * lines, and its language or datatype as a muted annotation at the end of the column, on the first line.
  */
 .literal-value {
 	display: flex;
@@ -1045,6 +1049,8 @@ body {
 	gap: var(--col-gap);
 	width: 100%;
 	min-width: 0;
+	padding-block: var(--text-pad);
+	line-height: var(--text-line);
 }
 
 .literal-text {
@@ -1058,7 +1064,7 @@ body {
 	overflow-wrap: anywhere;
 }
 
-.literal-tag {
+.literal-annotation {
 	flex: none;
 	margin-left: auto;
 	color: var(--form-muted);
@@ -1568,7 +1574,7 @@ body {
 
 /*
  * The label row leads an expanded card: the label is the title of the card, in the size and weight
- * of the title on the line box of every row, with its tag shown only while it is edited.
+ * of the title on the line box of every row, with its annotation shown only while it is edited.
  */
 .statement-line.is-card-label .literal-field {
 	--clamp: 1;
@@ -1579,11 +1585,11 @@ body {
 	font-weight: 600;
 }
 
-.statement-line.is-card-label .literal-field-tag {
+.statement-line.is-card-label .literal-field-annotation {
 	display: none;
 }
 
-.statement-line.is-card-label .literal-field:focus-within .literal-field-tag {
+.statement-line.is-card-label .literal-field:focus-within .literal-field-annotation {
 	display: inline-block;
 }
 
@@ -1682,8 +1688,9 @@ body {
 
 /*
  * A literal: a text area laid over a hidden copy of its text. The copy gives the field its height
- * and puts the tag of the literal after its last character, and both wrap alike, so the tag follows
- * the text onto its last line. The tag stands over the area, so the pointer reaches it.
+ * and puts the annotation of the literal after its last character, and both wrap alike, so the
+ * annotation follows the text onto its last line. The annotation stands over the area, so the
+ * pointer reaches it.
  */
 .literal-field {
 	anchor-scope: --literal-field;
@@ -1696,9 +1703,16 @@ body {
 	anchor-name: --literal-field;
 }
 
+/* The room the lines of the text leave in the line box of the row lies on the box, so a text cut at rest shows no part of the line after the cut. */
+.statement-cells .literal-field-box.input-field {
+	min-height: var(--text-line);
+	padding-block: calc(var(--row-pad) + var(--text-pad)) calc(var(--row-pad) + 1px + var(--text-pad));
+}
+
 .literal-field-text {
 	position: relative;
 	display: block;
+	line-height: var(--text-line);
 	white-space: pre-wrap;
 	overflow-wrap: anywhere;
 }
@@ -1709,7 +1723,7 @@ body {
 
 /* At rest a long text shows the lines its card allows; with the focus it shows whole. */
 .literal-field:not(:focus-within) > .literal-field-box > .literal-field-text {
-	max-height: calc(var(--clamp) * var(--line-box));
+	max-height: calc(var(--clamp) * var(--text-line));
 	overflow: hidden;
 }
 
@@ -1743,8 +1757,8 @@ body {
 	color: var(--form-muted);
 }
 
-/* The tag: the language or datatype of the literal, muted and small, which opens its picker. */
-.literal-field-tag {
+/* The annotation: the language or datatype of the literal, muted and small, which opens its picker. */
+.literal-field-annotation {
 	position: relative;
 	z-index: 2;
 	display: inline-block;
@@ -1762,25 +1776,37 @@ body {
 	cursor: pointer;
 }
 
-.literal-field-tag:hover,
-.literal-field-tag:focus-visible {
+.literal-field-annotation:hover,
+.literal-field-annotation:focus-visible {
 	background: var(--form-pill-background);
 	color: var(--vscode-foreground);
 	outline: none;
 }
 
-/* A text cut at rest shows the tag over the end of its last line, the text fading out before it. */
-.literal-field.is-clamped .literal-field-tag {
+/* An annotation that just appeared ignores the pointer for a moment, looking the same, so a click meant for the text does not land on it. */
+.literal-field-annotation.is-guarded,
+.combobox-suffix > .literal-field-annotation.is-guarded {
+	pointer-events: none;
+}
+
+/* The datatype a plain string looks like a value of, offered, not set: outlined and slanted. */
+.literal-field-annotation.is-suggestion {
+	box-shadow: inset 0 0 0 1px var(--form-field-border);
+	font-style: italic;
+}
+
+/* A text cut at rest shows the annotation over the end of its last line, the text fading out before it. */
+.literal-field.is-clamped .literal-field-annotation {
 	position: absolute;
 	right: 0;
-	bottom: 4px;
+	bottom: calc((var(--text-line) - 16px) / 2);
 	padding-inline-start: 28px;
 	border-radius: 0;
 	background: linear-gradient(to right, transparent, var(--card-surface) 20px);
 }
 
-/* A text that does not fit its datatype: the tag, the reason under the value and the underline of the field in the colour of errors. */
-.literal-field.is-problem .literal-field-tag {
+/* A text that does not fit its datatype: the annotation, the reason under the value and the underline of the field in the colour of errors. */
+.literal-field.is-problem .literal-field-annotation {
 	color: var(--form-error);
 }
 
@@ -1797,12 +1823,12 @@ body {
 }
 
 /*
- * The tag picker: a pop-up in the top layer under the value, from its start, with a tab for the
+ * The annotation picker: a pop-up in the top layer under the value, from its start, with a tab for the
  * datatypes and one for the languages, a filter, and the list of the items of the tab that match
  * it, each its code and what it is. It keeps its width on both tabs; the list scrolls once it is
  * taller than eight items.
  */
-.tag-picker {
+.literal-annotation-picker {
 	position: fixed;
 	position-anchor: --literal-field;
 	inset: auto;
@@ -1823,7 +1849,7 @@ body {
 	line-height: 16px;
 }
 
-.tag-picker-tabs {
+.literal-annotation-picker-tabs {
 	display: flex;
 	gap: 2px;
 	margin-bottom: 4px;
@@ -1831,7 +1857,7 @@ body {
 	border-bottom: 1px solid var(--form-hairline);
 }
 
-.tag-picker-tab {
+.literal-annotation-picker-tab {
 	flex: 1;
 	height: 26px;
 	padding: 0;
@@ -1843,17 +1869,17 @@ body {
 	cursor: pointer;
 }
 
-.tag-picker-tab:hover {
+.literal-annotation-picker-tab:hover {
 	color: var(--vscode-foreground);
 }
 
-.tag-picker-tab.is-active {
+.literal-annotation-picker-tab.is-active {
 	background: var(--form-pill-background);
 	color: var(--vscode-foreground);
 }
 
 /* The filter under the tabs, a field of its own on the surface of the pop-up. */
-.tag-picker-filter {
+.literal-annotation-picker-filter {
 	display: block;
 	box-sizing: border-box;
 	width: 100%;
@@ -1868,25 +1894,25 @@ body {
 	outline: none;
 }
 
-.tag-picker-filter:focus {
+.literal-annotation-picker-filter:focus {
 	border-color: var(--form-accent);
 }
 
-.tag-picker-filter::placeholder {
+.literal-annotation-picker-filter::placeholder {
 	color: var(--vscode-input-placeholderForeground, var(--form-muted));
 }
 
-.tag-picker-list {
+.literal-annotation-picker-list {
 	max-height: 232px;
 	overflow-y: auto;
 }
 
-.tag-picker-empty {
+.literal-annotation-picker-empty {
 	padding: 6px 8px;
 	color: var(--form-muted);
 }
 
-.tag-picker-item {
+.literal-annotation-picker-item {
 	display: flex;
 	align-items: center;
 	gap: 10px;
@@ -1897,16 +1923,16 @@ body {
 	cursor: pointer;
 }
 
-.tag-picker-item.is-active {
+.literal-annotation-picker-item.is-active {
 	background: var(--form-pill-background);
 }
 
-.tag-picker-code {
+.literal-annotation-picker-code {
 	flex: none;
 	font-family: var(--form-mono);
 }
 
-.tag-picker-description {
+.literal-annotation-picker-description {
 	min-width: 0;
 	overflow: hidden;
 	color: var(--form-muted);
@@ -2051,6 +2077,36 @@ body {
 	anchor-scope: --combobox;
 	position: relative;
 	display: block;
+}
+
+/*
+ * What follows the text of the field, laid over it: a hidden copy of the text, or of the
+ * placeholder, pushes the suffix to the end of the text. Only the suffix takes the pointer, and a
+ * text longer than the field hides it.
+ */
+.combobox-suffix {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	align-items: center;
+	padding-inline-start: var(--form-field-text-inset);
+	overflow: hidden;
+	white-space: pre;
+	pointer-events: none;
+}
+
+.combobox-suffix-copy {
+	visibility: hidden;
+}
+
+.combobox-suffix > .literal-field-annotation,
+.combobox .literal-annotation-picker {
+	pointer-events: auto;
+}
+
+/* The annotation picker of the type of a new value opens under the field. */
+.combobox .literal-annotation-picker {
+	position-anchor: --combobox;
 }
 
 .combobox-list {

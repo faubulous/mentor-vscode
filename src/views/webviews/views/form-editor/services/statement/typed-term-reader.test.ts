@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { RDF, XSD } from '@faubulous/mentor-rdf';
+import { RDF } from '@faubulous/mentor-rdf';
 import { EXAMPLE_NAMESPACE, TEST_NAMESPACES } from '@src/utilities/mocks/statement-fixtures';
 import { TypedTermReader } from './typed-term-reader';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
@@ -27,12 +27,26 @@ describe('TypedTermReader', () => {
 		expect(reader.readValue('   ', 'any')).toBeUndefined();
 	});
 
-	it('reads numbers and booleans as typed literals where the predicate takes more than text', () => {
-		expect(reader.readValue('42', 'any')).toEqual({ term: RdfDataFactory.literal('42', RdfDataFactory.namedNode(XSD.integer)) });
-		expect(reader.readValue('-1.5', 'any')).toEqual({ term: RdfDataFactory.literal('-1.5', RdfDataFactory.namedNode(XSD.decimal)) });
-		expect(reader.readValue('3.6E3', 'any')).toEqual({ term: RdfDataFactory.literal('3.6E3', RdfDataFactory.namedNode(XSD.double)) });
-		expect(reader.readValue('true', 'any')).toEqual({ term: RdfDataFactory.literal('true', RdfDataFactory.namedNode(XSD.boolean)) });
-		expect(reader.readValue('42', 'literal')).toEqual({ term: RdfDataFactory.literal('42') });
+	it.each(['42', '-1.5', '3.6E3', 'true'])('reads %s as a plain string, which its field suggests a datatype for', text => {
+		expect(reader.readValue(text, 'any')).toEqual({ term: RdfDataFactory.literal(text) });
+		expect(reader.readValue(text, 'literal')).toEqual({ term: RdfDataFactory.literal(text) });
+	});
+
+	it.each(['', 'e', 'ex', 'ex.', 'ex:', 'ex:Tr', ':x', '<', '<http://other.org/', '<http://other.org/x>'])('tells %j may still become a name', text => {
+		expect(TypedTermReader.couldBeName(text)).toBe(true);
+	});
+
+	it.each(['a tree', '4', '42', '-x', '"', '.ex', '<a>b', 'ex tree:x'])('tells %j can no longer become a name', text => {
+		expect(TypedTermReader.couldBeName(text)).toBe(false);
+	});
+
+	it('reads the text of a literal as a prefixed name, an <iri> or a bare IRI', () => {
+		expect(reader.readResourceText(' ex:Tree ')).toEqual({ term: RdfDataFactory.namedNode(`${EXAMPLE_NAMESPACE}Tree`) });
+		expect(reader.readResourceText('<http://other.org/x>')).toEqual({ term: RdfDataFactory.namedNode('http://other.org/x') });
+		expect(reader.readResourceText('https://other.org/x')).toEqual({ term: RdfDataFactory.namedNode('https://other.org/x') });
+		expect(reader.readResourceText('urn:isbn:0451450523')).toEqual({ term: RdfDataFactory.namedNode('urn:isbn:0451450523') });
+		expect(reader.readResourceText('foo:x').problem).toEqual({ kind: 'undeclaredPrefix', prefix: 'foo' });
+		expect(reader.readResourceText('a tree').problem).toEqual({ kind: 'notAName' });
 	});
 
 	it('takes text as typed, without reading quotes or escapes', () => {

@@ -104,8 +104,8 @@ describe('StatementList, edited', () => {
 		expect(rowLabels()).toEqual(['rdf:type', 'rdfs:label', 'rdfs:subClassOf']);
 		expect(screen.getByRole('button', { name: 'Add property' })).toBeTruthy();
 		expect((within(rows()[1]).getByLabelText('Value 1') as HTMLInputElement).value).toBe('Tree');
-		expect(within(rows()[1]).getByText('en', { selector: '.literal-field-tag' })).toBeTruthy();
-		expect(within(rows()[1]).getByRole('button', { name: 'en' }).classList.contains('statement-predicate-tag')).toBe(true);
+		expect(within(rows()[1]).getByText('en', { selector: '.literal-field-annotation' })).toBeTruthy();
+		expect(within(rows()[1]).getByRole('button', { name: 'en' }).classList.contains('statement-predicate-annotation')).toBe(true);
 		expect(within(rows()[0]).getByText('Class').closest('.value-pill')).not.toBeNull();
 	});
 
@@ -208,6 +208,47 @@ describe('StatementList, edited', () => {
 
 		expect(host.submitted).toEqual([]);
 		expect(field.value).toBe('42');
+	});
+
+	it('suggests the datatype a focused plain string looks like a value of, and gives it the datatype only once Tab accepts it', async () => {
+		const cardBody = withAnchors(createTestCardBody([createProperty('ex:planted', [{ term: RdfDataFactory.literal('2024-02-29'), editable: true }])]));
+		const { host } = renderList(cardBody);
+		const field = within(rows()[0]).getByLabelText('Value 1') as HTMLTextAreaElement;
+
+		expect(within(rows()[0]).queryByRole('button', { name: 'Suggested datatype date, accept' })).toBeNull();
+
+		fireEvent.focus(field);
+
+		expect(within(rows()[0]).getByRole('button', { name: 'Suggested datatype date, accept' }).textContent).toBe('date?');
+
+		fireEvent.keyDown(field, { key: 'Tab' });
+
+		expect(within(rows()[0]).queryByRole('button', { name: 'Suggested datatype date, accept' })).toBeNull();
+		expect(within(rows()[0]).getByRole('button', { name: 'Datatype date, change' })).toBeTruthy();
+
+		await leave(rows()[0]);
+
+		expect(host.submitted.map(edit => edit.operations[0])).toEqual([{
+			op: 'setValues',
+			subject: TEST_SUBJECT,
+			predicate: `${EXAMPLE_NAMESPACE}planted`,
+			values: [{ kind: 'term', term: RdfDataFactory.literal('2024-02-29', RdfDataFactory.namedNode(XSD.date)) }]
+		}]);
+	});
+
+	it('suggests no datatype for a plain string that only looks like one, nor for a literal with a language', () => {
+		const cardBody = withAnchors(createTestCardBody([createProperty('ex:note', [
+			{ term: RdfDataFactory.literal('2023-02-29'), editable: true },
+			{ term: RdfDataFactory.literal('42', 'en'), editable: true }
+		])]));
+
+		renderList(cardBody);
+
+		for (const label of ['Value 1', 'Value 2']) {
+			fireEvent.focus(within(rows()[0]).getByLabelText(label));
+		}
+
+		expect(document.querySelector('.literal-field-annotation.is-suggestion')).toBeNull();
 	});
 
 	it('writes a new predicate as soon as its field is left', () => {

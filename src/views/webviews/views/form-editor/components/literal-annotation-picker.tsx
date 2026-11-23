@@ -1,24 +1,24 @@
 import { MouseEvent, useEffect, useRef } from 'react';
-import { TagPickerControl } from '../hooks/use-tag-picker';
+import { LiteralAnnotationPickerControl } from '../hooks/use-literal-annotation-picker';
 import { showInTopLayer } from './combobox';
-import { TagPickerTab } from './tag-picker-items';
+import { LiteralAnnotationPickerTab } from './literal-annotation-picker-items';
 
 /**
  * The tabs of the picker, in their order, with their names.
  */
-const TABS: readonly { tab: TagPickerTab; name: string }[] = [
+const TABS: readonly { tab: LiteralAnnotationPickerTab; name: string }[] = [
 	{ tab: 'datatype', name: 'Datatype' },
 	{ tab: 'language', name: 'Language' }
 ];
 
 /**
- * Properties of the {@link TagPicker} component.
+ * Properties of the {@link LiteralAnnotationPicker} component.
  */
-export interface TagPickerProps {
+export interface LiteralAnnotationPickerProps {
 	/**
 	 * The picker, as the field of the literal drives it.
 	 */
-	picker: TagPickerControl;
+	picker: LiteralAnnotationPickerControl;
 
 	/**
 	 * The identifier of the list of items, which the text of the literal controls.
@@ -32,12 +32,12 @@ export interface TagPickerProps {
  * @param index The index of the item.
  * @returns The identifier.
  */
-export function getTagPickerItemId(listId: string, index: number): string {
+export function getLiteralAnnotationPickerItemId(listId: string, index: number): string {
 	return `${listId}-${index}`;
 }
 
 /**
- * The tag picker of a literal: a pop-up under the value with a filter that takes the focus as the
+ * The annotation picker of a literal: a pop-up under the value with a filter that takes the focus as the
  * picker opens, a Datatype and a Language tab under it, and the list of the items of the tab that
  * match the filter, each its code and what it is. The filter keeps the focus: the tabs and items act
  * on the press of the mouse, whose default is prevented, and the keys pressed in the filter move
@@ -45,7 +45,7 @@ export function getTagPickerItemId(listId: string, index: number): string {
  * @param props The picker.
  * @returns The pop-up.
  */
-export function TagPicker({ picker, listId }: TagPickerProps): React.JSX.Element {
+export function LiteralAnnotationPicker({ picker, listId }: LiteralAnnotationPickerProps): React.JSX.Element {
 	const listRef = useRef<HTMLDivElement>(null);
 	const filterRef = useRef<HTMLInputElement>(null);
 	const { tab, items, active, filter } = picker;
@@ -65,11 +65,11 @@ export function TagPicker({ picker, listId }: TagPickerProps): React.JSX.Element
 	};
 
 	return (
-		<div ref={showInTopLayer} popover="manual" className="tag-picker">
+		<div ref={showInTopLayer} popover="manual" className="literal-annotation-picker">
 			<input
 				ref={filterRef}
 				type="text"
-				className="tag-picker-filter"
+				className="literal-annotation-picker-filter"
 				role="combobox"
 				value={filter}
 				placeholder={`Search ${noun}`}
@@ -78,18 +78,18 @@ export function TagPicker({ picker, listId }: TagPickerProps): React.JSX.Element
 				aria-label={`Search ${noun}`}
 				aria-expanded={true}
 				aria-controls={listId}
-				aria-activedescendant={items.length > 0 ? getTagPickerItemId(listId, active) : undefined}
+				aria-activedescendant={items.length > 0 ? getLiteralAnnotationPickerItemId(listId, active) : undefined}
 				onChange={event => picker.setFilter(event.currentTarget.value)}
 				onKeyDown={picker.handleKeyDown}
 			/>
-			<div className="tag-picker-tabs" role="tablist" aria-label="Datatype or language">
+			<div className="literal-annotation-picker-tabs" role="tablist" aria-label="Datatype or language">
 				{TABS.map(entry => (
 					<button
 						key={entry.tab}
 						type="button"
 						role="tab"
 						tabIndex={-1}
-						className={`tag-picker-tab${entry.tab === tab ? ' is-active' : ''}`}
+						className={`literal-annotation-picker-tab${entry.tab === tab ? ' is-active' : ''}`}
 						aria-selected={entry.tab === tab}
 						aria-controls={listId}
 						onMouseDown={event => act(event, () => picker.showTab(entry.tab))}
@@ -98,23 +98,23 @@ export function TagPicker({ picker, listId }: TagPickerProps): React.JSX.Element
 					</button>
 				))}
 			</div>
-			<div ref={listRef} id={listId} className="tag-picker-list" role="listbox" aria-label={tab === 'datatype' ? 'Datatypes' : 'Languages'}>
+			<div ref={listRef} id={listId} className="literal-annotation-picker-list" role="listbox" aria-label={tab === 'datatype' ? 'Datatypes' : 'Languages'}>
 				{items.map((item, index) => (
 					<div
 						key={item.key}
-						id={getTagPickerItemId(listId, index)}
-						className={`tag-picker-item${index === active ? ' is-active' : ''}`}
+						id={getLiteralAnnotationPickerItemId(listId, index)}
+						className={`literal-annotation-picker-item${index === active ? ' is-active' : ''}`}
 						role="option"
 						aria-selected={index === active}
 						aria-label={item.description ? `${item.code}, ${item.description}` : item.code}
 						onMouseDown={event => act(event, () => picker.pick(item))}
 						onMouseEnter={() => picker.highlight(index)}
 					>
-						<span className="tag-picker-code">{item.code}</span>
-						<span className="tag-picker-description">{item.description}</span>
+						<span className="literal-annotation-picker-code">{item.code}</span>
+						<span className="literal-annotation-picker-description">{item.description}</span>
 					</div>
 				))}
-				{items.length === 0 && <div className="tag-picker-empty">No matching {noun}</div>}
+				{items.length === 0 && <div className="literal-annotation-picker-empty">No matching {noun}</div>}
 			</div>
 		</div>
 	);

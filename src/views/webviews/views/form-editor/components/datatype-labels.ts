@@ -10,21 +10,21 @@ import { LanguageTags } from '@src/utilities/language-tags';
 export type PrefixedNameOf = (datatype: NamedNode) => string | undefined;
 
 /**
- * The tag of a literal, as its field shows it after the text.
+ * The annotation of a literal, as its field shows it after the text.
  */
-export interface LiteralTagData {
+export interface LiteralAnnotationData {
 	/**
 	 * The text of the tag: the language tag, or the name of the datatype.
 	 */
 	text: string;
 
 	/**
-	 * The tooltip of the tag: the IRI of the datatype, or the name of the language.
+	 * The tooltip of the annotation: the IRI of the datatype, or the name of the language.
 	 */
 	tooltip: string;
 
 	/**
-	 * The accessible name of the tag, which changes it.
+	 * The accessible name of the annotation, which changes it.
 	 */
 	accessibleName: string;
 }
@@ -103,31 +103,31 @@ export function getDatatypeProblem(name: string, iri: string): string {
 }
 
 /**
- * The tag of a literal: its language tag in standard form, with its direction, else the name of its
- * datatype; none for a plain string.
+ * The annotation of a literal as text: its language tag in standard form, with its direction, else
+ * the name of its datatype; none for a plain string.
  * @param term The literal.
  * @param prefixedNameOf Gives a datatype its prefixed name.
- * @returns The tag, or `undefined` for a plain string.
+ * @returns The annotation, or `undefined` for a plain string.
  */
-export function getLiteralTag(term: Literal, prefixedNameOf: PrefixedNameOf): string | undefined {
+export function getLiteralAnnotation(term: Literal, prefixedNameOf: PrefixedNameOf): string | undefined {
 	if (term.language) {
-		const tag = LanguageTags.normalize(term.language);
+		const languageTag = LanguageTags.normalize(term.language);
 
-		return term.direction ? `${tag}--${term.direction}` : tag;
+		return term.direction ? `${languageTag}--${term.direction}` : languageTag;
 	}
 
 	return term.datatype.value === XSD.string ? undefined : getDatatypeName(term.datatype, prefixedNameOf);
 }
 
 /**
- * The tag a literal field shows after its text: the tag of the literal, with the name of its
- * language or the IRI of its datatype as its tooltip; none for a plain string.
+ * The annotation a literal field shows after its text, with the name of its language or the IRI of
+ * its datatype as its tooltip; none for a plain string.
  * @param term The literal.
  * @param prefixedNameOf Gives a datatype its prefixed name.
- * @returns The tag, or `undefined` for a plain string.
+ * @returns The annotation, or `undefined` for a plain string.
  */
-export function getLiteralTagData(term: Literal, prefixedNameOf: PrefixedNameOf): LiteralTagData | undefined {
-	const text = getLiteralTag(term, prefixedNameOf);
+export function getLiteralAnnotationData(term: Literal, prefixedNameOf: PrefixedNameOf): LiteralAnnotationData | undefined {
+	const text = getLiteralAnnotation(term, prefixedNameOf);
 
 	if (!text) {
 		return undefined;
@@ -140,4 +140,17 @@ export function getLiteralTagData(term: Literal, prefixedNameOf: PrefixedNameOf)
 	}
 
 	return { text, tooltip: term.datatype.value, accessibleName: `Datatype ${text}, change` };
+}
+
+/**
+ * The annotation a plain string shows for the datatype its text looks like a value of, which Tab or
+ * a click gives it: the name of the datatype with a question mark.
+ * @param datatype The suggested datatype.
+ * @param prefixedNameOf Gives a datatype its prefixed name.
+ * @returns The annotation.
+ */
+export function getSuggestedAnnotationData(datatype: NamedNode, prefixedNameOf: PrefixedNameOf): LiteralAnnotationData {
+	const name = getDatatypeName(datatype, prefixedNameOf);
+
+	return { text: `${name}?`, tooltip: `Make it a ${name} (Tab)`, accessibleName: `Suggested datatype ${name}, accept` };
 }
