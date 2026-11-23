@@ -138,17 +138,20 @@ describe('ResourceViewBuilder.buildStatements', () => {
 	});
 });
 
-describe('ResourceViewBuilder value kinds', () => {
-	it('tells the kind of values a predicate takes from the values it has', () => {
-		const cardBody = detailOf('ex:Thing rdfs:label "First" ; ex:knows ex:Other , [ ex:p "x" ] ; ex:mixed "text" , ex:Other ; ex:steps ( ex:a ) .\n');
-		const kinds = Object.fromEntries(cardBody.predicates.map(property => [property.predicate.prefixedName, property.valueKind]));
+describe('ResourceViewBuilder predicate ranges', () => {
+	it('gives each property the range the options tell for its predicate and resource, and none where they tell none', () => {
+		const asked: string[] = [];
+		const cardBody = detailOf('ex:Thing rdfs:label "First" ; ex:knows ex:Other .\n', {}, {
+			resolvePredicateRange: (predicate, entry) => {
+				asked.push(`${entry.term.value} ${predicate}`);
 
-		expect(kinds).toEqual({
-			'rdfs:label': { kind: 'literal', source: 'usage' },
-			'ex:knows': { kind: 'resource', source: 'usage' },
-			'ex:mixed': { kind: 'any', source: 'usage' },
-			'ex:steps': { kind: 'resource', source: 'usage' }
+				return predicate === `${EX}knows` ? { type: 'resource', source: 'range' } : undefined;
+			}
 		});
+		const ranges = Object.fromEntries(cardBody.predicates.map(property => [property.predicate.prefixedName, property.range]));
+
+		expect(ranges).toEqual({ 'rdfs:label': undefined, 'ex:knows': { type: 'resource', source: 'range' } });
+		expect(asked).toEqual([`${EX}Thing ${_RDFS}label`, `${EX}Thing ${EX}knows`]);
 	});
 });
 

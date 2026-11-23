@@ -2,7 +2,7 @@ import { QuadContext } from '@faubulous/mentor-rdf-parsers';
 import { RDF } from '@faubulous/mentor-rdf';
 import { BlankNode, NamedNode, Term } from '@rdfjs/types';
 import { termToString } from 'rdf-string';
-import { NamespaceData, ResourceListItemData } from '@src/views/webviews/views/form-editor/form-editor-model';
+import { NamespaceData, PredicateRangeData, ResourceListItemData } from '@src/views/webviews/views/form-editor/form-editor-model';
 
 /**
  * A resource collected from the document, together with the statements that describe it.
@@ -97,6 +97,12 @@ export interface ResourceIndexOptions {
 	 * about it. Objects described in the document get their glyph from their own statements.
 	 */
 	resolveObjectIcon?: (iri: string) => string | undefined;
+
+	/**
+	 * Resolve what values a predicate takes for a resource, from the ranges and shapes the store
+	 * holds.
+	 */
+	resolvePredicateRange?: (predicate: string, entry: ResourceIndexEntry) => PredicateRangeData | undefined;
 }
 
 /**

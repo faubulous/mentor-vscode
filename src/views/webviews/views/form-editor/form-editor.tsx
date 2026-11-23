@@ -78,6 +78,11 @@ function FormEditor(): React.JSX.Element {
 	const routeUndo = useUndoRouting(scrollElement);
 
 	const onMessage = useCallback((message: FormEditorMessages) => {
+		// The answers to the requests of the pickers and fields are the service's, whatever they are.
+		if (termSearch.accept(message)) {
+			return;
+		}
+
 		switch (message.id) {
 			case 'DocumentSnapshot':
 				documentDataService.setSnapshot(message.snapshot.version, message.snapshot.revision);
@@ -90,10 +95,6 @@ function FormEditor(): React.JSX.Element {
 			case 'EditApplied':
 			case 'EditRejected':
 				hostService.accept(message);
-				break;
-			case 'TermSearchResult':
-			case 'WorkspaceLanguagesResponse':
-				termSearch.accept(message);
 				break;
 			case 'ScrollToResource':
 				revealResourceRef.current?.(message.resource);

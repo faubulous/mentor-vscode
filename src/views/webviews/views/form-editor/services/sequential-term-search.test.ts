@@ -16,7 +16,8 @@ function createSearch() {
 
 			return new Promise(answer => answers.push(answer));
 		},
-		getWorkspaceLanguages: async () => []
+		getWorkspaceLanguages: async () => [],
+		getPredicateRange: async () => undefined
 	};
 	const onAnswer = vi.fn();
 	const search = new SequentialTermSearch(service, 'predicate', 10, onAnswer);

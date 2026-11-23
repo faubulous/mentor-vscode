@@ -1,5 +1,6 @@
 import { StatementServices } from '../hooks/use-statement-services';
 import { StatementRowEditor } from '../state/statement-row-editor';
+import { DefaultValueType } from '../state/new-value-type';
 import { StatementRowState } from '../state/statement-row-state';
 
 /**
@@ -21,6 +22,11 @@ export interface EditedRow {
 	 * Reads what is typed and names the terms.
 	 */
 	services: StatementServices;
+
+	/**
+	 * The type a new value of the row starts as, and the datatype a range gives it.
+	 */
+	defaultType: DefaultValueType;
 
 	/**
 	 * Move the focus to the field of a new value of the row, where the row has one.

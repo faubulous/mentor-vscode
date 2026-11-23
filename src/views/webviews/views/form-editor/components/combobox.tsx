@@ -153,15 +153,21 @@ export function Combobox<T>(props: ComboboxProps<T>): React.JSX.Element {
 		_assignRef(fieldRef, element);
 	}, [fieldRef]);
 
-	// The text the field shows is set before anything moves the focus, as starting a literal does:
-	// the field renders a new value later, and a blur in between would read the old one back.
+	// The field shows the text it is given after every render, before anything moves the focus, as
+	// starting a literal does: the field renders a new value later, and a blur in between would read
+	// the old one back; and text its owner took elsewhere, which leaves the text as it was, goes.
 	useLayoutEffect(() => {
-		const input = ownField.current?.wrappedElement;
+		const field = ownField.current;
+		const input = field?.wrappedElement;
+
+		if (field && field.value !== text) {
+			field.value = text;
+		}
 
 		if (input && input.value !== text) {
 			input.value = text;
 		}
-	}, [text]);
+	});
 
 	// The best match is highlighted while typing and as the options arrive, so Enter picks it.
 	useEffect(() => setActive(0), [text, options]);

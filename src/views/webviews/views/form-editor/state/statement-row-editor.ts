@@ -1,7 +1,6 @@
 import { EditOperation } from '@src/services/editing/edit-operation';
 import { StatementValue } from '@src/services/editing/statement-value';
 import { BlankNode, NamedNode } from '@rdfjs/types';
-import { ValueKind } from '@src/utilities/value-kind';
 import { PredicateData, ResourceOptionData, TermData } from '../form-editor-model';
 import { EditOutcome } from '../services/editing-host-service.interface';
 import { LiteralDatatypes } from '@src/utilities/literal-datatypes';
@@ -10,7 +9,6 @@ import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { EditWriter } from './edit-writer';
 import { IEditingController } from './editing-controller.interface';
 import { LiteralAnnotation } from './literal-annotation';
-import { NewValueType } from './new-value-type';
 import { PrefixProposal } from './prefix-proposal';
 import { RowValue } from './row-value';
 import { StatementDraft } from './statement-draft';
@@ -421,19 +419,11 @@ export class StatementRowEditor implements EditWriter {
 	}
 
 	/**
-	 * Choose the type of value the text typed for a new value makes, as picking resource from its
-	 * annotation picker does, until the field is emptied.
-	 * @param type The type.
-	 */
-	choosePendingType(type: NewValueType): void {
-		this._update(this._state.withPendingType(type));
-	}
-
-	/**
-	 * Add the value the text typed for a new value reads as, or show why it reads as none.
+	 * Add the resource the text typed for a new value names, or show why it names none. Text for a
+	 * literal never stays in the input: it starts a literal of its own.
 	 */
 	commitPending(): void {
-		const reading = this._data.reader.readValue(this._state.pendingText, this._pendingRange);
+		const reading = this._readPending();
 
 		if (reading?.term) {
 			this._update(this._state.withValueAppended(reading.term));
@@ -567,7 +557,7 @@ export class StatementRowEditor implements EditWriter {
 
 			return;
 		}
-		const reading = this._data.reader.readValue(this._state.pendingText, this._pendingRange);
+		const reading = this._readPending();
 		const withPending = reading?.term ? draft.withValueAppended(reading.term) : draft;
 		const next = this._state.withDraft(_withUnfittingLiteralsReverted(withPending));
 
@@ -626,18 +616,11 @@ export class StatementRowEditor implements EditWriter {
 	}
 
 	/**
-	 * What the predicate takes, as its values tell.
+	 * Read the text typed for a new value as the resource it names.
+	 * @returns The IRI, or why the text names none; `undefined` when nothing was typed.
 	 */
-	private get _range(): ValueKind {
-		return this._data.property?.valueKind?.kind ?? 'any';
-	}
-
-	/**
-	 * What the text typed for a new value is read as: a resource where that type was chosen for it,
-	 * else what the predicate takes.
-	 */
-	private get _pendingRange(): ValueKind {
-		return this._state.pendingType ?? this._range;
+	private _readPending(): IriReading | undefined {
+		return this._state.pendingText.trim() === '' ? undefined : this._data.reader.readResourceText(this._state.pendingText);
 	}
 
 	/**

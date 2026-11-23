@@ -1,43 +1,52 @@
 import { describe, expect, it } from 'vitest';
-import { getNewValueType, startsLiteral } from './new-value-type';
+import { XSD } from '@faubulous/mentor-rdf/ontologies';
+import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
+import { PredicateRangeData } from '../form-editor-model';
+import { getDefaultAnnotation, getDefaultValueType, startsLiteral } from './new-value-type';
+import { RowValue } from './row-value';
 
-describe('getNewValueType', () => {
-	it('follows a predicate that takes one type of values only', () => {
-		expect(getNewValueType('a tree', 'resource')).toBe('resource');
-		expect(getNewValueType('ex:Tree', 'literal')).toBe('literal');
+const LITERAL: RowValue = { kind: 'term', term: RdfDataFactory.literal('Oak') };
+
+const RESOURCE: RowValue = { kind: 'term', term: RdfDataFactory.namedNode('http://example.org/Oak') };
+
+const DATE_RANGE: PredicateRangeData = { type: 'literal', datatype: XSD.date, source: 'range' };
+
+const OBJECT_PROPERTY: PredicateRangeData = { type: 'resource', source: 'propertyType' };
+
+describe('getDefaultValueType', () => {
+	it('gives the type of a resource resources and its label text', () => {
+		expect(getDefaultValueType('type', [LITERAL], DATE_RANGE)).toEqual({ type: 'resource' });
+		expect(getDefaultValueType('label', [RESOURCE], OBJECT_PROPERTY)).toEqual({ type: 'literal' });
 	});
 
-	it('makes a resource of an empty text or a name, and a literal of any other text, where the predicate takes either', () => {
-		expect(getNewValueType('', 'any')).toBe('resource');
-		expect(getNewValueType('ex:Tree', 'any')).toBe('resource');
-		expect(getNewValueType('<http://example.org/x>', 'any')).toBe('resource');
-		expect(getNewValueType('Tree', 'any')).toBe('literal');
+	it('follows a range before the values, with the datatype it names', () => {
+		expect(getDefaultValueType(undefined, [RESOURCE], DATE_RANGE)).toEqual({ type: 'literal', datatype: XSD.date });
+		expect(getDefaultValueType(undefined, [LITERAL], { type: 'resource', source: 'range' })).toEqual({ type: 'resource' });
 	});
 
-	it('follows the type chosen for the text', () => {
-		expect(getNewValueType('Tree', 'any', 'resource')).toBe('resource');
+	it('follows the last value where no range tells, before the type of the property', () => {
+		expect(getDefaultValueType(undefined, [RESOURCE, LITERAL], OBJECT_PROPERTY)).toEqual({ type: 'literal' });
+		expect(getDefaultValueType(undefined, [LITERAL, RESOURCE], undefined)).toEqual({ type: 'resource' });
+	});
+
+	it('follows the type of the property where the row has no value, else starts text', () => {
+		expect(getDefaultValueType(undefined, [], OBJECT_PROPERTY)).toEqual({ type: 'resource' });
+		expect(getDefaultValueType(undefined, [], undefined)).toEqual({ type: 'literal' });
 	});
 });
 
 describe('startsLiteral', () => {
-	it('starts a literal from the first character where the predicate takes literals only', () => {
-		expect(startsLiteral('T', 'literal')).toBe(true);
-		expect(startsLiteral('', 'literal')).toBe(false);
+	it('starts a literal from the first character where a new value starts as one, and never for a resource', () => {
+		expect(startsLiteral('T', { type: 'literal' })).toBe(true);
+		expect(startsLiteral(' ', { type: 'literal' })).toBe(false);
+		expect(startsLiteral('a tree', { type: 'resource' })).toBe(false);
 	});
+});
 
-	it('never starts a literal where the predicate takes resources only', () => {
-		expect(startsLiteral('a tree', 'resource')).toBe(false);
-	});
-
-	it('starts a literal once the text can no longer become a name, where the predicate takes either', () => {
-		expect(startsLiteral('Tree', 'any')).toBe(false);
-		expect(startsLiteral('ex:Tr', 'any')).toBe(false);
-		expect(startsLiteral('Tree ', 'any')).toBe(true);
-		expect(startsLiteral('4', 'any')).toBe(true);
-		expect(startsLiteral(' ', 'any')).toBe(false);
-	});
-
-	it('keeps text a resource was chosen for in the input', () => {
-		expect(startsLiteral('Tree oak', 'any', 'resource')).toBe(false);
+describe('getDefaultAnnotation', () => {
+	it('gives a started literal the datatype of its range, and none for text', () => {
+		expect(getDefaultAnnotation({ type: 'literal', datatype: XSD.date })).toEqual({ datatype: XSD.date });
+		expect(getDefaultAnnotation({ type: 'literal', datatype: XSD.string })).toEqual({});
+		expect(getDefaultAnnotation({ type: 'literal' })).toEqual({});
 	});
 });

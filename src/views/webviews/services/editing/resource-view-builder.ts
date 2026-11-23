@@ -7,7 +7,6 @@ import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { getIconContextOf } from '@src/utilities/resource-icon';
 import { DEFAULT_ICON, getSubjectIconName } from '@src/utilities/subject-icon';
 import { getTokenPosition, hasSourcePosition } from '@src/utilities/tokens';
-import { ValueKind, ValueKindHint } from '@src/utilities/value-kind';
 import {
 	DocumentPosition,
 	NestedResourceData,
@@ -98,11 +97,24 @@ export class ResourceViewBuilder {
 
 		return {
 			subject: entry.term,
-			predicates: groups.map(group => ({ ...group, valueKind: _valueKindOf(group.values) })),
+			predicates: groups.map(group => this._withRange(group, entry)),
 			// A resource of its own shows them above its card, where they were written; a node
 			// written inside another has no card of its own to stand outside of.
 			leadingComments: entry.nested && resourceComments.length > 0 ? resourceComments : undefined
 		};
+	}
+
+	/**
+	 * Add what values the predicate of a property takes for the resource, where it is known.
+	 * @param property The property.
+	 * @param entry The resource.
+	 * @returns The property with its range.
+	 */
+	private _withRange(property: PredicateData, entry: ResourceIndexEntry): PredicateData {
+		const predicate = property.predicate.term;
+		const range = predicate.termType === 'NamedNode' ? this._options.resolvePredicateRange?.(predicate.value, entry) : undefined;
+
+		return range ? { ...property, range } : property;
 	}
 
 	/**
@@ -369,22 +381,6 @@ function _primaryTypeIndex(typeIris: readonly string[]): number {
  */
 function _countProperties(entry: ResourceIndexEntry): number {
 	return new Set(entry.quads.map(quad => quad.predicate.value).filter(iri => !isCollectionChainPredicate(iri))).size;
-}
-
-/**
- * Tell what kind of values a predicate takes from the values it has: literals, resources, or
- * either when it has both.
- * @param values The values of the predicate.
- * @returns The hint, or `undefined` when the predicate has no value.
- */
-function _valueKindOf(values: readonly TermData[]): ValueKindHint | undefined {
-	const kinds = new Set<ValueKind>(values.map(value => value.term.termType === 'Literal' ? 'literal' : 'resource'));
-
-	if (kinds.size === 0) {
-		return undefined;
-	}
-
-	return { kind: kinds.size === 1 ? [...kinds][0] : 'any', source: 'usage' };
 }
 
 /**

@@ -1,7 +1,6 @@
 import { DragEvent, FocusEvent, KeyboardEvent, MouseEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { VscodeTextfield } from '@vscode-elements/elements';
 import { ResourceOptionData, TermData, TermSearchKind } from '../form-editor-model';
-import { NewValueType } from '../state/new-value-type';
 import { NewValueTypeMarker } from './new-value-type-marker';
 import { LiteralAnnotationPickerSelection } from './literal-annotation-picker-items';
 import { TermPicker } from './term-picker';
@@ -39,15 +38,10 @@ interface PillDragState {
 }
 
 /**
- * The type of value the input makes of the typed text, which it shows after the text, and what to
- * do when another is picked.
+ * The annotation picker of the text typed for a new value, which the input shows after the text,
+ * and what to do when a datatype or language is picked for it.
  */
 interface NewValueTypeControl {
-	/**
-	 * The type.
-	 */
-	type: NewValueType;
-
 	/**
 	 * The languages of the card, which the annotation picker offers first.
 	 */

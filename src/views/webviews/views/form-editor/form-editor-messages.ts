@@ -8,7 +8,7 @@ import type { EditOperation } from '@src/services/editing/edit-operation';
 import type { EditProblem } from '@src/services/editing/edit-problem';
 import type { ExecuteCommandMessage } from '../../webview-messaging';
 import type { BlankNode, NamedNode } from '@rdfjs/types';
-import type { DocumentPosition, DocumentSnapshot, ResourceCardBodyData, ResourceSource, ResourceCardHeaderData, ResourceOptionData, TermSearchKind } from './form-editor-model';
+import type { DocumentPosition, DocumentSnapshot, PredicateRangeData, ResourceCardBodyData, ResourceSource, ResourceCardHeaderData, ResourceOptionData, TermSearchKind } from './form-editor-model';
 import type { ScopeKey } from '@src/utilities/config-scope';
 
 /**
@@ -59,7 +59,12 @@ export type FormEditorHostMessage =
 	 * The answer to a {@link FormEditorWebviewMessage} `WorkspaceLanguagesRequest`: the language
 	 * tags of the literals of the workspace, the most used first.
 	 */
-	| { id: 'WorkspaceLanguagesResponse'; requestId: number; languages: string[] };
+	| { id: 'WorkspaceLanguagesResponse'; requestId: number; languages: string[] }
+	/**
+	 * The answer to a {@link FormEditorWebviewMessage} `PredicateRangeRequest`: what values the
+	 * predicate takes for the resource, where the store tells it.
+	 */
+	| { id: 'PredicateRangeResponse'; requestId: number; range?: PredicateRangeData };
 
 /**
  * Messages sent from the webview to the extension host.
@@ -115,6 +120,11 @@ export type FormEditorWebviewMessage =
 	 * `WorkspaceLanguagesResponse` of the same `requestId`.
 	 */
 	| { id: 'WorkspaceLanguagesRequest'; requestId: number }
+	/**
+	 * Ask what values a predicate takes for a resource, as a row for a new statement does once its
+	 * predicate is picked; the host answers with a `PredicateRangeResponse` of the same `requestId`.
+	 */
+	| { id: 'PredicateRangeRequest'; requestId: number; subject: NamedNode | BlankNode; predicate: string }
 	| ExecuteCommandMessage;
 
 /**

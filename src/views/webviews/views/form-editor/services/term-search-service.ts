@@ -1,5 +1,6 @@
-import { FormEditorHostMessage, FormEditorWebviewMessage } from '../form-editor-messages';
-import { ResourceOptionData, TermSearchKind } from '../form-editor-model';
+import { FormEditorMessages, FormEditorWebviewMessage } from '../form-editor-messages';
+import { BlankNode, NamedNode } from '@rdfjs/types';
+import { PredicateRangeData, ResourceOptionData, TermSearchKind } from '../form-editor-model';
 import { ITermSearchService } from './term-search-service.interface';
 
 /**
@@ -7,7 +8,7 @@ import { ITermSearchService } from './term-search-service.interface';
  * with an identifier of its own, which the host answers it by.
  */
 export class TermSearchService implements ITermSearchService {
-	private readonly _pending = new Map<number, (answer: ResourceOptionData[] | string[]) => void>();
+	private readonly _pending = new Map<number, (answer: unknown) => void>();
 
 	private _nextRequestId = 1;
 
@@ -25,18 +26,25 @@ export class TermSearchService implements ITermSearchService {
 		return this._request<string[]>(requestId => ({ id: 'WorkspaceLanguagesRequest', requestId }));
 	}
 
+	getPredicateRange(subject: NamedNode | BlankNode, predicate: string): Promise<PredicateRangeData | undefined> {
+		return this._request<PredicateRangeData | undefined>(requestId => ({ id: 'PredicateRangeRequest', requestId, subject, predicate }));
+	}
+
 	/**
 	 * Take in a message from the host.
 	 * @param message The message.
 	 * @returns `true` if the message was one this service handles.
 	 */
-	accept(message: FormEditorHostMessage): boolean {
+	accept(message: FormEditorMessages): boolean {
 		switch (message.id) {
 			case 'TermSearchResult':
 				this._answer(message.requestId, message.options);
 				return true;
 			case 'WorkspaceLanguagesResponse':
 				this._answer(message.requestId, message.languages);
+				return true;
+			case 'PredicateRangeResponse':
+				this._answer(message.requestId, message.range);
 				return true;
 			default:
 				return false;
@@ -48,7 +56,7 @@ export class TermSearchService implements ITermSearchService {
 	 * @param messageOf Builds the request for its identifier.
 	 * @returns The answer.
 	 */
-	private _request<T extends ResourceOptionData[] | string[]>(messageOf: (requestId: number) => FormEditorWebviewMessage): Promise<T> {
+	private _request<T>(messageOf: (requestId: number) => FormEditorWebviewMessage): Promise<T> {
 		const requestId = this._nextRequestId++;
 
 		return new Promise(resolve => {
@@ -62,7 +70,7 @@ export class TermSearchService implements ITermSearchService {
 	 * @param requestId The request.
 	 * @param answer The answer.
 	 */
-	private _answer(requestId: number, answer: ResourceOptionData[] | string[]): void {
+	private _answer(requestId: number, answer: unknown): void {
 		const resolve = this._pending.get(requestId);
 
 		this._pending.delete(requestId);

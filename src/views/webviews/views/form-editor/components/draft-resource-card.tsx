@@ -46,9 +46,9 @@ export function DraftResourceCard({ type, index, edited }: DraftResourceCardProp
 	};
 
 	const handleCreate = (): void => {
-		const reading = services.reader.readValue(text, 'resource');
+		const reading = services.reader.readIri(text);
 
-		if (reading?.term?.termType === 'NamedNode') {
+		if (reading.term) {
 			editor.setNodeType(index, reading.term);
 			setText('');
 		}

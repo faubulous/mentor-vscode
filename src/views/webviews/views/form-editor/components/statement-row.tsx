@@ -1,16 +1,16 @@
 import { FocusEvent, KeyboardEvent, useEffect, useRef, useState } from 'react';
 import { RDF } from '@faubulous/mentor-rdf/ontologies';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
-import { ValueKind } from '@src/utilities/value-kind';
 import { ScopeKey } from '@src/utilities/config-scope';
 import { NamespaceData, PredicateData, TermData, TermSearchKind } from '../form-editor-model';
 import { ContextMenu, useContextMenu } from '../hooks/use-context-menu';
 import { RowReorder } from '../hooks/use-row-reorder';
+import { usePredicateRange } from '../hooks/use-predicate-range';
 import { useRowEditorState } from '../hooks/use-row-editor-state';
 import { StatementServices } from '../hooks/use-statement-services';
 import { FormEditorShortcuts } from '../form-editor-shortcuts';
 import { LanguageFilter } from '../state/language-filter';
-import { getNewValueType, startsLiteral } from '../state/new-value-type';
+import { DefaultValueType, getDefaultAnnotation, getDefaultValueType, startsLiteral } from '../state/new-value-type';
 import { RowValue } from '../state/row-value';
 import { useFormEditorContext } from '../state/form-editor-context';
 import { StatementRowEditor } from '../state/statement-row-editor';
@@ -178,8 +178,10 @@ export function StatementRow({ property, editor, services, autoFocus = false, he
 	const state = useRowEditorState(editor);
 	const rowRef = useRef<HTMLDivElement>(null);
 	const [valueFocus, setValueFocus] = useState<{ index: number; caret?: number }>();
+	const range = usePredicateRange(editor?.subject, state?.draft.predicate, property);
+	const defaultType = getDefaultValueType(header?.kind, state?.draft.values ?? [], range);
 	const edited: EditedRow | undefined = editor && state && services
-		? { editor, state, services, focusNewValue: () => _focusNewValueField(rowRef.current), focusValue: (index, caret) => setValueFocus({ index, caret }) }
+		? { editor, state, services, defaultType, focusNewValue: () => _focusNewValueField(rowRef.current), focusValue: (index, caret) => setValueFocus({ index, caret }) }
 		: undefined;
 	const { languageFilter = LanguageFilter.ALL, pinScopes = [], namespaces } = useFormEditorContext();
 	const { menuRef, openOnContextMenu } = useContextMenu();
@@ -266,7 +268,7 @@ export function StatementRow({ property, editor, services, autoFocus = false, he
 					)}
 				<span className="statement-values">
 					{literals.map(entry => <StatementValueCell key={entry.index} {...entry} edited={edited} {...context} />)}
-					{edited && !(folded && resources.length === 0) ? !addLink && !titled && _resourceBox(edited, resources, property, { header: header?.kind, autoFocus: addingValue, label }) : _resourcePills(resources, context)}
+					{edited && !(folded && resources.length === 0) ? !addLink && !titled && _resourceBox(edited, resources, { header: header?.kind, autoFocus: addingValue, label }) : _resourcePills(resources, context)}
 					{wholes.map(entry => <StatementValueCell key={entry.index} {...entry} edited={edited} {...context} />)}
 					{addLink && <button type="button" className="add-link statement-value-add" onClick={() => setAddingValue(true)}>{addLink}</button>}
 					{header?.kind === 'type' && header.collapsed && _collapsedSummaryOf(header)}
@@ -503,21 +505,19 @@ function _addLinkOf(edited: EditedRow, header: RowHeader | undefined, literals: 
  * row without pills it stands after the nested cards of blank nodes, and in a row with values it
  * shows while the focus is in the row, or at once where Add value opened it. It offers the terms
  * of the workspace, the type of a blank node its classes, and asks to choose one while there is
- * none. `[` typed into the empty input starts a new blank node where the predicate takes resources.
- * A row for a new statement takes no value until its predicate is picked, and its input asks for
- * that.
+ * none. `[` typed into the empty input starts a new blank node where a new value starts as a
+ * resource. A row for a new statement takes no value until its predicate is picked, and its input
+ * asks for that.
  * @param edited The row.
  * @param resources The resources of the row.
- * @param property The property of the row, whose values tell what the predicate takes.
  * @param options The kind of header the row is, whether the input takes the focus, and the label
  * of the predicate, which the input of an empty row asks to add a value for.
  * @returns The box.
  */
-function _resourceBox(edited: EditedRow, resources: readonly ShownValue[], property: PredicateData | undefined, options: { header?: RowHeader['kind']; autoFocus: boolean; label: string }): React.JSX.Element {
+function _resourceBox(edited: EditedRow, resources: readonly ShownValue[], options: { header?: RowHeader['kind']; autoFocus: boolean; label: string }): React.JSX.Element {
 	const { header, autoFocus, label } = options;
 	const isType = header === 'type';
-	const { editor, state } = edited;
-	const range = _rangeOf(header, property);
+	const { editor, state, defaultType } = edited;
 	const awaitsPredicate = editor.isNew && state.draft.predicate === undefined;
 	// The input Add value opens shows at once: hidden until the row has the focus, it could not take it.
 	const onIntent = !autoFocus && resources.length === 0 && state.draft.values.length > 0 && state.pendingText === '';
@@ -527,18 +527,18 @@ function _resourceBox(edited: EditedRow, resources: readonly ShownValue[], prope
 		<span className={classes.join(' ')}>
 			<ResourceValues
 				resources={resources.map(({ view, index }) => ({ view, index }))}
-				kind={_termKindOf(isType, range)}
+				kind={_termKindOf(isType, defaultType)}
 				pendingText={state.pendingText}
 				placeholder={awaitsPredicate ? 'Pick a property first' : _placeholderOf(state.draft.values.length, header, label)}
 				readOnly={awaitsPredicate}
-				onPendingInput={(text, caret) => _inputPending(edited, isType ? 'resource' : range, text, caret)}
+				onPendingInput={(text, caret) => _inputPending(edited, text, caret)}
 				onPick={option => editor.pickValue(option)}
 				onCreate={() => editor.commitPending()}
 				onRemove={index => editor.removeValue(index)}
 				onMove={(from, to) => editor.moveValue(from, to)}
-				onStartNode={!header && range !== 'literal' ? () => editor.addNode() : undefined}
+				onStartNode={!header && defaultType.type === 'resource' ? () => editor.addNode() : undefined}
 				onStartText={isType ? undefined : () => edited.focusValue(editor.startLiteral(''))}
-				newValueType={isType ? undefined : { type: getNewValueType(state.pendingText, range, state.pendingType), languages: edited.services.languages, onPick: selection => _pickNewValueType(edited, selection) }}
+				newValueType={isType ? undefined : { languages: edited.services.languages, onPick: selection => _pickNewValueType(edited, selection) }}
 				autoFocus={autoFocus}
 			/>
 		</span>
@@ -546,64 +546,47 @@ function _resourceBox(edited: EditedRow, resources: readonly ShownValue[], prope
 }
 
 /**
- * Take the text typed for a new value: text that starts a literal goes into a literal of its own,
- * which takes the focus with the caret where it was, and other text stays in the input.
+ * Take the text typed for a new value: where a new value starts as a literal, the text goes into a
+ * literal of its own, with the datatype a range names, which takes the focus with the caret where
+ * it was; text for a resource stays in the input.
  * @param edited The row.
- * @param range What the input reads typed text as.
  * @param text The text.
  * @param caret Where the caret stands in the text.
  */
-function _inputPending(edited: EditedRow, range: ValueKind, text: string, caret: number): void {
-	if (startsLiteral(text, range, edited.state.pendingType)) {
-		edited.focusValue(edited.editor.startLiteral(text), caret);
+function _inputPending(edited: EditedRow, text: string, caret: number): void {
+	if (startsLiteral(text, edited.defaultType)) {
+		edited.focusValue(edited.editor.startLiteral(text, getDefaultAnnotation(edited.defaultType)), caret);
 	} else {
 		edited.editor.inputPending(text);
 	}
 }
 
 /**
- * Give the text typed for a new value what was picked for it from the annotation picker of its type: a
- * resource keeps it in the input, read as a resource, while a datatype or a language makes a
- * literal of it, which takes the focus.
+ * Give the text typed for a new value what was picked for it from the annotation picker of its
+ * type: a datatype or a language makes a literal of it, which takes the focus; resource keeps it in
+ * the input, as it is.
  * @param edited The row.
  * @param selection What the item picked gives the text.
  */
 function _pickNewValueType(edited: EditedRow, selection: LiteralAnnotationPickerSelection): void {
-	if (selection.type === 'resource') {
-		edited.editor.choosePendingType('resource');
-	} else {
+	if (selection.type === 'literal') {
 		edited.focusValue(edited.editor.startLiteral(edited.state.pendingText.trim(), selection.annotation, selection.missingPrefix));
 	}
 }
 
 /**
  * The kind of terms the input of the next value of a row offers: classes for a type, resources
- * where the predicate takes them, none where it takes text only.
+ * where a new value starts as a resource, none where it starts as text.
  * @param isType Whether the row is the type of a resource.
- * @param range What the input reads typed text as.
+ * @param defaultType The type a new value starts as.
  * @returns The kind, or `undefined` for none.
  */
-function _termKindOf(isType: boolean, range: ValueKind): TermSearchKind | undefined {
+function _termKindOf(isType: boolean, defaultType: DefaultValueType): TermSearchKind | undefined {
 	if (isType) {
 		return 'class';
 	}
 
-	return range === 'literal' ? undefined : 'resource';
-}
-
-/**
- * What the input of the next value of a row reads typed text as: resources for a type, text for a
- * label, and otherwise what the values of the property tell.
- * @param header The kind of header the row is, if it is one.
- * @param property The property of the row.
- * @returns The kind of values.
- */
-function _rangeOf(header: RowHeader['kind'] | undefined, property: PredicateData | undefined): ValueKind {
-	if (header) {
-		return header === 'type' ? 'resource' : 'literal';
-	}
-
-	return property?.valueKind?.kind ?? 'any';
+	return defaultType.type === 'resource' ? 'resource' : undefined;
 }
 
 /**
