@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import { Uri, VocabularyRepository } from "@faubulous/mentor-rdf";
 import { IToken, RdfToken } from "@faubulous/mentor-rdf-parsers";
 import { IDocumentContextService } from '@src/services/document';
-import { getNamespaceIriFromPrefixedName, getPropertyTypeFromRange, getTokenIndexAtPosition, getTripleComponentType, isTypeAssertionObject, TripleComonentType } from "@src/utilities";
+import { getNamespaceIriFromPrefixedName, getPropertyTypeFromRange, getTokenIndexAtPosition, getTriplePosition, isTypeAssertionObject, TriplePosition } from "@src/utilities";
 import { TurtleDocument } from '@src/languages/turtle/turtle-document';
 import { TurtleFeatureProvider } from '@src/languages/turtle/turtle-feature-provider';
 import { WorkspaceUri } from "@src/providers/workspace-uri";
@@ -96,7 +96,7 @@ export class TurtleCompletionItemProvider extends TurtleFeatureProvider implemen
 	protected getCompletionItems(document: vscode.TextDocument, context: TurtleDocument, tokens: IToken[], tokenIndex: number): vscode.ProviderResult<vscode.CompletionItem[] | vscode.CompletionList> {
 		let result: IriCompletionItem[] = [];
 		let queryGraphs: string[] | undefined;
-		let componentType: TripleComonentType;
+		let triplePosition: TriplePosition;
 		let isTypeAssertion = false;
 
 		if (this._isLocalPartDefinitionContext(tokens, tokenIndex)) {
@@ -105,8 +105,8 @@ export class TurtleCompletionItemProvider extends TurtleFeatureProvider implemen
 			// the graph where the document's triples are stored.
 			const documentIri = WorkspaceUri.toCanonicalString(context.graphIri);
 
-			componentType = getTripleComponentType(tokens, tokenIndex);
-			isTypeAssertion = componentType === 'object' && isTypeAssertionObject(tokens, tokenIndex, context.namespaces);
+			triplePosition = getTriplePosition(tokens, tokenIndex);
+			isTypeAssertion = triplePosition === 'object' && isTypeAssertionObject(tokens, tokenIndex, context.namespaces);
 
 			const currentToken = tokens[tokenIndex];
 			const namespaceIri = getNamespaceIriFromPrefixedName(context.namespaces, currentToken.image);
@@ -118,12 +118,12 @@ export class TurtleCompletionItemProvider extends TurtleFeatureProvider implemen
 				queryGraphs = [documentIri, namespaceIri];
 
 				// Primarily query the context graph for retrieving completion items.
-				result = this._getLocalPartCompletionItems(componentType, iri, queryGraphs);
+				result = this._getLocalPartCompletionItems(triplePosition, iri, queryGraphs);
 
 				// If none are found, query the background graph for retrieving additional items from other ontologies.
 				if (result.length == 0) {
 					queryGraphs = undefined;
-					result = this._getLocalPartCompletionItems(componentType, iri, undefined);
+					result = this._getLocalPartCompletionItems(triplePosition, iri, undefined);
 				}
 			}
 		}
@@ -146,7 +146,7 @@ export class TurtleCompletionItemProvider extends TurtleFeatureProvider implemen
 			const priorities = new Map<string, number>();
 
 			for (const item of result) {
-				priorities.set(item.iri, this._getCompletionItemPriority(item.iri, componentType, isTypeAssertion, classes, properties));
+				priorities.set(item.iri, this._getCompletionItemPriority(item.iri, triplePosition, isTypeAssertion, classes, properties));
 			}
 
 			result.sort((a, b) => priorities.get(a.iri)! - priorities.get(b.iri)!);
@@ -180,13 +180,13 @@ export class TurtleCompletionItemProvider extends TurtleFeatureProvider implemen
 	 * - Predicates: uniform priority; the candidates are properties only.
 	 *
 	 * @param iri The IRI of the completion candidate.
-	 * @param componentType The position of the completion in the triple.
+	 * @param triplePosition The position of the completion in the triple.
 	 * @param isTypeAssertion Whether the completion is the object of a type assertion.
 	 * @param classes The set of class IRIs defined in the queried graphs.
 	 * @param properties The set of property IRIs defined in the queried graphs.
 	 */
-	private _getCompletionItemPriority(iri: string, componentType: TripleComonentType, isTypeAssertion: boolean, classes: Set<string>, properties: Set<string>): number {
-		if (componentType === 'predicate') {
+	private _getCompletionItemPriority(iri: string, triplePosition: TriplePosition, isTypeAssertion: boolean, classes: Set<string>, properties: Set<string>): number {
+		if (triplePosition === 'predicate') {
 			return 0;
 		}
 
@@ -240,10 +240,10 @@ export class TurtleCompletionItemProvider extends TurtleFeatureProvider implemen
 	 * Collects all completion items whose IRI starts with the given search prefix.
 	 * @returns All matching items sorted by label; the caller is responsible for truncation.
 	 */
-	private _getLocalPartCompletionItems(componentType: TripleComonentType, uri: string, graphs: string[] | undefined): IriCompletionItem[] {
+	private _getLocalPartCompletionItems(triplePosition: TriplePosition, uri: string, graphs: string[] | undefined): IriCompletionItem[] {
 		let items: Record<string, IriCompletionItem> = {};
 
-		if (componentType === 'predicate') {
+		if (triplePosition === 'predicate') {
 			// In this case we only want to return properties.
 			for (let property of this._vocabulary.getProperties(graphs)) {
 				this._addLocalPartCompletionItem(items, uri, property);

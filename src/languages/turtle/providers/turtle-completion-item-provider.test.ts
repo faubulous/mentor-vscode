@@ -262,7 +262,7 @@ describe('TurtleCompletionItemProvider', () => {
                 makeToken(RdfToken.IRIREF.name, '<http://example.org/Sub>', { startLine: 1, startColumn: 3 }),
                 makeToken(RdfToken.PNAME_LN.name, 'ex:n', { startLine: 1, startColumn: 28 }),
             ];
-            // previous of index 2 is IRIREF → getTripleComponentType returns "predicate" in a specific case.
+            // previous of index 2 is IRIREF → getTriplePosition returns "predicate" in a specific case.
             // Using SEMICOLON as previous token is more reliable for predicate:
             const tokens2 = [
                 makeToken(RdfToken.IRIREF.name, '<http://example.org/Sub>', { startLine: 1, startColumn: 1 }),

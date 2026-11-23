@@ -7,7 +7,7 @@ import { RdfSyntax } from '@faubulous/mentor-rdf-parsers';
 import { ITokenizedDocumentContext } from '@src/services/document/document-context.interface';
 import { IPrefixLookupService } from '@src/services/document/prefix-lookup-service.interface';
 import { createResolvingDocumentContext } from '@src/utilities/mocks/factories';
-import { TermSearchKind } from '@src/views/webviews/views/form-editor/form-editor-model';
+import { TermSearchTargetType } from '@src/views/webviews/views/form-editor/form-editor-model';
 import { StoreIconResolver } from './store-icon-resolver';
 import { TermCatalogueService } from './term-catalogue-service';
 
@@ -73,14 +73,14 @@ function createDocument(namespaces: Record<string, string> = { ex: EX }, syntax 
 
 /**
  * Search the catalogue and name the terms found by their IRIs.
- * @param kind The kind of terms.
+ * @param targetType The type of terms.
  * @param text The typed text.
  * @param options The catalogue and the document.
  * @returns The IRIs, best first.
  */
-async function find(kind: TermSearchKind, text: string, options: { catalogue?: TermCatalogueService; document?: ITokenizedDocumentContext; limit?: number } = {}): Promise<string[]> {
+async function find(targetType: TermSearchTargetType, text: string, options: { catalogue?: TermCatalogueService; document?: ITokenizedDocumentContext; limit?: number } = {}): Promise<string[]> {
 	const catalogue = options.catalogue ?? createCatalogue();
-	const found = await catalogue.search({ kind, text, limit: options.limit ?? 50 }, options.document ?? createDocument());
+	const found = await catalogue.search({ targetType, text, limit: options.limit ?? 50 }, options.document ?? createDocument());
 
 	return found.map(option => option.subject.value);
 }
@@ -99,7 +99,7 @@ describe('TermCatalogueService', () => {
 		expect(await find('predicate', 'HEI')).toEqual([`${V}height`]);
 	});
 
-	it('offers the classes, resources and datatypes of their kind', async () => {
+	it('offers the classes, resources and datatypes of their type', async () => {
 		expect(await find('class', 'tr')).toEqual([`${V}Tree`]);
 		expect(await find('resource', 'oak')).toEqual([`${V}Oak`]);
 		expect(await find('datatype', 'len')).toEqual([`${V}Length`]);
@@ -124,13 +124,13 @@ describe('TermCatalogueService', () => {
 	});
 
 	it('proposes the prefix the workspace uses where the document declares none for the namespace', async () => {
-		const [tree] = await createCatalogue().search({ kind: 'class', text: 'Tree', limit: 1 }, createDocument());
+		const [tree] = await createCatalogue().search({ targetType: 'class', text: 'Tree', limit: 1 }, createDocument());
 
 		expect(tree).toMatchObject({ label: 'Tree', prefixedName: 'v:Tree', source: 'workspace', missingPrefix: { prefix: 'v', namespace: V } });
 	});
 
 	it.each([RdfSyntax.NTriples, RdfSyntax.NQuads])('proposes no prefix in a document written in %s, which writes no prefixed names', async syntax => {
-		const [tree] = await createCatalogue().search({ kind: 'class', text: 'Tree', limit: 1 }, createDocument({}, syntax));
+		const [tree] = await createCatalogue().search({ targetType: 'class', text: 'Tree', limit: 1 }, createDocument({}, syntax));
 
 		expect(tree).toMatchObject({ label: 'Tree', source: 'workspace' });
 		expect(tree.prefixedName).toBeUndefined();
@@ -138,14 +138,14 @@ describe('TermCatalogueService', () => {
 	});
 
 	it('writes a term by the prefixes of the document and ranks it as declared, where the document declares its namespace', async () => {
-		const [tree] = await createCatalogue().search({ kind: 'class', text: 'Tree', limit: 1 }, createDocument({ ex: EX, voc: V }));
+		const [tree] = await createCatalogue().search({ targetType: 'class', text: 'Tree', limit: 1 }, createDocument({ ex: EX, voc: V }));
 
 		expect(tree).toMatchObject({ prefixedName: 'voc:Tree', source: 'declared' });
 		expect(tree.missingPrefix).toBeUndefined();
 	});
 
 	it('proposes no prefix the document declares for another namespace', async () => {
-		const [tree] = await createCatalogue().search({ kind: 'class', text: 'Tree', limit: 1 }, createDocument({ v: EX }));
+		const [tree] = await createCatalogue().search({ targetType: 'class', text: 'Tree', limit: 1 }, createDocument({ v: EX }));
 
 		expect(tree.prefixedName).toBeUndefined();
 		expect(tree.missingPrefix).toBeUndefined();
@@ -159,11 +159,11 @@ describe('TermCatalogueService', () => {
 		const catalogue = createCatalogue();
 		const document = createDocument();
 
-		expect((await catalogue.search({ kind: 'class', text: 'Tree', limit: 1 }, document))[0]).toMatchObject({ source: 'workspace', missingPrefix: { prefix: 'v' } });
+		expect((await catalogue.search({ targetType: 'class', text: 'Tree', limit: 1 }, document))[0]).toMatchObject({ source: 'workspace', missingPrefix: { prefix: 'v' } });
 
 		document.namespaces['voc'] = V;
 
-		expect((await catalogue.search({ kind: 'class', text: 'Tree', limit: 1 }, document))[0]).toMatchObject({ prefixedName: 'voc:Tree', source: 'declared', missingPrefix: undefined });
+		expect((await catalogue.search({ targetType: 'class', text: 'Tree', limit: 1 }, document))[0]).toMatchObject({ prefixedName: 'voc:Tree', source: 'declared', missingPrefix: undefined });
 	});
 
 	it('returns at most as many terms as asked for', async () => {
@@ -176,7 +176,7 @@ describe('TermCatalogueService', () => {
 		const catalogue = createCatalogue(createStore(), () => whenIndexed);
 		const answered = vi.fn();
 
-		const search = catalogue.search({ kind: 'class', text: '', limit: 10 }, createDocument()).then(answered);
+		const search = catalogue.search({ targetType: 'class', text: '', limit: 10 }, createDocument()).then(answered);
 
 		await Promise.resolve();
 		expect(answered).not.toHaveBeenCalled();
@@ -211,7 +211,7 @@ describe('TermCatalogueService', () => {
 	});
 
 	it('offers the datatypes of the store by the shape of the values they hold', async () => {
-		const [length] = await createCatalogue().search({ kind: 'datatype', text: 'len', limit: 1 }, createDocument());
+		const [length] = await createCatalogue().search({ targetType: 'datatype', text: 'len', limit: 1 }, createDocument());
 
 		expect(length).toMatchObject({ subject: { value: `${V}Length` }, iconName: 'symbol-text' });
 	});

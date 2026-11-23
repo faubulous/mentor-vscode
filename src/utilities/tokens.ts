@@ -305,9 +305,18 @@ export function getUnquotedLiteralValue(token: IToken): string {
 	return token.image;
 }
 
-export type TripleComonentType = "subject" | "predicate" | "object" | undefined;
+/**
+ * The position of a term in a triple, `undefined` where it stands in none.
+ */
+export type TriplePosition = "subject" | "predicate" | "object" | undefined;
 
-export function getTripleComponentType(tokens: IToken[], tokenIndex: number): TripleComonentType {
+/**
+ * Get the position in a triple of the token at an index, from the token before it.
+ * @param tokens The tokens of the document.
+ * @param tokenIndex The index of the token.
+ * @returns The position, or `undefined` where the token stands in no triple.
+ */
+export function getTriplePosition(tokens: IToken[], tokenIndex: number): TriplePosition {
 	if (tokenIndex < 1) {
 		// If there is no previous token, we are at the beginning of the document.
 		// It must either be followed by a prefix declaration or a subject.

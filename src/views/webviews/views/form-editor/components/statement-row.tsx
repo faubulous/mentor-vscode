@@ -2,7 +2,7 @@ import { FocusEvent, KeyboardEvent, useEffect, useRef, useState } from 'react';
 import { RDF } from '@faubulous/mentor-rdf/ontologies';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { ScopeKey } from '@src/utilities/config-scope';
-import { NamespaceData, PredicateData, TermData, TermSearchKind } from '../form-editor-model';
+import { NamespaceData, PredicateData, TermData, TermSearchTargetType } from '../form-editor-model';
 import { ContextMenu, useContextMenu } from '../hooks/use-context-menu';
 import { RowReorder } from '../hooks/use-row-reorder';
 import { usePredicateRange } from '../hooks/use-predicate-range';
@@ -527,7 +527,7 @@ function _resourceBox(edited: EditedRow, resources: readonly ShownValue[], optio
 		<span className={classes.join(' ')}>
 			<ResourceValues
 				resources={resources.map(({ view, index }) => ({ view, index }))}
-				kind={_termKindOf(isType, defaultType)}
+				targetType={_targetTypeOf(isType, defaultType)}
 				pendingText={state.pendingText}
 				placeholder={awaitsPredicate ? 'Pick a property first' : _placeholderOf(state.draft.values.length, header, label)}
 				readOnly={awaitsPredicate}
@@ -575,13 +575,13 @@ function _pickNewValueType(edited: EditedRow, selection: LiteralAnnotationPicker
 }
 
 /**
- * The kind of terms the input of the next value of a row offers: classes for a type, resources
- * where a new value starts as a resource, none where it starts as text.
+ * The type of terms the input of the next value of a row offers: classes for the type of a
+ * resource, resources where a new value starts as a resource, none where it starts as text.
  * @param isType Whether the row is the type of a resource.
  * @param defaultType The type a new value starts as.
- * @returns The kind, or `undefined` for none.
+ * @returns The type of terms, or `undefined` for none.
  */
-function _termKindOf(isType: boolean, defaultType: DefaultValueType): TermSearchKind | undefined {
+function _targetTypeOf(isType: boolean, defaultType: DefaultValueType): TermSearchTargetType | undefined {
 	if (isType) {
 		return 'class';
 	}

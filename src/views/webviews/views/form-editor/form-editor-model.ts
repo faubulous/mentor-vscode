@@ -270,10 +270,12 @@ export interface ResourceListItemData extends ResourceCardHeaderData {
 }
 
 /**
- * The kind of terms a picker searches for: the predicates of statements, the classes a resource is
- * typed with, the resources a value refers to, or the datatypes of literals.
+ * The type of terms a search targets, by the place the picked term takes in a statement: the
+ * predicates of statements, the classes a resource is typed with, the resources a value refers to,
+ * or the datatypes of literals. A picker of the form editor and the completion of the text editor
+ * search by it.
  */
-export type TermSearchKind = 'predicate' | 'class' | 'resource' | 'datatype';
+export type TermSearchTargetType = 'predicate' | 'class' | 'resource' | 'datatype';
 
 /**
  * Where a term a picker offers comes from, which ranks it: the document itself, a vocabulary whose

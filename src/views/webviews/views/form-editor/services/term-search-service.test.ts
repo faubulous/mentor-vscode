@@ -44,8 +44,8 @@ describe('TermSearchService', () => {
 		const second = service.search('class', 'tr', 5);
 
 		expect(posted).toEqual([
-			{ id: 'TermSearch', requestId: 1, kind: 'predicate', text: 'la', limit: 10 },
-			{ id: 'TermSearch', requestId: 2, kind: 'class', text: 'tr', limit: 5 }
+			{ id: 'TermSearch', requestId: 1, targetType: 'predicate', text: 'la', limit: 10 },
+			{ id: 'TermSearch', requestId: 2, targetType: 'class', text: 'tr', limit: 5 }
 		]);
 
 		expect(service.accept({ id: 'TermSearchResult', requestId: 2, options: [option('Tree')] })).toBe(true);
