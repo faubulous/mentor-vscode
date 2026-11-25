@@ -92,6 +92,11 @@ describe('getPropertyIconName', () => {
 		expect(getPropertyIconName()).toBe('rdf-object-property');
 		expect(getPropertyIconName('http://example.org/Thing')).toBe('rdf-object-property');
 	});
+
+	it('falls back to the text glyph for a property known to take literals', () => {
+		expect(getPropertyIconName(undefined, true)).toBe('symbol-text');
+		expect(getPropertyIconName('http://example.org/Length', true)).toBe('symbol-text');
+	});
 });
 
 describe('getIconContextOf', () => {
