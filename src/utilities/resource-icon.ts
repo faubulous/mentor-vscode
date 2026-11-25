@@ -7,7 +7,6 @@
 
 import { _SH, OWL, RDF, RDFS, SH, SKOS, XSD } from '@faubulous/mentor-rdf';
 import type { Quad } from '@rdfjs/types';
-import type { ValueKind } from '@src/utilities/value-kind';
 
 /**
  * The glyph shown for a property whose range says nothing more specific.
@@ -72,17 +71,19 @@ export function getDatatypeIconName(datatypeIri?: string): string {
  * shape of its values rather than by a glyph of its own, which is what distinguishes it from an
  * object property at a glance.
  * @param rangeIri The IRI of the property's range or datatype, if it declares one.
- * @param valueKind The kind of values the property takes, when known; decides the glyph of a
- * literal-valued property whose datatype is not one of the well-known XSD types.
+ * @param takesLiterals Whether the property is known to take literals, such as a datatype
+ * property; decides the glyph when its range is not one of the well-known XSD types.
  * @returns The name of the icon to show.
  */
-export function getPropertyIconName(rangeIri?: string, valueKind?: ValueKind): string {
+export function getPropertyIconName(rangeIri?: string, takesLiterals: boolean = false): string {
+	const fallback = takesLiterals ? 'symbol-text' : DEFAULT_PROPERTY_ICON;
+
 	// A property that declares no range at all is a relation until something says otherwise.
 	if (rangeIri === undefined) {
-		return valueKind === 'literal' ? 'symbol-text' : DEFAULT_PROPERTY_ICON;
+		return fallback;
 	}
 
-	return _getDatatypeIconName(rangeIri) ?? (valueKind === 'literal' ? 'symbol-text' : DEFAULT_PROPERTY_ICON);
+	return _getDatatypeIconName(rangeIri) ?? fallback;
 }
 
 /**
@@ -119,8 +120,6 @@ export interface ResourceIconContext {
 	iri?: string;
 	/** The range of the resource, when it is a property. */
 	rangeIri?: string;
-	/** The kind of values the resource takes, when it is a property. */
-	valueKind?: ValueKind;
 	/** The predicates the resource uses, which identify a shape that declares no type. */
 	predicateIris?: readonly string[];
 	/** The value type a property shape constrains, which refines its glyph. */
@@ -183,7 +182,7 @@ export function getResourceIconName(
 
 	for (const type of PROPERTY_TYPES) {
 		if (types.has(type)) {
-			return getPropertyIconName(context.rangeIri, context.valueKind ?? (types.has(OWL.DatatypeProperty) ? 'literal' : undefined));
+			return getPropertyIconName(context.rangeIri, types.has(OWL.DatatypeProperty));
 		}
 	}
 
