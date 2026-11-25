@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import type { CstNode } from 'chevrotain';
 import { Quad, Quad_Graph, Quad_Subject, Quad_Object, Quad_Predicate } from '@rdfjs/types';
 import { LanguageTagUsageStats, Store, Uri, VocabularyRepository, _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, RDF } from '@faubulous/mentor-rdf';
-import { BlankNodeIdGenerator, createFileBlankNodeIdGenerator, IToken, QuadContext, QuadReaderError, RdfSyntax, RdfToken, tokenizeWithTriplate, TriplateLexingResult, TurtleQuadReader, TurtleReader } from '@faubulous/mentor-rdf-parsers';
+import { BlankNodeIdGenerator, createFileBlankNodeIdGenerator, IToken, QuadContext, QuadReadResult, RdfSyntax, RdfToken, tokenizeWithTriplate, TriplateLexingResult, TurtleReader } from '@faubulous/mentor-rdf-parsers';
 import { ParserFactory } from '@src/languages/parser-factory';
 import { ISettingsService } from '@src/services/core';
 import { DocumentContext } from '@src/services/document/document-context';
@@ -118,35 +118,46 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 	}
 
 	/**
-	 * Derives the quads, or the syntax tree and the errors, of a text from its
+	 * Derives the quads, the syntax tree and the errors of a text from its
 	 * tokens.
 	 *
-	 * A Turtle document is read by the quad reader first: it needs no syntax
-	 * tree, which is what makes indexing and editing large files cheap, and it
-	 * stops at the first error. Only a document it rejects goes through the
-	 * grammar parser with error recovery, so that the diagnostics can list
-	 * every error. A Triplate template, whose tree is built from placeholder
-	 * tokens, and a TriG document take the grammar parser directly.
+	 * A Turtle, TriG, N-Triples or N-Quads document is read by the quad reader
+	 * of its syntax first: it needs no syntax tree, which is what makes indexing
+	 * and editing large files cheap, and it reads the statements without errors
+	 * of a document that has some, so that a statement being typed does not
+	 * take the rest of the document out of the store. Only a document with
+	 * errors also goes through the grammar parser with error recovery, so that
+	 * the diagnostics can list every error with its position. A Triplate
+	 * template, whose tree is built from placeholder tokens, and an N3
+	 * document take the grammar parser only.
 	 * @param text The text the tokens were produced from.
 	 * @param lexingResult The tokens of the text.
 	 * @returns The parse result, or `undefined` when the analysis failed outright.
 	 */
 	private _analyze(text: string, lexingResult: TriplateLexingResult): DocumentParseResult | undefined {
-		if (this.syntax === RdfSyntax.Turtle && !lexingResult.template) {
-			try {
-				const quads = new TurtleQuadReader().read(lexingResult.tokens);
+		const quadReader = lexingResult.template ? undefined : ParserFactory.createQuadReader(this.syntax);
 
-				return { text, tokens: lexingResult.tokens, template: false, lexErrors: lexingResult.errors, parserErrors: [], semanticErrors: [], quads };
-			} catch (error) {
-				// Anything but a syntax error is the reader giving up, such as
-				// the stack being exhausted by a pathologically nested document.
-				if (!(error instanceof QuadReaderError)) {
-					return undefined;
-				}
-			}
+		if (!quadReader) {
+			return this._parseSyntaxTree(text, lexingResult);
 		}
 
-		return this._parseSyntaxTree(text, lexingResult);
+		let read: QuadReadResult;
+
+		try {
+			read = quadReader.readStatements(lexingResult.tokens);
+		} catch {
+			// The reader gave up, such as on the stack being exhausted by a
+			// pathologically nested document.
+			return undefined;
+		}
+
+		if (read.errors.length === 0) {
+			return { text, tokens: lexingResult.tokens, template: false, lexErrors: lexingResult.errors, parserErrors: [], semanticErrors: [], quads: read.quads };
+		}
+
+		const parsed = this._parseSyntaxTree(text, lexingResult);
+
+		return parsed ? { ...parsed, quads: read.quads } : undefined;
 	}
 
 	/**
@@ -394,16 +405,16 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 	 * @param data The text being loaded.
 	 * @param graph The graph of the document.
 	 * @param languageTagStats The statistics to count the language tags in.
-	 * @returns The quads, or no quads when the document has errors, so that an invalid
-	 * document loads no triples.
+	 * @returns The quads of the statements without errors; no quads when the document
+	 * has errors and its syntax has no quad reader, as N3.
 	 */
 	private _readGraphQuads(data: string, graph: Quad_Graph, languageTagStats: LanguageTagUsageStats): Quad[] {
 		let quads: Quad[];
 
 		try {
 			// Reuse the quads or the CST captured by parse() when they were produced
-			// from exactly this content. An errored, stale or already released result
-			// reads the tokens again, which throws on errors.
+			// from exactly this content. A stale or already released result reads the
+			// tokens again.
 			quads = this.getParseResult(data)?.quads ?? this._readQuads(data);
 		} catch {
 			return [];
@@ -418,8 +429,9 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 
 	/**
 	 * Reads the quads of the current tokens when {@link parse} did not capture
-	 * them: from the syntax tree it captured when that is reusable, otherwise
-	 * by reading the tokens again. Throws when the document has errors, so
+	 * them: the quads of the statements without errors, read again by the quad
+	 * reader of the syntax. A syntax without a quad reader, and a template, are
+	 * read from the syntax tree, which throws when the document has errors, so
 	 * that no triples are loaded from it.
 	 *
 	 * The parser and reader must match the document syntax: TriG graph blocks
@@ -430,6 +442,11 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 	 */
 	private _readQuads(text: string): Quad[] {
 		const cached = this.getParseResult(text);
+		const quadReader = cached?.template ? undefined : ParserFactory.createQuadReader(this.syntax);
+
+		if (quadReader) {
+			return quadReader.readStatements(this._tokens).quads;
+		}
 
 		// The grammar parser has already rejected this text: reading it again
 		// would only reproduce the errors it reported.
@@ -441,16 +458,6 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 
 		if (cst) {
 			return this.readQuads(cst);
-		}
-
-		if (this.syntax === RdfSyntax.Turtle) {
-			try {
-				return new TurtleQuadReader().read(this._tokens);
-			} catch (error) {
-				if (!(error instanceof QuadReaderError)) {
-					throw error;
-				}
-			}
 		}
 
 		return this.readQuads(ParserFactory.getParser(this.syntax).parse(this._tokens));

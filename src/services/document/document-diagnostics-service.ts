@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import type { ILexingError } from 'chevrotain';
-import { createFileBlankNodeIdGenerator, IRecognitionException, IToken, RdfSyntax, tokenizeWithTriplate, TriplateLexingResult, TurtleQuadReader } from '@faubulous/mentor-rdf-parsers';
+import { createFileBlankNodeIdGenerator, IRecognitionException, IToken, RdfSyntax, tokenizeWithTriplate, TriplateLexingResult } from '@faubulous/mentor-rdf-parsers';
 import { Diagnostic as LspDiagnostic, DiagnosticSeverity as LspDiagnosticSeverity, Range as LspRange } from 'vscode-languageserver-types';
 import { ParserFactory } from '@src/languages/parser-factory';
 import { SparqlUnusedVariableLinter } from '@src/languages/sparql/sparql-unused-variable-linter';
@@ -400,19 +400,22 @@ export class DocumentDiagnosticsService implements vscode.Disposable {
 	}
 
 	/**
-	 * Returns the syntax errors of a lexed document. A Turtle document is read
-	 * with the quad reader first, the way the document context reads it (see
-	 * `TurtleDocument._analyze`): a document the reader accepts has no syntax
-	 * errors, and only a rejected one goes through the grammar parser with error
-	 * recovery, which lists every error but costs far more.
+	 * Returns the syntax errors of a lexed document. A document is read with the
+	 * quad reader of its syntax first, the way the document context reads it
+	 * (see `TurtleDocument._analyze`): a document the reader reads without
+	 * errors has no syntax errors, and only one with errors goes through the
+	 * grammar parser with error recovery, which lists every error but costs far
+	 * more.
 	 * @param syntax The syntax of the document.
 	 * @param lexingResult The tokens of the document.
 	 * @returns The parser and semantic errors.
 	 */
 	private _getSyntaxErrors(syntax: RdfSyntax, lexingResult: TriplateLexingResult): IRecognitionException[] {
-		if (syntax === RdfSyntax.Turtle && !lexingResult.template) {
+		const quadReader = lexingResult.template ? undefined : ParserFactory.createQuadReader(syntax);
+
+		if (quadReader) {
 			try {
-				new TurtleQuadReader().read(lexingResult.tokens);
+				quadReader.read(lexingResult.tokens);
 
 				return [];
 			} catch {

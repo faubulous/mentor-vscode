@@ -37,16 +37,17 @@ export interface DocumentParseResult {
 	readonly template: boolean;
 
 	/**
-	 * The quads of a valid Turtle document, read straight from the tokens
-	 * without a syntax tree. Released once {@link IDocumentContext.loadTriples}
-	 * has consumed them. A document that holds quads has no errors and no
-	 * {@link cst}.
+	 * The quads of the statements without errors of a Turtle, TriG, N-Triples
+	 * or N-Quads document, read straight from the tokens without a syntax tree.
+	 * Released once {@link IDocumentContext.loadTriples} has consumed them. A
+	 * document without errors holds no {@link cst}; one with errors holds both.
 	 */
 	readonly quads?: Quad[];
 
 	/**
 	 * The concrete syntax tree produced by the shared parser with error
-	 * recovery enabled, for a document that was not read into {@link quads}.
+	 * recovery enabled, for a document with errors or one whose syntax has no
+	 * quad reader.
 	 * It is by far the largest part of the result and is released once
 	 * {@link IDocumentContext.loadTriples} has consumed it; the tokens and
 	 * errors stay for the diagnostics pass that follows.
