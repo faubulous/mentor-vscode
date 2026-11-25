@@ -43,4 +43,24 @@ suite('document edits', () => {
 		await vscode.commands.executeCommand('undo');
 		await waitFor(async () => await countGraphTriples(graphIri) === tripleCount, { label: 'the undone triple', timeoutMs: 10000 });
 	});
+
+	test('keeps the triples of the other statements while a statement has a syntax error', async () => {
+		const tripleCount = await countGraphTriples(graphIri);
+		const document = await vscode.workspace.openTextDocument(ontologyUri);
+		const end = document.positionAt(document.getText().length);
+		const insertion = '\nex:Broken a .\nex:NextToBroken a owl:Class .\n';
+		const insert = new vscode.WorkspaceEdit();
+
+		insert.insert(ontologyUri, end, insertion);
+
+		await vscode.workspace.applyEdit(insert);
+		await waitFor(async () => await countGraphTriples(graphIri) === tripleCount + 1, { label: 'the triples next to the broken statement', timeoutMs: 10000 });
+
+		const remove = new vscode.WorkspaceEdit();
+
+		remove.delete(ontologyUri, new vscode.Range(end, document.positionAt(document.getText().length)));
+
+		await vscode.workspace.applyEdit(remove);
+		await waitFor(async () => await countGraphTriples(graphIri) === tripleCount, { label: 'the triples without the edit', timeoutMs: 10000 });
+	});
 });

@@ -2,20 +2,25 @@ import {
 	ILexer,
 	IParser,
 	RdfSyntax,
+	StatementQuadReader,
 	TurtleLexer,
 	TurtleParser,
+	TurtleQuadReader,
 	TurtleReader,
 	TrigLexer,
 	TrigParser,
+	TrigQuadReader,
 	TrigReader,
 	N3Lexer,
 	N3Parser,
 	N3Reader,
 	NTriplesLexer,
 	NTriplesParser,
+	NTriplesQuadReader,
 	NTriplesReader,
 	NQuadsLexer,
 	NQuadsParser,
+	NQuadsQuadReader,
 	NQuadsReader,
 	SparqlLexer,
 	SparqlParser,
@@ -150,6 +155,29 @@ export class ParserFactory {
 				return new SparqlReader();
 			default:
 				throw new Error(`No reader available for syntax: ${syntax}`);
+		}
+	}
+
+	/**
+	 * Creates a new quad reader for a given RDF syntax, which reads the quads of a
+	 * document straight from its tokens without a syntax tree, and can skip the
+	 * statements that have errors. Like readers, quad readers hold per-document
+	 * state and are cheap to construct, so they are not shared.
+	 * @param syntax The RDF syntax to create a quad reader for.
+	 * @returns The quad reader, or `undefined` for a syntax that has none (N3, SPARQL).
+	 */
+	static createQuadReader(syntax: RdfSyntax): StatementQuadReader | undefined {
+		switch (syntax) {
+			case RdfSyntax.Turtle:
+				return new TurtleQuadReader();
+			case RdfSyntax.TriG:
+				return new TrigQuadReader();
+			case RdfSyntax.NTriples:
+				return new NTriplesQuadReader();
+			case RdfSyntax.NQuads:
+				return new NQuadsQuadReader();
+			default:
+				return undefined;
 		}
 	}
 }
