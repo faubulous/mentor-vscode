@@ -39,7 +39,7 @@ import { ReferenceUpdateService } from '@src/services/core/reference-update-serv
 import { WorkspaceRenameService } from './core/workspace-rename-service';
 import { WorkspaceFileOperationService } from '@src/services/core/workspace-file-operation-service';
 import { SettingsMigrationService } from './core/settings-migration-service';
-import { DocumentQueryTemplateMigration, FormEditorSettingsMigration, IndexExcludeFilesMigration, LegacyTemplateFormatMigration } from './core/migrations/';
+import { DocumentQueryTemplateMigration, IndexExcludeFilesMigration, LegacyTemplateFormatMigration } from './core/migrations/';
 import { PredicateRangeResolver } from './vocabulary/predicate-range-resolver';
 import { PropertyShapeIndex } from './vocabulary/property-shape-index';
 import { StoreIconResolver } from './vocabulary/store-icon-resolver';
@@ -276,7 +276,6 @@ export function configureServiceContainer(context: vscode.ExtensionContext): voi
 		new DocumentQueryTemplateMigration(),
 		new ShaclValidationProfilesMigration(),
 		new ShaclValidationScopeMigration(),
-		new FormEditorSettingsMigration(),
 	]);
 	container.registerInstance(ServiceToken.SettingsMigrationService, settingsMigrationService);
 }
