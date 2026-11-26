@@ -25,6 +25,7 @@ import { PropertyShapeIndex } from '@src/services/vocabulary/property-shape-inde
 import { StoreIconResolver } from '@src/services/vocabulary/store-icon-resolver';
 import { TermCatalogueService } from '@src/services/vocabulary/term-catalogue-service';
 import { TermFitResolver } from '@src/services/vocabulary/term-fit-resolver';
+import { registerResourceCardService } from '@src/utilities/mocks/resource-card-fixtures';
 
 const EX = 'http://example.org/';
 const PREAMBLE = `@prefix ex: <${EX}> .\n\n`;
@@ -74,6 +75,7 @@ async function createSession(body: string, context?: IDocumentContext, services:
 
 	turtle.parse(document.getText());
 	container.registerInstance(ServiceToken.DocumentContextService, createMockDocumentContextService({ contexts: { [URI]: context ?? turtle }, ...services }));
+	registerResourceCardService();
 
 	const testPanel = createPanel();
 	const extensionContext = { subscriptions: [], extensionUri: vscode.Uri.parse('file:///extension') } as unknown as vscode.ExtensionContext;

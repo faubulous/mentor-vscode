@@ -4,7 +4,7 @@ vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 
 import { RDFS, _OWL, _RDFS, _SH, _XSD } from '@faubulous/mentor-rdf';
 import { ResolvingDocumentContextOptions, createResolvingDocumentContext, readTurtleQuadContexts } from '@src/utilities/mocks/factories';
-import { ResourceCardBodyData } from '@src/views/webviews/views/form-editor/form-editor-model';
+import { ResourceCardBodyData } from '@src/services/resource/resource-card-data';
 import { ResourceIndexOptions, getEntry } from './resource-index';
 import { ResourceIndexBuilder } from './resource-index-builder';
 import { ResourceViewBuilder } from './resource-view-builder';

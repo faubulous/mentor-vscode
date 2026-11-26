@@ -5,8 +5,8 @@ vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 import { _OWL, _RDFS } from '@faubulous/mentor-rdf';
 import { createResolvingDocumentContext, readTurtleQuadContexts } from '@src/utilities/mocks/factories';
 import { ExternalDeclarationDetector } from './external-declaration-detector';
-import { ResourceIndex } from './resource-index';
-import { ResourceIndexBuilder } from './resource-index-builder';
+import { ResourceIndex } from '@src/services/resource/resource-index';
+import { ResourceIndexBuilder } from '@src/services/resource/resource-index-builder';
 
 const EX = 'http://example.org/';
 const NAMESPACES = { ex: EX, rdfs: _RDFS, owl: _OWL };

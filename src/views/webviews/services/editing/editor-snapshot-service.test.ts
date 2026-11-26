@@ -5,7 +5,7 @@ vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 import { RDF, RDFS, SKOS, _OWL, _RDFS, _SKOS } from '@faubulous/mentor-rdf';
 import { createResolvingDocumentContext, readTurtleQuadContexts } from '@src/utilities/mocks/factories';
 import { DocumentSnapshot } from '@src/views/webviews/views/form-editor/form-editor-model';
-import { PinnedPropertiesService } from './pinned-properties-service';
+import { PinnedPropertiesService } from '@src/services/resource/pinned-properties-service';
 import { EditorSnapshotService, SnapshotInput } from './editor-snapshot-service';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 

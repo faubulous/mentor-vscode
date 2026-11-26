@@ -4,7 +4,7 @@ import { isTemplate } from 'triplate';
 import { BlankNode, NamedNode } from '@rdfjs/types';
 import { termToString } from 'rdf-string';
 import { RdfSyntax, RdfToken } from '@faubulous/mentor-rdf-parsers';
-import { OWL, RDF, RDFS, VocabularyRepository, rdf } from '@faubulous/mentor-rdf';
+import { OWL, RDF, RDFS, VocabularyRepository } from '@faubulous/mentor-rdf';
 import { ServiceToken } from '@src/services/tokens';
 import { ISettingsService } from '@src/services/core';
 import { LanguageSelection, SelectActiveLanguageOptions, selectActiveLanguage } from '@src/commands/document/select-active-language';
@@ -16,20 +16,18 @@ import { StatementValue } from '@src/services/editing/statement-value';
 import { LocalPartCase, getLocalPartFromLabel } from '@src/utilities/uri';
 import { getLog } from '@src/utilities/vscode/log';
 import { getConfig, toConfigurationTarget } from '@src/utilities/vscode/config';
-import { ResourceReferenceProvider } from '@src/providers/resource-reference-provider';
 import { getTokenAtPosition, tokensMatchText } from '@src/utilities/tokens';
 import { isPlainLocalName } from '@src/utilities/prefixed-name';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { DocumentSyntaxError } from '@src/services/document/document-syntax-error';
 import { WebviewComponentFactory } from '../../webview-component-factory';
 import { ExecuteCommandMessage } from '../../webview-messaging';
-import { ResourceIndex, ResourceIndexEntry, ResourceIndexOptions, findCardResource, getEntry, typeIrisOf } from '../../services/editing/resource-index';
-import { ResourceIndexBuilder } from '../../services/editing/resource-index-builder';
-import { ResourceViewBuilder } from '../../services/editing/resource-view-builder';
-import { PinChange, PinnedPropertiesService } from '../../services/editing/pinned-properties-service';
+import { ResourceIndex, ResourceIndexEntry, findCardResource, getEntry, typeIrisOf } from '@src/services/resource/resource-index';
+import { ResourceViewBuilder } from '@src/services/resource/resource-view-builder';
+import { PinChange, PinnedPropertiesService } from '@src/services/resource/pinned-properties-service';
+import { PINNED_PROPERTIES_SETTING, ResourceCardService } from '@src/services/resource/resource-card-service';
 import { EditorSnapshotService } from '../../services/editing/editor-snapshot-service';
 import { PredicateRangeResolver } from '@src/services/vocabulary/predicate-range-resolver';
-import { StoreIconResolver } from '@src/services/vocabulary/store-icon-resolver';
 import { TermCatalogueService } from '@src/services/vocabulary/term-catalogue-service';
 import { EditOutcome, FormEditorEditHandler } from './form-editor-edit-handler';
 import { FormEditorHostMessage, FormEditorWebviewMessage } from './form-editor-messages';
@@ -90,27 +88,6 @@ const SUPPORTED_SYNTAXES: ReadonlySet<RdfSyntax> = new Set([
 const RENDERING_SETTINGS = ['mentor.formEditor', 'mentor.predicates', 'mentor.definitionTree.labelStyle', 'mentor.definitionTree.defaultLanguageTag'];
 
 /**
- * The types of the resources of the document as the store knows them, inferred ones included,
- * read at one version of it.
- */
-interface InferredTypeCache {
-	/**
-	 * The version of the store the types were read at.
-	 */
-	version: number;
-
-	/**
-	 * The types of each resource asked for, by the key of its term.
-	 */
-	types: Map<string, readonly string[]>;
-}
-
-/**
- * The setting that holds the pinned properties, in the `mentor.formEditor` section.
- */
-const PINNED_PROPERTIES_SETTING = 'pinnedProperties';
-
-/**
  * Serves one form editor tab. VS Code creates one webview panel per tab, so state is held per
  * session rather than per provider, and every subscription is disposed with the panel instead
  * of with the extension.
@@ -120,7 +97,7 @@ export class FormEditorSession implements vscode.Disposable {
 
 	private readonly _contextService: IDocumentContextService;
 
-	private readonly _referenceProvider: ResourceReferenceProvider;
+	private readonly _cards: ResourceCardService;
 
 	private readonly _editHandler = new FormEditorEditHandler();
 
@@ -163,8 +140,6 @@ export class FormEditorSession implements vscode.Disposable {
 	private _sentSnapshot?: DocumentSnapshot;
 
 
-	private _inferredTypes?: InferredTypeCache;
-
 	private _disposed = false;
 
 	/**
@@ -179,7 +154,7 @@ export class FormEditorSession implements vscode.Disposable {
 		private readonly _panel: vscode.WebviewPanel
 	) {
 		this._contextService = container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
-		this._referenceProvider = new ResourceReferenceProvider(this._contextService);
+		this._cards = container.resolve<ResourceCardService>(ServiceToken.ResourceCardService);
 	}
 
 	/**
@@ -690,9 +665,9 @@ export class FormEditorSession implements vscode.Disposable {
 			context,
 			readOnly,
 			problems,
-			countUsages: iri => this._countUsages(iri),
-			pins: _readPins(),
-			inferredTypesOf: resource => this._inferredTypesOf(context.graphs, resource),
+			countUsages: iri => this._cards.countUsages(iri),
+			pins: this._cards.readPins(),
+			inferredTypesOf: resource => this._cards.getInferredTypes(context.graphs, resource),
 			pinScopes: _pinScopes()
 		}).build();
 
@@ -729,7 +704,7 @@ export class FormEditorSession implements vscode.Disposable {
 			return;
 		}
 
-		const views = new ResourceViewBuilder(this._index, context, this._getIndexOptions());
+		const views = new ResourceViewBuilder(this._index, context, this._cards.getIndexOptions(context.graphs));
 		const listed = new Set(this._snapshot.resources.map(resource => termToString(resource.subject)));
 		const cardBodies: ResourceCardBodyData[] = [];
 		const cardHeaders: ResourceCardHeaderData[] = [];
@@ -746,7 +721,7 @@ export class FormEditorSession implements vscode.Disposable {
 			cardBodies.push(views.buildCardBody(entry));
 
 			if (!listed.has(termToString(resource))) {
-				cardHeaders.push({ ...views.buildListItem(entry), ...this._pinsOf(context, entry) });
+				cardHeaders.push({ ...views.buildListItem(entry), ...this._cards.getPins(entry, context.graphs) });
 			}
 		}
 
@@ -762,7 +737,6 @@ export class FormEditorSession implements vscode.Disposable {
 	 */
 	private _publishStoreResources(requested: (NamedNode | BlankNode)[]): void {
 		const context = this._getTokenizedContext();
-		const store = this._getVocabulary()?.store;
 
 		if (!this._snapshot || !context) {
 			return;
@@ -773,45 +747,17 @@ export class FormEditorSession implements vscode.Disposable {
 		const missing: (NamedNode | BlankNode)[] = [];
 
 		for (const resource of requested) {
-			const index = store && resource.termType === 'NamedNode' ? ResourceIndexBuilder.fromStore(store, resource.value, context) : undefined;
-			const entry = index ? getEntry(index, resource) : undefined;
-			const listItem = index?.listItems.find(candidate => candidate.subject.equals(resource));
+			const card = this._cards.getStoreCard(resource, context);
 
-			if (!index || !entry || !listItem) {
+			if (card) {
+				cardBodies.push(card.cardBody);
+				cardHeaders.push(card.cardHeader);
+			} else {
 				missing.push(resource);
-				continue;
 			}
-
-			cardBodies.push(new ResourceViewBuilder(index, context, this._getIndexOptions()).buildCardBody(entry));
-			cardHeaders.push({ ...listItem, usageCount: this._countUsages(resource.value), ...this._pinsOf(context, entry, undefined) });
 		}
 
 		this._postMessage({ id: 'ResourceResponse', revision: this._snapshot.revision, cardBodies, cardHeaders, missing, source: 'store' });
-	}
-
-	/**
-	 * How often a resource is referred to across the indexed documents, not counting the statement
-	 * that defines it, as the usage code lens counts.
-	 * @param iri The IRI of the resource.
-	 * @returns The count.
-	 */
-	private _countUsages(iri: string): number {
-		return Math.max(this._referenceProvider.countReferencesForIri(iri) - 1, 0);
-	}
-
-	/**
-	 * Options for building the statements about resources: the glyphs of the IRIs the document only
-	 * mentions, and what values the predicates take, come from the store, when there is one.
-	 * @returns The options.
-	 */
-	private _getIndexOptions(): ResourceIndexOptions {
-		const icons = _resolveIfRegistered<StoreIconResolver>(ServiceToken.StoreIconResolver);
-		const ranges = _resolveIfRegistered<PredicateRangeResolver>(ServiceToken.PredicateRangeResolver);
-
-		return {
-			resolveObjectIcon: icons ? iri => icons.resolve(iri) : undefined,
-			resolvePredicateRange: ranges ? (predicate, entry) => ranges.resolve(predicate, this._typesOf(entry)) : undefined
-		};
 	}
 
 	/**
@@ -821,7 +767,7 @@ export class FormEditorSession implements vscode.Disposable {
 	 * @returns The type IRIs, each once.
 	 */
 	private _typesOf(entry: ResourceIndexEntry): string[] {
-		return Array.from(new Set([...typeIrisOf(entry), ...this._inferredTypesOf(this._getTokenizedContext()?.graphs, entry.term)]));
+		return this._cards.getTypes(entry, this._getTokenizedContext()?.graphs);
 	}
 
 	/**
@@ -895,7 +841,7 @@ export class FormEditorSession implements vscode.Disposable {
 			return;
 		}
 
-		await _writePins(_readPins().withPin(types.typeIris, types.pinType, predicate.value, scope));
+		await _writePins(this._cards.readPins().withPin(types.typeIris, types.pinType, predicate.value, scope));
 	}
 
 	/**
@@ -911,7 +857,7 @@ export class FormEditorSession implements vscode.Disposable {
 			return;
 		}
 
-		const pins = _readPins();
+		const pins = this._cards.readPins();
 		const predicates = pins.pinsOf(types.typeIris).map(pin => pin.predicate);
 
 		await _writePins(pins.withoutPins(types.typeIris, predicates, _pinScopes()));
@@ -932,68 +878,10 @@ export class FormEditorSession implements vscode.Disposable {
 		}
 
 		const asserted = typeIrisOf(entry);
-		const inferred = this._inferredTypesOf(context.graphs, resource);
+		const inferred = this._cards.getInferredTypes(context.graphs, resource);
 		const pinType = PinnedPropertiesService.pinTypeOf(asserted, inferred);
 
 		return pinType ? { typeIris: Array.from(new Set([...asserted, ...inferred])), pinType } : undefined;
-	}
-
-	/**
-	 * The pins of a resource the snapshot does not list, as the snapshot holds them for the
-	 * resources it lists, so a nested card of a blank node and the card of a resource of the store
-	 * pin too.
-	 * @param context The context of the document.
-	 * @param entry The resource.
-	 * @param graphs The graphs its inferred types are read from: those of the document, or all
-	 * graphs for a resource of the store.
-	 * @returns The fields of the card header.
-	 */
-	private _pinsOf(context: TurtleDocument, entry: ResourceIndexEntry, graphs: string[] | undefined = context.graphs): Pick<ResourceCardHeaderData, 'pins'> {
-		const pins = _readPins().resolve(typeIrisOf(entry), this._inferredTypesOf(graphs, entry.term));
-
-		return pins ? { pins } : {};
-	}
-
-	/**
-	 * The types of a resource the store knows, inferred ones included, which an untyped blank node
-	 * of a shape gets from the reasoner. Memoized until the store changes.
-	 * @param graphs The graphs to read: those of the document, or all graphs when absent.
-	 * @param resource The resource.
-	 * @returns The type IRIs, none when there is no store.
-	 */
-	private _inferredTypesOf(graphs: string[] | undefined, resource: NamedNode | BlankNode): readonly string[] {
-		const store = this._getVocabulary()?.store;
-
-		if (!store) {
-			return [];
-		}
-
-		if (!this._inferredTypes || this._inferredTypes.version !== store.version) {
-			this._inferredTypes = { version: store.version, types: new Map() };
-		}
-
-		const key = `${graphs?.join(' ') ?? '*'}|${termToString(resource)}`;
-		const known = this._inferredTypes.types.get(key);
-
-		if (known) {
-			return known;
-		}
-
-		const types = new Set<string>();
-
-		// Read with the inference graphs when the store has a reasoner; asking for them without one
-		// throws.
-		for (const quad of store.matchAll(graphs, resource, rdf.type, null, store.reasoner ? true : false)) {
-			if (quad.object.termType === 'NamedNode') {
-				types.add(quad.object.value);
-			}
-		}
-
-		const result = Array.from(types);
-
-		this._inferredTypes.types.set(key, result);
-
-		return result;
 	}
 
 	/**
@@ -1187,15 +1075,6 @@ function _localPartCaseOf(types: readonly string[]): LocalPartCase | undefined {
 	}
 
 	return types.some(type => PROPERTY_TYPES.has(type)) ? 'camel' : undefined;
-}
-
-/**
- * Read the pinned properties from the layers of the setting: the default value and the workspace
- * one for everyone, the user one for oneself.
- * @returns The pins.
- */
-function _readPins(): PinnedPropertiesService {
-	return PinnedPropertiesService.fromSetting(getConfig('formEditor').inspect<unknown>(PINNED_PROPERTIES_SETTING));
 }
 
 /**

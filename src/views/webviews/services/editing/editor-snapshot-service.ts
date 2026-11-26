@@ -8,9 +8,9 @@ import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { DocumentProblem, DocumentSnapshot, ReadOnlyReason, ResourceListItemData } from '@src/views/webviews/views/form-editor/form-editor-model';
 import { ExternalDeclarationDetector } from './external-declaration-detector';
 import { ScopeKey } from '@src/utilities/config-scope';
-import { PinnedPropertiesService } from './pinned-properties-service';
-import { ResourceIndex, ResourceIndexEntry, getEntry, typeIrisOf } from './resource-index';
-import { ResourceIndexBuilder } from './resource-index-builder';
+import { PinnedPropertiesService } from '@src/services/resource/pinned-properties-service';
+import { ResourceIndex, ResourceIndexEntry, getEntry, typeIrisOf } from '@src/services/resource/resource-index';
+import { ResourceIndexBuilder } from '@src/services/resource/resource-index-builder';
 import { getLanguageTagSpellings } from '@faubulous/mentor-rdf-serializers';
 
 /**

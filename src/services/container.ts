@@ -45,6 +45,8 @@ import { PropertyShapeIndex } from './vocabulary/property-shape-index';
 import { StoreIconResolver } from './vocabulary/store-icon-resolver';
 import { TermCatalogueService } from './vocabulary/term-catalogue-service';
 import { TermFitResolver } from './vocabulary/term-fit-resolver';
+import { ResourceCardService } from './resource/resource-card-service';
+import { ResourceReferenceProvider } from '@src/providers/resource-reference-provider';
 
 /**
  * Configures the service container with all necessary services and dependencies for the extension.
@@ -171,6 +173,11 @@ export function configureServiceContainer(context: vscode.ExtensionContext): voi
 	const termFitResolver = new TermFitResolver(store, propertyShapeIndex);
 	const termCatalogueService = new TermCatalogueService(vocabularyRepository, prefixLookupService, storeIconResolver, predicateRangeResolver, termFitResolver, () => workspaceIndexerService.waitForIndexed());
 	container.registerInstance(ServiceToken.TermCatalogueService, termCatalogueService);
+
+	// What the cards of resources show besides their statements, as the form editor and the
+	// tooltips of the definition tree and the text editor show it.
+	const resourceCardService = new ResourceCardService(store, new ResourceReferenceProvider(documentContextService), storeIconResolver, predicateRangeResolver);
+	container.registerInstance(ServiceToken.ResourceCardService, resourceCardService);
 
 	// Register the SHACL profile settings service and the shape graph service the
 	// validation service resolves its shape graphs through.

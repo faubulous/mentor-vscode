@@ -1,5 +1,5 @@
 import { RDF, RDFS, Uri, _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, _XSD } from '@faubulous/mentor-rdf';
-import { ResourceIndex, ResourceIndexEntry } from './resource-index';
+import { ResourceIndex, ResourceIndexEntry } from '@src/services/resource/resource-index';
 
 /**
  * The predicates a declaration may state without saying anything of its own about the resource:
