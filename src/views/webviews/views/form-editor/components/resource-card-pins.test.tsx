@@ -8,7 +8,7 @@ import { createResourceDataServiceStub } from '@src/utilities/mocks/resource-dat
 import { createResourceListItem } from '@src/utilities/mocks/resource-list-item-fixtures';
 import { TEST_NAMESPACES, createIriView, createLiteralView, createProperty, createTestCardBody } from '@src/utilities/mocks/statement-fixtures';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
-import { PinnedProperty, ResourceListItemData } from '../form-editor-model';
+import { PinnedProperty, ResourceListItemData, TermData } from '../form-editor-model';
 import { FormEditorContext, FormEditorContextValue } from '../state/form-editor-context';
 import { ResourceCard } from './resource-card';
 
@@ -100,6 +100,21 @@ describe('ResourceCard, its pins', () => {
 		expect(fields.map(field => field.querySelector('.pinned-property-caption')?.textContent ?? field.textContent)).toEqual(['A tree bearing apples', 'ex:count', 'ex:p']);
 		expect(fields[0].classList.contains('is-unpinned')).toBe(true);
 		expect(container.querySelector('.resource-card-description')).toBeNull();
+	});
+
+	it('names the items of a pinned list, its literals and the lists in it too', () => {
+		const list = (items: TermData[]): TermData => ({ term: RdfDataFactory.blankNode(), editable: false, collection: { items } });
+		const cardBody = createTestCardBody([
+			createProperty('ex:p', [list([createIriView('ex:A', 'A'), createLiteralView('b'), list([createLiteralView('c')])])])
+		]);
+		const resource = createResourceListItem('Tree', { subject: cardBody.subject, pins: [PINS[0]] });
+		const { container } = renderWebview(
+			<FormEditorContext.Provider value={{ readOnly: true, namespaces: [], languageTags: {}, labelPredicates: [], descriptionPredicates: [] }}>
+				<ResourceCard cardHeader={resource} dataService={createResourceDataServiceStub([cardBody])} expanded={false} onToggle={() => undefined} />
+			</FormEditorContext.Provider>
+		);
+
+		expect(container.querySelector('.pinned-property-value')?.textContent).toBe('(A, b, (c))');
 	});
 
 	it('leaves out of the fields the label the title of a collapsed card shows', () => {
