@@ -109,6 +109,7 @@ export function StatementList({ cardBody, stale = false, dataService, depth, vis
 			key={entry?.key ?? 'leading'}
 			property={entry?.property}
 			editor={entry?.editor}
+			inferredValues={entry?.inferredValues}
 			services={services}
 			autoFocus={entry?.editor !== undefined && entry.editor.id === focusedRowId}
 			header={rowHeader}
@@ -183,12 +184,13 @@ function _leadingEntryOf(entries: readonly StatementRowEntry[], leadingRow: Lead
 function _pinnedOf(rows: readonly StatementRowEntry[], pins: readonly PinnedProperty[]): { label: string; text: string }[] {
 	return rows.flatMap(entry => {
 		const property = entry.property;
+		const values = [...property?.values ?? [], ...entry.inferredValues ?? []];
 
-		if (!property || property.values.length === 0 || !pins.some(pin => property.predicate.term.equals(pin.predicate))) {
+		if (!property || values.length === 0 || !pins.some(pin => property.predicate.term.equals(pin.predicate))) {
 			return [];
 		}
 
-		return [{ label: getTermLabel(property.predicate), text: property.values.map(_valueTextOf).join(', ') }];
+		return [{ label: getTermLabel(property.predicate), text: values.map(_valueTextOf).join(', ') }];
 	});
 }
 

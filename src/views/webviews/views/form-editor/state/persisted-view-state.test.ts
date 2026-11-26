@@ -37,6 +37,17 @@ describe('PersistedViewState', () => {
 		expect(PersistedViewState.read(JSON.parse(JSON.stringify(state)))).toEqual(state);
 	});
 
+	it('reads and changes whether the inferred statements are hidden', () => {
+		const state = PersistedViewState.read({ openCards: [], hideInferred: true });
+
+		expect(state.hideInferred).toBe(true);
+		expect(PersistedViewState.INITIAL.hideInferred).toBeUndefined();
+		expect(PersistedViewState.read({ hideInferred: 'yes' }).hideInferred).toBeUndefined();
+		expect(state.with({ hideInferred: undefined }).hideInferred).toBeUndefined();
+		expect(state.with({ allLanguages: true }).hideInferred).toBe(true);
+		expect(PersistedViewState.read(JSON.parse(JSON.stringify(state)))).toEqual(state);
+	});
+
 	it('changes only the fields named', () => {
 		const state = new PersistedViewState(['x'], 'u', true);
 

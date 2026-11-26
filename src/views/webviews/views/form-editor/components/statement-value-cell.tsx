@@ -45,7 +45,7 @@ export function StatementValueCell({ value, view, index, edited, ...context }: S
 	const isNode = view.nested !== undefined || (value.kind === 'term' && value.node !== undefined);
 
 	return (
-		<span className={`statement-value${isNode ? ' is-node' : ''}`}>
+		<span className={`statement-value${isNode ? ' is-node' : ''}${view.inferred ? ' is-inferred' : ''}`}>
 			{comments && !view.nested && <span className="statement-comment statement-value-comment">{comments.join('\n')}</span>}
 			{edited ? _editedValue(value, view, index, edited, context) : <TermValue view={view} comments={comments} {...context} />}
 		</span>

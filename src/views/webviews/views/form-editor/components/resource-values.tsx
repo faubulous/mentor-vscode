@@ -63,6 +63,12 @@ export interface ResourceValuesProps {
 	resources: readonly ResourceValueEntry[];
 
 	/**
+	 * The resources the reasoner infers for the statement, shown after the others as pills that
+	 * only read: they cannot be removed, moved or reached with the arrows.
+	 */
+	inferred?: readonly TermData[];
+
+	/**
 	 * The type of terms the input offers, such as classes for the type of a resource; none where it
 	 * takes text only.
 	 */
@@ -141,8 +147,8 @@ export interface ResourceValuesProps {
 }
 
 /**
- * The resources of a statement in one box: a pill per resource and the input of the next value
- * after the last pill, which offers the terms of the workspace that are not among the values yet,
+ * The resources of a statement in one box: a pill per resource, the resources the reasoner infers
+ * after them as pills that only read, and the input of the next value after the last pill, which offers the terms of the workspace that are not among the values yet,
  * as a {@link TermPicker}, and takes a typed prefixed name, `<iri>` or, where the predicate takes
  * more than resources, text. The box is one stop of Tab, the
  * input; the arrows walk the pills from it. On a pill Backspace and Delete remove it, Alt with an
@@ -155,7 +161,7 @@ export interface ResourceValuesProps {
  * @returns The box.
  */
 export function ResourceValues(props: ResourceValuesProps): React.JSX.Element {
-	const { resources, targetType, statement, pendingText, placeholder, onPendingInput, onPick, onCreate, onRemove, onMove, onStartNode, onStartText, newValueType, autoFocus = false, readOnly = false } = props;
+	const { resources, inferred = [], targetType, statement, pendingText, placeholder, onPendingInput, onPick, onCreate, onRemove, onMove, onStartNode, onStartText, newValueType, autoFocus = false, readOnly = false } = props;
 	const pills = useRef<(HTMLElement | null)[]>([]);
 	const fieldRef = useRef<VscodeTextfield>(null);
 	const [focusRequest, setFocusRequest] = useState<number>();
@@ -328,6 +334,7 @@ export function ResourceValues(props: ResourceValuesProps): React.JSX.Element {
 					<ValuePill view={view} pillRef={element => { pills.current[position] = element; }} onKeyDown={handlePillKeyDown(position)} onRemove={() => onRemove(index)} />
 				</span>
 			))}
+			{inferred.map(view => <ValuePill key={`inferred-${view.term.value}`} view={view} />)}
 			<TermPicker
 				targetType={targetType}
 				statement={statement}

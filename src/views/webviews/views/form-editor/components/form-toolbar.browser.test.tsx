@@ -14,6 +14,8 @@ function renderToolbar(width: number) {
 				languages={{ languageTags: { en: 'en', 'en-us': 'en-US', de: 'de' }, activeLanguage: 'en', allLanguages: false, onPick: vi.fn() }}
 				externalDeclarationsHidden={false}
 				onToggleExternalDeclarations={vi.fn()}
+				inferredHidden={false}
+				onToggleInferred={vi.fn()}
 			/>
 		</div>
 	);

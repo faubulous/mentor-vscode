@@ -29,14 +29,3 @@ export function ResourceCardTitle({ cardHeader }: ResourceCardTitleProps): React
 		</span>
 	);
 }
-
-/**
- * The labels of the types a card names for its resource: every type it asserts, each once.
- * @param cardHeader The resource.
- * @returns The labels, in the order asserted.
- */
-export function getTypeLabels(cardHeader: ResourceCardHeaderData): string[] {
-	const labels = cardHeader.typeLabels ?? (cardHeader.typeLabel ? [cardHeader.typeLabel] : []);
-
-	return Array.from(new Set(labels));
-}

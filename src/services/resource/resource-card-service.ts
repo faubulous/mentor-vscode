@@ -1,4 +1,4 @@
-import { BlankNode, NamedNode } from '@rdfjs/types';
+import { BlankNode, NamedNode, Quad } from '@rdfjs/types';
 import { termToString } from 'rdf-string';
 import { Store, rdf } from '@faubulous/mentor-rdf';
 import { IDocumentContext } from '@src/services/document/document-context.interface';
@@ -8,7 +8,7 @@ import { StoreIconResolver } from '@src/services/vocabulary/store-icon-resolver'
 import { getConfig } from '@src/utilities/vscode/config';
 import { PinnedPropertiesService } from './pinned-properties-service';
 import { ResourceCardData, ResourceCardHeaderData } from './resource-card-data';
-import { ResourceIndexEntry, ResourceIndexOptions, getEntry, typeIrisOf } from './resource-index';
+import { ResourceIndexEntry, ResourceIndexOptions, getEntry, getStatementKey, typeIrisOf } from './resource-index';
 import { ResourceIndexBuilder } from './resource-index-builder';
 import { ResourceViewBuilder } from './resource-view-builder';
 
@@ -18,18 +18,25 @@ import { ResourceViewBuilder } from './resource-view-builder';
 export const PINNED_PROPERTIES_SETTING = 'pinnedProperties';
 
 /**
- * The types of resources read from the store, inferred ones included, at one version of it.
+ * What was read from the store about the inferences on resources, at one version of it.
  */
-interface InferredTypeCache {
+interface InferenceCache {
 	/**
-	 * The version of the store the types were read at.
+	 * The version of the store it was read at.
 	 */
 	version: number;
 
 	/**
-	 * The types of each resource asked for, by the graphs read and the key of its term.
+	 * The types of each resource asked for, inferred ones included, by the graphs read and the key
+	 * of its term.
 	 */
 	types: Map<string, readonly string[]>;
+
+	/**
+	 * The statements inferred about each resource asked for, by the graphs read and the key of its
+	 * term.
+	 */
+	quads: Map<string, readonly Quad[]>;
 }
 
 /**
@@ -40,9 +47,9 @@ interface InferredTypeCache {
  */
 export class ResourceCardService {
 	/**
-	 * The types of resources read from the store, inferred ones included.
+	 * What was read from the store about the inferences on resources.
 	 */
-	private _inferredTypes?: InferredTypeCache;
+	private _inference?: InferenceCache;
 
 	/**
 	 * Create the service.
@@ -60,13 +67,15 @@ export class ResourceCardService {
 
 	/**
 	 * The card of a resource as the store states it, across all its graphs: its header, with the
-	 * usage count and the pins of its types, and its statements, which only read.
+	 * usage count and the pins of its types, and its statements, which only read, those the
+	 * reasoner inferred included.
 	 * @param resource The resource.
 	 * @param context The document the card is shown for, which resolves labels and prefixes.
 	 * @returns The card, or `undefined` where the store states nothing about the resource.
 	 */
 	getStoreCard(resource: NamedNode | BlankNode, context: IDocumentContext): ResourceCardData | undefined {
-		const index = this._store ? ResourceIndexBuilder.fromStore(this._store, resource, context) : undefined;
+		const options = this.getIndexOptions(undefined);
+		const index = this._store ? ResourceIndexBuilder.fromStore(this._store, resource, context, options) : undefined;
 		const entry = index ? getEntry(index, resource) : undefined;
 		const listItem = index?.listItems.find(candidate => candidate.subject.equals(resource));
 
@@ -78,7 +87,7 @@ export class ResourceCardService {
 
 		return {
 			cardHeader: { ...listItem, usageCount, ...this.getPins(entry, undefined) },
-			cardBody: new ResourceViewBuilder(index, context, this.getIndexOptions(context.graphs)).buildCardBody(entry)
+			cardBody: new ResourceViewBuilder(index, context, options).buildCardBody(entry)
 		};
 	}
 
@@ -121,12 +130,9 @@ export class ResourceCardService {
 			return [];
 		}
 
-		if (!this._inferredTypes || this._inferredTypes.version !== store.version) {
-			this._inferredTypes = { version: store.version, types: new Map() };
-		}
-
-		const key = `${graphs?.join(' ') ?? '*'}|${termToString(resource)}`;
-		const known = this._inferredTypes.types.get(key);
+		const cache = this._inferenceOf(store);
+		const key = _cacheKeyOf(graphs, resource);
+		const known = cache.types.get(key);
 
 		if (known) {
 			return known;
@@ -144,9 +150,65 @@ export class ResourceCardService {
 
 		const result = Array.from(types);
 
-		this._inferredTypes.types.set(key, result);
+		cache.types.set(key, result);
 
 		return result;
+	}
+
+	/**
+	 * The statements the reasoner infers about a resource that the graphs do not assert as well,
+	 * each once however many inference graphs hold it. Memoized until the store changes.
+	 * @param graphs The graphs whose statements and inferences are read, all graphs when absent.
+	 * @param resource The resource.
+	 * @returns The statements, none when there is no store or no reasoner.
+	 */
+	getInferredQuads(graphs: string[] | undefined, resource: NamedNode | BlankNode): readonly Quad[] {
+		const store = this._store;
+
+		if (!store?.reasoner) {
+			return [];
+		}
+
+		const cache = this._inferenceOf(store);
+		const key = _cacheKeyOf(graphs, resource);
+		const known = cache.quads.get(key);
+
+		if (known) {
+			return known;
+		}
+
+		const asserted = new Set<string>();
+		const inferred = new Map<string, Quad>();
+
+		for (const quad of store.matchAll(graphs, resource, null, null, true)) {
+			const statement = getStatementKey(quad);
+
+			if (!store.isInferred(quad)) {
+				asserted.add(statement);
+			} else if (!inferred.has(statement)) {
+				inferred.set(statement, quad);
+			}
+		}
+
+		const result = Array.from(inferred).filter(([statement]) => !asserted.has(statement)).map(([, quad]) => quad);
+
+		cache.quads.set(key, result);
+
+		return result;
+	}
+
+	/**
+	 * What was read from the store about inferences at its current version, emptied when the store
+	 * changed.
+	 * @param store The store.
+	 * @returns The cache.
+	 */
+	private _inferenceOf(store: Store): InferenceCache {
+		if (!this._inference || this._inference.version !== store.version) {
+			this._inference = { version: store.version, types: new Map(), quads: new Map() };
+		}
+
+		return this._inference;
 	}
 
 	/**
@@ -177,8 +239,8 @@ export class ResourceCardService {
 
 	/**
 	 * Options for building the statements about resources: the glyphs of the IRIs a card only
-	 * mentions, and what values the predicates take, come from the store.
-	 * @param graphs The graphs the inferred types of a resource are read from.
+	 * mentions, what values the predicates take, and what the reasoner infers come from the store.
+	 * @param graphs The graphs the inferences about a resource are read from, all graphs when absent.
 	 * @returns The options.
 	 */
 	getIndexOptions(graphs: string[] | undefined): ResourceIndexOptions {
@@ -187,7 +249,9 @@ export class ResourceCardService {
 
 		return {
 			resolveObjectIcon: icons ? iri => icons.resolve(iri) : undefined,
-			resolvePredicateRange: ranges ? (predicate, entry) => ranges.resolve(predicate, this.getTypes(entry, graphs)) : undefined
+			resolvePredicateRange: ranges ? (predicate, entry) => ranges.resolve(predicate, this.getTypes(entry, graphs)) : undefined,
+			inferredQuadsOf: resource => this.getInferredQuads(graphs, resource),
+			inferredTypesOf: resource => this.getInferredTypes(graphs, resource)
 		};
 	}
 
@@ -199,4 +263,14 @@ export class ResourceCardService {
 	readPins(): PinnedPropertiesService {
 		return PinnedPropertiesService.fromSetting(getConfig('formEditor').inspect<unknown>(PINNED_PROPERTIES_SETTING));
 	}
+}
+
+/**
+ * The key what is read about a resource is cached by.
+ * @param graphs The graphs read, all graphs when absent.
+ * @param resource The resource.
+ * @returns The key.
+ */
+function _cacheKeyOf(graphs: string[] | undefined, resource: NamedNode | BlankNode): string {
+	return `${graphs?.join(' ') ?? '*'}|${termToString(resource)}`;
 }

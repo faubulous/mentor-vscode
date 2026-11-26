@@ -156,6 +156,55 @@ describe('StatementRows', () => {
 		expect(entries).toHaveLength(2);
 	});
 
+	it('edits the asserted values of a property only, and shows those inferred besides', () => {
+		const inferredType = { ...createIriView('owl:NamedIndividual'), editable: false, inferred: true };
+		const types = { ...SAMPLE[0], values: [...SAMPLE[0].values, inferredType] };
+		const rows = createRows();
+		const entry = rows.reconcile(dataOf([types, SAMPLE[1]]))[0];
+		const editor = entry.editor!;
+
+		expect(entry.property).toEqual(SAMPLE[0]);
+		expect(entry.inferredValues).toEqual([inferredType]);
+		expect(editor.state.draft.values).toHaveLength(1);
+
+		editor.addValue(RdfDataFactory.namedNode(OWL.Thing));
+		editor.leave();
+
+		expect(editor.takeEdit()).toEqual([{
+			op: 'setValues',
+			subject: TEST_SUBJECT,
+			predicate: RDF.type,
+			values: [{ kind: 'existing', anchor: SAMPLE[0].values[0].anchor }, { kind: 'term', term: RdfDataFactory.namedNode(OWL.Thing) }]
+		}]);
+	});
+
+	it('reads a property with nothing but inferred values, which a new statement may still write', () => {
+		const inferred = createProperty('rdfs:seeAlso', [{ ...createIriView('ex:Other'), editable: false, inferred: true }]);
+		const rows = createRows();
+		const entries = rows.reconcile(dataOf([SAMPLE[1], inferred]));
+
+		expect(entries[1]).toEqual({ key: `inferred-${RDFS.seeAlso}`, property: inferred });
+		expect(rows.rowOf(RDFS.seeAlso)).toBeUndefined();
+
+		const added = rows.addRow()!;
+
+		added.inputPredicate('rdfs:seeAlso');
+		added.commitPredicate();
+		added.addValue(RdfDataFactory.namedNode('http://example.org/Mine'));
+		added.leave();
+
+		expect(added.takeEdit()).toEqual([{ op: 'setValues', subject: TEST_SUBJECT, predicate: RDFS.seeAlso, values: [{ kind: 'term', term: RdfDataFactory.namedNode('http://example.org/Mine') }] }]);
+	});
+
+	it('shows the inferred type of an untyped node in the row that stands in for its type', () => {
+		const inferredType = { ...createIriView('owl:Class'), editable: false, inferred: true };
+		const entries = createBoxRows().reconcile(dataOf([SAMPLE[1], createProperty('rdf:type', [inferredType])]));
+
+		expect(entries).toHaveLength(2);
+		expect(entries[0]).toMatchObject({ isLeading: true, inferredValues: [inferredType] });
+		expect(entries[0].editor?.state.stored.predicate).toBe(RDF.type);
+	});
+
 	it('leads the rows of a card of the list with its most preferred label, and stands in for a missing one', () => {
 		const label = createProperty('skos:prefLabel', [createLiteralView('Tree')]);
 		const otherLabel = createProperty('rdfs:label', [createLiteralView('A tree')]);

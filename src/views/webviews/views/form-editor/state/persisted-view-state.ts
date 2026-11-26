@@ -24,6 +24,12 @@ export interface ViewStateChanges {
 	 * the document is read in. A preference, kept across documents.
 	 */
 	allLanguages?: boolean;
+
+	/**
+	 * Whether the statements the reasoner infers are hidden. A preference of the view, kept across
+	 * documents.
+	 */
+	hideInferred?: boolean;
 }
 
 /**
@@ -45,12 +51,14 @@ export class PersistedViewState {
 	 * @param documentUri The document the state belongs to.
 	 * @param hideExternalDeclarations Whether external declarations are hidden.
 	 * @param allLanguages Whether the values of every language are shown.
+	 * @param hideInferred Whether the inferred statements are hidden.
 	 */
 	constructor(
 		readonly openCards: readonly string[] = [],
 		readonly documentUri?: string,
 		readonly hideExternalDeclarations?: boolean,
-		readonly allLanguages?: boolean
+		readonly allLanguages?: boolean,
+		readonly hideInferred?: boolean
 	) { }
 
 	/**
@@ -69,7 +77,8 @@ export class PersistedViewState {
 			_stringArray(state.openCards) ?? [],
 			typeof state.documentUri === 'string' ? state.documentUri : undefined,
 			state.hideExternalDeclarations === true ? true : undefined,
-			state.allLanguages === true ? true : undefined
+			state.allLanguages === true ? true : undefined,
+			state.hideInferred === true ? true : undefined
 		);
 	}
 
@@ -83,7 +92,8 @@ export class PersistedViewState {
 			changes.openCards ?? this.openCards,
 			'documentUri' in changes ? changes.documentUri : this.documentUri,
 			'hideExternalDeclarations' in changes ? changes.hideExternalDeclarations : this.hideExternalDeclarations,
-			'allLanguages' in changes ? changes.allLanguages : this.allLanguages
+			'allLanguages' in changes ? changes.allLanguages : this.allLanguages,
+			'hideInferred' in changes ? changes.hideInferred : this.hideInferred
 		);
 	}
 
@@ -96,7 +106,8 @@ export class PersistedViewState {
 			documentUri: this.documentUri,
 			openCards: [...this.openCards],
 			hideExternalDeclarations: this.hideExternalDeclarations,
-			allLanguages: this.allLanguages
+			allLanguages: this.allLanguages,
+			hideInferred: this.hideInferred
 		};
 	}
 }

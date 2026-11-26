@@ -4,7 +4,7 @@ import { ResourceCardHeaderData } from '../form-editor-model';
 import { useFormEditorContext } from '../state/form-editor-context';
 import { CardUsage } from './card-usage';
 import { ResourceCardMenu } from './resource-card-menu';
-import { getTypeLabels } from './resource-card-title';
+import { ResourceCardTypes } from './resource-card-types';
 
 /**
  * Properties of the {@link ResourceCardTitleBar} component.
@@ -56,14 +56,13 @@ export function ResourceCardTitleBar({ cardHeader, expanded, nestedCollapsed, on
 	const position = cardHeader.position;
 	const term = cardHeader.subject;
 	const unpinnable = cardHeader.pins?.some(pin => pinScopes.includes(pin.scope)) === true;
-	const types = expanded ? [] : getTypeLabels(cardHeader);
 
 	return (
 		<div className="resource-card-title-bar">
 			<button type="button" className="icon-button resource-card-chevron" aria-expanded={expanded} aria-label={expanded ? 'Collapse' : 'Expand'} title={expanded ? 'Collapse' : 'Expand'} onClick={onToggle}>
 				<vscode-icon name={expanded ? 'chevron-down' : 'chevron-right'} size={16}></vscode-icon>
 			</button>
-			<span className="resource-card-types" title={types.join(', ') || undefined}>{types.join(', ')}</span>
+			{expanded ? <span className="resource-card-types" /> : <ResourceCardTypes cardHeader={cardHeader} className="resource-card-types" />}
 			{expanded && (
 				<button type="button" className="icon-button" aria-label={nestedCollapsed ? 'Expand all nested' : 'Collapse all nested'} title={nestedCollapsed ? 'Expand all nested' : 'Collapse all nested'} onClick={onToggleNested}>
 					<vscode-icon name={nestedCollapsed ? 'expand-all' : 'collapse-all'} size={15}></vscode-icon>

@@ -988,6 +988,16 @@ body {
 	color: var(--vscode-foreground);
 }
 
+/* The values the reasoner infers stand among the values of their row as if written there. */
+.statement-inferred-values {
+	display: contents;
+}
+
+/* What the reasoner infers is told apart from what the document writes by italics alone. */
+.is-inferred {
+	font-style: italic;
+}
+
 .statement-value {
 	display: flex;
 	flex-direction: column;

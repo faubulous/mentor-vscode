@@ -46,6 +46,12 @@ export interface FormEditorContextValue {
 	languageFilter?: LanguageFilter;
 
 	/**
+	 * Whether the cards show the statements the reasoner infers, after those asserted and in
+	 * italics. Shown when absent.
+	 */
+	showInferred?: boolean;
+
+	/**
 	 * The resources of the document, which the lines complete and label local terms from.
 	 */
 	resources?: ResourceListItemData[];

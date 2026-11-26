@@ -104,6 +104,18 @@ describe('ResourceTooltipMarkdown', () => {
 		);
 	});
 
+	it('shows the statements asserted only, not those the reasoner inferred', () => {
+		const predicates = [
+			property(`${EX}broader`, 'broader', [termData(RdfDataFactory.namedNode(`${EX}Tree`), { label: 'Tree' }), termData(RdfDataFactory.namedNode(`${EX}Plant`), { label: 'Plant', inferred: true })]),
+			property(`${EX}height`, 'height', [termData(RdfDataFactory.literal('30'), { inferred: true })])
+		];
+		const pins = [`${EX}broader`, `${EX}height`].map(iri => ({ predicate: RdfDataFactory.namedNode(iri), scope: 'workspace' as const }));
+
+		expect(markdown.render(card({ pins, inferredTypeLabels: ['Named individual'] }, predicates))).toBe(
+			'_Tree · 3 usages_\n\n---\n\n**Oak**\n\nbroader: Tree\n\n---\n\n`http://example.org/Oak`'
+		);
+	});
+
 	it('links a blank node by its identifier', () => {
 		const linked = new ResourceTooltipMarkdown({ ...OPTIONS, linkOf: resource => `go:${resource.value}` });
 

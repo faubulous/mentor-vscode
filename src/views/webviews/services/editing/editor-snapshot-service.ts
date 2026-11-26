@@ -68,8 +68,9 @@ export interface SnapshotInput {
 	pins?: PinnedPropertiesService;
 
 	/**
-	 * The types of a resource the store infers besides those the document asserts, as of an
-	 * untyped blank node that a property shape is; none when absent.
+	 * The types the store gives a resource, inferred ones included, as an untyped blank node that a
+	 * property shape is gets one: the list items name those the document does not assert as
+	 * inferred, and the pins follow all of them. None when absent.
 	 */
 	inferredTypesOf?: (resource: NamedNode | BlankNode) => readonly string[];
 
@@ -114,7 +115,7 @@ export class EditorSnapshotService {
 	 */
 	build(): SnapshotResult {
 		const { context, quadContexts } = this._input;
-		const index = new ResourceIndexBuilder(quadContexts, context).build();
+		const index = new ResourceIndexBuilder(quadContexts, context, { inferredTypesOf: this._input.inferredTypesOf }).build();
 		const externals = new ExternalDeclarationDetector(index, context.namespaces);
 		const documentResource = EditorSnapshotService._findDocumentResource(index);
 		const resources = index.listItems.map(listItem => ({

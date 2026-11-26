@@ -115,6 +115,12 @@ export interface StatementRowProps extends StatementRowContext {
 	editor?: StatementRowEditor;
 
 	/**
+	 * The values the reasoner infers for the predicate of an edited row, which it shows after those
+	 * it edits, read-only.
+	 */
+	inferredValues?: readonly TermData[];
+
+	/**
 	 * Reads what is typed and names the terms; present wherever the row is edited.
 	 */
 	services?: StatementServices;
@@ -174,7 +180,7 @@ interface ShownValue {
  * @param props The statement, its editor and where the row stands.
  * @returns The row.
  */
-export function StatementRow({ property, editor, services, autoFocus = false, header, reorder, ...context }: StatementRowProps): React.JSX.Element {
+export function StatementRow({ property, editor, inferredValues = [], services, autoFocus = false, header, reorder, ...context }: StatementRowProps): React.JSX.Element {
 	const state = useRowEditorState(editor);
 	const rowRef = useRef<HTMLDivElement>(null);
 	const [valueFocus, setValueFocus] = useState<{ index: number; caret?: number }>();
@@ -191,6 +197,7 @@ export function StatementRow({ property, editor, services, autoFocus = false, he
 	const literals = [...values.filter(entry => _kindOf(entry.view) === 'literal'), ..._missingLanguageField(edited, languageFilter)];
 	const resources = values.filter(entry => _kindOf(entry.view) === 'resource');
 	const wholes = values.filter(entry => _kindOf(entry.view) === 'whole');
+	const inferred = _shownValues(inferredValues.map(view => ({ kind: 'written' as const, view })), services, languageFilter);
 	const predicateView = edited ? _editedPredicateView(edited.editor, edited.state, edited.services) : property?.predicate;
 	const label = predicateView ? getTermLabel(predicateView) : state?.predicateText ?? '';
 	const error = state ? getRowErrorMessage(state) : undefined;
@@ -199,11 +206,14 @@ export function StatementRow({ property, editor, services, autoFocus = false, he
 	// A collapsed nested card shows its type, but does not ask for a missing one: without a type it
 	// leaves out the label of the type too, and its summary takes the row.
 	const folded = header?.kind === 'type' && header.collapsed;
-	const typeless = folded && resources.length === 0;
+	const typeless = folded && resources.length === 0 && inferred.length === 0;
 	const addLink = edited && !addingValue && !folded ? _addLinkOf(edited, header, literals.length, resources.length, wholes.length) : undefined;
 	// The label row is the title of its card: it offers the input of a new value only while the
 	// resource has no label, and the label of another language comes through the language picker.
 	const titled = header?.kind === 'label' && literals.length > 0;
+	// The inferred resources of an edited row stand in its box, after the resources it edits.
+	const boxed = edited !== undefined && !(folded && resources.length === 0) && !addLink && !titled;
+	const inferredResources = inferred.filter(entry => _kindOf(entry.view) === 'resource');
 
 	// A literal just started takes the focus once it is shown.
 	useEffect(() => {
@@ -277,8 +287,9 @@ export function StatementRow({ property, editor, services, autoFocus = false, he
 					)}
 				<span className="statement-values">
 					{literals.map(entry => <StatementValueCell key={entry.index} {...entry} edited={edited} {...context} />)}
-					{edited && !(folded && resources.length === 0) ? !addLink && !titled && _resourceBox(edited, resources, { header: header?.kind, autoFocus: addingValue, label }) : _resourcePills(resources, context)}
+					{boxed && edited ? _resourceBox(edited, resources, { header: header?.kind, autoFocus: addingValue, label, inferred: inferredResources.map(entry => entry.view) }) : !edited || (folded && resources.length === 0) ? _resourcePills(resources, context) : undefined}
 					{wholes.map(entry => <StatementValueCell key={entry.index} {...entry} edited={edited} {...context} />)}
+					{inferred.length > 0 && _inferredValuesOf(boxed ? inferred.filter(entry => _kindOf(entry.view) !== 'resource') : inferred, context)}
 					{addLink && <button type="button" className="add-link statement-value-add" onClick={() => setAddingValue(true)}>{addLink}</button>}
 					{header?.kind === 'type' && header.collapsed && _collapsedSummaryOf(header)}
 					{header?.kind === 'type' && header.caption && <span className="nested-card-caption">{header.caption.join('\n')}</span>}
@@ -519,12 +530,13 @@ function _addLinkOf(edited: EditedRow, header: RowHeader | undefined, literals: 
  * asks for that.
  * @param edited The row.
  * @param resources The resources of the row.
- * @param options The kind of header the row is, whether the input takes the focus, and the label
- * of the predicate, which the input of an empty row asks to add a value for.
+ * @param options The kind of header the row is, whether the input takes the focus, the label
+ * of the predicate, which the input of an empty row asks to add a value for, and the resources the
+ * reasoner infers, which stand after the others.
  * @returns The box.
  */
-function _resourceBox(edited: EditedRow, resources: readonly ShownValue[], options: { header?: RowHeader['kind']; autoFocus: boolean; label: string }): React.JSX.Element {
-	const { header, autoFocus, label } = options;
+function _resourceBox(edited: EditedRow, resources: readonly ShownValue[], options: { header?: RowHeader['kind']; autoFocus: boolean; label: string; inferred: readonly TermData[] }): React.JSX.Element {
+	const { header, autoFocus, label, inferred } = options;
 	const isType = header === 'type';
 	const { editor, state, defaultType } = edited;
 	const awaitsPredicate = editor.isNew && state.draft.predicate === undefined;
@@ -536,6 +548,7 @@ function _resourceBox(edited: EditedRow, resources: readonly ShownValue[], optio
 		<span className={classes.join(' ')}>
 			<ResourceValues
 				resources={resources.map(({ view, index }) => ({ view, index }))}
+				inferred={inferred}
 				targetType={_targetTypeOf(isType, defaultType)}
 				statement={isType ? undefined : { subject: editor.subject, predicate: state.draft.predicate }}
 				pendingText={state.pendingText}
@@ -655,6 +668,26 @@ function _resourcePills(resources: readonly ShownValue[], context: StatementRowC
 			<span className="value-pills">
 				{resources.map(({ view, index }) => <TermValue key={index} view={view} {...context} />)}
 			</span>
+		</span>
+	);
+}
+
+/**
+ * The values the reasoner infers for the predicate of an edited row, after those it edits, as a
+ * row that only reads shows them: literals on lines of their own, resources as pills, and blank
+ * nodes and lists whole.
+ * @param inferred The values.
+ * @param context Where the row stands.
+ * @returns The values.
+ */
+function _inferredValuesOf(inferred: readonly ShownValue[], context: StatementRowContext): React.JSX.Element {
+	const cellOf = (entry: ShownValue): React.JSX.Element => <StatementValueCell key={entry.index} {...entry} {...context} />;
+
+	return (
+		<span className="statement-inferred-values">
+			{inferred.filter(entry => _kindOf(entry.view) === 'literal').map(cellOf)}
+			{_resourcePills(inferred.filter(entry => _kindOf(entry.view) === 'resource'), context)}
+			{inferred.filter(entry => _kindOf(entry.view) === 'whole').map(cellOf)}
 		</span>
 	);
 }

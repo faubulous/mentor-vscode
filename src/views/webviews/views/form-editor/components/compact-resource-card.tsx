@@ -1,10 +1,12 @@
 import { useEffect } from 'react';
 import { ResourceCardHeaderData } from '../form-editor-model';
 import { useResourceCardBody } from '../hooks/use-resource-card-body';
+import { useFormEditorContext } from '../state/form-editor-context';
 import { IResourceDataService } from '../services/resource-data-service.interface';
 import { CardUsage } from './card-usage';
 import { PinnedPropertiesList } from './pinned-properties-list';
-import { getTypeLabels, ResourceCardTitle } from './resource-card-title';
+import { ResourceCardTitle } from './resource-card-title';
+import { getShownTypeLabels, ResourceCardTypes } from './resource-card-types';
 
 /**
  * Properties of the {@link CompactResourceCard} component.
@@ -25,14 +27,16 @@ export interface CompactResourceCardProps {
  * The card of a resource in its most compact density, as a tooltip shows it, laid out as the larger
  * card: a title bar with the types of the resource and its usage count, the title under it, the
  * pinned properties of its types, or else its description as text without a caption, and a footer
- * with the IRI. It has no controls, no placeholders and no empty rows, and takes no part in editing.
+ * with the IRI. What the reasoner infers it shows as the form does: in italics, where shown. It has no controls, no placeholders and no empty rows, and takes no part in editing.
  * @param props The resource and where its statements come from.
  * @returns The card.
  */
 export function CompactResourceCard({ cardHeader, dataService }: CompactResourceCardProps): React.JSX.Element {
 	const { cardBody, stale } = useResourceCardBody(dataService, cardHeader.subject);
 	const pins = cardHeader.pins ?? [];
-	const types = getTypeLabels(cardHeader);
+	const { showInferred = true } = useFormEditorContext();
+	const types = getShownTypeLabels(cardHeader, showInferred);
+	const typed = types.asserted.length > 0 || types.inferred.length > 0;
 	const identifier = cardHeader.subject.termType === 'NamedNode' ? cardHeader.subject.value : `_:${cardHeader.subject.value}`;
 
 	// The pinned properties are read from the statements, which are asked for while they are not current.
@@ -44,9 +48,9 @@ export function CompactResourceCard({ cardHeader, dataService }: CompactResource
 
 	return (
 		<article className="resource-card is-compact" data-density="tooltip">
-			{(types.length > 0 || cardHeader.usageCount !== undefined) && (
+			{(typed || cardHeader.usageCount !== undefined) && (
 				<div className="compact-card-title-bar">
-					<span className="compact-card-types">{types.join(', ')}</span>
+					<ResourceCardTypes cardHeader={cardHeader} className="compact-card-types" />
 					{cardHeader.usageCount !== undefined && <CardUsage count={cardHeader.usageCount} />}
 				</div>
 			)}

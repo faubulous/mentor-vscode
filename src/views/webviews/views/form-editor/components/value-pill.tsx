@@ -61,7 +61,7 @@ export function ValuePill({ view, onNavigate, onRemove, onKeyDown, pillRef }: Va
 	return (
 		<span
 			ref={pillRef}
-			className="value-pill"
+			className={`value-pill${view.inferred ? ' is-inferred' : ''}`}
 			{...getResourceTooltipAttributes(view.term)}
 			role={onNavigate ? 'link' : undefined}
 			tabIndex={onKeyDown ? -1 : onNavigate ? 0 : undefined}

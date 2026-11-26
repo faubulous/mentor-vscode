@@ -6,7 +6,7 @@ import { activateMentor, waitFor } from './helpers';
  * The parts of the snapshot these tests read.
  */
 interface SnapshotView {
-	resources: { label: string; prefixedName?: string; propertyCount: number; iconName: string }[];
+	resources: { label: string; prefixedName?: string; propertyCount: number; iconName: string; inferredTypeLabels?: string[] }[];
 	documentResource?: { termType: string; value: string };
 	namespaces: { prefix: string }[];
 	readOnly?: unknown;
@@ -29,13 +29,7 @@ suite('form editor content', () => {
 	test('builds a snapshot with the ontology and the defined terms', async () => {
 		const [uri] = await vscode.workspace.findFiles('data/ontology.ttl', undefined, 1);
 
-		await vscode.commands.executeCommand('mentor.command.openFormEditor', uri);
-
-		const snapshot = await waitFor(async () => {
-			const result = await vscode.commands.executeCommand<SnapshotView | undefined>('mentor.e2e.getFormEditorSnapshot', uri.toString());
-
-			return result?.resources.length ? result : undefined;
-		}, { label: 'the form editor snapshot to be built' });
+		const snapshot = await openSnapshot(uri);
 
 		assert.ok(snapshot, 'the snapshot must be built');
 		assert.strictEqual(snapshot.readOnly, undefined, 'a valid fixture must not be read-only');
@@ -48,4 +42,32 @@ suite('form editor content', () => {
 		assert.ok(snapshot.resources.some(resource => resource.iconName === 'mentor-rdf-class'), 'the class must carry the class glyph');
 		assert.ok(snapshot.namespaces.some(namespace => namespace.prefix === 'ex'), 'the declared namespaces must be reported');
 	});
+
+	test('names the types the reasoner infers for a resource', async () => {
+		const [uri] = await vscode.workspace.findFiles('data/ontology.ttl', undefined, 1);
+		const snapshot = await openSnapshot(uri);
+		const thing = snapshot.resources.find(resource => resource.label === 'Thing');
+
+		assert.ok(thing, 'the class must appear in the resource list');
+		assert.ok(thing.inferredTypeLabels?.some(label => /class/i.test(label)), `the reasoner infers rdfs:Class for an owl:Class, got ${JSON.stringify(thing.inferredTypeLabels)}`);
+	});
 });
+
+/**
+ * Open the form editor on a document and wait for its snapshot.
+ * @param uri The document.
+ * @returns The snapshot.
+ */
+async function openSnapshot(uri: vscode.Uri): Promise<SnapshotView> {
+	await vscode.commands.executeCommand('mentor.command.openFormEditor', uri);
+
+	const snapshot = await waitFor(async () => {
+		const result = await vscode.commands.executeCommand<SnapshotView | undefined>('mentor.e2e.getFormEditorSnapshot', uri.toString());
+
+		return result?.resources.length ? result : undefined;
+	}, { label: 'the form editor snapshot to be built' });
+
+	assert.ok(snapshot, 'the snapshot must be built');
+
+	return snapshot;
+}
