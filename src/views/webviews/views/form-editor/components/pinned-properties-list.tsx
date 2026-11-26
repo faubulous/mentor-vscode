@@ -156,7 +156,7 @@ function _itemsOf(cardBody: ResourceCardBodyData, pins: readonly PinnedProperty[
  */
 function _valueOf(view: TermData, index: number): React.JSX.Element {
 	if (view.collection) {
-		return <span key={index} className="pinned-property-value">({view.collection.items.map(item => getTermLabel(item)).join(', ')})</span>;
+		return <span key={index} className="pinned-property-value">{_textOf(view)}</span>;
 	}
 
 	if (view.nested) {
@@ -172,4 +172,22 @@ function _valueOf(view: TermData, index: number): React.JSX.Element {
 	}
 
 	return <ValuePill key={index} view={view} />;
+}
+
+/**
+ * The text of a value as an item of a list shows it: a list as its items, a blank node by its
+ * label, else its type, a literal as its text and a resource by its label.
+ * @param view The value.
+ * @returns The text.
+ */
+function _textOf(view: TermData): string {
+	if (view.collection) {
+		return `(${view.collection.items.map(item => _textOf(item)).join(', ')})`;
+	}
+
+	if (view.nested) {
+		return view.nested.label ?? view.nested.typeLabel ?? 'blank node';
+	}
+
+	return view.term.termType === 'Literal' ? view.term.value : getTermLabel(view);
 }
