@@ -2,7 +2,8 @@ import { QuadContext } from '@faubulous/mentor-rdf-parsers';
 import { RDF } from '@faubulous/mentor-rdf';
 import { BlankNode, NamedNode, Term } from '@rdfjs/types';
 import { termToString } from 'rdf-string';
-import { NamespaceData, PredicateRangeData, ResourceListItemData } from '@src/views/webviews/views/form-editor/form-editor-model';
+import { NamespaceData, ResourceListItemData } from '@src/services/resource/resource-card-data';
+import { PredicateRangeData } from '@src/services/vocabulary/predicate-range';
 
 /**
  * A resource collected from the document, together with the statements that describe it.

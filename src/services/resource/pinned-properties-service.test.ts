@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { OWL, RDF, RDFS, SKOS } from '@faubulous/mentor-rdf';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
-import * as packageJson from '../../../../../package.json';
+import * as packageJson from '../../../package.json';
 import { PinnedPropertiesService } from './pinned-properties-service';
 
 const SH = 'http://www.w3.org/ns/shacl#';

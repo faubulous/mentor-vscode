@@ -82,5 +82,7 @@ export enum ServiceToken {
 	/** Tells what values a predicate takes for a resource, from its ranges and shapes. */
 	PredicateRangeResolver = "PredicateRangeResolver",
 	/** Searches the terms of the workspace, as the form editor's pickers and the completion of the text editor do. */
-	TermCatalogueService = "TermCatalogueService"
+	TermCatalogueService = "TermCatalogueService",
+	/** Builds what the cards of resources show besides their statements: store cards, pins, types and usages. */
+	ResourceCardService = "ResourceCardService"
 }

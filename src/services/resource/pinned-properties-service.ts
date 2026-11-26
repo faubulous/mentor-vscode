@@ -1,7 +1,7 @@
 import { OWL, RDF } from '@faubulous/mentor-rdf';
 import { ScopeKey } from '@src/utilities/config-scope';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
-import { PinnedProperty } from '@src/views/webviews/views/form-editor/form-editor-model';
+import { PinnedProperty } from '@src/services/resource/resource-card-data';
 
 /**
  * The predicates pinned for each type, by type IRI, as one layer of the

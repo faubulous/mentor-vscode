@@ -262,7 +262,7 @@ describe('ResourceIndexBuilder.fromStore', () => {
 	const context = createResolvingDocumentContext({ namespaces: NAMESPACES });
 
 	it('indexes what the store states about a resource as a document would state it, each statement once', () => {
-		const index = ResourceIndexBuilder.fromStore(storeOf(), `${EX}Tree`, context)!;
+		const index = ResourceIndexBuilder.fromStore(storeOf(), RdfDataFactory.namedNode(`${EX}Tree`), context)!;
 		const entry = index.entries.get(`${EX}Tree`)!;
 
 		expect(index.listItems.map(listItem => listItem.subject.value)).toEqual([`${EX}Tree`]);
@@ -270,7 +270,7 @@ describe('ResourceIndexBuilder.fromStore', () => {
 	});
 
 	it('nests the blank nodes the resource refers to and collapses its lists', () => {
-		const index = ResourceIndexBuilder.fromStore(storeOf(), `${EX}Tree`, context)!;
+		const index = ResourceIndexBuilder.fromStore(storeOf(), RdfDataFactory.namedNode(`${EX}Tree`), context)!;
 		const cardBody = new ResourceViewBuilder(index, context).buildCardBody(index.entries.get(`${EX}Tree`)!);
 		const valueOf = (predicate: string) => cardBody.predicates.find(property => property.predicate.term.value === predicate)!.values[0];
 
@@ -279,7 +279,7 @@ describe('ResourceIndexBuilder.fromStore', () => {
 	});
 
 	it('gives values that cannot be edited and have no place in a text', () => {
-		const index = ResourceIndexBuilder.fromStore(storeOf(), `${EX}Tree`, context)!;
+		const index = ResourceIndexBuilder.fromStore(storeOf(), RdfDataFactory.namedNode(`${EX}Tree`), context)!;
 		const cardBody = new ResourceViewBuilder(index, context).buildCardBody(index.entries.get(`${EX}Tree`)!);
 		const values = cardBody.predicates.flatMap(property => [property.predicate, ...property.values]);
 
@@ -288,6 +288,6 @@ describe('ResourceIndexBuilder.fromStore', () => {
 	});
 
 	it('indexes nothing for a resource the store states nothing about', () => {
-		expect(ResourceIndexBuilder.fromStore(storeOf(), `${EX}Unknown`, context)).toBeUndefined();
+		expect(ResourceIndexBuilder.fromStore(storeOf(), RdfDataFactory.namedNode(`${EX}Unknown`), context)).toBeUndefined();
 	});
 });

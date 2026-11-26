@@ -14,7 +14,7 @@ import {
 	ResourceCardBodyData,
 	ResourceListItemData,
 	TermData
-} from '@src/views/webviews/views/form-editor/form-editor-model';
+} from '@src/services/resource/resource-card-data';
 import { AnnotationResolver } from './annotation-resolver';
 import { CollectionItem, ResourceIndex, ResourceIndexEntry, ResourceIndexOptions, getEntry, isCollectionChainPredicate, typeIrisOf } from './resource-index';
 import { leadingCommentRunsOf, splitLeadingComments } from './statement-comments';

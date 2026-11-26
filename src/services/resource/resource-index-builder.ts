@@ -3,9 +3,8 @@ import { BlankNode, NamedNode, Quad, Term } from '@rdfjs/types';
 import { termToString } from 'rdf-string';
 import { RDF, Store } from '@faubulous/mentor-rdf';
 import { IDocumentContext } from '@src/services/document/document-context.interface';
-import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { createSyntheticToken, isTokenOfType } from '@src/utilities/tokens';
-import { NamespaceData } from '@src/views/webviews/views/form-editor/form-editor-model';
+import { NamespaceData } from '@src/services/resource/resource-card-data';
 import { CollectionItem, ResourceIndex, ResourceIndexEntry } from './resource-index';
 import { ResourceViewBuilder } from './resource-view-builder';
 import { trailingCommentRunsOf } from './statement-comments';
@@ -46,12 +45,12 @@ export class ResourceIndexBuilder {
 	 * the blank nodes it refers to, read from the graph that refers to them. The statements carry
 	 * synthetic tokens, so their values cannot be edited and have no position in a text.
 	 * @param store The store.
-	 * @param iri The IRI of the resource.
+	 * @param resource The resource: an IRI, or a blank node of a document of the workspace.
 	 * @param context The document context, used to resolve labels and prefixes.
 	 * @returns The index, or `undefined` when the store states nothing about the resource.
 	 */
-	static fromStore(store: Store, iri: string, context: IDocumentContext): ResourceIndex | undefined {
-		const quads = _storeQuadsOf(store, RdfDataFactory.namedNode(iri));
+	static fromStore(store: Store, resource: NamedNode | BlankNode, context: IDocumentContext): ResourceIndex | undefined {
+		const quads = _storeQuadsOf(store, resource);
 
 		return quads.length > 0 ? new ResourceIndexBuilder(quads, context).build() : undefined;
 	}
@@ -221,7 +220,7 @@ export class ResourceIndexBuilder {
  * @param subject The resource.
  * @returns The statements, those of each blank node after the statement that refers to it.
  */
-function _storeQuadsOf(store: Store, subject: NamedNode): QuadContext[] {
+function _storeQuadsOf(store: Store, subject: NamedNode | BlankNode): QuadContext[] {
 	const quads: QuadContext[] = [];
 	const seen = new Set<string>();
 

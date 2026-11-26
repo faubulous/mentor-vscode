@@ -12,6 +12,7 @@ import { createMockDocumentContextService, createMockTextDocument } from '@src/u
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { FormEditorProvider } from './form-editor-provider';
 import { FormEditorSession } from './form-editor-session';
+import { registerResourceCardService } from '@src/utilities/mocks/resource-card-fixtures';
 
 const URI = 'file:///workspace/test.ttl';
 
@@ -62,6 +63,7 @@ describe('FormEditorProvider', () => {
 	beforeEach(() => {
 		container.reset();
 		container.registerInstance(ServiceToken.DocumentContextService, createMockDocumentContextService());
+		registerResourceCardService();
 		activateTab(undefined);
 		vi.restoreAllMocks();
 	});
