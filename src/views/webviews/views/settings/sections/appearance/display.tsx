@@ -16,6 +16,10 @@ export const appearanceDisplaySection = {
 		'predicates.label',
 		'predicates.description'
 	],
+	// The pins of the form editor are set from its cards.
+	hiddenKeys: [
+		'formEditor.pinnedProperties',
+	],
 } as const satisfies SettingsSectionDescriptor;
 
 function DisplaySection({ keys, settings, onUpdate, setScope, onBulkScope }: SettingsSectionProps) {
