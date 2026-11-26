@@ -4,7 +4,6 @@ import type { SettingsSectionDescriptor } from '../settings-section-descriptor';
 
 import { appearanceDisplaySection } from './appearance/display';
 import { appearanceDefinitionsTreeSection } from './appearance/definitions-tree';
-import { appearanceEditingSection } from './appearance/editing';
 import { editorGeneralSection } from './editor/general';
 import { editorTemplatesSection } from './editor/templates';
 import { editorFormattingSection } from './editor/formatting';
@@ -31,7 +30,6 @@ export const SETTINGS_GROUPS = [
 		sections: [
 			appearanceDisplaySection,
 			appearanceDefinitionsTreeSection,
-			appearanceEditingSection,
 		],
 	},
 	{

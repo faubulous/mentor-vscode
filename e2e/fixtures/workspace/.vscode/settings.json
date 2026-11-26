@@ -5,6 +5,5 @@
             "endpointUrl": "https://example.invalid/sparql",
             "storeType": "sparql"
         }
-    ],
-    "mentor.formEditor.enabled": true
+    ]
 }
