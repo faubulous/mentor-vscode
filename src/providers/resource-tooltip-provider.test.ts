@@ -20,6 +20,13 @@ const mockStore = {
 	matchAll: vi.fn(() => [] as any[]),
 };
 
+/**
+ * Gives the tooltip of a resource as the term asked for and the `tooltip` of the context asked with.
+ */
+const mockTooltips = {
+	getTooltip: vi.fn((resource: { termType: string; value: string }, context: { tooltip?: string }) => `${resource.termType} ${resource.value}: ${context.tooltip}`),
+};
+
 vi.mock('tsyringe', () => ({
 	container: {
 		resolve: vi.fn((token: string) => {
@@ -47,7 +54,7 @@ describe('ResourceTooltipProvider', () => {
 		mockContextService.activeContext = undefined;
 		mockContextService.isLoading = () => false;
 		mockStore.matchAll = vi.fn(() => []);
-		provider = new ResourceTooltipProvider({ subscriptions: [] } as any, mockContextService as any, mockStore as any);
+		provider = new ResourceTooltipProvider({ subscriptions: [] } as any, mockContextService as any, mockStore as any, mockTooltips as any);
 	});
 
 	function makeDoc(uri: string, text = '', context?: any) {
@@ -68,15 +75,25 @@ describe('ResourceTooltipProvider', () => {
 		expect(provider.provideHover(doc, mockPosition)).toBeNull();
 	});
 
-	it('returns hover with IRI tooltip when IRI at position', () => {
+	it('returns the tooltip of the resource of the IRI at the position', () => {
 		const doc = makeDoc('file:///test.ttl', '', {
 			getIriAtPosition: vi.fn(() => 'http://example.org/Class'),
 			getLiteralAtPosition: vi.fn(() => null),
-			getResourceTooltip: vi.fn(() => 'This is a class.'),
+			tooltip: 'a class',
 		});
 		const result = provider.provideHover(doc, mockPosition) as any;
 		expect(result).toBeDefined();
-		expect(result.contents[0]).toBe('This is a class.');
+		expect(result.contents[0]).toBe('NamedNode http://example.org/Class: a class');
+	});
+
+	it('returns the tooltip of a blank node at the position', () => {
+		const doc = makeDoc('file:///test.ttl', '', {
+			getIriAtPosition: vi.fn(() => 'b0'),
+			getLiteralAtPosition: vi.fn(() => null),
+			tooltip: 'a leaf',
+		});
+		const result = provider.provideHover(doc, mockPosition) as any;
+		expect(result.contents[0]).toBe('BlankNode b0: a leaf');
 	});
 
 	it('returns hover with literal value when literal at position', () => {
@@ -125,7 +142,7 @@ describe('ResourceTooltipProvider', () => {
 		const uriOffset = text.indexOf('http://example.org/Person');
 
 		mockStore.matchAll = vi.fn(() => [{}]);
-		mockContextService.activeContext = { isLoaded: true, getResourceTooltip: vi.fn(() => 'Person class.') };
+		mockContextService.activeContext = { isLoaded: true, tooltip: 'Person class.' };
 
 		const doc = {
 			uri: vscode.Uri.parse('file:///test.sparql'),
@@ -138,7 +155,7 @@ describe('ResourceTooltipProvider', () => {
 		const result = provider.provideHover(doc, new vscode.Position(3, 12)) as any;
 
 		expect(result).toBeDefined();
-		expect(result.contents[0]).toBe('Person class.');
+		expect(result.contents[0]).toBe('NamedNode http://example.org/Person: Person class.');
 	});
 
 	it('returns null for an unknown URI inside triplate frontmatter', () => {
@@ -162,7 +179,7 @@ describe('ResourceTooltipProvider', () => {
 		const uri = 'file:///test.ttl';
 		const doc = makeDoc(uri, 'ex:Thing', {
 			getIriAtPosition: () => 'http://example.org/Thing',
-			getResourceTooltip: () => new vscode.MarkdownString('Thing (before the load)'),
+			tooltip: 'Thing (before the load)',
 		});
 
 		let finishLoad!: () => void;
@@ -175,7 +192,7 @@ describe('ResourceTooltipProvider', () => {
 		const result = provider.provideHover(doc, mockPosition) as Promise<vscode.Hover>;
 
 		// The load finishes and replaces the tooltip data, e.g. the labels of the document.
-		mockContextService.contexts[uri].getResourceTooltip = () => new vscode.MarkdownString('Thing (loaded)');
+		mockContextService.contexts[uri].tooltip = 'Thing (loaded)';
 		mockContextService.isLoading = () => false;
 		finishLoad();
 

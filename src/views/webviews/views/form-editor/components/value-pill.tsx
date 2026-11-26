@@ -1,7 +1,7 @@
 import { KeyboardEvent, MouseEvent } from 'react';
 import { TermData } from '../form-editor-model';
 import { getResourceTooltipAttributes } from './resource-tooltip';
-import { getTermLabel } from './term-labels';
+import { getTermLabel } from '@src/services/resource/term-labels';
 
 /**
  * Properties of the {@link ValuePill} component.

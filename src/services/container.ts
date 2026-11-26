@@ -46,6 +46,7 @@ import { StoreIconResolver } from './vocabulary/store-icon-resolver';
 import { TermCatalogueService } from './vocabulary/term-catalogue-service';
 import { TermFitResolver } from './vocabulary/term-fit-resolver';
 import { ResourceCardService } from './resource/resource-card-service';
+import { ResourceTooltipService } from './resource/resource-tooltip-service';
 import { ResourceReferenceProvider } from '@src/providers/resource-reference-provider';
 
 /**
@@ -178,6 +179,7 @@ export function configureServiceContainer(context: vscode.ExtensionContext): voi
 	// tooltips of the definition tree and the text editor show it.
 	const resourceCardService = new ResourceCardService(store, new ResourceReferenceProvider(documentContextService), storeIconResolver, predicateRangeResolver);
 	container.registerInstance(ServiceToken.ResourceCardService, resourceCardService);
+	container.registerInstance(ServiceToken.ResourceTooltipService, new ResourceTooltipService(resourceCardService));
 
 	// Register the SHACL profile settings service and the shape graph service the
 	// validation service resolves its shape graphs through.

@@ -22,10 +22,10 @@ export interface CompactResourceCardProps {
 }
 
 /**
- * The card of a resource in its most compact density, as a tooltip shows it: the title with the
- * types of the resource, the pinned properties of its types, or else its description as text
- * without a caption, and a footer with the IRI and the usage count. It has no controls, no
- * placeholders and no empty rows, and takes no part in editing.
+ * The card of a resource in its most compact density, as a tooltip shows it, laid out as the larger
+ * card: a title bar with the types of the resource and its usage count, the title under it, the
+ * pinned properties of its types, or else its description as text without a caption, and a footer
+ * with the IRI. It has no controls, no placeholders and no empty rows, and takes no part in editing.
  * @param props The resource and where its statements come from.
  * @returns The card.
  */
@@ -44,16 +44,20 @@ export function CompactResourceCard({ cardHeader, dataService }: CompactResource
 
 	return (
 		<article className="resource-card is-compact" data-density="tooltip">
+			{(types.length > 0 || cardHeader.usageCount !== undefined) && (
+				<div className="compact-card-title-bar">
+					<span className="compact-card-types">{types.join(', ')}</span>
+					{cardHeader.usageCount !== undefined && <CardUsage count={cardHeader.usageCount} />}
+				</div>
+			)}
 			<div className="compact-card-title">
 				<ResourceCardTitle cardHeader={cardHeader} />
-				{types.length > 0 && <span className="compact-card-types">{types.join(', ')}</span>}
 			</div>
 			{pins.length > 0 && cardBody
 				? <PinnedPropertiesList cardBody={cardBody} pins={pins} />
 				: cardHeader.description && <div className="resource-card-description">{cardHeader.description}</div>}
 			<div className="compact-card-footer">
 				<span className="compact-card-iri">{identifier}</span>
-				{cardHeader.usageCount !== undefined && <CardUsage count={cardHeader.usageCount} />}
 			</div>
 		</article>
 	);

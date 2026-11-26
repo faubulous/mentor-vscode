@@ -60,7 +60,7 @@ export class ResourceCardService {
 
 	/**
 	 * The card of a resource as the store states it, across all its graphs: its header, with the
-	 * usage count of an IRI and the pins of its types, and its statements, which only read.
+	 * usage count and the pins of its types, and its statements, which only read.
 	 * @param resource The resource.
 	 * @param context The document the card is shown for, which resolves labels and prefixes.
 	 * @returns The card, or `undefined` where the store states nothing about the resource.
@@ -74,10 +74,10 @@ export class ResourceCardService {
 			return undefined;
 		}
 
-		const usage = resource.termType === 'NamedNode' ? { usageCount: this.countUsages(resource.value) } : {};
+		const usageCount = resource.termType === 'NamedNode' ? this.countUsages(resource.value) : this._countReferences(resource);
 
 		return {
-			cardHeader: { ...listItem, ...usage, ...this.getPins(entry, undefined) },
+			cardHeader: { ...listItem, usageCount, ...this.getPins(entry, undefined) },
 			cardBody: new ResourceViewBuilder(index, context, this.getIndexOptions(context.graphs)).buildCardBody(entry)
 		};
 	}
@@ -157,6 +157,22 @@ export class ResourceCardService {
 	 */
 	countUsages(iri: string): number {
 		return Math.max(this._references.countReferencesForIri(iri) - 1, 0);
+	}
+
+	/**
+	 * How often the statements of the store refer to a blank node, which nothing outside the document
+	 * that writes it can name, as the form editor counts the usages of a blank node of its document.
+	 * @param resource The blank node.
+	 * @returns The count.
+	 */
+	private _countReferences(resource: BlankNode): number {
+		let count = 0;
+
+		for (const _ of this._store!.matchAll(undefined, null, null, resource, false)) {
+			count++;
+		}
+
+		return count;
 	}
 
 	/**

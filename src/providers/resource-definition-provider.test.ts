@@ -235,6 +235,17 @@ describe('ResourceDefinitionProvider', () => {
             expect(presetDocuments.ensureLoaded).toHaveBeenCalledTimes(1);
             expect(result.uri.toString()).toBe(docUriStr);
         });
+
+        it('finds the definition of a resource by its identifier as by a position, in a preset graph too', async () => {
+            const presetDocuments = makePresetDocuments(makeContext(presetUri, { typeDefinitions: createRangeIndex({ [iri]: [range] }), isPreset: true }));
+            const primaryContext = makeContext(docUri);
+
+            mockContextService.contexts[docUriStr] = primaryContext;
+
+            const result = await new ResourceDefinitionProvider(mockContextService as any, undefined, presetDocuments).provideDefinitionOfResource(primaryContext as any, iri) as vscode.Location;
+
+            expect(result.uri.toString()).toBe(presetUri.toString());
+        });
     });
 
     describe('provideDefinitionForResource', () => {

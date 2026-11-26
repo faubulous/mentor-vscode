@@ -2,11 +2,15 @@ import * as vscode from 'vscode';
 import { DefinitionQueryOptions } from '@faubulous/mentor-rdf';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
+import { ResourceTooltipService } from '@src/services/resource/resource-tooltip-service';
+import { getResourceTerm } from '@src/utilities/rdf-terms';
 import { ISettingsService } from '@src/services/core';
 import { IDocumentContext } from '@src/services/document/document-context.interface';
 import { Label } from '@src/services/document/document-context';
 import { TreeNodeBase } from '@src/views/trees/tree-node';
 import { getIriFromNodeId } from '@src/utilities';
+import { getConfig } from '@src/utilities/vscode/config';
+import { RevealDefinitionOptions, RevealScope } from '@src/commands/definition-tree/reveal-definition.interface';
 
 /**
  * Base class for a node in the definition tree.
@@ -65,11 +69,16 @@ export class DefinitionTreeNode extends TreeNodeBase {
 	}
 
 	getCommand(): vscode.Command | undefined {
+		const options: RevealDefinitionOptions = {
+			scope: getConfig().get<RevealScope>('definitionTree.revealScope', 'document'),
+			restoreFocus: true
+		};
+
 		// The node itself, so a command can ask a section or type node for the resources it stands for.
 		return {
 			command: 'mentor.command.revealDefinition',
 			title: '',
-			arguments: [this, true]
+			arguments: [this, options]
 		};
 	}
 
@@ -184,12 +193,16 @@ export class DefinitionTreeNode extends TreeNodeBase {
 		}
 	}
 
+	/**
+	 * The tooltip of the node: the compact card of its resource.
+	 * @returns The tooltip, or `undefined` for a node of no resource.
+	 */
 	getTooltip(): vscode.MarkdownString | undefined {
-		if (this.uri) {
-			return this.document.getResourceTooltip(this.uri);
-		} else {
+		if (!this.uri) {
 			return undefined;
 		}
+
+		return container.resolve<ResourceTooltipService>(ServiceToken.ResourceTooltipService).getTooltip(getResourceTerm(this.uri), this.document);
 	}
 
 	/**

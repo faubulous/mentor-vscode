@@ -84,5 +84,7 @@ export enum ServiceToken {
 	/** Searches the terms of the workspace, as the form editor's pickers and the completion of the text editor do. */
 	TermCatalogueService = "TermCatalogueService",
 	/** Builds what the cards of resources show besides their statements: store cards, pins, types and usages. */
-	ResourceCardService = "ResourceCardService"
+	ResourceCardService = "ResourceCardService",
+	/** Gives the tooltips of resources in the definition tree and the hovers of the text editor: the compact card as Markdown. */
+	ResourceTooltipService = "ResourceTooltipService"
 }

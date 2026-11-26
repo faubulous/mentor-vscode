@@ -408,18 +408,4 @@ export abstract class DocumentContext implements IDocumentContext {
 
 		return subjectIri;
 	}
-
-	getResourceTooltip(subjectUri: string): vscode.MarkdownString {
-		const iri = this.getResourceIri(subjectUri);
-		const label = this.getResourceLabel(subjectUri);
-		const description = this.getResourceDescription(subjectUri);
-
-		let lines = [
-			`**${label.value}**`,
-			description?.value,
-			iri
-		];
-
-		return new vscode.MarkdownString(lines.filter(line => line).join('\n\n'), true);
-	}
 }

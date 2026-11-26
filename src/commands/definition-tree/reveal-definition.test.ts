@@ -105,7 +105,7 @@ describe('revealDefinition', () => {
 		vi.spyOn(ResourceDefinitionProvider.prototype, 'provideDefinitionForResource').mockReturnValue(loc);
 		const execSpy = vi.spyOn(vscode.commands, 'executeCommand').mockResolvedValue(undefined);
 
-		await revealDefinition.handler('urn:ex#X', true);
+		await revealDefinition.handler('urn:ex#X', { restoreFocus: true });
 
 		expect(execSpy).toHaveBeenCalledWith('mentor.view.definitionTree.focus');
 	});
@@ -136,5 +136,65 @@ describe('revealDefinition', () => {
 
 		expect(mockRevealTarget.revealDefinition).toHaveBeenCalledWith(mockActiveContext.uri, 'urn:store:b1');
 		expect(editor.revealRange).toHaveBeenCalledWith(loc.range, expect.anything());
+	});
+
+	it('stays in the active document without a scope, even where another document defines the resource', async () => {
+		const editor = makeEditor();
+		const mention = makeLocation('file:///doc.ttl', 5, 2, 5, 9);
+		const { ResourceDefinitionProvider } = await import('@src/providers');
+		const definitionOf = vi.spyOn(ResourceDefinitionProvider.prototype, 'provideDefinitionOfResource');
+
+		mockActiveContext.uri = vscode.Uri.parse('file:///doc.ttl');
+		mockActivateDocument.mockResolvedValue(editor);
+		vi.spyOn(ResourceDefinitionProvider.prototype, 'provideDefinitionForResource').mockReturnValue(mention);
+
+		await revealDefinition.handler('http://example.org/Event');
+
+		expect(definitionOf).not.toHaveBeenCalled();
+		expect(editor.revealRange).toHaveBeenCalledWith(mention.range, expect.anything());
+	});
+
+	it('opens the document that defines the resource with the workspace scope', async () => {
+		const definition = makeLocation('file:///vocabulary.ttl', 12, 0, 12, 9);
+		const { ResourceDefinitionProvider } = await import('@src/providers');
+		const showTextDocument = vi.spyOn(vscode.window, 'showTextDocument');
+
+		mockActiveContext.uri = vscode.Uri.parse('file:///doc.ttl');
+		vi.spyOn(ResourceDefinitionProvider.prototype, 'provideDefinitionOfResource').mockResolvedValue(definition);
+
+		await revealDefinition.handler('http://example.org/Event', { scope: 'workspace' });
+
+		expect(showTextDocument).toHaveBeenCalledWith(definition.uri, { selection: definition.range });
+		expect(mockActivateDocument).not.toHaveBeenCalled();
+	});
+
+	it('selects the definition in the active document with the workspace scope where the document defines it', async () => {
+		const editor = makeEditor();
+		const definition = makeLocation('file:///doc.ttl', 1, 0, 1, 6);
+		const { ResourceDefinitionProvider } = await import('@src/providers');
+		const showTextDocument = vi.spyOn(vscode.window, 'showTextDocument');
+
+		mockActiveContext.uri = vscode.Uri.parse('file:///doc.ttl');
+		mockActivateDocument.mockResolvedValue(editor);
+		vi.spyOn(ResourceDefinitionProvider.prototype, 'provideDefinitionOfResource').mockResolvedValue(definition);
+		vi.spyOn(ResourceDefinitionProvider.prototype, 'provideDefinitionForResource').mockReturnValue(definition);
+
+		await revealDefinition.handler('http://example.org/Oak', { scope: 'workspace' });
+
+		expect(showTextDocument).not.toHaveBeenCalled();
+		expect(editor.revealRange).toHaveBeenCalledWith(definition.range, expect.anything());
+	});
+
+	it('leaves the definition to an editor in front that shows it, with the workspace scope too', async () => {
+		const { ResourceDefinitionProvider } = await import('@src/providers');
+		const definitionOf = vi.spyOn(ResourceDefinitionProvider.prototype, 'provideDefinitionOfResource');
+
+		mockRevealTarget.registered = true;
+		mockActiveContext.uri = vscode.Uri.parse('file:///doc.ttl');
+
+		await revealDefinition.handler('http://example.org/Oak', { scope: 'workspace' });
+
+		expect(mockRevealTarget.revealDefinition).toHaveBeenCalledWith(mockActiveContext.uri, 'http://example.org/Oak');
+		expect(definitionOf).not.toHaveBeenCalled();
 	});
 });
