@@ -4,11 +4,21 @@ vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 
 let mockSettingsGet: (key: string, defaultValue?: any) => any;
 
+/**
+ * Gives the tooltip of a resource as the term asked for.
+ */
+const mockTooltips = {
+	getTooltip: vi.fn((resource: { termType: string; value: string }) => `${resource.termType} ${resource.value}`),
+};
+
 vi.mock('tsyringe', () => ({
 	container: {
 		resolve: vi.fn((token: string) => {
 			if (token === ServiceToken.SettingsService) {
 				return { get: (k: string, d?: any) => mockSettingsGet(k, d) };
+			}
+			if (token === ServiceToken.ResourceTooltipService) {
+				return mockTooltips;
 			}
 			return {};
 		}),
@@ -26,14 +36,12 @@ import { ServiceToken } from '@src/services/tokens';
 function makeContext(overrides: Partial<{
 	graphs: string[];
 	getResourceLabel: (iri: string) => any;
-	getResourceTooltip: (iri: string) => any;
 	activeLanguageTag: string | undefined;
 	activeLanguage: string | undefined;
 }> = {}): any {
 	return {
 		graphs: ['urn:graph1'],
 		getResourceLabel: (_iri: string) => ({ value: 'Test Label', language: undefined }),
-		getResourceTooltip: (_iri: string) => new vscode.MarkdownString('Tooltip'),
 		activeLanguageTag: undefined,
 		activeLanguage: undefined,
 		...overrides,
@@ -75,7 +83,17 @@ describe('DefinitionTreeNode', () => {
 			const node = new DefinitionTreeNode(makeContext(), 'my-id', 'urn:x');
 			const cmd = node.getCommand();
 			expect(cmd?.command).toBe('mentor.command.revealDefinition');
-			expect(cmd?.arguments).toEqual([node, true]);
+			expect(cmd?.arguments).toEqual([node, { scope: 'document', restoreFocus: true }]);
+		});
+
+		it('should look for the definition where mentor.definitionTree.revealScope says', () => {
+			vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValueOnce({
+				get: (key: string, fallback: unknown) => key === 'definitionTree.revealScope' ? 'workspace' : fallback
+			} as unknown as vscode.WorkspaceConfiguration);
+
+			const node = new DefinitionTreeNode(makeContext(), 'my-id', 'urn:x');
+
+			expect(node.getCommand()?.arguments?.[1]).toEqual({ scope: 'workspace', restoreFocus: true });
 		});
 	});
 
@@ -213,13 +231,18 @@ describe('DefinitionTreeNode', () => {
 	});
 
 	describe('getTooltip', () => {
-		it('should return the tooltip from the document when uri is set', () => {
-			const ctx = makeContext({
-				getResourceTooltip: () => new vscode.MarkdownString('### Test'),
-			});
+		it('should return the tooltip of the resource of the node', () => {
+			const ctx = makeContext();
 			const node = new DefinitionTreeNode(ctx, 'id', 'urn:x');
-			const tooltip = node.getTooltip();
-			expect(tooltip).toBeInstanceOf(vscode.MarkdownString);
+
+			expect(node.getTooltip()).toBe('NamedNode urn:x');
+			expect(mockTooltips.getTooltip).toHaveBeenCalledWith(expect.objectContaining({ termType: 'NamedNode', value: 'urn:x' }), ctx);
+		});
+
+		it('should return the tooltip of the blank node of the node', () => {
+			const node = new DefinitionTreeNode(makeContext(), 'id', 'b0');
+
+			expect(node.getTooltip()).toBe('BlankNode b0');
 		});
 
 		it('should return undefined when uri is empty', () => {

@@ -15,6 +15,9 @@ vi.mock('tsyringe', () => ({
 			if (token === ServiceToken.VocabularyRepository) {
 				return mockVocabularyStub;
 			}
+			if (token === ServiceToken.ResourceTooltipService) {
+				return { getTooltip: (resource: { value: string }) => `tooltip of ${resource.value}` };
+			}
 			return {};
 		}),
 	},
@@ -160,9 +163,8 @@ describe('OntologyNode', () => {
 			expect(tooltip).toBeInstanceOf(vscode.MarkdownString);
 		});
 
-		it('should return default tooltip for normal IRI', () => {
-			// super.getTooltip() returns undefined when context provides no tooltip
-			expect(makeOntologyNode().getTooltip()).toBeUndefined();
+		it('should return the tooltip of the ontology for a normal IRI', () => {
+			expect(makeOntologyNode().getTooltip()).toMatch(/^tooltip of /);
 		});
 	});
 

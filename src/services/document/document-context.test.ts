@@ -370,48 +370,75 @@ describe('DocumentContext – getResourceDescription', () => {
 });
 
 // ---------------------------------------------------------------------------
-// getResourceTooltip
+// getResourceLabel – AnnotatedLabels (store-backed)
 // ---------------------------------------------------------------------------
-describe('DocumentContext – getResourceTooltip', () => {
-    beforeEach(() => {
-        mockSettingsGet = (key: string, defaultValue?: any) => {
-            if (key === 'view.definitionTree.labelStyle') return TreeLabelStyle.UriLabels;
-            return defaultValue;
-        };
-    });
-
-    it('returns a MarkdownString', () => {
+describe('DocumentContext – getResourceLabel (AnnotatedLabels)', () => {
+    it('falls back to local name when store returns no labels', () => {
         const doc = makeDoc();
-        const tooltip = doc.getResourceTooltip('http://example.org/Thing');
-        expect(tooltip).toBeInstanceOf(vscode.MarkdownString);
+        const label = doc.getResourceLabel('http://example.org/Thing');
+        expect(label.value).toBe('Thing');
     });
 
-    it('includes the label in bold', () => {
-        const doc = makeDoc();
-        const tooltip = doc.getResourceTooltip('http://example.org/Thing');
-        expect(tooltip.value).toContain('**Thing**');
-    });
-
-    it('includes the IRI', () => {
-        const doc = makeDoc();
-        const tooltip = doc.getResourceTooltip('http://example.org/Thing');
-        expect(tooltip.value).toContain('http://example.org/Thing');
-    });
-
-    it('includes the description when one is available', () => {
+    it('returns the store label when a matching literal exists', () => {
         mockStoreMatchAll = () => [
-            { object: makeLiteral('Describes a thing.', '') },
+            { object: makeLiteral('My Thing', 'en') },
         ];
         const doc = makeDoc();
-        const tooltip = doc.getResourceTooltip('http://example.org/Thing');
-        expect(tooltip.value).toContain('Describes a thing.');
+        const label = doc.getResourceLabel('http://example.org/Thing');
+        expect(label.value).toBe('My Thing');
     });
 
-    it('omits the description line when none is available', () => {
+    it('prefers the activeLanguageTag match over generic literals', () => {
+        mockStoreMatchAll = () => [
+            { object: makeLiteral('Ding', 'de') },
+            { object: makeLiteral('Thing', 'en') },
+        ];
         const doc = makeDoc();
-        const tooltip = doc.getResourceTooltip('http://example.org/Thing');
-        // No spurious blank lines from undefined description
-        expect(tooltip.value).not.toContain('undefined');
+        doc.activeLanguageTag = 'en';
+        const label = doc.getResourceLabel('http://example.org/Thing');
+        expect(label.value).toBe('Thing');
+    });
+
+    it('falls back to primary-language match when active tag has no exact match', () => {
+        mockStoreMatchAll = () => [
+            { object: makeLiteral('Ding', 'de') },
+            { object: makeLiteral('Thing', 'en') },
+        ];
+        const doc = makeDoc();
+        doc.languageTagStats = { de: 5, en: 1 };
+        doc.activeLanguageTag = 'fr'; // no 'fr' literal exists
+        const label = doc.getResourceLabel('http://example.org/Thing');
+        // Should return 'de' (primary) or 'en' (fallback), not 'fr'
+        expect(['Ding', 'Thing']).toContain(label.value);
+    });
+
+    it('works with blank node subjects (no colon in id)', () => {
+        mockStoreMatchAll = () => [
+            { object: makeLiteral('Blank Label', '') },
+        ];
+        const doc = makeDoc();
+        const label = doc.getResourceLabel('_blankNode1');
+        expect(label.value).toBe('Blank Label');
+    });
+});
+
+// ---------------------------------------------------------------------------
+// getResourceDescription
+// ---------------------------------------------------------------------------
+describe('DocumentContext – getResourceDescription', () => {
+    it('returns undefined when store returns no matching quads', () => {
+        const doc = makeDoc();
+        expect(doc.getResourceDescription('http://example.org/Thing')).toBeUndefined();
+    });
+
+    it('returns a label object when matching quads exist', () => {
+        mockStoreMatchAll = () => [
+            { object: makeLiteral('A test thing.', 'en') },
+        ];
+        const doc = makeDoc();
+        const desc = doc.getResourceDescription('http://example.org/Thing');
+        expect(desc).toBeDefined();
+        expect(desc!.value).toBe('A test thing.');
     });
 });
 

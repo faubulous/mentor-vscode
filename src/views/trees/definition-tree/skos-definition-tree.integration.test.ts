@@ -92,7 +92,6 @@ function createProvider(graph: string): DefinitionNodeProvider {
 		// Note: The local name is used as a label so that the expected output is easy to follow,
 		// and the IRI if it has no local name.
 		getResourceLabel: (uri: string) => ({ value: uri.split(/[#/]/).pop() || uri, language: undefined }),
-		getResourceTooltip: () => undefined,
 		activeLanguageTag: undefined,
 		activeLanguage: undefined,
 	} as any;

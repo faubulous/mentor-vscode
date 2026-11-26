@@ -40,18 +40,29 @@ export class ResourceDefinitionProvider {
 			return null;
 		}
 
+		return this.provideDefinitionOfResource(context, iri);
+	}
+
+	/**
+	 * Get the definition of a resource as "Go to Definition" finds it: in the primary document, else
+	 * in the workspace, else in the preset graphs, else where the primary document mentions it.
+	 * @param primaryContext The document the definition is looked for from.
+	 * @param id The IRI or blank node ID of the resource.
+	 * @returns The definition of the resource, or `null` if no definition was found.
+	 */
+	provideDefinitionOfResource(primaryContext: IDocumentContext, id: string): vscode.ProviderResult<vscode.Definition> {
 		// While the workspace is being indexed, the file that defines the resource may
 		// not be loaded yet. Answer from the complete index instead of falling back to
 		// a reference in this document.
-		if (this._indexer && !this._indexer.indexingFinished && !this._isDefinedInLoadedContext(iri)) {
-			const uri = document.uri.toString();
+		if (this._indexer && !this._indexer.indexingFinished && !this._isDefinedInLoadedContext(id)) {
+			const uri = primaryContext.uri.toString();
 
 			return this._indexer.waitForIndexed().then(() => {
-				return this._provideDefinitionIncludingPresets(this._contextService.contexts[uri] ?? context, iri);
+				return this._provideDefinitionIncludingPresets(this._contextService.contexts[uri] ?? primaryContext, id);
 			});
 		}
 
-		return this._provideDefinitionIncludingPresets(context, iri);
+		return this._provideDefinitionIncludingPresets(primaryContext, id);
 	}
 
 	/**

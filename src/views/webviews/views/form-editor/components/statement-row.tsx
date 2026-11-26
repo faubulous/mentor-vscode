@@ -30,7 +30,7 @@ import { StatementRowContext } from './statement-row-context';
 import { StatementValueCell } from './statement-value-cell';
 import { LiteralAnnotationPickerSelection } from './literal-annotation-picker-items';
 import { getResourceTooltipAttributes } from './resource-tooltip';
-import { getTermLabel } from './term-labels';
+import { getTermLabel } from '@src/services/resource/term-labels';
 import { TermValue } from './term-value';
 
 /**

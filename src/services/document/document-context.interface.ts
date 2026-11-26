@@ -281,13 +281,6 @@ export interface IDocumentContext {
 	 * @returns A IRI for the resource as a string literal.
 	 */
 	getResourceIri(subjectIri: string): string;
-
-	/**
-	 * Get the tooltip for a resource.
-	 * @param subjectUri URI of the resource.
-	 * @returns A markdown string containing the label, description and URI of the resource.
-	 */
-	getResourceTooltip(subjectUri: string): vscode.MarkdownString;
 }
 
 /**

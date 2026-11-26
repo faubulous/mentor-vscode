@@ -36,7 +36,6 @@ function makeCtx(overrides: any = {}) {
 		isTemporary: false,
 		getIriAtPosition: vi.fn(() => undefined),
 		getLiteralAtPosition: vi.fn(() => undefined),
-		getResourceTooltip: vi.fn(() => new (vscode.MarkdownString as any)('tooltip')),
 		...overrides,
 		typeDefinitions: createRangeIndex(overrides.typeDefinitions ?? {}),
 		typeAssertions: createRangeIndex(overrides.typeAssertions ?? {}),
@@ -146,10 +145,15 @@ describe('ResourceDefinitionProvider', () => {
 
 // ---- ResourceTooltipProvider ----
 
+/**
+ * Gives every resource the same tooltip.
+ */
+const mockTooltips = { getTooltip: vi.fn(() => new (vscode.MarkdownString as any)('tooltip')) } as any;
+
 describe('ResourceTooltipProvider', () => {
 	describe('provideHover', () => {
 		it('should return null when context is not found', () => {
-			const provider = new ResourceTooltipProvider(mockServices, mockServices, mockServices);
+			const provider = new ResourceTooltipProvider(mockServices, mockServices, mockServices, mockTooltips);
 			const result = provider.provideHover(makeDocument('file:///unknown.ttl'), new (vscode.Position as any)(0, 0));
 			expect(result).toBeNull();
 		});
@@ -157,7 +161,7 @@ describe('ResourceTooltipProvider', () => {
 		it('should return null when no IRI and no literal at position', () => {
 			const ctx = makeCtx({ getIriAtPosition: vi.fn(() => undefined), getLiteralAtPosition: vi.fn(() => undefined) });
 			mockContexts['file:///test.ttl'] = ctx;
-			const provider = new ResourceTooltipProvider(mockServices, mockServices, mockServices);
+			const provider = new ResourceTooltipProvider(mockServices, mockServices, mockServices, mockTooltips);
 			const result = provider.provideHover(makeDocument(), new (vscode.Position as any)(0, 0));
 			expect(result).toBeNull();
 		});
@@ -165,7 +169,7 @@ describe('ResourceTooltipProvider', () => {
 		it('should return Hover with tooltip when IRI is at position', () => {
 			const ctx = makeCtx({ getIriAtPosition: vi.fn(() => 'urn:ex#Thing') });
 			mockContexts['file:///test.ttl'] = ctx;
-			const provider = new ResourceTooltipProvider(mockServices, mockServices, mockServices);
+			const provider = new ResourceTooltipProvider(mockServices, mockServices, mockServices, mockTooltips);
 			const result = provider.provideHover(makeDocument(), new (vscode.Position as any)(0, 0));
 			expect(result).toBeInstanceOf(vscode.Hover);
 		});
@@ -176,7 +180,7 @@ describe('ResourceTooltipProvider', () => {
 				getLiteralAtPosition: vi.fn(() => 'some literal'),
 			});
 			mockContexts['file:///test.ttl'] = ctx;
-			const provider = new ResourceTooltipProvider(mockServices, mockServices, mockServices);
+			const provider = new ResourceTooltipProvider(mockServices, mockServices, mockServices, mockTooltips);
 			const result = provider.provideHover(makeDocument(), new (vscode.Position as any)(0, 0));
 			expect(result).toBeInstanceOf(vscode.Hover);
 		});

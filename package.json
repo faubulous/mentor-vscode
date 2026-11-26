@@ -1873,6 +1873,20 @@
             ],
             "default": "GroupBySource"
           },
+          "mentor.definitionTree.revealScope": {
+            "type": "string",
+            "title": "Go to Definition from the Tree",
+            "description": "Where a click on a node of the definitions tree looks for the definition of its resource.",
+            "enum": [
+              "document",
+              "workspace"
+            ],
+            "enumDescriptions": [
+              "Stay in the active document: select the definition there, else where the document mentions the resource.",
+              "Go to the file of the workspace or the vocabulary that defines the resource, where the active document does not define it."
+            ],
+            "default": "document"
+          },
           "mentor.definitionTree.defaultLanguageTag": {
             "type": "string",
             "title": "Default Language",
@@ -1924,6 +1938,20 @@
               "http://schema.org/description",
               "http://www.w3.org/2004/02/skos/core#scopeNote"
             ]
+          },
+          "mentor.tooltips.revealScope": {
+            "type": "string",
+            "title": "Go to Definition from Tooltips",
+            "description": "Where a link to a resource in the tooltips of the definitions tree and the text editor looks for its definition.",
+            "enum": [
+              "document",
+              "workspace"
+            ],
+            "enumDescriptions": [
+              "Stay in the active document: select the definition there, else where the document mentions the resource.",
+              "Go to the file of the workspace or the vocabulary that defines the resource, where the active document does not define it."
+            ],
+            "default": "workspace"
           },
           "mentor.namespaces": {
             "type": "array",

@@ -11,7 +11,7 @@ import { usePinnedProperties } from '../state/pinned-properties-context';
 import { useFormEditorContext } from '../state/form-editor-context';
 import { LeadingRow, StatementRowEntry } from '../state/statement-rows';
 import { RowHeader, StatementRow } from './statement-row';
-import { getTermLabel } from './term-labels';
+import { getTermLabel } from '@src/services/resource/term-labels';
 
 /**
  * Properties of the {@link StatementList} component.

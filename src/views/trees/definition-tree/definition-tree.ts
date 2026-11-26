@@ -60,7 +60,7 @@ export class DefinitionTree implements TreeView {
 			this._registerDecorationProvider(),
 			this._registerValidationHandler(),
 			this._registerActiveLanguageHandler(),
-			this._registerPredicateSettingsHandler(),
+			this._registerRenderSettingsHandler(),
 			this._registerRefreshCommand(),
 			this._registerRevealCommand(),
 			this._registerEditorSelectionHandler(),
@@ -112,12 +112,12 @@ export class DefinitionTree implements TreeView {
 		});
 	}
 
-	private _registerPredicateSettingsHandler(): vscode.Disposable {
-		// Node labels and tooltips are derived from the mentor.predicates.* settings;
-		// re-render the tree as soon as they change so the new predicates apply
-		// immediately instead of on the next document switch.
+	private _registerRenderSettingsHandler(): vscode.Disposable {
+		// Node labels and tooltips are derived from the mentor.predicates.* settings, and the
+		// command of a node from mentor.definitionTree.revealScope; re-render the tree as soon
+		// as they change so they apply immediately instead of on the next document switch.
 		return vscode.workspace.onDidChangeConfiguration((e) => {
-			if (e.affectsConfiguration('mentor.predicates.label') || e.affectsConfiguration('mentor.predicates.description')) {
+			if (e.affectsConfiguration('mentor.predicates.label') || e.affectsConfiguration('mentor.predicates.description') || e.affectsConfiguration('mentor.definitionTree.revealScope')) {
 				this.treeDataProvider.refresh(this._contextService.activeContext);
 			}
 		});

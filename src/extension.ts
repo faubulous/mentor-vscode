@@ -5,6 +5,7 @@ import { container } from 'tsyringe';
 import { Store } from '@faubulous/mentor-rdf';
 import { configureServiceContainer } from './services/container';
 import { ServiceToken } from './services/tokens';
+import { ResourceTooltipService } from './services/resource/resource-tooltip-service';
 import { ISettingsMigrationService, IWorkspaceFileService, IWorkspaceService, SettingsFileStore } from './services/core';
 import { IDocumentContextService, IPrefixLookupService } from './services/document';
 import { IViewRouter } from './views/webviews';
@@ -134,7 +135,7 @@ function registerProviders(context: vscode.ExtensionContext) {
 	new providers.XsdAnyUriCodeActionProvider(context);
 	new providers.InferenceUriLinkProvider(context);
 	new providers.MentorUriHandler(context, store, prefixLookup, router);
-	new providers.ResourceTooltipProvider(context, contextService, store);
+	new providers.ResourceTooltipProvider(context, contextService, store, container.resolve<ResourceTooltipService>(ServiceToken.ResourceTooltipService));
 }
 
 /**

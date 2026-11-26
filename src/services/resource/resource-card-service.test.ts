@@ -55,13 +55,13 @@ describe('ResourceCardService', () => {
 		expect(card.cardBody.predicates.map(property => property.predicate.term.value)).toEqual([RDF.type, RDFS.label, RDFS.comment, `${EX}leaf`]);
 	});
 
-	it('builds the card of a blank node of the store, which has no usage count', () => {
+	it('builds the card of a blank node of the store, used as often as statements refer to it', () => {
 		const { service, store, context } = createService();
 		const leaf = Array.from(store.matchAll(undefined, RdfDataFactory.namedNode(`${EX}Oak`), RdfDataFactory.namedNode(`${EX}leaf`), null, false))[0].object as ReturnType<typeof RdfDataFactory.blankNode>;
 		const card = service.getStoreCard(leaf, context)!;
 
 		expect(card.cardHeader).toMatchObject({ typeIri: `${EX}Leaf` });
-		expect(card.cardHeader.usageCount).toBeUndefined();
+		expect(card.cardHeader.usageCount).toBe(1);
 		expect(card.cardBody.predicates.map(property => property.predicate.term.value)).toEqual([RDF.type, `${EX}shape`]);
 	});
 

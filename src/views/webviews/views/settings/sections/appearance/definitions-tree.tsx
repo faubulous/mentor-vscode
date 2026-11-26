@@ -17,6 +17,7 @@ export const appearanceDefinitionsTreeSection = {
 		'definitionTree.defaultLayout',
 		'definitionTree.defaultLanguageTag',
 		'definitionTree.decorateMissingLanguageTags',
+		'definitionTree.revealScope',
 	],
 } as const satisfies SettingsSectionDescriptor;
 
@@ -38,6 +39,11 @@ function DefinitionsTreeSection({ keys, settings, onUpdate, setScope, onBulkScop
 	const decorateMissingRef = useVscodeElementRef<VscodeSingleSelect>(
 		'change',
 		(element) => onUpdate(MENTOR_SETTINGS_SOURCE, 'definitionTree.decorateMissingLanguageTags', element.value)
+	);
+
+	const revealScopeRef = useVscodeElementRef<VscodeSingleSelect>(
+		'change',
+		(element) => onUpdate(MENTOR_SETTINGS_SOURCE, 'definitionTree.revealScope', element.value)
 	);
 
 	return (
@@ -77,6 +83,16 @@ function DefinitionsTreeSection({ keys, settings, onUpdate, setScope, onBulkScop
 					value={String(settings['definitionTree.decorateMissingLanguageTags']?.value ?? 'Disabled')}
 				>
 					{(settings['definitionTree.decorateMissingLanguageTags']?.enumOptions ?? []).map(o => (
+						<vscode-option key={o.value} value={o.value}>{o.label}</vscode-option>
+					))}
+				</vscode-single-select>
+			</SettingRow>
+			<SettingRow {...rowProps('definitionTree.revealScope')}>
+				<vscode-single-select
+					ref={revealScopeRef}
+					value={String(settings['definitionTree.revealScope']?.value ?? 'document')}
+				>
+					{(settings['definitionTree.revealScope']?.enumOptions ?? []).map(o => (
 						<vscode-option key={o.value} value={o.value}>{o.label}</vscode-option>
 					))}
 				</vscode-single-select>

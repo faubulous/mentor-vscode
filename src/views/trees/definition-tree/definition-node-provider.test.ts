@@ -7,6 +7,11 @@ let mockSettingsStub: any;
 let mockContextServiceStub: any;
 let mockWorkspaceIndexerStub: any;
 
+/**
+ * Gives the tooltips of the resources of the nodes.
+ */
+const mockTooltipsStub = { getTooltip: vi.fn(() => undefined as unknown) };
+
 vi.mock('tsyringe', () => ({
 	container: {
 		resolve: vi.fn((token: string) => {
@@ -14,6 +19,7 @@ vi.mock('tsyringe', () => ({
 			if (token === ServiceToken.VocabularyRepository) return mockVocabularyStub;
 			if (token === ServiceToken.DocumentContextService) return mockContextServiceStub;
 			if (token === ServiceToken.WorkspaceIndexerService) return mockWorkspaceIndexerStub;
+			if (token === ServiceToken.ResourceTooltipService) return mockTooltipsStub;
 			return {};
 		}),
 	},
@@ -34,7 +40,6 @@ function makeContext(): any {
 	return {
 		graphs: ['urn:g1'],
 		getResourceLabel: () => ({ value: 'Label', language: undefined }),
-		getResourceTooltip: () => undefined,
 		activeLanguageTag: undefined,
 		activeLanguage: undefined,
 	};
@@ -183,15 +188,16 @@ describe('DefinitionNodeProvider', () => {
 
 		it('should not compute the tooltip', () => {
 			const provider = new DefinitionNodeProvider();
-			const ctx = { ...makeContext(), getResourceTooltip: vi.fn(() => new vscode.MarkdownString('Tooltip')) };
-			const node = new DefinitionTreeNode(ctx, 'root', 'urn:ex#x');
+			const node = new DefinitionTreeNode(makeContext(), 'root', 'urn:ex#x');
 			const getTooltip = vi.spyOn(node, 'getTooltip');
+
+			mockTooltipsStub.getTooltip.mockClear();
 
 			const item = provider.getTreeItem(node);
 
 			expect(item.tooltip).toBeUndefined();
 			expect(getTooltip).not.toHaveBeenCalled();
-			expect(ctx.getResourceTooltip).not.toHaveBeenCalled();
+			expect(mockTooltipsStub.getTooltip).not.toHaveBeenCalled();
 		});
 	});
 
@@ -199,15 +205,17 @@ describe('DefinitionNodeProvider', () => {
 		it('should set the tooltip of the node on the tree item', () => {
 			const provider = new DefinitionNodeProvider();
 			const tooltip = new vscode.MarkdownString('Tooltip');
-			const ctx = { ...makeContext(), getResourceTooltip: vi.fn(() => tooltip) };
+			const ctx = makeContext();
 			const node = new DefinitionTreeNode(ctx, 'root', 'urn:ex#x');
 			const item = provider.getTreeItem(node);
+
+			mockTooltipsStub.getTooltip.mockReturnValueOnce(tooltip);
 
 			const resolved = provider.resolveTreeItem(item, node);
 
 			expect(resolved).toBe(item);
 			expect(resolved.tooltip).toBe(tooltip);
-			expect(ctx.getResourceTooltip).toHaveBeenCalledWith('urn:ex#x');
+			expect(mockTooltipsStub.getTooltip).toHaveBeenCalledWith(expect.objectContaining({ termType: 'NamedNode', value: 'urn:ex#x' }), ctx);
 		});
 	});
 

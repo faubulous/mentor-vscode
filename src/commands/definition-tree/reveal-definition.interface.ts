@@ -25,3 +25,26 @@ export interface IDefinitionRevealTarget {
 	 */
 	filterDefinitions(documentUri: vscode.Uri, label: string, resources: readonly string[]): boolean;
 }
+
+/**
+ * Where "Go to Definition" looks for the definition of a resource: only in the active document,
+ * which selects its definition there, else where the document mentions it; or in the workspace,
+ * which goes to its definition in another file of the workspace or in a vocabulary Mentor ships
+ * with where the active document does not define it.
+ */
+export type RevealScope = 'document' | 'workspace';
+
+/**
+ * How "Go to Definition" reveals a resource.
+ */
+export interface RevealDefinitionOptions {
+	/**
+	 * Where the definition is looked for; the active document when absent.
+	 */
+	scope?: RevealScope;
+
+	/**
+	 * Whether the definition tree gets the focus back once the definition is revealed.
+	 */
+	restoreFocus?: boolean;
+}

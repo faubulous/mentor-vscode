@@ -1,5 +1,5 @@
 import { Literal, Term } from '@rdfjs/types';
-import { TermData } from '../form-editor-model';
+import { TermData } from './resource-card-data';
 
 /**
  * The identifier a term is written by: the IRI of a resource, `_:` and the label of a blank node.

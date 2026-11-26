@@ -229,7 +229,6 @@ export function createMockDocumentContext(overrides?: Partial<IDocumentContext>)
 		getPropertyPathLabel: () => '',
 		getResourceDescription: () => undefined,
 		getResourceIri: subjectIri => subjectIri,
-		getResourceTooltip: () => new vscode.MarkdownString(),
 		...overrides,
 	};
 }

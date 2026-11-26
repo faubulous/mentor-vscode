@@ -89,10 +89,11 @@ describe('ResourceTooltip', () => {
 
 		expect(card.getAttribute('data-density')).toBe('tooltip');
 		expect(card.querySelector('.resource-card-label')?.textContent).toBe('Apple tree');
-		expect(card.querySelector('.compact-card-types')?.textContent).toBe('Class, Plant');
+		expect(card.querySelector('.compact-card-title-bar .compact-card-types')?.textContent).toBe('Class, Plant');
+		expect(card.querySelector('.compact-card-title-bar .card-usage')?.textContent).toBe('3 usages');
+		expect(card.querySelector('.compact-card-title-bar + .compact-card-title .resource-card-label')?.textContent).toBe('Apple tree');
 		expect(card.querySelector('.resource-card-description')?.textContent).toBe('A tree bearing apples');
-		expect(card.querySelector('.compact-card-iri')?.textContent).toBe(TREE.subject.value);
-		expect(card.querySelector('.card-usage')?.textContent).toBe('3 usages');
+		expect(card.querySelector('.compact-card-footer')?.textContent).toBe(TREE.subject.value);
 		expect(card.querySelector('[role="button"], button')).toBeNull();
 	});
 

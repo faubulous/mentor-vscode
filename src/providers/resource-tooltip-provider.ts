@@ -1,15 +1,27 @@
 import * as vscode from 'vscode';
 import { Store, NamedNode } from '@faubulous/mentor-rdf';
 import { IDocumentContextService } from '@src/services/document';
+import { ResourceTooltipService } from '@src/services/resource/resource-tooltip-service';
+import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
+import { getResourceTerm } from '@src/utilities/rdf-terms';
 
 /**
- * Provides hover information for tokens in RDF documents and for HTTP/HTTPS URIs in any file type.
+ * Provides hover information for tokens in RDF documents and for HTTP/HTTPS URIs in any file type:
+ * the compact card of a resource, and the text of a literal.
  */
-export class ResourceTooltipProvider implements vscode.HoverProvider {	
+export class ResourceTooltipProvider implements vscode.HoverProvider {
+	/**
+	 * Create the provider and register it for every language.
+	 * @param context The extension context.
+	 * @param _contextService Gives the document contexts.
+	 * @param _store The store of the workspace.
+	 * @param _tooltips Gives the tooltips of resources.
+	 */
 	constructor(
 		context: vscode.ExtensionContext,
 		private readonly _contextService: IDocumentContextService,
-		private readonly _store: Store
+		private readonly _store: Store,
+		private readonly _tooltips: ResourceTooltipService
 	) {
 		context.subscriptions.push(vscode.languages.registerHoverProvider('*', this));
 	}
@@ -38,7 +50,7 @@ export class ResourceTooltipProvider implements vscode.HoverProvider {
 			const iri = context.getIriAtPosition(position);
 
 			if (iri) {
-				return new vscode.Hover(context.getResourceTooltip(iri));
+				return new vscode.Hover(this._tooltips.getTooltip(getResourceTerm(iri), context));
 			}
 
 			const literalValue = context.getLiteralAtPosition(position);
@@ -88,7 +100,7 @@ export class ResourceTooltipProvider implements vscode.HoverProvider {
 			return null;
 		}
 
-		return new vscode.Hover(workspaceContext.getResourceTooltip(iri));
+		return new vscode.Hover(this._tooltips.getTooltip(RdfDataFactory.namedNode(iri), workspaceContext));
 	}
 
 	private _getUriAtTextPosition(document: vscode.TextDocument, position: vscode.Position): string | null {

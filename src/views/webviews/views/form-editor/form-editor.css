@@ -2367,12 +2367,24 @@ body {
 }
 
 /*
- * The compact card: the title line with the types after the label, the pinned properties or the
- * description, and the footer with the IRI and the usage count under a hairline.
+ * The compact card, laid out as the larger card: the title bar with the types and the usage count,
+ * the title under it, the pinned properties or the description, and the footer with the IRI under
+ * a hairline.
  */
 .resource-card.is-compact {
 	width: 100%;
 	box-sizing: border-box;
+}
+
+/* The title bar, as the title bar of the larger card: the types from the content edge, the usage count at the end. */
+.compact-card-title-bar {
+	display: flex;
+	align-items: baseline;
+	gap: var(--col-gap);
+	min-width: 0;
+	padding: 4px var(--content-edge);
+	border-bottom: 1px solid var(--form-row-border);
+	background: var(--form-card-title-background);
 }
 
 .compact-card-title {
@@ -2390,6 +2402,7 @@ body {
 }
 
 .compact-card-types {
+	flex: 1 1 auto;
 	min-width: 0;
 	color: var(--form-muted);
 	overflow: hidden;

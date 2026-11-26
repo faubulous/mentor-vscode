@@ -1,4 +1,4 @@
-import { Literal, Quad, Term } from '@rdfjs/types';
+import { BlankNode, Literal, NamedNode, Quad, Term } from '@rdfjs/types';
 import { RdfDataFactory } from './rdf-data-factory';
 
 /**
@@ -71,4 +71,14 @@ function _isTerm(value: object): value is Term {
 	const termType = (value as { termType?: unknown }).termType;
 
 	return typeof termType === 'string' && TERM_TYPES.has(termType);
+}
+
+/**
+ * The resource an identifier of Mentor's documents names: an IRI, or the identifier of a blank
+ * node, which has no colon, as the definition tree and the hovers of the text editor pass it.
+ * @param identifier The IRI or the blank node identifier.
+ * @returns The term.
+ */
+export function getResourceTerm(identifier: string): NamedNode | BlankNode {
+	return identifier.includes(':') ? RdfDataFactory.namedNode(identifier) : RdfDataFactory.blankNode(identifier);
 }

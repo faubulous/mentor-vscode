@@ -6,7 +6,7 @@ import { useFormEditorContext } from '../state/form-editor-context';
 import { LanguageFilter } from '../state/language-filter';
 import { HighlightedText } from './highlighted-text';
 import { getResourceTooltipAttributes } from './resource-tooltip';
-import { getTermLabel } from './term-labels';
+import { getTermLabel } from '@src/services/resource/term-labels';
 import { ValuePill } from './value-pill';
 
 /**
