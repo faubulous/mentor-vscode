@@ -1121,7 +1121,7 @@
         },
         {
           "command": "mentor.command.openFormEditor",
-          "when": "resourceLangId =~ /^(turtle|trig|ntriples|nquads)$/ && config.mentor.formEditor.enabled && activeCustomEditorId != 'mentor.formEditor'",
+          "when": "resourceLangId =~ /^(turtle|trig|ntriples|nquads)$/ && activeCustomEditorId != 'mentor.formEditor'",
           "group": "navigation@1"
         },
         {
@@ -1387,7 +1387,7 @@
         },
         {
           "command": "mentor.command.openFormEditor",
-          "when": "resourceLangId =~ /^(turtle|trig|ntriples|nquads)$/ && config.mentor.formEditor.enabled && activeCustomEditorId != 'mentor.formEditor'"
+          "when": "resourceLangId =~ /^(turtle|trig|ntriples|nquads)$/ && activeCustomEditorId != 'mentor.formEditor'"
         },
         {
           "command": "mentor.command.openTextEditor",
@@ -2437,13 +2437,6 @@
             "description": "The default N-Quads document template to be used when creating a new N-Quads document.",
             "default": "",
             "editPresentation": "multilineText"
-          },
-          "mentor.formEditor.enabled": {
-            "type": "boolean",
-            "default": false,
-            "title": "Enable Form Editor",
-            "description": "Register the form based editor for RDF documents, which the editor title bar switches to. To open a file type in the form editor by default, run 'Reopen Editor With...' on a document of that type and choose 'Configure default editor for ...'. Takes effect after the window is reloaded.",
-            "experimental": true
           },
           "mentor.formEditor.pinnedProperties": {
             "type": "object",
