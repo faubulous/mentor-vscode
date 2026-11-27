@@ -1,4 +1,5 @@
 import { PredicateData } from '../form-editor-model';
+import { getCommentTarget } from '../state/comment-editor';
 import { CommentField } from './comment-field';
 import { CommentScope } from './value-comment';
 
@@ -18,20 +19,32 @@ export interface PropertyCommentsProps {
 }
 
 /**
- * The comment lines written above a property, if it has any, shown under the values of its row and
- * edited in place.
+ * The comment lines written above a property, shown under the values of its row and edited in
+ * place; once asked for, an empty field for a property without a comment, which writes one.
  * @param props The property and where its comment is written.
- * @returns The comment lines.
+ * @returns The comment lines, or nothing for a property without them.
  */
 export function PropertyComments({ property, scope }: PropertyCommentsProps): React.JSX.Element | null {
-	const { subject, card, version } = scope;
+	const { subject, card, version, draft, onDraftDone } = scope;
 	const predicate = property.predicate.term;
+	const anchor = predicate.termType === 'NamedNode' ? { kind: 'property' as const, subject, predicate: predicate.value } : undefined;
+	const asked = draft === 'property' && anchor !== undefined;
 
-	if (!property.comments) {
+	if (!property.comments && !asked) {
 		return null;
 	}
 
-	const anchor = predicate.termType === 'NamedNode' ? { kind: 'property' as const, subject, predicate: predicate.value } : undefined;
-
-	return <CommentField className="statement-comment" label="Comment on the property" lines={property.comments} anchor={anchor} subject={subject} card={card} version={version} />;
+	return (
+		<CommentField
+			className="statement-comment"
+			label="Comment on the property"
+			lines={property.comments ?? []}
+			target={anchor ? getCommentTarget(anchor) : undefined}
+			subject={subject}
+			card={card}
+			version={version}
+			autoFocus={asked}
+			onLeave={asked ? onDraftDone : undefined}
+		/>
+	);
 }

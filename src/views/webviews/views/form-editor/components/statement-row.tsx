@@ -23,7 +23,7 @@ import { RowMenu } from './row-menu';
 import { PredicateField } from './predicate-field';
 import { PredicateAnnotations } from './predicate-annotations';
 import { PropertyComments } from './property-comments';
-import { CommentScope, ValueComment } from './value-comment';
+import { CommentDraft, CommentScope, ValueComment, hasValueComment } from './value-comment';
 import { ResourceValues } from './resource-values';
 import { getRowErrorMessage } from './row-error-message';
 import { RowError } from './row-error';
@@ -205,13 +205,22 @@ export function StatementRow({ property, editor, inferredValues = [], services, 
 	const error = state ? getRowErrorMessage(state) : undefined;
 	const rowKind = _rowKindOf(literals.length, resources.length, wholes.length);
 	const [addingValue, setAddingValue] = useState(false);
+	const [draftComment, setDraftComment] = useState<CommentDraft>();
 	// A collapsed nested card shows its type without the label of its predicate, which would take
 	// room from the summary, and does not ask for a missing type.
 	const folded = header?.kind === 'type' && header.collapsed;
 	const addLink = edited && !addingValue && !folded ? _addLinkOf(edited, header, literals.length, resources.length, wholes.length) : undefined;
 	// The label row is the title of its card: it offers the input of a new value only while the
 	// resource has no label, and the label of another language comes through the language picker.
-	const scope: CommentScope = { subject: context.visited[context.visited.length - 1], card: context.visited[0], predicate: _predicateIriOf(predicateView), version: context.dataService.version };
+	const scope: CommentScope = {
+		subject: context.visited[context.visited.length - 1],
+		card: context.visited[0],
+		predicate: _predicateIriOf(predicateView),
+		version: context.dataService.version,
+		draft: draftComment,
+		onDraft: edited ? setDraftComment : undefined,
+		onDraftDone: () => setDraftComment(undefined)
+	};
 	const titled = header?.kind === 'label' && literals.length > 0;
 	// The inferred resources of an edited row stand in its box, after the resources it edits.
 	const boxed = edited !== undefined && !(folded && resources.length === 0) && !addLink && !titled;
@@ -237,7 +246,15 @@ export function StatementRow({ property, editor, inferredValues = [], services, 
 			return;
 		}
 
-		if (FormEditorShortcuts.Remove.matches(event) && !header && editor && !editor.isNew) {
+		if (FormEditorShortcuts.Comment.matches(event) && header?.kind !== 'type' && editor && !editor.isNew) {
+			const draft = _commentDraftAt(event.target);
+
+			if (draft !== undefined) {
+				event.preventDefault();
+				event.stopPropagation();
+				setDraftComment(draft);
+			}
+		} else if (FormEditorShortcuts.Remove.matches(event) && !header && editor && !editor.isNew) {
 			event.preventDefault();
 			event.stopPropagation();
 			editor.removeProperty();
@@ -549,7 +566,7 @@ function _resourceBox(edited: EditedRow, resources: readonly ShownValue[], optio
 	return (
 		<span className={classes.join(' ')}>
 			<ResourceValues
-				resources={resources.map(({ value, view, index }) => ({ view, index, comment: _commentOf(value, view, scope) }))}
+				resources={resources.map(({ value, view, index }) => ({ view, index, comment: _commentOf(value, view, index, scope) }))}
 				inferred={inferred}
 				targetType={_targetTypeOf(isType, defaultType)}
 				statement={isType ? undefined : { subject: editor.subject, predicate: state.draft.predicate }}
@@ -671,7 +688,7 @@ function _resourcePills(resources: readonly ShownValue[], context: StatementRowC
 		<span className="statement-value">
 			<span className="value-pills">
 				{resources.map(({ value, view, index }) => {
-					const comment = _commentOf(value, view, scope);
+					const comment = _commentOf(value, view, index, scope);
 					const pill = <TermValue key={index} view={view} {...context} />;
 
 					// A pill with a comment takes a line of its own, under its comment.
@@ -683,14 +700,32 @@ function _resourcePills(resources: readonly ShownValue[], context: StatementRowC
 }
 
 /**
- * The comment written above a value of a row, where it has one.
+ * The comment written above a value of a row, where it has one or one is asked for.
  * @param value The value.
  * @param view The view of the value.
+ * @param index The index of the value among the values of the row.
  * @param scope Where the comment is written.
  * @returns The comment, or `undefined` for a value without one.
  */
-function _commentOf(value: RowValue, view: TermData, scope: CommentScope): ReactNode {
-	return value.kind === 'written' && view.comments ? <ValueComment view={view} scope={scope} /> : undefined;
+function _commentOf(value: RowValue, view: TermData, index: number, scope: CommentScope): ReactNode {
+	return value.kind === 'written' && hasValueComment(view, index, scope) ? <ValueComment view={view} index={index} scope={scope} /> : undefined;
+}
+
+/**
+ * The comment Ctrl+/ asks for where the focus is in a row: the one above the value whose field or
+ * pill has the focus, else the one above the property, from its predicate or the input of a new
+ * value. Nothing in a comment, which is one already.
+ * @param target The element the key was pressed in.
+ * @returns The comment, or `undefined` where there is none to ask for.
+ */
+function _commentDraftAt(target: EventTarget): CommentDraft | undefined {
+	if (!(target instanceof Element) || target.closest('.comment-field')) {
+		return undefined;
+	}
+
+	const value = target.closest('[data-value-index]')?.getAttribute('data-value-index');
+
+	return value !== null && value !== undefined ? Number(value) : 'property';
 }
 
 /**

@@ -1,6 +1,9 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, screen } from '@testing-library/react';
+import { act, fireEvent, screen } from '@testing-library/react';
+import { createEditingHostStub } from '@src/utilities/mocks/editing-host-fixtures';
+import { EditingController } from '../state/editing-controller';
+import { FormBlock } from '../state/form-block';
 import { createResourceDataServiceStub } from '@src/utilities/mocks/resource-data-service-fixtures';
 import { renderWebview } from '@src/utilities/mocks/webview-test-utils';
 import { createResourceListItem } from '@src/utilities/mocks/resource-list-item-fixtures';
@@ -84,5 +87,93 @@ describe('BlockList', () => {
 		expect(dataService.requested.length).toBeGreaterThan(0);
 		expect(dataService.requested.length).toBeLessThan(RESOURCES.length);
 		expect(dataService.requested[0]).toBe(RESOURCES[0].subject);
+	});
+
+	describe('adding comments', () => {
+		/**
+		 * Render the first blocks of a short document in a form that can write it.
+		 * @param filtering Whether a filter narrows the list.
+		 * @returns The recording host and the blocks.
+		 */
+		async function renderEditable(filtering = false) {
+			const host = createEditingHostStub();
+			const blocks: FormBlock[] = buildFormBlocks(RESOURCES.slice(0, 2), [['The end']], filtering);
+
+			await act(async () => {
+				renderWebview(
+					<FormEditorContext.Provider value={{ readOnly: false, editing: new EditingController(host), namespaces: [], languageTags: {} }}>
+						<BlockList blocks={blocks} dataService={createResourceDataServiceStub()} scrollElement={createScrollElement(2000)} cardStates={ResourceCardStates.NONE} filtering={filtering} onToggle={() => undefined} />
+					</FormEditorContext.Provider>
+				);
+			});
+
+			return { host, blocks };
+		}
+
+		/**
+		 * Type a comment into the field that is asked for and leave it.
+		 * @param text The text.
+		 */
+		async function writeNewComment(text: string): Promise<void> {
+			const field = screen.getByLabelText('New comment');
+
+			expect(document.activeElement).toBe(field);
+
+			await act(async () => {
+				fireEvent.change(field, { target: { value: text } });
+				fireEvent.blur(field);
+			});
+		}
+
+		/**
+		 * The link that adds a comment in the gap above a block.
+		 * @param id The identifier of the block.
+		 * @returns The link.
+		 */
+		function linkAbove(id: string): HTMLElement {
+			return document.querySelector<HTMLElement>(`[data-block-id="${CSS.escape(id)}"] > .block-add-comment`)!;
+		}
+
+		it('adds a comment directly above a resource from the gap above its card', async () => {
+			const { host, blocks } = await renderEditable();
+
+			await act(async () => fireEvent.click(linkAbove(blocks[2].id)));
+			await writeNewComment('About Thing1');
+
+			expect(host.submitted[0].operations).toEqual([{ op: 'addComment', before: { subject: RESOURCES[1].subject }, lines: ['About Thing1'] }]);
+			expect(screen.queryByLabelText('New comment')).toBeNull();
+		});
+
+		it('adds a comment before a comment above a resource, and at the end of the document', async () => {
+			const { host, blocks } = await renderEditable();
+
+			await act(async () => fireEvent.click(linkAbove(blocks[0].id)));
+			await writeNewComment('Before the file comment');
+			// The data of the list stays at its version: the first comment is settled without a change of it.
+			await act(async () => host.settle({ ok: true, version: 1 }));
+			await act(async () => fireEvent.click(document.querySelector<HTMLElement>('.block-list-add-comment')!));
+			await writeNewComment('The very end');
+
+			expect(host.submitted.map(edit => edit.operations[0])).toEqual([
+				{ op: 'addComment', before: { subject: RESOURCES[0].subject, run: 0 }, lines: ['Before the file comment'] },
+				{ op: 'addComment', before: undefined, lines: ['The very end'] }
+			]);
+		});
+
+		it('writes nothing for a comment left empty, and offers none above the comments closing the document', async () => {
+			const { host, blocks } = await renderEditable();
+
+			await act(async () => fireEvent.click(linkAbove(blocks[2].id)));
+			await act(async () => fireEvent.blur(screen.getByLabelText('New comment')));
+
+			expect(host.submitted).toEqual([]);
+			expect(linkAbove(blocks[blocks.length - 1].id)).toBeNull();
+		});
+
+		it('offers no comment while a filter narrows the list', async () => {
+			await renderEditable(true);
+
+			expect(document.querySelector('.block-add-comment, .block-list-add-comment')).toBeNull();
+		});
 	});
 });

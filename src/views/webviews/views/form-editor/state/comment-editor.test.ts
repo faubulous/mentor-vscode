@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { createEditingHostStub } from '@src/utilities/mocks/editing-host-fixtures';
 import { TEST_SUBJECT } from '@src/utilities/mocks/statement-fixtures';
 import { CommentAnchor } from '@src/services/editing/comment-anchor';
-import { CommentEditor } from './comment-editor';
+import { CommentEditor, getCommentTarget } from './comment-editor';
 import { EditingController } from './editing-controller';
 
 const ANCHOR: CommentAnchor = { kind: 'resource', subject: TEST_SUBJECT, run: 0 };
@@ -12,7 +12,7 @@ const ANCHOR: CommentAnchor = { kind: 'resource', subject: TEST_SUBJECT, run: 0 
  */
 function createEditor(lines = ['first', 'second']) {
 	const host = createEditingHostStub();
-	const editor = new CommentEditor(new EditingController(host), ANCHOR, { subject: TEST_SUBJECT, card: TEST_SUBJECT, lines, version: 1 });
+	const editor = new CommentEditor(new EditingController(host), getCommentTarget(ANCHOR), { subject: TEST_SUBJECT, card: TEST_SUBJECT, lines, version: 1 });
 
 	return { host, editor };
 }

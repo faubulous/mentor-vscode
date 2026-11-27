@@ -1,4 +1,5 @@
 import { CommentFormBlock } from '../state/form-block';
+import { getCommentTarget } from '../state/comment-editor';
 import { CommentField } from './comment-field';
 
 /**
@@ -25,7 +26,7 @@ export interface CommentBlockProps {
 export function CommentBlock({ block, version }: CommentBlockProps): React.JSX.Element {
 	return (
 		<div className="comment-block">
-			<CommentField className="comment-block-text" label="Comment" lines={block.lines} anchor={block.anchor} subject={block.subject} card={block.subject} version={version} />
+			<CommentField className="comment-block-text" label="Comment" lines={block.lines} target={getCommentTarget(block.anchor)} subject={block.subject} card={block.subject} version={version} />
 		</div>
 	);
 }

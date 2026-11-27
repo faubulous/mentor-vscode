@@ -6,7 +6,10 @@ import { useStickyHeight } from '../hooks/use-sticky-height';
 import { IResourceDataService } from '../services/resource-data-service.interface';
 import { FormBlock } from '../state/form-block';
 import { ResourceCardStates } from '../state/resource-card-states';
+import { useFormEditorContext } from '../state/form-editor-context';
+import { NewCommentPosition } from '../state/comment-editor';
 import { CommentBlock } from './comment-block';
+import { NewCommentBlock } from './new-comment-block';
 import { OverviewRuler, RulerMark } from './overview-ruler';
 import { ResourceCard } from './resource-card';
 
@@ -14,6 +17,11 @@ import { ResourceCard } from './resource-card';
  * How many rows beyond the viewport are loaded, so that scrolling does not reveal empty rows.
  */
 const PREFETCH_MARGIN = 15;
+
+/**
+ * The key of the comment being added at the end of the document.
+ */
+const END_OF_DOCUMENT = 'end';
 
 /**
  * A resource to scroll to; a new request object scrolls again, even to the same resource.
@@ -90,7 +98,8 @@ export interface BlockListProps {
  * The virtualized list of the blocks of the form: resource cards and the comments between
  * them. Only the visible rows are rendered, and only the statements of the cards around the
  * viewport are requested, so a document with thousands of resources costs no more than one with
- * a screenful.
+ * a screenful. Where the form can write the document, the gap above a card or a comment above a
+ * resource offers to add a comment there, as the end of the list does at the end of the document.
  * @param props The blocks, the scroll container and the state of the entries.
  * @returns The list.
  */
@@ -107,6 +116,11 @@ export function BlockList({ blocks, dataService, scrollElement, cardStates, pinn
 	const currentId = useCurrentEntry(scrollElement, blocks, window.indexAt, scrollMargin, stickyHeight, onCurrentChange);
 	const marks = useRulerMarks(blocks, window.offsetOf, window.totalSize, scrollMargin, filtering === true);
 	const measureRow = useCallback((element: HTMLElement | null) => window.measureRow(element), [window]);
+	const { editing, readOnly } = useFormEditorContext();
+	const [newComment, setNewComment] = useState<string>();
+	// A comment belongs to its place among all resources, which a filtered list does not show.
+	const adding = editing !== undefined && !readOnly && filtering !== true;
+	const closeNewComment = useCallback(() => setNewComment(undefined), []);
 
 	return (
 		<>
@@ -127,6 +141,10 @@ export function BlockList({ blocks, dataService, scrollElement, cardStates, pinn
 							data-block-id={block.id}
 							style={{ position: 'absolute', top: item.offset, left: 0, width: '100%' }}
 						>
+							{adding && _newCommentPositionOf(block) && (
+								<button type="button" className="block-add-comment" onClick={() => setNewComment(block.id)}>Add comment</button>
+							)}
+							{newComment === block.id && <NewCommentBlock position={_newCommentPositionOf(block)} version={dataService.version} onDone={closeNewComment} />}
 							{block.kind === 'resource'
 								? <ResourceCard cardHeader={block.resource} dataService={dataService} expanded={cardStates.stateOf(block.id).open !== 'collapsed'} writing={busyIds?.has(block.id) === true} current={block.id === currentId} onToggle={onToggle} />
 								: <CommentBlock block={block} version={dataService.version} />}
@@ -134,6 +152,13 @@ export function BlockList({ blocks, dataService, scrollElement, cardStates, pinn
 					);
 				})}
 			</div>
+			{adding && blocks.length > 0 && (
+				<div className="block-list-end">
+					{newComment === END_OF_DOCUMENT
+						? <NewCommentBlock position={undefined} version={dataService.version} onDone={closeNewComment} />
+						: <button type="button" className="add-link block-list-add-comment" onClick={() => setNewComment(END_OF_DOCUMENT)}>Add comment</button>}
+				</div>
+			)}
 			{rulerElement && createPortal(<OverviewRuler scrollElement={scrollElement} marks={marks} contentHeight={window.totalSize + scrollMargin} />, rulerElement)}
 		</>
 	);
@@ -322,4 +347,19 @@ function useListPlacement(listRef: RefObject<HTMLDivElement | null>, scrollEleme
 	}, [listRef, scrollElement]);
 
 	return scrollMargin;
+}
+
+/**
+ * Where a comment added in the gap above a block goes: directly above a resource for its card,
+ * before the run for a comment above a resource. The comments closing the document offer none, as
+ * a comment is added after them at the end of the list.
+ * @param block The block.
+ * @returns The position, or `undefined` where the gap offers no comment.
+ */
+function _newCommentPositionOf(block: FormBlock): NewCommentPosition {
+	if (block.kind === 'resource') {
+		return { subject: block.resource.subject };
+	}
+
+	return block.anchor.kind === 'resource' ? { subject: block.anchor.subject, run: block.anchor.run } : undefined;
 }

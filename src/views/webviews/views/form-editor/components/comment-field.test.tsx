@@ -139,4 +139,72 @@ describe('CommentField', () => {
 
 		expect(host.submitted[0].operations).toEqual([{ op: 'setComment', at: { kind: 'node', subject: node }, lines: ['the node, edited'] }]);
 	});
+
+	describe('asked for with Ctrl+/', () => {
+		const LABEL = withAnchors(createTestCardBody([createProperty('rdfs:comment', [createLiteralView('x')]), createProperty('rdfs:label', [createLiteralView('Tree'), createLiteralView('Baum', 'de')])]));
+
+		/**
+		 * Press Ctrl+/ in an element.
+		 * @param element The element.
+		 */
+		async function pressComment(element: Element): Promise<void> {
+			await act(async () => {
+				fireEvent.keyDown(element, { key: '/', ctrlKey: true });
+			});
+		}
+
+		it('opens an empty comment above the value whose field has the focus, which writes the comment of that value', async () => {
+			const { host } = renderList(LABEL);
+
+			await pressComment(screen.getByLabelText('Value 2'));
+
+			const field = screen.getByLabelText('Comment on the value');
+
+			expect(document.activeElement).toBe(field);
+			expect(field.closest('.statement-value')?.querySelector('[data-value-index="1"]')).not.toBeNull();
+
+			await write(field, 'the German name');
+
+			expect(host.submitted[0].operations).toEqual([{ op: 'setComment', at: { kind: 'value', subject: TEST_SUBJECT, predicate: RDFS.label, anchor: LABEL.predicates[1].values[1].anchor }, lines: ['the German name'] }]);
+			expect(screen.queryByLabelText('Comment on the value')).toBeNull();
+		});
+
+		it('opens an empty comment above the property from its predicate field, and writes nothing when left empty', async () => {
+			const { host } = renderList(LABEL);
+			const row = screen.getByRole('group', { name: 'rdfs:label' });
+
+			await pressComment(row.querySelector('.statement-predicate .input-field')!);
+
+			const field = screen.getByLabelText('Comment on the property');
+
+			expect(document.activeElement).toBe(field);
+
+			await act(async () => fireEvent.blur(field));
+
+			expect(host.submitted).toEqual([]);
+			expect(screen.queryByLabelText('Comment on the property')).toBeNull();
+		});
+
+		it('takes the focus to the comment a value has already', async () => {
+			const cardBody = withAnchors(createTestCardBody([createProperty('rdfs:comment', [createLiteralView('x')]), createProperty('rdfs:label', [{ ...createLiteralView('Tree'), comments: ['the name'] }])]));
+
+			renderList(cardBody);
+			await pressComment(within(screen.getByRole('group', { name: 'rdfs:label' })).getByLabelText('Value 1'));
+
+			expect(screen.getAllByLabelText('Comment on the value')).toHaveLength(1);
+			expect(document.activeElement).toBe(screen.getByLabelText('Comment on the value'));
+		});
+
+		it('opens the comment above a nested card from its header', async () => {
+			const node = RdfDataFactory.blankNode('b1');
+			const nested: ResourceCardBodyData = { subject: node, predicates: [createProperty('rdfs:comment', [createLiteralView('inside')])] };
+			const cardBody = withAnchors(createTestCardBody([createProperty('ex:has', [{ term: node, editable: true, nested: { term: node, propertyCount: 1 } }])]));
+			const { host } = renderList(cardBody, [nested]);
+
+			await pressComment(screen.getByRole('button', { name: 'Expand' }));
+			await write(screen.getByLabelText('Comment on the value'), 'the node');
+
+			expect(host.submitted[0].operations).toEqual([{ op: 'setComment', at: { kind: 'value', subject: TEST_SUBJECT, predicate: `${TEST_NAMESPACES.ex}has`, anchor: cardBody.predicates[0].values[0].anchor }, lines: ['the node'] }]);
+		});
+	});
 });

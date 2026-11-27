@@ -534,13 +534,57 @@ body {
 
 /* The cards stand apart; the gap belongs to the block, which the list measures. */
 .form-block.is-resource {
-	padding-top: 12px;
+	--block-gap: 12px;
+	padding-top: var(--block-gap);
 }
 
 @container pane (max-width: 600px) {
 	.form-block.is-resource {
-		padding-top: 8px;
+		--block-gap: 8px;
 	}
+}
+
+/* A comment between the cards stands apart by the room above its text. */
+.form-block.is-comment {
+	--block-gap: 16px;
+}
+
+/*
+ * The gap above a card, or above a comment over a resource, offers to add a comment there: the
+ * link fills the gap and shows while it is pointed at or has the focus, so the list stays quiet.
+ */
+.block-add-comment {
+	position: absolute;
+	inset: 0 0 auto 0;
+	z-index: 1;
+	height: var(--block-gap);
+	padding: 0;
+	border: 0;
+	background: none;
+	color: var(--form-muted);
+	font: inherit;
+	font-size: 11px;
+	line-height: var(--block-gap);
+	text-align: left;
+	opacity: 0;
+	cursor: pointer;
+}
+
+.block-add-comment:hover,
+.block-add-comment:focus-visible {
+	opacity: 1;
+	color: var(--vscode-foreground);
+	outline: none;
+}
+
+/* A comment being added stands where it will be written, above the card or comment after it. */
+.comment-block.is-new {
+	padding-bottom: 12px;
+}
+
+/* The end of the list, where a comment is added at the end of the document. */
+.block-list-end {
+	padding-top: 12px;
 }
 
 /* The card the context bar names, the one the definition tree revealed, or the one being edited. */

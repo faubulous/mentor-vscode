@@ -12,7 +12,7 @@ export const DOCUMENT_COMMENT_BLOCK_ID = 'comment:document';
 /**
  * The term the comments closing the document are written for, which no resource of it is.
  */
-const DOCUMENT_SUBJECT = RdfDataFactory.namedNode('urn:mentor:document');
+export const DocumentSubject = RdfDataFactory.namedNode('urn:mentor:document');
 
 /**
  * Build the blocks of the form from the visible resources. While filtering, only the entries are
@@ -68,5 +68,5 @@ function _resourceCommentBlock(resource: ResourceListItemData, lines: string[], 
  * @returns The blocks.
  */
 function _documentCommentBlocks(runs: readonly string[][]): FormBlock[] {
-	return runs.map((lines, run) => ({ kind: 'comment', id: `${DOCUMENT_COMMENT_BLOCK_ID}:${run}`, lines, anchor: { kind: 'document', run }, subject: DOCUMENT_SUBJECT }));
+	return runs.map((lines, run) => ({ kind: 'comment', id: `${DOCUMENT_COMMENT_BLOCK_ID}:${run}`, lines, anchor: { kind: 'document', run }, subject: DocumentSubject }));
 }
