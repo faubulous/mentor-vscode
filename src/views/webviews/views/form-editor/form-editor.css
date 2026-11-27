@@ -913,7 +913,7 @@ body {
 	align-items: start;
 	min-width: 0;
 	padding-top: var(--row-pad);
-	border-bottom: 1px solid var(--form-row-border);
+	border-bottom: 1px dotted var(--form-row-border);
 }
 
 /* The row that ends a card shows no line under it, but keeps its height; the row of Add property has none. */
@@ -1221,8 +1221,8 @@ body {
 	overflow: hidden;
 }
 
-/* A collapsed box without a type gives its summary the whole row. */
-.statement-line.is-card-header.is-typeless > .statement-cells > .statement-values {
+/* A collapsed box shows no predicate: its type and summary take the whole row. */
+.statement-line.is-card-header.is-folded > .statement-cells > .statement-values {
 	grid-column: 1 / -1;
 }
 
@@ -1330,6 +1330,12 @@ body {
 .statement-line:hover > .row-gutter > .row-grip,
 .statement-line:focus-within > .row-gutter > .row-grip {
 	visibility: visible;
+}
+
+/* The grip shows its focus ring however it took the focus, as a click on it leaves its arrows working. */
+.row-gutter > .row-grip:focus {
+	outline: 1px solid var(--vscode-focusBorder);
+	outline-offset: -1px;
 }
 
 /* Pressing the grip focuses it, but the grip of the dragged row shows neither its focus ring nor its tint while it is dragged. */

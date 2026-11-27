@@ -227,7 +227,7 @@ describe('StatementList, with a blank node', () => {
 		}]]);
 	});
 
-	it('leads the nested card with its type, collapsed to the type at first and naming the other properties, with a chevron that expands it', async () => {
+	it('leads the nested card with its type, collapsed to the type without its predicate at first and naming the other properties, with a chevron that expands it', async () => {
 		const typed: ResourceCardBodyData = withAnchors({ subject: NODE, predicates: [...NODE_CARD_BODY.predicates, createProperty('rdf:type', [createIriView('owl:Restriction', 'Restriction')])] });
 
 		await renderCard(typed, false);
@@ -235,7 +235,7 @@ describe('StatementList, with a blank node', () => {
 		const header = within(nestedCard()).getByRole('group', { name: 'Type' });
 
 		expect(nestedCard().querySelector('.statement-line')).toBe(header);
-		expect(header.querySelector('.statement-predicate')?.textContent).toBe('type');
+		expect(header.querySelector('.statement-predicate')).toBeNull();
 		expect(within(header).getByText('Restriction')).toBeTruthy();
 		expect(within(nestedCard()).queryByRole('group', { name: 'rdfs:label' })).toBeNull();
 		expect(within(nestedCard()).queryByRole('button', { name: 'Add property' })).toBeNull();
@@ -245,6 +245,7 @@ describe('StatementList, with a blank node', () => {
 
 		expect(within(nestedCard()).getByRole('group', { name: 'rdfs:label' })).toBeTruthy();
 		expect(within(nestedCard()).getByRole('button', { name: 'Add property' })).toBeTruthy();
+		expect(header.querySelector('.statement-predicate')?.textContent).toBe('type');
 
 		await userEvent.click(within(header).getByRole('button', { name: 'Collapse' }));
 

@@ -1,4 +1,4 @@
-import { DragEvent, RefObject, useEffect, useState } from 'react';
+import { DragEvent, RefObject, useEffect, useRef, useState } from 'react';
 import { StatementRowEntry } from '../state/statement-rows';
 import { RowGripProps } from '../components/row-grip';
 
@@ -107,6 +107,8 @@ interface FocusRequest {
 export function useRowReorder(rows: readonly StatementRowEntry[], listRef: RefObject<HTMLElement | null>): RowReordering {
 	const [dragged, setDragged] = useState<string>();
 	const [drop, setDrop] = useState<{ key: string; placement: Placement }>();
+	// The place the drop line shows, as of the last drag event, which a render may not have caught up with.
+	const shownDrop = useRef<{ key: string; placement: Placement }>(undefined);
 	const [focusRequest, setFocusRequest] = useState<FocusRequest>();
 	const placed = rows.filter(entry => _predicateOf(entry) !== undefined);
 
@@ -119,7 +121,7 @@ export function useRowReorder(rows: readonly StatementRowEntry[], listRef: RefOb
 		setFocusRequest(undefined);
 
 		if (!document.activeElement || document.activeElement === document.body) {
-			_gripOf(listRef.current, focusRequest.predicate)?.focus();
+			_focusGrip(_gripOf(listRef.current, focusRequest.predicate));
 		}
 	}, [rows, focusRequest, listRef]);
 
@@ -140,13 +142,16 @@ export function useRowReorder(rows: readonly StatementRowEntry[], listRef: RefOb
 	};
 
 	const endDrag = (): void => {
+		shownDrop.current = undefined;
 		setDragged(undefined);
 		setDrop(undefined);
 	};
 
 	const showDrop = (next: RowDrop | undefined): void => {
+		shownDrop.current = next ? { key: next.entry.key, placement: next.placement } : undefined;
+
 		if (next?.entry.key !== drop?.key || next?.placement !== drop?.placement) {
-			setDrop(next ? { key: next.entry.key, placement: next.placement } : undefined);
+			setDrop(shownDrop.current);
 		}
 	};
 
@@ -188,14 +193,17 @@ export function useRowReorder(rows: readonly StatementRowEntry[], listRef: RefOb
 			}
 		},
 		onDrop: event => {
-			const target = dropAt(event.clientY);
+			// The row goes where the drop line shows, not where the pointer of the drop event is: in a
+			// webview the drop event may report another position than the drag events before it.
+			const shown = shownDrop.current;
+			const target = shown ? { entry: placed.find(candidate => candidate.key === shown.key), placement: shown.placement } : undefined;
 			const source = placed.find(candidate => candidate.key === dragged);
 
 			event.preventDefault();
 			event.stopPropagation();
 			endDrag();
 
-			if (target && source) {
+			if (target?.entry && source) {
 				move(source, target.entry, target.placement, false);
 			}
 		}
@@ -324,4 +332,19 @@ function _gripOf(list: HTMLElement | null, predicate: string): HTMLElement | nul
 	const row = Array.from(list?.children ?? []).find(child => child.getAttribute('data-predicate') === predicate);
 
 	return row?.querySelector<HTMLElement>(':scope > .row-gutter > .row-grip');
+}
+
+/**
+ * Give a grip the focus. A grip is hidden until its row is pointed at or holds the focus, and a
+ * hidden element takes no focus, so it shows while it takes the focus, which then keeps it shown.
+ * @param grip The grip, if the row shows one.
+ */
+function _focusGrip(grip: HTMLElement | null | undefined): void {
+	if (!grip) {
+		return;
+	}
+
+	grip.style.visibility = 'visible';
+	grip.focus();
+	grip.style.removeProperty('visibility');
 }

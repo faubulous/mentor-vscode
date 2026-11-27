@@ -112,10 +112,10 @@ export interface ResourceIndexOptions {
 	inferredQuadsOf?: (resource: NamedNode | BlankNode) => readonly Quad[];
 
 	/**
-	 * Read the types the store gives a resource, inferred ones included; those it does not assert
-	 * are named as inferred.
+	 * Read the types a card names for a resource, inferred ones included, without those that are
+	 * superclasses of its other types; those it does not assert are named as inferred.
 	 */
-	inferredTypesOf?: (resource: NamedNode | BlankNode) => readonly string[];
+	shownTypesOf?: (resource: NamedNode | BlankNode) => readonly string[];
 }
 
 /**

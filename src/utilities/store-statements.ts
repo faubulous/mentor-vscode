@@ -1,4 +1,4 @@
-import { RDF, Store } from '@faubulous/mentor-rdf';
+import { RDF, RDFS, Store } from '@faubulous/mentor-rdf';
 import { Quad_Object, Quad_Subject } from '@rdfjs/types';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 
@@ -50,4 +50,28 @@ export function isInstanceOf(store: Store, iri: string, classes: readonly string
 	const subject = RdfDataFactory.namedNode(iri);
 
 	return classes.some(type => hasStatement(store, subject, RDF.type, RdfDataFactory.namedNode(type)));
+}
+
+/**
+ * A class with all its superclasses, followed along `rdfs:subClassOf` in all graphs of the store.
+ * @param store The store.
+ * @param type The IRI of the class.
+ * @returns The IRIs of the class and its superclasses.
+ */
+export function getClassWithSuperClasses(store: Store, type: string): Set<string> {
+	const classes = new Set<string>([type]);
+	const pending = [type];
+
+	while (pending.length > 0) {
+		const current = pending.pop()!;
+
+		for (const superClass of getObjectIris(store, RdfDataFactory.namedNode(current), [RDFS.subClassOf])) {
+			if (!classes.has(superClass)) {
+				classes.add(superClass);
+				pending.push(superClass);
+			}
+		}
+	}
+
+	return classes;
 }

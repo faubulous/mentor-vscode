@@ -128,6 +128,27 @@ describe('ResourceCardService', () => {
 		expect(card.cardHeader.inferredTypeLabels).toEqual(['NamedIndividual']);
 	});
 
+	it('names the types of a resource without those that are superclasses of its other types', () => {
+		const { service, store } = createService();
+		const oak = RdfDataFactory.namedNode(`${EX}Oak`);
+
+		store.loadTurtle(`@prefix ex: <${EX}> .\n@prefix owl: <${_OWL}> .\n@prefix rdfs: <${_RDFS}> .\nex:Tree rdfs:subClassOf owl:NamedIndividual .`, 'file:///w/classes.ttl', true);
+
+		expect(service.getInferredTypes(undefined, oak)).toEqual(expect.arrayContaining([`${EX}Tree`, OWL.NamedIndividual]));
+		expect(service.getShownTypes(undefined, oak)).toEqual([`${EX}Tree`]);
+		expect(service.getInferredQuads(undefined, oak).map(quad => quad.object.value)).toContain(OWL.NamedIndividual);
+		expect(service.getShownInferredQuads(undefined, oak).map(quad => quad.object.value)).not.toContain(OWL.NamedIndividual);
+	});
+
+	it('keeps the types of a resource that are superclasses of each other', () => {
+		const { service, store } = createService();
+		const oak = RdfDataFactory.namedNode(`${EX}Oak`);
+
+		store.loadTurtle(`@prefix ex: <${EX}> .\n@prefix owl: <${_OWL}> .\n@prefix rdfs: <${_RDFS}> .\nex:Tree rdfs:subClassOf owl:NamedIndividual .\nowl:NamedIndividual rdfs:subClassOf ex:Tree .`, 'file:///w/classes.ttl', true);
+
+		expect([...service.getShownTypes(undefined, oak)].sort()).toEqual([`${EX}Tree`, OWL.NamedIndividual].sort());
+	});
+
 	it('counts the usages of a resource without the statement that defines it', () => {
 		const { service } = createService({ [`${EX}Oak`]: 1 });
 

@@ -1,7 +1,7 @@
 import { OWL, RDF, RDFS, Store } from '@faubulous/mentor-rdf';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { getSchemaOrgIris, SchemaOrg } from '@src/utilities/schema-org';
-import { getObjectIris } from '@src/utilities/store-statements';
+import { getClassWithSuperClasses, getObjectIris } from '@src/utilities/store-statements';
 import { TermFit } from './term-search';
 import { PropertyShapeIndex } from './property-shape-index';
 
@@ -171,19 +171,7 @@ export class TermFitResolver {
 			return known;
 		}
 
-		const classes = new Set<string>([type]);
-		const pending = [type];
-
-		while (pending.length > 0) {
-			const current = pending.pop()!;
-
-			for (const superClass of getObjectIris(this._store, RdfDataFactory.namedNode(current), [RDFS.subClassOf])) {
-				if (!classes.has(superClass)) {
-					classes.add(superClass);
-					pending.push(superClass);
-				}
-			}
-		}
+		const classes = getClassWithSuperClasses(this._store, type);
 
 		this._closures.set(type, classes);
 

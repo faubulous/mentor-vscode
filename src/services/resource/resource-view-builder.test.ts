@@ -276,7 +276,7 @@ describe('ResourceViewBuilder, with the statements the reasoner infers', () => {
 
 	it('names the types the store gives a resource besides those it asserts as inferred', () => {
 		const documentContext = createResolvingDocumentContext({ namespaces: NAMESPACES });
-		const options: ResourceIndexOptions = { inferredTypesOf: () => [`${EX}Class`, OWL.NamedIndividual] };
+		const options: ResourceIndexOptions = { shownTypesOf: () => [`${EX}Class`, OWL.NamedIndividual] };
 		const index = new ResourceIndexBuilder(readTurtleQuadContexts(PREAMBLE + 'ex:Thing a ex:Class .\n'), documentContext, options).build();
 
 		expect(index.listItems[0]).toMatchObject({ typeLabels: ['ex:Class'], inferredTypeLabels: ['owl:NamedIndividual'] });
@@ -284,7 +284,7 @@ describe('ResourceViewBuilder, with the statements the reasoner infers', () => {
 
 	it('names no inferred type where the store gives a resource none but those it asserts', () => {
 		const documentContext = createResolvingDocumentContext({ namespaces: NAMESPACES });
-		const index = new ResourceIndexBuilder(readTurtleQuadContexts(PREAMBLE + 'ex:Thing a ex:Class .\n'), documentContext, { inferredTypesOf: () => [`${EX}Class`] }).build();
+		const index = new ResourceIndexBuilder(readTurtleQuadContexts(PREAMBLE + 'ex:Thing a ex:Class .\n'), documentContext, { shownTypesOf: () => [`${EX}Class`] }).build();
 
 		expect(index.listItems[0].inferredTypeLabels).toBeUndefined();
 	});

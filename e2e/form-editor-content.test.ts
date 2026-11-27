@@ -43,13 +43,19 @@ suite('form editor content', () => {
 		assert.ok(snapshot.namespaces.some(namespace => namespace.prefix === 'ex'), 'the declared namespaces must be reported');
 	});
 
-	test('names the types the reasoner infers for a resource', async () => {
-		const [uri] = await vscode.workspace.findFiles('data/ontology.ttl', undefined, 1);
-		const snapshot = await openSnapshot(uri);
-		const thing = snapshot.resources.find(resource => resource.label === 'Thing');
+	test('names the types the reasoner infers for a resource, except superclasses of its other types', async () => {
+		const [instances] = await vscode.workspace.findFiles('data/instances.ttl', undefined, 1);
+		const item = (await openSnapshot(instances)).resources.find(resource => resource.label === 'Item 0');
+
+		assert.ok(item?.inferredTypeLabels?.some(label => /individual/i.test(label)), `the reasoner infers owl:NamedIndividual for a typed individual, got ${JSON.stringify(item?.inferredTypeLabels)}`);
+
+		await vscode.commands.executeCommand('workbench.action.closeAllEditors');
+
+		const [ontology] = await vscode.workspace.findFiles('data/ontology.ttl', undefined, 1);
+		const thing = (await openSnapshot(ontology)).resources.find(resource => resource.label === 'Thing');
 
 		assert.ok(thing, 'the class must appear in the resource list');
-		assert.ok(thing.inferredTypeLabels?.some(label => /class/i.test(label)), `the reasoner infers rdfs:Class for an owl:Class, got ${JSON.stringify(thing.inferredTypeLabels)}`);
+		assert.strictEqual(thing.inferredTypeLabels, undefined, 'the inferred rdfs:Class is a superclass of the asserted owl:Class and is not named');
 	});
 });
 

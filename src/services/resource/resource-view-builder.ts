@@ -382,7 +382,7 @@ export class ResourceViewBuilder {
 	 */
 	private _resolveInferredTypeLabels(entry: ResourceIndexEntry, typeIris: readonly string[]): string[] | undefined {
 		const asserted = new Set(typeIris);
-		const inferred = (this._options.inferredTypesOf?.(entry.term) ?? []).filter(iri => !asserted.has(iri));
+		const inferred = (this._options.shownTypesOf?.(entry.term) ?? []).filter(iri => !asserted.has(iri));
 
 		return this._resolveTypeLabels(inferred);
 	}
