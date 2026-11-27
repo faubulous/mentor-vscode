@@ -91,6 +91,25 @@ describe('ResourceCard, with the statements the reasoner infers', () => {
 		expect(rowOf('rdfs:seeAlso').classList.contains('is-editable')).toBe(false);
 	});
 
+	it('shows the inferred type of an untyped nested node as a pill that is no link, as those edited are not', () => {
+		const editing = new EditingController(createEditingHostStub());
+		const node = RdfDataFactory.blankNode('n0');
+		const nodeBody: ResourceCardBodyData = { subject: node, predicates: [createProperty('rdf:type', [inferredView('owl:Class', 'Class')]), ...withAnchors(createTestCardBody([createProperty('rdfs:label', [{ term: RdfDataFactory.literal('Node'), editable: true }])])).predicates] };
+		const outer = withAnchors(createTestCardBody([createProperty('ex:part', [{ term: node, editable: true, nested: { term: node, propertyCount: 2 } }])]));
+		const dataService = createResourceDataServiceStub([outer, nodeBody]);
+
+		renderWebview(
+			<FormEditorContext.Provider value={{ readOnly: false, editing, resources: [], namespaces: NAMESPACES, languageTags: {} }}>
+				<ResourceCard cardHeader={TREE} dataService={dataService} expanded onToggle={() => undefined} />
+			</FormEditorContext.Provider>
+		);
+
+		const pill = screen.getByText('Class').closest('.value-pill')!;
+
+		expect(pill.classList.contains('is-inferred')).toBe(true);
+		expect(pill.getAttribute('role')).toBeNull();
+	});
+
 	it('leaves the inferred values and the properties only inferred out where the view hides them', () => {
 		renderCard({ showInferred: false });
 

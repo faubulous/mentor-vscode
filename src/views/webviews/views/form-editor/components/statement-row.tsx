@@ -32,6 +32,7 @@ import { LiteralAnnotationPickerSelection } from './literal-annotation-picker-it
 import { getResourceTooltipAttributes } from './resource-tooltip';
 import { getTermLabel } from '@src/services/resource/term-labels';
 import { TermValue } from './term-value';
+import { ValuePill } from './value-pill';
 
 /**
  * The header of the nested card of a blank node, which the row of its type leads.
@@ -675,18 +676,25 @@ function _resourcePills(resources: readonly ShownValue[], context: StatementRowC
 /**
  * The values the reasoner infers for the predicate of an edited row, after those it edits, as a
  * row that only reads shows them: literals on lines of their own, resources as pills, and blank
- * nodes and lists whole.
+ * nodes and lists whole. The pills are not links, as the pills of the values the row edits are not.
  * @param inferred The values.
  * @param context Where the row stands.
  * @returns The values.
  */
 function _inferredValuesOf(inferred: readonly ShownValue[], context: StatementRowContext): React.JSX.Element {
 	const cellOf = (entry: ShownValue): React.JSX.Element => <StatementValueCell key={entry.index} {...entry} {...context} />;
+	const resources = inferred.filter(entry => _kindOf(entry.view) === 'resource');
 
 	return (
 		<span className="statement-inferred-values">
 			{inferred.filter(entry => _kindOf(entry.view) === 'literal').map(cellOf)}
-			{_resourcePills(inferred.filter(entry => _kindOf(entry.view) === 'resource'), context)}
+			{resources.length > 0 && (
+				<span className="statement-value">
+					<span className="value-pills">
+						{resources.map(({ view, index }) => <ValuePill key={index} view={view} />)}
+					</span>
+				</span>
+			)}
 			{inferred.filter(entry => _kindOf(entry.view) === 'whole').map(cellOf)}
 		</span>
 	);
