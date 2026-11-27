@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, screen, within } from '@testing-library/react';
+import { act, createEvent, fireEvent, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { RDF, RDFS, XSD } from '@faubulous/mentor-rdf';
 import { createEditingHostStub, EditingHostStub } from '@src/utilities/mocks/editing-host-fixtures';
@@ -538,6 +538,29 @@ describe('StatementList, moving rows', () => {
 
 		expect(host.submitted[0].operations).toEqual([{ op: 'moveProperty', subject: TEST_SUBJECT, predicate: RDFS.subClassOf, target: RDF.type, placement: 'before' }]);
 		expect(document.querySelector('.is-drop-before, .is-drop-after')).toBeNull();
+	});
+
+	it('drops a dragged row where the drop line shows, though the drop event reports another position, as in a webview', async () => {
+		const { host } = renderList();
+
+		// The rows stand one under the other, each as high as a line.
+		rows().forEach((row, index) => {
+			row.getBoundingClientRect = () => ({ top: index * 30, height: 30 }) as DOMRect;
+		});
+
+		const at = (event: Event, clientY: number): Event => Object.defineProperty(event, 'clientY', { value: clientY });
+
+		fireEvent.dragStart(gripOf(rows()[2]), { dataTransfer });
+		fireEvent(rows()[0], at(createEvent.dragOver(rows()[0], { dataTransfer }), 5));
+
+		expect(rows()[0].classList.contains('is-drop-before')).toBe(true);
+
+		// The drop event reports a position below the rows, the gap where the dragged row stands.
+		await act(async () => {
+			fireEvent(rows()[0], at(createEvent.drop(rows()[0], { dataTransfer }), 1000));
+		});
+
+		expect(host.submitted[0].operations).toEqual([{ op: 'moveProperty', subject: TEST_SUBJECT, predicate: RDFS.subClassOf, target: RDF.type, placement: 'before' }]);
 	});
 
 	it('shows why the host did not move a row', async () => {

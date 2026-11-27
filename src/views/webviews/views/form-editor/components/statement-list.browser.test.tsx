@@ -769,7 +769,96 @@ describe('StatementList, edited in a browser', () => {
 		expect(host.submitted[0].operations).toEqual([{ op: 'moveProperty', subject: TEST_SUBJECT, predicate: RDF.type, target: RDFS.subClassOf, placement: 'after' }]);
 	});
 
-	it('shows no focus ring on the grip of a row while the row is dragged', async () => {
+	it('moves a row of a nested card, whose type is only inferred, dragged by its grip onto the lower half of another', async () => {
+		const node = RdfDataFactory.blankNode('shape');
+		const inferredType = { ...createIriView('owl:Class', 'Property Shape'), editable: false, inferred: true };
+		const nodeBody = withAnchors(createTestCardBody([
+			createProperty('ex:path', [createIriView('ex:p', 'p')]),
+			createProperty('ex:maxCount', [createLiteralView('1')]),
+			createProperty('ex:minCount', [createLiteralView('1')]),
+			createProperty('ex:class', [createIriView('ex:Project', 'Project')])
+		]));
+		const nested: ResourceCardBodyData = { subject: node, predicates: [createProperty('rdf:type', [inferredType]), ...nodeBody.predicates] };
+		const cardBody = withAnchors(createTestCardBody([createProperty('ex:property', [{ term: node, editable: true, nested: { term: node, propertyCount: 5 } }])]));
+		const { host } = await renderList(cardBody, [nested]);
+		const box = document.querySelector<HTMLElement>('.resource-card.is-nested')!;
+		const rowOf = (name: string) => within(box).getByRole('group', { name });
+		const expand = within(box).queryByRole('button', { name: 'Expand' });
+
+		if (expand) {
+			await userEvent.click(expand);
+		}
+
+		const grip = rowOf('ex:maxCount').querySelector<HTMLElement>('.row-grip')!;
+		const target = rowOf('ex:minCount').getBoundingClientRect();
+
+		await userEvent.hover(rowOf('ex:maxCount'));
+
+		await userEvent.dragAndDrop(grip, rowOf('ex:minCount'), { targetPosition: { x: target.width / 2, y: target.height - 3 } });
+		await expect.poll(() => host.submitted.length).toBe(1);
+
+		// Into the gap after the row it is dropped on: before the row that follows that one.
+		expect(host.submitted[0].operations).toEqual([{ op: 'moveProperty', subject: node, predicate: `${EXAMPLE_NAMESPACE}maxCount`, target: `${EXAMPLE_NAMESPACE}class`, placement: 'before' }]);
+	});
+
+		it('shows the focus ring of a grip clicked with the mouse, whose arrows then move its row', async () => {
+		await renderList();
+
+		const grip = rows()[0].querySelector<HTMLElement>('.row-grip')!;
+
+		await userEvent.hover(rows()[0]);
+		await userEvent.click(grip);
+
+		expect(document.activeElement).toBe(grip);
+		expect(getComputedStyle(grip).outlineStyle).toBe('solid');
+	});
+
+		it('keeps the focus on the grip of a row moved down by its arrows, which is put in its new place and loses the focus on the way', async () => {
+		const { host, deliver } = await renderList();
+		const grip = rows()[1].querySelector<HTMLElement>('.row-grip')!;
+
+		await userEvent.hover(rows()[1]);
+		await userEvent.click(grip);
+		await userEvent.keyboard('{ArrowDown}');
+		await expect.poll(() => host.submitted.length).toBe(1);
+		await act(async () => host.settle({ ok: true, version: 2 }));
+		// The pointer leaves the row, whose grip is then hidden unless it holds the focus.
+		await userEvent.unhover(rows()[1]);
+		await deliver({ ...SAMPLE, predicates: [SAMPLE.predicates[0], SAMPLE.predicates[2], SAMPLE.predicates[1]] });
+
+		expect(rows().map(row => row.getAttribute('aria-label'))).toEqual(['rdf:type', 'rdfs:subClassOf', 'rdfs:label']);
+		await expect.poll(() => document.activeElement).toBe(rows()[2].querySelector('.row-grip'));
+	});
+
+	it('shows the focus ring of a grip clicked with the mouse, whose arrows then move its row', async () => {
+		await renderList();
+
+		const grip = rows()[0].querySelector<HTMLElement>('.row-grip')!;
+
+		await userEvent.hover(rows()[0]);
+		await userEvent.click(grip);
+
+		expect(document.activeElement).toBe(grip);
+		expect(getComputedStyle(grip).outlineStyle).toBe('solid');
+	});
+
+		it('keeps the focus on the grip of a row moved by its arrows, once the row stands in its new place', async () => {
+		const { host, deliver } = await renderList();
+		const grip = rows()[2].querySelector<HTMLElement>('.row-grip')!;
+
+		await userEvent.hover(rows()[2]);
+		await userEvent.click(grip);
+		await userEvent.keyboard('{ArrowUp}');
+		await expect.poll(() => host.submitted.length).toBe(1);
+		await act(async () => host.settle({ ok: true, version: 2 }));
+		await deliver({ ...SAMPLE, predicates: [SAMPLE.predicates[0], SAMPLE.predicates[2], SAMPLE.predicates[1]] });
+		await new Promise(resolve => setTimeout(resolve, 50));
+
+		expect(rows().map(row => row.getAttribute('aria-label'))).toEqual(['rdf:type', 'rdfs:subClassOf', 'rdfs:label']);
+		expect(document.activeElement).toBe(rows()[1].querySelector('.row-grip'));
+	});
+
+		it('shows no focus ring on the grip of a row while the row is dragged', async () => {
 		await renderList();
 
 		const grip = rows()[2].querySelector<HTMLElement>('.row-grip')!;

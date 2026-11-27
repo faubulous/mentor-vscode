@@ -204,10 +204,9 @@ export function StatementRow({ property, editor, inferredValues = [], services, 
 	const error = state ? getRowErrorMessage(state) : undefined;
 	const rowKind = _rowKindOf(literals.length, resources.length, wholes.length);
 	const [addingValue, setAddingValue] = useState(false);
-	// A collapsed nested card shows its type, but does not ask for a missing one: without a type it
-	// leaves out the label of the type too, and its summary takes the row.
+	// A collapsed nested card shows its type without the label of its predicate, which would take
+	// room from the summary, and does not ask for a missing type.
 	const folded = header?.kind === 'type' && header.collapsed;
-	const typeless = folded && resources.length === 0 && inferred.length === 0;
 	const addLink = edited && !addingValue && !folded ? _addLinkOf(edited, header, literals.length, resources.length, wholes.length) : undefined;
 	// The label row is the title of its card: it offers the input of a new value only while the
 	// resource has no label, and the label of another language comes through the language picker.
@@ -260,7 +259,7 @@ export function StatementRow({ property, editor, inferredValues = [], services, 
 	return (
 		<div
 			ref={rowRef}
-			className={`statement-line is-${rowKind}-row${edited ? ' is-editable' : ''}${editor?.isNew && !header ? ' is-draft' : ''}${_headerClassOf(header)}${typeless ? ' is-typeless' : ''}${reorder?.dragged ? ' is-dragged' : ''}${reorder?.dropPlacement ? ` is-drop-${reorder.dropPlacement}` : ''}`}
+			className={`statement-line is-${rowKind}-row${edited ? ' is-editable' : ''}${editor?.isNew && !header ? ' is-draft' : ''}${_headerClassOf(header)}${folded ? ' is-folded' : ''}${reorder?.dragged ? ' is-dragged' : ''}${reorder?.dropPlacement ? ` is-drop-${reorder.dropPlacement}` : ''}`}
 			role="group"
 			aria-label={header ? _headerLabelOf(header) : editor?.isNew ? 'New statement' : label}
 			data-predicate={_predicateIriOf(predicateView)}
@@ -275,7 +274,7 @@ export function StatementRow({ property, editor, inferredValues = [], services, 
 			</span>
 			<div className="statement-cells">
 				{header
-					? !typeless && _headerPredicateOf(header, edited, label)
+					? !folded && _headerPredicateOf(header, edited, label)
 					: (
 						<span className={`statement-predicate${_isIriLabel(predicateView, label) ? ' is-iri' : ''}`} {...getResourceTooltipAttributes(edited ? undefined : predicateView?.term)}>
 							{edited ? <PredicateField editor={edited.editor} state={edited.state} label={label} autoFocus={autoFocus} onPredicateTaken={() => setNewValueFocus(true)} /> : <span className="statement-predicate-text">{label}</span>}
