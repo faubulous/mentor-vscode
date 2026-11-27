@@ -891,6 +891,34 @@ describe('DocumentContextService', () => {
 			expect(fired).toEqual([]);
 		});
 
+		it('gives an active document back the tokens that closing its last editor released, publishing nothing', async () => {
+			const { service } = createService();
+			const { context, document } = loadedDocument(service, 'a.ttl');
+			const fired: unknown[] = [];
+			const loadDocument = vi.spyOn(service, 'loadDocument').mockResolvedValue(context);
+
+			Object.assign(context, { isParsed: false, isTokenized: alwaysTokenized });
+			service.activeContext = context;
+			service.onDidChangeDocumentContext(changed => fired.push(changed));
+
+			expect(await service.activateContextForDocument(document)).toBe(context);
+			expect(loadDocument).toHaveBeenCalledWith(document, false, undefined);
+			expect(fired).toEqual([]);
+		});
+
+		it('loads nothing for an active document that has its tokens', async () => {
+			const { service } = createService();
+			const { context, document } = loadedDocument(service, 'a.ttl');
+			const loadDocument = vi.spyOn(service, 'loadDocument');
+
+			Object.assign(context, { isParsed: true, isTokenized: alwaysTokenized });
+			service.activeContext = context;
+
+			await service.activateContextForDocument(document);
+
+			expect(loadDocument).not.toHaveBeenCalled();
+		});
+
 		it('leaves a document asked for later active when an earlier one finishes loading after it', async () => {
 			const { service } = createService();
 			const first = loadedDocument(service, 'a.ttl');
