@@ -1,10 +1,34 @@
 import { BlankNode, NamedNode } from '@rdfjs/types';
+import { termToString } from 'rdf-string';
 import { CommentAnchor } from '@src/services/editing/comment-anchor';
 import { EditOperation } from '@src/services/editing/edit-operation';
 import { EditProblem } from '@src/services/editing/edit-problem';
 import { EditOutcome } from '../services/editing-host-service.interface';
 import { IEditingController } from './editing-controller.interface';
 import { EditWriter } from './edit-writer';
+
+/**
+ * The comment a field writes: one the document has, or a new one, and the edit that writes it.
+ */
+export interface CommentTarget {
+	/**
+	 * The key of the comment, by which its field keeps its editor.
+	 */
+	key: string;
+
+	/**
+	 * Build the edit that writes the comment.
+	 * @param lines The lines of the comment; none remove it.
+	 * @returns The edit.
+	 */
+	operationOf(lines: string[]): EditOperation;
+}
+
+/**
+ * Where a comment of its own is added: before a run of the comments above a resource, directly
+ * above the resource, or at the end of the document.
+ */
+export type NewCommentPosition = Extract<EditOperation, { op: 'addComment' }>['before'];
 
 /**
  * What a comment field shows of its comment.
@@ -72,10 +96,10 @@ export class CommentEditor implements EditWriter {
 	/**
 	 * Create the editor of a comment.
 	 * @param _editing Writes the comment.
-	 * @param anchor What the comment is written about.
+	 * @param _target The comment and the edit that writes it.
 	 * @param data The comment as the document writes it.
 	 */
-	constructor(private readonly _editing: IEditingController, readonly anchor: CommentAnchor, data: CommentEditorData) {
+	constructor(private readonly _editing: IEditingController, private readonly _target: CommentTarget, data: CommentEditorData) {
 		this._data = data;
 		this._stored = data.lines.join('\n');
 		this._state = { text: this._stored };
@@ -207,7 +231,7 @@ export class CommentEditor implements EditWriter {
 
 		this._sending = true;
 
-		return [{ op: 'setComment', at: this.anchor, lines: this._state.text.split('\n') }];
+		return [this._target.operationOf(this._state.text.split('\n'))];
 	}
 
 	settle(outcome: EditOutcome): void {
@@ -231,5 +255,45 @@ export class CommentEditor implements EditWriter {
 		for (const listener of this._listeners) {
 			listener();
 		}
+	}
+}
+
+/**
+ * The comment the document has at an anchor, which its field rewrites.
+ * @param anchor The anchor.
+ * @returns The target.
+ */
+export function getCommentTarget(anchor: CommentAnchor): CommentTarget {
+	return { key: getCommentAnchorKey(anchor), operationOf: lines => ({ op: 'setComment', at: anchor, lines }) };
+}
+
+/**
+ * A comment of its own the document does not have yet, which its field adds.
+ * @param before Where it is added, at the end of the document when absent.
+ * @returns The target.
+ */
+export function getNewCommentTarget(before: NewCommentPosition): CommentTarget {
+	const key = before ? `new ${termToString(before.subject)} ${before.run ?? 'resource'}` : 'new end';
+
+	return { key, operationOf: lines => ({ op: 'addComment', before, lines }) };
+}
+
+/**
+ * The key of the comment an anchor names.
+ * @param anchor The anchor.
+ * @returns The key.
+ */
+export function getCommentAnchorKey(anchor: CommentAnchor): string {
+	switch (anchor.kind) {
+		case 'resource':
+			return `resource ${termToString(anchor.subject)} ${anchor.run}`;
+		case 'node':
+			return `node ${termToString(anchor.subject)}`;
+		case 'property':
+			return `property ${termToString(anchor.subject)} ${anchor.predicate}`;
+		case 'value':
+			return `value ${termToString(anchor.subject)} ${anchor.predicate} ${anchor.anchor}`;
+		default:
+			return `document ${anchor.run}`;
 	}
 }

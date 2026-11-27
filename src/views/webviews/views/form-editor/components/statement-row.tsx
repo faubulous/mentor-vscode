@@ -13,7 +13,8 @@ import { LanguageFilter } from '../state/language-filter';
 import { DefaultValueType, getDefaultAnnotation, getDefaultValueType, startsLiteral } from '../state/new-value-type';
 import { RowValue } from '../state/row-value';
 import { useFormEditorContext } from '../state/form-editor-context';
-import { CommentScope } from '../state/comment-scope';
+import { CommentDraft, CommentScope } from '../state/comment-scope';
+import { getCommentTarget } from '../state/comment-editor';
 import { StatementRowEditor } from '../state/statement-row-editor';
 import { StatementRowState } from '../state/statement-row-state';
 import { PinnedProperties, usePinnedProperties } from '../state/pinned-properties-context';
@@ -205,13 +206,22 @@ export function StatementRow({ property, editor, inferredValues = [], services, 
 	const error = state ? getRowErrorMessage(state) : undefined;
 	const rowKind = _rowKindOf(literals.length, resources.length, wholes.length);
 	const [addingValue, setAddingValue] = useState(false);
+	const [draftComment, setDraftComment] = useState<CommentDraft>();
 	// A collapsed nested card shows its type without the label of its predicate, which would take
 	// room from the summary, and does not ask for a missing type.
 	const folded = header?.kind === 'type' && header.collapsed;
 	const addLink = edited && !addingValue && !folded ? _addLinkOf(edited, header, literals.length, resources.length, wholes.length) : undefined;
 	// The label row is the title of its card: it offers the input of a new value only while the
 	// resource has no label, and the label of another language comes through the language picker.
-	const scope: CommentScope = { subject: context.visited[context.visited.length - 1], card: context.visited[0], predicate: _predicateIriOf(predicateView), version: context.dataService.version };
+	const scope: CommentScope = {
+		subject: context.visited[context.visited.length - 1],
+		card: context.visited[0],
+		predicate: _predicateIriOf(predicateView),
+		version: context.dataService.version,
+		draft: draftComment,
+		onDraft: edited ? setDraftComment : undefined,
+		onDraftDone: () => setDraftComment(undefined)
+	};
 	const titled = header?.kind === 'label' && literals.length > 0;
 	// The inferred resources of an edited row stand in its box, after the resources it edits.
 	const boxed = edited !== undefined && !(folded && resources.length === 0) && !addLink && !titled;
@@ -237,7 +247,15 @@ export function StatementRow({ property, editor, inferredValues = [], services, 
 			return;
 		}
 
-		if (FormEditorShortcuts.Remove.matches(event) && !header && editor && !editor.isNew) {
+		if (FormEditorShortcuts.Comment.matches(event) && header?.kind !== 'type' && editor && !editor.isNew) {
+			const draft = _commentDraftAt(event.target);
+
+			if (draft !== undefined) {
+				event.preventDefault();
+				event.stopPropagation();
+				setDraftComment(draft);
+			}
+		} else if (FormEditorShortcuts.Remove.matches(event) && !header && editor && !editor.isNew) {
 			event.preventDefault();
 			event.stopPropagation();
 			editor.removeProperty();
@@ -288,9 +306,9 @@ export function StatementRow({ property, editor, inferredValues = [], services, 
 						</span>
 					)}
 				<span className="statement-values">
-					{literals.map(entry => <StatementValueCell key={entry.index} {...entry} edited={edited} comment={_commentOf(entry.value, entry.view, scope)} {...context} />)}
+					{literals.map(entry => <StatementValueCell key={entry.index} {...entry} edited={edited} comment={_commentOf(entry.value, entry.view, entry.index, scope)} scope={scope} {...context} />)}
 					{boxed && edited ? _resourceBox(edited, resources, { header: header?.kind, autoFocus: addingValue, label, inferred: inferredResources.map(entry => entry.view), scope }) : !edited || (folded && resources.length === 0) ? _resourcePills(resources, context, scope) : undefined}
-					{wholes.map(entry => <StatementValueCell key={entry.index} {...entry} edited={edited} comment={_commentOf(entry.value, entry.view, scope)} {...context} />)}
+					{wholes.map(entry => <StatementValueCell key={entry.index} {...entry} edited={edited} comment={_commentOf(entry.value, entry.view, entry.index, scope)} scope={scope} {...context} />)}
 					{inferred.length > 0 && _inferredValuesOf(boxed ? inferred.filter(entry => _kindOf(entry.view) !== 'resource') : inferred, context, scope)}
 					{addLink && <button type="button" className="add-link statement-value-add" onClick={() => setAddingValue(true)}>{addLink}</button>}
 					{header?.kind === 'type' && header.collapsed && _collapsedSummaryOf(header)}
@@ -549,7 +567,7 @@ function _resourceBox(edited: EditedRow, resources: readonly ShownValue[], optio
 	return (
 		<span className={classes.join(' ')}>
 			<ResourceValues
-				resources={resources.map(({ value, view, index }) => ({ view, index, comment: _commentOf(value, view, scope) }))}
+				resources={resources.map(({ value, view, index }) => ({ view, index, comment: _commentOf(value, view, index, scope) }))}
 				inferred={inferred}
 				targetType={_targetTypeOf(isType, defaultType)}
 				statement={isType ? undefined : { subject: editor.subject, predicate: state.draft.predicate }}
@@ -671,7 +689,7 @@ function _resourcePills(resources: readonly ShownValue[], context: StatementRowC
 		<span className="statement-value">
 			<span className="value-pills">
 				{resources.map(({ value, view, index }) => {
-					const comment = _commentOf(value, view, scope);
+					const comment = _commentOf(value, view, index, scope);
 					const pill = <TermValue key={index} view={view} {...context} />;
 
 					// A pill with a comment takes a line of its own, under its comment.
@@ -684,40 +702,86 @@ function _resourcePills(resources: readonly ShownValue[], context: StatementRowC
 
 /**
  * The comment written above a value of a row, where it has one, edited in place where the value is
- * written in the document.
+ * written in the document; once asked for, an empty field above a value without a comment, which
+ * writes one.
  * @param value The value.
  * @param view The view of the value.
+ * @param index The index of the value among the values of the row.
  * @param scope Where the comment is written.
  * @returns The comment, or `undefined` for a value without one.
  */
-function _commentOf(value: RowValue, view: TermData, scope: CommentScope): ReactNode {
-	if (value.kind !== 'written' || !view.comments) {
+function _commentOf(value: RowValue, view: TermData, index: number, scope: CommentScope): ReactNode {
+	const { subject, card, predicate, version, draft, onDraftDone } = scope;
+	const anchor = predicate !== undefined && view.anchor !== undefined ? { kind: 'value' as const, subject, predicate, anchor: view.anchor } : undefined;
+	const asked = draft === index && anchor !== undefined;
+
+	if (value.kind !== 'written' || (!view.comments && !asked)) {
 		return undefined;
 	}
 
-	const { subject, card, predicate, version } = scope;
-	const anchor = predicate !== undefined && view.anchor !== undefined ? { kind: 'value' as const, subject, predicate, anchor: view.anchor } : undefined;
-
-	return <CommentField className="statement-comment statement-value-comment" label="Comment on the value" lines={view.comments} anchor={anchor} subject={subject} card={card} version={version} />;
+	return (
+		<CommentField
+			className="statement-comment statement-value-comment"
+			label="Comment on the value"
+			lines={view.comments ?? []}
+			target={anchor ? getCommentTarget(anchor) : undefined}
+			subject={subject}
+			card={card}
+			version={version}
+			autoFocus={asked}
+			onLeave={asked ? onDraftDone : undefined}
+		/>
+	);
 }
 
 /**
  * The comment written above the property of a row, where it has one, shown under the values of the
- * row and edited in place.
+ * row and edited in place; once asked for, an empty field for a property without a comment, which
+ * writes one.
  * @param property The property.
  * @param scope Where the comment is written.
  * @returns The comment, or `undefined` for a property without one.
  */
 function _propertyCommentOf(property: PredicateData, scope: CommentScope): ReactNode {
-	if (!property.comments) {
+	const { subject, card, version, draft, onDraftDone } = scope;
+	const predicate = property.predicate.term;
+	const anchor = predicate.termType === 'NamedNode' ? { kind: 'property' as const, subject, predicate: predicate.value } : undefined;
+	const asked = draft === 'property' && anchor !== undefined;
+
+	if (!property.comments && !asked) {
 		return undefined;
 	}
 
-	const { subject, card, version } = scope;
-	const predicate = property.predicate.term;
-	const anchor = predicate.termType === 'NamedNode' ? { kind: 'property' as const, subject, predicate: predicate.value } : undefined;
+	return (
+		<CommentField
+			className="statement-comment"
+			label="Comment on the property"
+			lines={property.comments ?? []}
+			target={anchor ? getCommentTarget(anchor) : undefined}
+			subject={subject}
+			card={card}
+			version={version}
+			autoFocus={asked}
+			onLeave={asked ? onDraftDone : undefined}
+		/>
+	);
+}
 
-	return <CommentField className="statement-comment" label="Comment on the property" lines={property.comments} anchor={anchor} subject={subject} card={card} version={version} />;
+/**
+ * The comment Ctrl+/ asks for where the focus is in a row: the one above the value whose field or
+ * pill has the focus, else the one above the property, from its predicate or the input of a new
+ * value. Nothing in a comment, which is one already.
+ * @param target The element the key was pressed in.
+ * @returns The comment, or `undefined` where there is none to ask for.
+ */
+function _commentDraftAt(target: EventTarget): CommentDraft | undefined {
+	if (!(target instanceof Element) || target.closest('.comment-field')) {
+		return undefined;
+	}
+
+	const value = target.closest('[data-value-index]')?.getAttribute('data-value-index');
+
+	return value !== null && value !== undefined ? Number(value) : 'property';
 }
 
 /**
@@ -730,7 +794,7 @@ function _propertyCommentOf(property: PredicateData, scope: CommentScope): React
  * @returns The values.
  */
 function _inferredValuesOf(inferred: readonly ShownValue[], context: StatementRowContext, scope: CommentScope): React.JSX.Element {
-	const cellOf = (entry: ShownValue): React.JSX.Element => <StatementValueCell key={entry.index} {...entry} comment={_commentOf(entry.value, entry.view, scope)} {...context} />;
+	const cellOf = (entry: ShownValue): React.JSX.Element => <StatementValueCell key={entry.index} {...entry} comment={_commentOf(entry.value, entry.view, entry.index, scope)} scope={scope} {...context} />;
 	const resources = inferred.filter(entry => _kindOf(entry.view) === 'resource');
 
 	return (

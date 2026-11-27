@@ -12,6 +12,7 @@ import { PinnedPropertiesContext } from '../state/pinned-properties-context';
 import { useFormEditorContext } from '../state/form-editor-context';
 import { StatementList } from './statement-list';
 import { CommentField } from './comment-field';
+import { getCommentTarget } from '../state/comment-editor';
 
 /**
  * The nesting depth beyond which blank nodes stop being rendered in place as cards, so that a
@@ -85,16 +86,22 @@ export function NestedResourceCard({ nested, dataService, depth, visited, action
 		return <div className="resource-card is-nested" data-resource-id={termToString(nested.term)}><div className="resource-form-loading">Loading…</div></div>;
 	}
 
-	// The shortcut of Remove removes the node while the focus is in the header of its card or in no
-	// row of it; a row removes itself by it.
+	// The shortcut of Remove removes the node, and the one of Comment opens the comment above it,
+	// while the focus is in the header of its card or in no row of it; a row acts on itself by them.
 	const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
-		if (!actions || !FormEditorShortcuts.Remove.matches(event) || !_isOwnHeader(event.target, event.currentTarget)) {
+		if (!actions || !_isOwnHeader(event.target, event.currentTarget)) {
 			return;
 		}
 
-		event.preventDefault();
-		event.stopPropagation();
-		actions.onRemove();
+		if (FormEditorShortcuts.Remove.matches(event)) {
+			event.preventDefault();
+			event.stopPropagation();
+			actions.onRemove();
+		} else if (FormEditorShortcuts.Comment.matches(event) && actions.onComment && !(event.target instanceof Element && event.target.closest('.comment-field'))) {
+			event.preventDefault();
+			event.stopPropagation();
+			actions.onComment();
+		}
 	};
 
 	return (
@@ -119,7 +126,7 @@ function _captionOf(nodeComments: string[] | undefined, where: { nested: NestedR
 	const { nested, visited, version } = where;
 
 	return nodeComments
-		? <CommentField className="nested-card-caption-text" label="Comment on the node" lines={nodeComments} anchor={{ kind: 'node', subject: nested.term }} subject={nested.term} card={visited[0] ?? nested.term} version={version} />
+		? <CommentField className="nested-card-caption-text" label="Comment on the node" lines={nodeComments} target={getCommentTarget({ kind: 'node', subject: nested.term })} subject={nested.term} card={visited[0] ?? nested.term} version={version} />
 		: undefined;
 }
 

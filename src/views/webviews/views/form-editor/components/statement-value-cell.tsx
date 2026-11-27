@@ -1,5 +1,6 @@
 import { ReactNode } from 'react';
 import { TermData } from '../form-editor-model';
+import { CommentScope } from '../state/comment-scope';
 import { RowValue } from '../state/row-value';
 import { DraftResourceCard } from './draft-resource-card';
 import { LiteralValueField } from './literal-value-field';
@@ -33,9 +34,15 @@ export interface StatementValueCellProps extends StatementRowContext {
 	edited?: EditedRow;
 
 	/**
-	 * The comment written above the value, where it has one.
+	 * The comment written above the value, where it has one or one is asked for.
 	 */
 	comment?: ReactNode;
+
+	/**
+	 * Where the comments of the values of the row are written, which the ⋯ menu of a nested card
+	 * asks for.
+	 */
+	scope: CommentScope;
 }
 
 /**
@@ -46,13 +53,13 @@ export interface StatementValueCellProps extends StatementRowContext {
  * @param props The value, its row and where the row stands.
  * @returns The value.
  */
-export function StatementValueCell({ value, view, index, edited, comment, ...context }: StatementValueCellProps): React.JSX.Element {
+export function StatementValueCell({ value, view, index, edited, comment, scope, ...context }: StatementValueCellProps): React.JSX.Element {
 	const isNode = view.nested !== undefined || (value.kind === 'term' && value.node !== undefined);
 
 	return (
 		<span className={`statement-value${isNode ? ' is-node' : ''}${view.inferred ? ' is-inferred' : ''}`}>
 			{comment}
-			{edited ? _editedValue(value, view, index, edited, context) : <TermValue view={view} {...context} />}
+			{edited ? _editedValue(value, view, index, edited, context, scope) : <TermValue view={view} {...context} />}
 		</span>
 	);
 }
@@ -66,9 +73,10 @@ export function StatementValueCell({ value, view, index, edited, comment, ...con
  * @param index The index of the value.
  * @param edited The row.
  * @param context Where the row stands.
+ * @param scope Where the comments of the values of the row are written.
  * @returns The value.
  */
-function _editedValue(value: RowValue, view: TermData, index: number, edited: EditedRow, context: StatementRowContext): React.JSX.Element {
+function _editedValue(value: RowValue, view: TermData, index: number, edited: EditedRow, context: StatementRowContext, scope: CommentScope): React.JSX.Element {
 	if (value.kind === 'term' && value.node?.copyOf) {
 		return <TermValue view={view} {...context} />;
 	}
@@ -82,7 +90,7 @@ function _editedValue(value: RowValue, view: TermData, index: number, edited: Ed
 	}
 
 	if (view.nested) {
-		return <TermValue view={view} {...context} nestedActions={_nestedActionsOf(index, edited)} />;
+		return <TermValue view={view} {...context} nestedActions={_nestedActionsOf(index, edited, scope)} />;
 	}
 
 	return (
@@ -99,10 +107,14 @@ function _editedValue(value: RowValue, view: TermData, index: number, edited: Ed
  * What the ⋯ menu of the nested card of a blank node does in its row.
  * @param index The index of the node among the values of the row.
  * @param edited The row.
+ * @param scope Where the comments of the values of the row are written.
  * @returns The actions.
  */
-function _nestedActionsOf(index: number, edited: EditedRow): NestedCardActions {
+function _nestedActionsOf(index: number, edited: EditedRow, scope: CommentScope): NestedCardActions {
+	const onDraft = scope.onDraft;
+
 	return {
+		onComment: onDraft ? () => onDraft(index) : undefined,
 		onDuplicate: () => edited.editor.duplicateValue(index),
 		onRemove: () => {
 			edited.editor.removeValue(index);

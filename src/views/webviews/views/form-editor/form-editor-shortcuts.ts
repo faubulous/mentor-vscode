@@ -13,5 +13,11 @@ export const FormEditorShortcuts = {
 	/**
 	 * Find: opens the find of the form.
 	 */
-	Find: new KeyboardShortcut('f')
+	Find: new KeyboardShortcut('f'),
+
+	/**
+	 * Comment, as VS Code toggles a line comment: opens the comment above the value or property the
+	 * focus is in, or above a nested card whose header has it, empty where there is none.
+	 */
+	Comment: new KeyboardShortcut('/')
 };

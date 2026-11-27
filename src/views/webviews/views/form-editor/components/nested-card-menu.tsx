@@ -9,6 +9,11 @@ import { toggleMenuAtButton } from '../hooks/use-context-menu';
  */
 export interface NestedCardActions {
 	/**
+	 * Open the comment above the node, empty where it has none, as Ctrl+/ in its header does.
+	 */
+	onComment?: () => void;
+
+	/**
 	 * Write a copy of the node after it.
 	 */
 	onDuplicate: () => void;
@@ -35,7 +40,7 @@ export interface NestedCardMenuProps {
 }
 
 /**
- * The ⋮ button of the nested card of a blank node and its menu: Duplicate and Remove. The menu hides itself when an item is picked or the user clicks away, so its visibility
+ * The ⋮ button of the nested card of a blank node and its menu: Add Comment, Duplicate and Remove. The menu hides itself when an item is picked or the user clicks away, so its visibility
  * is left to the element.
  * @param props What the menu offers and where its element is kept.
  * @returns The button and the menu.
@@ -43,6 +48,9 @@ export interface NestedCardMenuProps {
 export function NestedCardMenu({ actions, menuRef }: NestedCardMenuProps): React.JSX.Element {
 	const selectRef = useVscodeElementRef<VscodeContextMenu, { value: string }>('vsc-context-menu-select', (_element, event) => {
 		switch (event.detail.value) {
+			case 'comment':
+				actions.onComment?.();
+				break;
 			case 'duplicate':
 				actions.onDuplicate();
 				break;
@@ -67,6 +75,7 @@ export function NestedCardMenu({ actions, menuRef }: NestedCardMenuProps): React
 			<vscode-context-menu
 				ref={setMenuRef}
 				data={[
+					...(actions.onComment ? [{ label: 'Add Comment', value: 'comment', keybinding: FormEditorShortcuts.Comment.label }, { separator: true }] : []),
 					{ label: 'Duplicate', value: 'duplicate' },
 					{ separator: true },
 					{ label: 'Remove', value: 'remove', keybinding: FormEditorShortcuts.Remove.label }

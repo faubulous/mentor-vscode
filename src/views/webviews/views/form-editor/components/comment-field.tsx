@@ -1,7 +1,6 @@
-import { ChangeEvent, KeyboardEvent } from 'react';
-import { CommentAnchor } from '@src/services/editing/comment-anchor';
+import { ChangeEvent, KeyboardEvent, useEffect, useRef } from 'react';
 import { useCommentEditor } from '../hooks/use-comment-editor';
-import { CommentEditorData } from '../state/comment-editor';
+import { CommentEditorData, CommentTarget } from '../state/comment-editor';
 import { getEditProblemMessage } from './edit-problem-message';
 import { AutoSizeTextarea } from './auto-size-textarea';
 import { RowError } from './row-error';
@@ -11,9 +10,9 @@ import { RowError } from './row-error';
  */
 export interface CommentFieldProps extends CommentEditorData {
 	/**
-	 * What the comment is written about, where the form knows it and can write the comment there.
+	 * The comment and the edit that writes it, where the form knows it and can write it.
 	 */
-	anchor?: CommentAnchor;
+	target?: CommentTarget;
 
 	/**
 	 * The class name that gives the comment its look where it stands.
@@ -24,6 +23,16 @@ export interface CommentFieldProps extends CommentEditorData {
 	 * The accessible name of the field.
 	 */
 	label: string;
+
+	/**
+	 * Whether the field takes the focus when it appears, as a comment just asked for does.
+	 */
+	autoFocus?: boolean;
+
+	/**
+	 * Called when the focus leaves the field, after what was typed is handed over to be written.
+	 */
+	onLeave?: () => void;
 }
 
 /**
@@ -34,8 +43,19 @@ export interface CommentFieldProps extends CommentEditorData {
  * @param props The comment and where it stands.
  * @returns The comment.
  */
-export function CommentField({ anchor, className, label, ...data }: CommentFieldProps): React.JSX.Element {
-	const { editor, state } = useCommentEditor(anchor, data);
+export function CommentField({ target, className, label, autoFocus = false, onLeave, ...data }: CommentFieldProps): React.JSX.Element {
+	const { editor, state } = useCommentEditor(target, data);
+	const inputRef = useRef<HTMLTextAreaElement>(null);
+
+	// A comment just asked for takes the focus as it appears, with the caret after its text.
+	useEffect(() => {
+		const input = inputRef.current;
+
+		if (autoFocus && input) {
+			input.focus();
+			input.setSelectionRange(input.value.length, input.value.length);
+		}
+	}, [autoFocus]);
 
 	if (!editor || !state) {
 		return <span className={className}>{data.lines.join('\n')}</span>;
@@ -61,15 +81,21 @@ export function CommentField({ anchor, className, label, ...data }: CommentField
 		}
 	};
 
+	const handleBlur = (): void => {
+		editor.leave();
+		onLeave?.();
+	};
+
 	return (
 		<span className={`${className} comment-field`}>
 			<AutoSizeTextarea
+				inputRef={inputRef}
 				value={state.text}
 				placeholder="Comment"
 				aria-label={label}
 				onChange={(event: ChangeEvent<HTMLTextAreaElement>) => editor.input(event.currentTarget.value)}
 				onKeyDown={handleKeyDown}
-				onBlur={() => editor.leave()}
+				onBlur={handleBlur}
 			/>
 			{state.rejection && <RowError message={getEditProblemMessage(state.rejection)} onDismiss={() => editor.dismissRejection()} />}
 		</span>
