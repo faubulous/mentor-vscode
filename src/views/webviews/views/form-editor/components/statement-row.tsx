@@ -1,4 +1,4 @@
-import { FocusEvent, KeyboardEvent, useEffect, useRef, useState } from 'react';
+import { FocusEvent, KeyboardEvent, ReactNode, useEffect, useRef, useState } from 'react';
 import { RDF } from '@faubulous/mentor-rdf/ontologies';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { ScopeKey } from '@src/utilities/config-scope';
@@ -23,6 +23,7 @@ import { RowMenu } from './row-menu';
 import { PredicateField } from './predicate-field';
 import { PredicateAnnotations } from './predicate-annotations';
 import { PropertyComments } from './property-comments';
+import { CommentScope, ValueComment } from './value-comment';
 import { ResourceValues } from './resource-values';
 import { getRowErrorMessage } from './row-error-message';
 import { RowError } from './row-error';
@@ -60,9 +61,9 @@ interface NestedCardHeader {
 	pinned?: PinnedSummaryItem[];
 
 	/**
-	 * The comment lines written above the node, shown in the header as its caption.
+	 * The comment written at the head of the node, shown in the header as its caption.
 	 */
-	caption?: string[];
+	caption?: ReactNode;
 
 	/**
 	 * Collapse or expand the card.
@@ -210,6 +211,7 @@ export function StatementRow({ property, editor, inferredValues = [], services, 
 	const addLink = edited && !addingValue && !folded ? _addLinkOf(edited, header, literals.length, resources.length, wholes.length) : undefined;
 	// The label row is the title of its card: it offers the input of a new value only while the
 	// resource has no label, and the label of another language comes through the language picker.
+	const scope: CommentScope = { subject: context.visited[context.visited.length - 1], card: context.visited[0], predicate: _predicateIriOf(predicateView), version: context.dataService.version };
 	const titled = header?.kind === 'label' && literals.length > 0;
 	// The inferred resources of an edited row stand in its box, after the resources it edits.
 	const boxed = edited !== undefined && !(folded && resources.length === 0) && !addLink && !titled;
@@ -286,14 +288,14 @@ export function StatementRow({ property, editor, inferredValues = [], services, 
 						</span>
 					)}
 				<span className="statement-values">
-					{literals.map(entry => <StatementValueCell key={entry.index} {...entry} edited={edited} {...context} />)}
-					{boxed && edited ? _resourceBox(edited, resources, { header: header?.kind, autoFocus: addingValue, label, inferred: inferredResources.map(entry => entry.view) }) : !edited || (folded && resources.length === 0) ? _resourcePills(resources, context) : undefined}
-					{wholes.map(entry => <StatementValueCell key={entry.index} {...entry} edited={edited} {...context} />)}
-					{inferred.length > 0 && _inferredValuesOf(boxed ? inferred.filter(entry => _kindOf(entry.view) !== 'resource') : inferred, context)}
+					{literals.map(entry => <StatementValueCell key={entry.index} {...entry} edited={edited} scope={scope} {...context} />)}
+					{boxed && edited ? _resourceBox(edited, resources, { header: header?.kind, autoFocus: addingValue, label, inferred: inferredResources.map(entry => entry.view), scope }) : !edited || (folded && resources.length === 0) ? _resourcePills(resources, context, scope) : undefined}
+					{wholes.map(entry => <StatementValueCell key={entry.index} {...entry} edited={edited} scope={scope} {...context} />)}
+					{inferred.length > 0 && _inferredValuesOf(boxed ? inferred.filter(entry => _kindOf(entry.view) !== 'resource') : inferred, context, scope)}
 					{addLink && <button type="button" className="add-link statement-value-add" onClick={() => setAddingValue(true)}>{addLink}</button>}
 					{header?.kind === 'type' && header.collapsed && _collapsedSummaryOf(header)}
-					{header?.kind === 'type' && header.caption && <span className="nested-card-caption">{header.caption.join('\n')}</span>}
-					{property && <PropertyComments property={property} />}
+					{header?.kind === 'type' && header.caption && <span className="nested-card-caption">{header.caption}</span>}
+					{property && <PropertyComments property={property} scope={scope} />}
 				</span>
 				{error && <RowError message={error} onDismiss={state?.rejection ? () => editor?.dismissRejection() : undefined} />}
 			</div>
@@ -531,12 +533,12 @@ function _addLinkOf(edited: EditedRow, header: RowHeader | undefined, literals: 
  * @param edited The row.
  * @param resources The resources of the row.
  * @param options The kind of header the row is, whether the input takes the focus, the label
- * of the predicate, which the input of an empty row asks to add a value for, and the resources the
- * reasoner infers, which stand after the others.
+ * of the predicate, which the input of an empty row asks to add a value for, the resources the
+ * reasoner infers, which stand after the others, and where the comments of the values are written.
  * @returns The box.
  */
-function _resourceBox(edited: EditedRow, resources: readonly ShownValue[], options: { header?: RowHeader['kind']; autoFocus: boolean; label: string; inferred: readonly TermData[] }): React.JSX.Element {
-	const { header, autoFocus, label, inferred } = options;
+function _resourceBox(edited: EditedRow, resources: readonly ShownValue[], options: { header?: RowHeader['kind']; autoFocus: boolean; label: string; inferred: readonly TermData[]; scope: CommentScope }): React.JSX.Element {
+	const { header, autoFocus, label, inferred, scope } = options;
 	const isType = header === 'type';
 	const { editor, state, defaultType } = edited;
 	const awaitsPredicate = editor.isNew && state.draft.predicate === undefined;
@@ -547,7 +549,7 @@ function _resourceBox(edited: EditedRow, resources: readonly ShownValue[], optio
 	return (
 		<span className={classes.join(' ')}>
 			<ResourceValues
-				resources={resources.map(({ view, index }) => ({ view, index }))}
+				resources={resources.map(({ value, view, index }) => ({ view, index, comment: _commentOf(value, view, scope) }))}
 				inferred={inferred}
 				targetType={_targetTypeOf(isType, defaultType)}
 				statement={isType ? undefined : { subject: editor.subject, predicate: state.draft.predicate }}
@@ -653,12 +655,14 @@ function _rowKindOf(literals: number, resources: number, wholes: number): 'liter
 }
 
 /**
- * The resources of a row that only reads, as pills that lead to them.
+ * The resources of a row that only reads, as pills that lead to them; a pill with a comment takes a
+ * line of its own, under its comment.
  * @param resources The resources of the row.
  * @param context Where the row stands.
+ * @param scope Where the comments of the values are written.
  * @returns The pills, or nothing for a row without resources.
  */
-function _resourcePills(resources: readonly ShownValue[], context: StatementRowContext): React.JSX.Element | null {
+function _resourcePills(resources: readonly ShownValue[], context: StatementRowContext, scope: CommentScope): React.JSX.Element | null {
 	if (resources.length === 0) {
 		return null;
 	}
@@ -666,10 +670,27 @@ function _resourcePills(resources: readonly ShownValue[], context: StatementRowC
 	return (
 		<span className="statement-value">
 			<span className="value-pills">
-				{resources.map(({ view, index }) => <TermValue key={index} view={view} {...context} />)}
+				{resources.map(({ value, view, index }) => {
+					const comment = _commentOf(value, view, scope);
+					const pill = <TermValue key={index} view={view} {...context} />;
+
+					// A pill with a comment takes a line of its own, under its comment.
+					return comment ? <span key={index} className="value-pill-line">{comment}{pill}</span> : pill;
+				})}
 			</span>
 		</span>
 	);
+}
+
+/**
+ * The comment written above a value of a row, where it has one.
+ * @param value The value.
+ * @param view The view of the value.
+ * @param scope Where the comment is written.
+ * @returns The comment, or `undefined` for a value without one.
+ */
+function _commentOf(value: RowValue, view: TermData, scope: CommentScope): ReactNode {
+	return value.kind === 'written' && view.comments ? <ValueComment view={view} scope={scope} /> : undefined;
 }
 
 /**
@@ -678,10 +699,11 @@ function _resourcePills(resources: readonly ShownValue[], context: StatementRowC
  * nodes and lists whole. The pills are not links, as the pills of the values the row edits are not.
  * @param inferred The values.
  * @param context Where the row stands.
+ * @param scope Where the comments of the values are written.
  * @returns The values.
  */
-function _inferredValuesOf(inferred: readonly ShownValue[], context: StatementRowContext): React.JSX.Element {
-	const cellOf = (entry: ShownValue): React.JSX.Element => <StatementValueCell key={entry.index} {...entry} {...context} />;
+function _inferredValuesOf(inferred: readonly ShownValue[], context: StatementRowContext, scope: CommentScope): React.JSX.Element {
+	const cellOf = (entry: ShownValue): React.JSX.Element => <StatementValueCell key={entry.index} {...entry} scope={scope} {...context} />;
 	const resources = inferred.filter(entry => _kindOf(entry.view) === 'resource');
 
 	return (

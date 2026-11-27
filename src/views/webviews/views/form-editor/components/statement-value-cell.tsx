@@ -6,6 +6,7 @@ import { NestedCardActions } from './nested-card-menu';
 import { EditedRow } from './edited-row';
 import { StatementRowContext } from './statement-row-context';
 import { TermValue } from './term-value';
+import { CommentScope, ValueComment } from './value-comment';
 
 /**
  * Properties of the {@link StatementValueCell} component.
@@ -30,6 +31,11 @@ export interface StatementValueCellProps extends StatementRowContext {
 	 * The row the value belongs to, where it is edited.
 	 */
 	edited?: EditedRow;
+
+	/**
+	 * Where the comment of the value is written.
+	 */
+	scope: CommentScope;
 }
 
 /**
@@ -40,14 +46,14 @@ export interface StatementValueCellProps extends StatementRowContext {
  * @param props The value, its row and where the row stands.
  * @returns The value.
  */
-export function StatementValueCell({ value, view, index, edited, ...context }: StatementValueCellProps): React.JSX.Element {
-	const comments = value.kind === 'written' ? value.view.comments : undefined;
+export function StatementValueCell({ value, view, index, edited, scope, ...context }: StatementValueCellProps): React.JSX.Element {
+	const comment = value.kind === 'written' && value.view.comments ? <ValueComment view={value.view} scope={scope} /> : undefined;
 	const isNode = view.nested !== undefined || (value.kind === 'term' && value.node !== undefined);
 
 	return (
 		<span className={`statement-value${isNode ? ' is-node' : ''}${view.inferred ? ' is-inferred' : ''}`}>
-			{comments && !view.nested && <span className="statement-comment statement-value-comment">{comments.join('\n')}</span>}
-			{edited ? _editedValue(value, view, index, edited, context) : <TermValue view={view} comments={comments} {...context} />}
+			{comment}
+			{edited ? _editedValue(value, view, index, edited, context) : <TermValue view={view} {...context} />}
 		</span>
 	);
 }
@@ -77,7 +83,7 @@ function _editedValue(value: RowValue, view: TermData, index: number, edited: Ed
 	}
 
 	if (view.nested) {
-		return <TermValue view={view} comments={value.kind === 'written' ? value.view.comments : undefined} {...context} nestedActions={_nestedActionsOf(index, edited)} />;
+		return <TermValue view={view} {...context} nestedActions={_nestedActionsOf(index, edited)} />;
 	}
 
 	return (

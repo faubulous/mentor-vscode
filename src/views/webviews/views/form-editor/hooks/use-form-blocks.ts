@@ -1,12 +1,18 @@
 import { useMemo } from 'react';
 import { termToString } from 'rdf-string';
 import { ResourceListItemData } from '../form-editor-model';
+import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { FormBlock } from '../state/form-block';
 
 /**
  * The prefix of the identifiers of the blocks holding the comments at the end of the document.
  */
 export const DOCUMENT_COMMENT_BLOCK_ID = 'comment:document';
+
+/**
+ * The term the comments closing the document are written for, which no resource of it is.
+ */
+const DOCUMENT_SUBJECT = RdfDataFactory.namedNode('urn:mentor:document');
 
 /**
  * Build the blocks of the form from the visible resources. While filtering, only the entries are
@@ -53,7 +59,7 @@ export function useFormBlocks(resources: readonly ResourceListItemData[], traili
  * @returns The block.
  */
 function _resourceCommentBlock(resource: ResourceListItemData, lines: string[], run: number): FormBlock {
-	return { kind: 'comment', id: `comment:${termToString(resource.subject)}:${run}`, text: lines.join('\n') };
+	return { kind: 'comment', id: `comment:${termToString(resource.subject)}:${run}`, lines, anchor: { kind: 'resource', subject: resource.subject, run }, subject: resource.subject };
 }
 
 /**
@@ -62,5 +68,5 @@ function _resourceCommentBlock(resource: ResourceListItemData, lines: string[], 
  * @returns The blocks.
  */
 function _documentCommentBlocks(runs: readonly string[][]): FormBlock[] {
-	return runs.map((lines, run) => ({ kind: 'comment', id: `${DOCUMENT_COMMENT_BLOCK_ID}:${run}`, text: lines.join('\n') }));
+	return runs.map((lines, run) => ({ kind: 'comment', id: `${DOCUMENT_COMMENT_BLOCK_ID}:${run}`, lines, anchor: { kind: 'document', run }, subject: DOCUMENT_SUBJECT }));
 }

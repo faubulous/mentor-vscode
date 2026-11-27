@@ -482,8 +482,12 @@ body {
 	/* The lines of a text that wraps or breaks, and the room above and under them that fills the line box of the row. */
 	--text-line: 20px;
 	--text-pad: calc((var(--line-box) - var(--text-line)) / 2);
-	/* A row of one line, its line under it included, and the space above and under the line box that makes it so tall. */
-	--row-min-h: 32px;
+	/*
+	 * A row of one line, its line under it included, and the space above and under the line box that
+	 * makes it so tall. The space is a whole number of pixels, so the fields of a row sit on whole
+	 * pixels and their carets are drawn crisp.
+	 */
+	--row-min-h: 33px;
 	--row-pad: calc((var(--row-min-h) - var(--line-box) - 1px) / 2);
 	--title-size: 17px;
 	--tag-size: 0.84em;
@@ -1014,13 +1018,12 @@ body {
 	margin-top: 8px;
 }
 
-/* The comment lines written above a property, under its values, and above a value, before it: quiet text. */
+/* The comment lines written above a property, under its values, and above a value, before it: muted text at the size of the values, so a comment being edited has the caret of a value. */
 .statement-comment {
 	display: block;
 	margin-top: 4px;
 	color: var(--form-muted);
-	font-size: var(--tag-size);
-	line-height: 18px;
+	line-height: var(--text-line);
 	white-space: pre-wrap;
 }
 
@@ -1141,6 +1144,20 @@ body {
 	align-items: center;
 	gap: var(--chip-gap);
 	min-height: var(--line-box);
+}
+
+/* A pill with a comment takes a line of its own among the pills, under its comment. */
+.value-pill-line {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	flex-basis: 100%;
+}
+
+/* A comment edited in place looks like its text at rest; the caret shows where it is written. */
+.comment-field {
+	display: block;
+	cursor: text;
 }
 
 /*
@@ -1307,10 +1324,17 @@ body {
 	min-width: 0;
 	overflow: hidden;
 	color: var(--form-muted);
-	font-family: var(--form-mono);
-	font-size: var(--tag-size);
-	text-overflow: ellipsis;
-	white-space: nowrap;
+	line-height: var(--text-line);
+}
+
+/* The caption shows the first line of its comments at rest, and all of them while one is edited. */
+.nested-card-caption:not(:focus-within) {
+	max-height: var(--text-line);
+}
+
+.nested-card-caption-text {
+	display: block;
+	white-space: pre-wrap;
 }
 
 /*
@@ -1682,13 +1706,16 @@ body {
 	gap: calc(2 * var(--row-pad) + 1px);
 }
 
-/* The text of a field stands after its border and padding, so the field starts before its column by that inset. */
+/*
+ * The text of a field stands after its border and padding, so the field starts before its column,
+ * or after the pill before it, by that inset: the text stands where plain text would.
+ */
 .statement-cells .statement-predicate > .combobox > .input-field {
 	--underline-inset: var(--field-text-inset);
 }
 
 .statement-predicate > .combobox > .input-field,
-.resource-values > .combobox:first-child > .input-field {
+.resource-values > .combobox > .input-field {
 	--field-text-inset: var(--form-field-text-inset);
 	width: calc(100% + var(--field-text-inset));
 	margin-left: calc(-1 * var(--field-text-inset));
@@ -1726,11 +1753,7 @@ body {
 }
 
 .literal-field-text {
-	position: relative;
-	display: block;
 	line-height: var(--text-line);
-	white-space: pre-wrap;
-	overflow-wrap: anywhere;
 }
 
 .literal-field.is-numeric .literal-field-text {
@@ -1743,11 +1766,23 @@ body {
 	overflow: hidden;
 }
 
-.literal-field-copy {
+.literal-field-input {
+	color: var(--vscode-foreground);
+}
+
+/* A text area as high as its text: it lies over a hidden copy of the text, which sizes the box. */
+.auto-size-text {
+	position: relative;
+	display: block;
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+}
+
+.auto-size-copy {
 	visibility: hidden;
 }
 
-.literal-field-input {
+.auto-size-input {
 	position: absolute;
 	inset: 0;
 	z-index: 1;
@@ -1758,18 +1793,20 @@ body {
 	padding: 0;
 	border: 0;
 	background: none;
-	color: var(--vscode-foreground);
+	color: inherit;
 	font: inherit;
 	letter-spacing: inherit;
+	line-height: inherit;
 	white-space: pre-wrap;
 	overflow-wrap: anywhere;
 	resize: none;
 	overflow: hidden;
 	outline: none;
-	caret-color: var(--form-accent);
+	/* The caret of the inputs of the form: in the colour of the text of the editor, also in muted text such as a comment. */
+	caret-color: var(--vscode-foreground);
 }
 
-.literal-field-input::placeholder {
+.auto-size-input::placeholder {
 	color: var(--form-muted);
 }
 
@@ -2113,6 +2150,11 @@ body {
 
 .combobox-suffix-copy {
 	visibility: hidden;
+}
+
+/* A field that starts before its column by the inset of its text has its text where its combobox starts. */
+:is(.statement-predicate, .resource-values) > .combobox > .combobox-suffix {
+	padding-inline-start: 0;
 }
 
 .combobox-suffix > .literal-field-annotation,

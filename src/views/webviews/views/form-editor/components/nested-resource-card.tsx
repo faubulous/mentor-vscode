@@ -1,5 +1,5 @@
 import { BlankNode, NamedNode } from '@rdfjs/types';
-import { KeyboardEvent, useEffect } from 'react';
+import { KeyboardEvent, ReactNode, useEffect } from 'react';
 import { termToString } from 'rdf-string';
 import { NestedResourceData } from '../form-editor-model';
 import { useContextMenu } from '../hooks/use-context-menu';
@@ -11,6 +11,7 @@ import { NestedResourcePlaceholder } from './nested-resource-placeholder';
 import { PinnedPropertiesContext } from '../state/pinned-properties-context';
 import { useFormEditorContext } from '../state/form-editor-context';
 import { StatementList } from './statement-list';
+import { CommentField } from './comment-field';
 
 /**
  * The nesting depth beyond which blank nodes stop being rendered in place as cards, so that a
@@ -48,22 +49,18 @@ export interface NestedResourceCardProps {
 	 */
 	actions?: NestedCardActions;
 
-	/**
-	 * The comment lines written above the value that refers to the node.
-	 */
-	comments?: string[];
 }
 
 /**
  * A blank node rendered below the value that refers to it, as a nested card led by its type, with
- * the comment lines written above the value and above the node as the caption of its header, and
+ * the comment written at the head of the node as the caption of its header, edited in place, and
  * the pins of the types of the node, which its rows set and its collapsed header shows. Beyond the nesting
  * limit it is a placeholder that scrolls to the node. Where its row is edited, the card
  * has a ⋯ menu, which a right-click on the card opens too, except in a text field.
  * @param props The blank node and where it stands.
  * @returns The card, or nothing for a node that holds this card already.
  */
-export function NestedResourceCard({ nested, dataService, depth, visited, actions, comments }: NestedResourceCardProps): React.JSX.Element | null {
+export function NestedResourceCard({ nested, dataService, depth, visited, actions }: NestedResourceCardProps): React.JSX.Element | null {
 	const { cardBody, stale } = useResourceCardBody(dataService, nested.term);
 	const pins = dataService.getCardHeader?.(nested.term)?.pins;
 	const { onSetPin } = useFormEditorContext();
@@ -103,7 +100,7 @@ export function NestedResourceCard({ nested, dataService, depth, visited, action
 	return (
 		<div className="resource-card is-nested" data-resource-id={termToString(nested.term)} onContextMenu={actions ? openOnContextMenu : undefined} onKeyDown={actions ? handleKeyDown : undefined}>
 			<PinnedPropertiesContext.Provider value={{ pins: pins ?? [], onPin: pins && onSetPin ? (predicate, scope) => onSetPin(nested.term, predicate, scope) : undefined }}>
-				<StatementList cardBody={cardBody} dataService={dataService} depth={depth} visited={[...visited, nested.term]} comments={_captionOf(comments, cardBody.leadingComments)} />
+				<StatementList cardBody={cardBody} dataService={dataService} depth={depth} visited={[...visited, nested.term]} caption={_captionOf(cardBody.leadingComments, { nested, visited, version: dataService.version })} />
 			</PinnedPropertiesContext.Provider>
 			{actions && <NestedCardMenu actions={actions} menuRef={menuRef} />}
 		</div>
@@ -111,16 +108,19 @@ export function NestedResourceCard({ nested, dataService, depth, visited, action
 }
 
 /**
- * The caption of the header of a nested card: the comment lines written above the value that
- * refers to the node, then those written above the node.
- * @param valueComments The comment lines above the value.
- * @param nodeComments The comment lines above the node.
- * @returns The lines, or `undefined` where there are none.
+ * The caption of the header of a nested card: the comment written at the head of the node, before
+ * its first statement. The comment written above the value that refers to the node stands above
+ * the card, as the comments of other values do.
+ * @param nodeComments The comment lines at the head of the node.
+ * @param where The node, the resources holding its card and the document version.
+ * @returns The caption, or `undefined` where there is no comment.
  */
-function _captionOf(valueComments: string[] | undefined, nodeComments: string[] | undefined): string[] | undefined {
-	const lines = [...(valueComments ?? []), ...(nodeComments ?? [])];
+function _captionOf(nodeComments: string[] | undefined, where: { nested: NestedResourceData; visited: readonly (NamedNode | BlankNode)[]; version: number }): ReactNode {
+	const { nested, visited, version } = where;
 
-	return lines.length > 0 ? lines : undefined;
+	return nodeComments
+		? <CommentField className="nested-card-caption-text" label="Comment on the node" lines={nodeComments} anchor={{ kind: 'node', subject: nested.term }} subject={nested.term} card={visited[0] ?? nested.term} version={version} />
+		: undefined;
 }
 
 

@@ -1,4 +1,4 @@
-import { DragEvent, FocusEvent, KeyboardEvent, MouseEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { DragEvent, FocusEvent, KeyboardEvent, MouseEvent, ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { VscodeTextfield } from '@vscode-elements/elements';
 import { ResourceOptionData, TermData, TermSearchStatement, TermSearchTargetType } from '../form-editor-model';
 import { NewValueTypeMarker } from './new-value-type-marker';
@@ -19,6 +19,11 @@ interface ResourceValueEntry {
 	 * The index of the value among the values of the statement.
 	 */
 	index: number;
+
+	/**
+	 * The comment written above the value, which puts the pill on a line of its own under it.
+	 */
+	comment?: ReactNode;
 }
 
 /**
@@ -147,11 +152,12 @@ export interface ResourceValuesProps {
 }
 
 /**
- * The resources of a statement in one box: a pill per resource, the resources the reasoner infers
- * after them as pills that only read, and the input of the next value after the last pill, which offers the terms of the workspace that are not among the values yet,
- * as a {@link TermPicker}, and takes a typed prefixed name, `<iri>` or, where the predicate takes
- * more than resources, text. The box is one stop of Tab, the
- * input; the arrows walk the pills from it. On a pill Backspace and Delete remove it, Alt with an
+ * The resources of a statement in one box: a pill per resource, a pill with a comment on a line of
+ * its own under it, the resources the reasoner infers after them as pills that only read, and the
+ * input of the next value after the last pill, which offers the terms of the workspace that are
+ * not among the values yet, as a {@link TermPicker}, and takes a typed prefixed name, `<iri>` or,
+ * where the predicate takes more than resources, text. The box is one stop of Tab, the input; the
+ * arrows walk the pills from it. On a pill Backspace and Delete remove it, Alt with an
  * arrow moves it one place, and typing continues in the input. Where the values can be moved, a
  * pill is dragged to another place among the pills, an accent bar showing where it is dropped.
  * Moving changes the order of the values only. Once text is typed into the input, the type of
@@ -329,11 +335,16 @@ export function ResourceValues(props: ResourceValuesProps): React.JSX.Element {
 
 	return (
 		<span className="resource-values" onMouseDown={focusFieldOnFreeSpace} onFocus={trackFocus} onBlur={loseFocus}>
-			{resources.map(({ view, index }, position) => (
-				<span key={index} data-value-index={index} className={_dropClassOf(drag, position, resources.length)} {...dragHandlersOf(position)}>
-					<ValuePill view={view} pillRef={element => { pills.current[position] = element; }} onKeyDown={handlePillKeyDown(position)} onRemove={() => onRemove(index)} />
-				</span>
-			))}
+			{resources.map(({ view, index, comment }, position) => {
+				const pill = (
+					<span key={index} data-value-index={index} className={_dropClassOf(drag, position, resources.length)} {...dragHandlersOf(position)}>
+						<ValuePill view={view} pillRef={element => { pills.current[position] = element; }} onKeyDown={handlePillKeyDown(position)} onRemove={() => onRemove(index)} />
+					</span>
+				);
+
+				// A pill with a comment takes a line of its own, under its comment, which is not dragged with it.
+				return comment ? <span key={index} className="value-pill-line">{comment}{pill}</span> : pill;
+			})}
 			{inferred.map(view => <ValuePill key={`inferred-${view.term.value}`} view={view} />)}
 			<TermPicker
 				targetType={targetType}
