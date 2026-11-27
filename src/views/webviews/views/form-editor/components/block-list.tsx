@@ -7,9 +7,10 @@ import { IResourceDataService } from '../services/resource-data-service.interfac
 import { FormBlock } from '../state/form-block';
 import { ResourceCardStates } from '../state/resource-card-states';
 import { useFormEditorContext } from '../state/form-editor-context';
-import { NewCommentPosition } from '../state/comment-editor';
+import { getNewCommentTarget, NewCommentPosition } from '../state/comment-editor';
+import { DocumentSubject } from '../hooks/use-form-blocks';
 import { CommentBlock } from './comment-block';
-import { NewCommentBlock } from './new-comment-block';
+import { CommentField } from './comment-field';
 import { OverviewRuler, RulerMark } from './overview-ruler';
 import { ResourceCard } from './resource-card';
 
@@ -144,7 +145,7 @@ export function BlockList({ blocks, dataService, scrollElement, cardStates, pinn
 							{adding && _newCommentPositionOf(block) && (
 								<button type="button" className="block-add-comment" onClick={() => setNewComment(block.id)}>Add comment</button>
 							)}
-							{newComment === block.id && <NewCommentBlock position={_newCommentPositionOf(block)} version={dataService.version} onDone={closeNewComment} />}
+							{newComment === block.id && _newCommentOf(_newCommentPositionOf(block), dataService.version, closeNewComment)}
 							{block.kind === 'resource'
 								? <ResourceCard cardHeader={block.resource} dataService={dataService} expanded={cardStates.stateOf(block.id).open !== 'collapsed'} writing={busyIds?.has(block.id) === true} current={block.id === currentId} onToggle={onToggle} />
 								: <CommentBlock block={block} version={dataService.version} />}
@@ -155,12 +156,32 @@ export function BlockList({ blocks, dataService, scrollElement, cardStates, pinn
 			{adding && blocks.length > 0 && (
 				<div className="block-list-end">
 					{newComment === END_OF_DOCUMENT
-						? <NewCommentBlock position={undefined} version={dataService.version} onDone={closeNewComment} />
+						? _newCommentOf(undefined, dataService.version, closeNewComment)
 						: <button type="button" className="add-link block-list-add-comment" onClick={() => setNewComment(END_OF_DOCUMENT)}>Add comment</button>}
 				</div>
 			)}
 			{rulerElement && createPortal(<OverviewRuler scrollElement={scrollElement} marks={marks} contentHeight={window.totalSize + scrollMargin} />, rulerElement)}
 		</>
+	);
+}
+
+/**
+ * A comment of its own being added between the resources of the document or at its end: an empty
+ * comment field with the focus, which writes the comment when it is left with text, a blank line
+ * apart from what is around it, and goes when it is left.
+ * @param position Where the comment is added: before a run of the comments above a resource,
+ * directly above the resource, or at the end of the document when absent.
+ * @param version The document version the list belongs to.
+ * @param onDone Called when the field is left, written or not.
+ * @returns The block of the new comment.
+ */
+function _newCommentOf(position: NewCommentPosition, version: number, onDone: () => void): React.JSX.Element {
+	const subject = position?.subject ?? DocumentSubject;
+
+	return (
+		<div className="comment-block is-new">
+			<CommentField className="comment-block-text" label="New comment" lines={[]} target={getNewCommentTarget(position)} subject={subject} card={subject} version={version} autoFocus onLeave={onDone} />
+		</div>
 	);
 }
 
