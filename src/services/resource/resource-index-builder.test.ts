@@ -178,7 +178,7 @@ describe('ResourceIndexBuilder comments', () => {
 			ex:Thing a ex:Class .
 		`);
 
-		expect(index.listItems[0].comments).toEqual([[' About the file.'], [' The thing itself.', ' Written over two lines.']]);
+		expect(index.listItems[0].comments).toEqual([['About the file.'], ['The thing itself.', 'Written over two lines.']]);
 	});
 
 	it('keeps the comments closing a document apart from the last resource', () => {
@@ -192,7 +192,7 @@ describe('ResourceIndexBuilder comments', () => {
 		`);
 
 		expect(index.listItems[0].comments).toBeUndefined();
-		expect(index.trailingComments).toEqual([[' That is all.', ' Really.'], [' Postscript.']]);
+		expect(index.trailingComments).toEqual([['That is all.', 'Really.'], ['Postscript.']]);
 	});
 
 	it('leaves a resource without comments unmarked', () => {

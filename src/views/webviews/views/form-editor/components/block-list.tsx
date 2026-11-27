@@ -11,6 +11,7 @@ import { getNewCommentTarget, NewCommentPosition } from '../state/comment-editor
 import { DocumentSubject } from '../hooks/use-form-blocks';
 import { CommentBlock } from './comment-block';
 import { CommentField } from './comment-field';
+import { CommentLine } from './comment-line';
 import { OverviewRuler, RulerMark } from './overview-ruler';
 import { ResourceCard } from './resource-card';
 
@@ -179,9 +180,9 @@ function _newCommentOf(position: NewCommentPosition, version: number, onDone: ()
 	const subject = position?.subject ?? DocumentSubject;
 
 	return (
-		<div className="comment-block is-new">
+		<CommentLine className="comment-block is-new">
 			<CommentField className="comment-block-text" label="New comment" lines={[]} target={getNewCommentTarget(position)} subject={subject} card={subject} version={version} autoFocus onLeave={onDone} />
-		</div>
+		</CommentLine>
 	);
 }
 

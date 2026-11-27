@@ -1062,20 +1062,6 @@ body {
 	margin-top: 8px;
 }
 
-/* The comment lines written above a property, under its values, and above a value, before it: muted text at the size of the values, so a comment being edited has the caret of a value. */
-.statement-comment {
-	display: block;
-	margin-top: 4px;
-	color: var(--form-muted);
-	line-height: var(--text-line);
-	white-space: pre-wrap;
-}
-
-.statement-value-comment {
-	margin-top: 0;
-	margin-bottom: 2px;
-}
-
 .statement-list-items {
 	display: flex;
 	flex-direction: column;
@@ -1196,32 +1182,6 @@ body {
 	flex-direction: column;
 	align-items: flex-start;
 	flex-basis: 100%;
-}
-
-/*
- * A comment is rendered as its text, which a double click or Enter opens for editing, as a cell of
- * Markdown in a notebook: the text then shows its lines as written, outlined while it is edited.
- */
-.comment-field {
-	display: block;
-}
-
-.comment-field-text {
-	display: block;
-	border-radius: var(--mentor-radius-sm);
-	cursor: default;
-}
-
-.comment-field-text:focus-visible {
-	outline: 1px solid var(--vscode-focusBorder);
-	outline-offset: 2px;
-}
-
-.comment-field.is-editing {
-	border-radius: var(--mentor-radius-sm);
-	outline: 1px solid var(--vscode-focusBorder);
-	outline-offset: 2px;
-	cursor: text;
 }
 
 /*
@@ -1396,9 +1356,9 @@ body {
 	max-height: var(--text-line);
 }
 
-.nested-card-caption-text {
-	display: block;
-	white-space: pre-wrap;
+/* The caption is quiet: its text muted. */
+.nested-card-caption .comment-body {
+	color: inherit;
 }
 
 /*
@@ -2399,16 +2359,170 @@ body {
 
 /* ---------- Comments ---------- */
 
-/* A comment between entries: grey text. */
-.form-block.is-comment .comment-block {
-	padding: 16px 0 12px;
+/*
+ * A comment that stands on its own, between the cards, above a row or at the end of a card: a muted
+ * `#` in the gutter where the grips of the rows stand, and beside it the comment across the columns
+ * of the rows, its first line where the first line of a row stands. No line runs under it, so it
+ * reads with the row below it.
+ */
+.comment-line {
+	display: flex;
+	gap: var(--gutter-gap, 4px);
+	min-width: 0;
 }
 
-.comment-block-text {
-	color: var(--vscode-descriptionForeground);
-	line-height: 1.55;
-	white-space: pre-wrap;
+.comment-gutter {
+	flex: none;
+	width: var(--gutter, 28px);
+	padding-top: calc(var(--row-pad, 3px) + var(--text-pad, 3px));
+	color: var(--form-muted);
+	font-family: var(--form-mono);
+	line-height: var(--text-line, 20px);
+	text-align: center;
+	user-select: none;
+}
+
+.comment-line-body {
+	flex: 1 1 auto;
+	min-width: 0;
+	padding: calc(var(--row-pad, 3px) + var(--text-pad, 3px)) 0 var(--text-pad, 3px);
+}
+
+/* A comment between the cards has its gutter where the cards have the gutter of their grips. */
+.form-block.is-comment .comment-block {
+	padding-left: calc(1px + var(--card-pad-x, 4px));
+}
+
+/* A comment above a row takes a line of its own in the row, and ends where the cells of the row end. */
+.statement-line.has-comment {
+	flex-wrap: wrap;
+	row-gap: 0;
+}
+
+.statement-property-comment {
+	flex: 0 0 100%;
+}
+
+.statement-property-comment,
+.statement-end-comment {
+	box-sizing: border-box;
+	padding-right: calc(var(--gutter) + var(--gutter-gap));
+}
+
+/* The line that marks where a dragged row drops runs above the comment of the row. */
+.statement-line.is-drop-before.has-comment > .statement-cells::before {
+	display: none;
+}
+
+.statement-line.is-drop-before.has-comment > .statement-property-comment {
+	position: relative;
+}
+
+.statement-line.is-drop-before.has-comment > .statement-property-comment::before {
+	content: '';
+	position: absolute;
+	z-index: 2;
+	top: -1px;
+	left: calc(var(--gutter) + var(--gutter-gap));
+	right: calc(var(--gutter) + var(--gutter-gap));
+	height: 2px;
+	border-radius: 1px;
+	background: var(--vscode-focusBorder);
+	pointer-events: none;
+}
+
+/* A comment above a single value stands right above it, without a gutter. */
+.statement-value-comment {
+	margin-bottom: 2px;
+}
+
+/*
+ * A comment rendered from its Markdown, at the size of the values: paragraphs, headings a step
+ * larger and bold, lists with muted bullets, and code in the colour of classes on the surface of
+ * the pills, shown whole. A double click opens it for editing, as a cell of Markdown in a notebook.
+ */
+.comment-field {
+	display: block;
+	min-width: 0;
+}
+
+.comment-body {
+	color: var(--vscode-foreground);
+	line-height: var(--text-line, 20px);
 	overflow-wrap: anywhere;
+	border-radius: var(--mentor-radius-sm);
+	cursor: text;
+}
+
+.comment-body:focus-visible {
+	outline: 1px solid var(--vscode-focusBorder);
+	outline-offset: 2px;
+}
+
+.comment-paragraph + :is(.comment-paragraph, .comment-heading, .comment-list),
+.comment-heading + :is(.comment-paragraph, .comment-list),
+.comment-list + :is(.comment-paragraph, .comment-heading) {
+	margin-top: calc(var(--text-line, 20px) / 2);
+}
+
+.comment-heading {
+	font-size: 1.07em;
+	font-weight: 600;
+}
+
+.comment-list {
+	margin: 0;
+	padding-left: 16px;
+}
+
+.comment-list > li::marker {
+	color: var(--form-muted);
+}
+
+.comment-body code {
+	padding: 1px 5px;
+	border-radius: 3px;
+	background: var(--form-pill-background);
+	color: var(--vscode-symbolIcon-classForeground, var(--vscode-foreground));
+	font-family: var(--form-mono);
+	font-size: 0.9em;
+}
+
+/*
+ * A comment being edited: its Markdown text in the font of the editor on the surface of the nested
+ * cards, room on the right for the type of the text, and the underline of the accent colour under
+ * it. The text area grows with the text, and shows at least two lines.
+ */
+.comment-input {
+	border-bottom: 2px solid var(--form-accent);
+	border-radius: var(--mentor-radius-sm) var(--mentor-radius-sm) 0 0;
+	background: var(--form-nested-background);
+	font-family: var(--form-mono);
+	font-size: 0.93em;
+	line-height: var(--text-line, 20px);
+}
+
+.comment-input > .auto-size-copy,
+.comment-input > .auto-size-input {
+	display: block;
+	box-sizing: border-box;
+	padding: 8px 84px 8px 10px;
+}
+
+.comment-input > .auto-size-copy {
+	min-height: calc(2 * var(--text-line, 20px) + 16px);
+}
+
+.comment-type {
+	position: absolute;
+	top: calc(8px + (var(--text-line, 20px) - 16px) / 2);
+	right: 10px;
+	z-index: 2;
+	color: var(--form-muted);
+	font-family: var(--form-mono);
+	font-size: 11px;
+	line-height: 16px;
+	pointer-events: none;
 }
 
 /* ---------- States ---------- */

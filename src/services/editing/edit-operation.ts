@@ -49,9 +49,9 @@ export type EditOperation =
 	| { op: 'declarePrefix'; prefix: string; namespace: string }
 	/**
 	 * Make `lines` the lines of the comment at an anchor: they replace the run written there, or
-	 * are written where it would stand, each as a comment line. A line is given as it is written
-	 * after the `#` that starts it; one that starts with text gets a space after the `#`. No lines
-	 * remove the run with one blank line beside it.
+	 * are written where it would stand, each as a comment line. A line is given as its Markdown
+	 * text, which is written after `# `, an empty one as `#` alone. No lines remove the run with
+	 * one blank line beside it.
 	 */
 	| { op: 'setComment'; at: CommentAnchor; lines: string[] }
 	/**

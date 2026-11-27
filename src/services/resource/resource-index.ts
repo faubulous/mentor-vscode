@@ -1,4 +1,4 @@
-import { QuadContext } from '@faubulous/mentor-rdf-parsers';
+import { IToken, QuadContext } from '@faubulous/mentor-rdf-parsers';
 import { RDF } from '@faubulous/mentor-rdf';
 import { BlankNode, NamedNode, Quad, Term } from '@rdfjs/types';
 import { termToString } from 'rdf-string';
@@ -122,6 +122,12 @@ export interface ResourceIndexOptions {
 	 * superclasses of its other types; those it does not assert are named as inferred.
 	 */
 	shownTypesOf?: (resource: NamedNode | BlankNode) => readonly string[];
+
+	/**
+	 * The tokens of the document, which tell the comments that end the statements of a resource
+	 * from those that introduce what follows them.
+	 */
+	tokens?: readonly IToken[];
 }
 
 /**

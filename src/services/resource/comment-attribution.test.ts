@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 
 import { IToken } from '@faubulous/mentor-rdf-parsers';
-import { readTurtleQuadContexts } from '@src/utilities/mocks/factories';
+import { readTurtleDocument, readTurtleQuadContexts } from '@src/utilities/mocks/factories';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { getCommentText } from '@src/utilities/tokens';
 import { CommentAttribution, getCommentRunLines } from './comment-attribution';
@@ -63,7 +63,7 @@ describe('CommentAttribution', () => {
 	const s = RdfDataFactory.namedNode(`${EX}s`);
 
 	it('gives the comments above the first statement of a resource to the resource, as its runs', () => {
-		expect(getCommentRunLines(attribution().comments.resourceComments(s))).toEqual([[' run one'], [' run two'], [' above a']]);
+		expect(getCommentRunLines(attribution().comments.resourceComments(s))).toEqual([['run one'], ['run two'], ['above a']]);
 	});
 
 	it('gives a comment above a value in a list of values to that value', () => {
@@ -99,7 +99,7 @@ describe('CommentAttribution', () => {
 		].map(getCommentText);
 
 		expect(all.some(text => text.startsWith('ends'))).toBe(false);
-		expect(getCommentRunLines(comments.documentComments())).toEqual([[' closing one'], [' closing two']]);
+		expect(getCommentRunLines(comments.documentComments())).toEqual([['closing one'], ['closing two']]);
 	});
 
 	it('names the first statement of a resource and of each of its properties', () => {
@@ -108,5 +108,63 @@ describe('CommentAttribution', () => {
 		expect(comments.firstStatementOf(s)?.predicate.value).toBe(`${EX}a`);
 		expect(comments.firstStatementOfProperty(s, `${EX}b`)?.object.value).toBe(`${EX}x`);
 		expect(comments.firstStatementOf(RdfDataFactory.namedNode(`${EX}unknown`))).toBeUndefined();
+	});
+
+	describe('with the tokens of the document', () => {
+		const ENDS = `@prefix ex: <${EX}> .
+
+ex:s ex:a 1 ;
+    ex:n [
+        ex:p 1
+        # ends n
+    ] ;
+    ex:b 2 ;
+    # ends s
+    # really
+.
+
+# about t
+ex:t ex:a 1 # ends the line
+    # ends t
+    .
+
+# closing
+`;
+
+		/**
+		 * The attribution of the comments of a document, with its tokens.
+		 * @param text The document.
+		 * @returns The attribution and the statements.
+		 */
+		function withTokens(text: string) {
+			const read = readTurtleDocument(text);
+
+			return { comments: new CommentAttribution(read.quadContexts, read.tokens), quads: read.quadContexts };
+		}
+
+		it('gives the comments before the . that closes the statements of a resource to its end', () => {
+			const { comments } = withTokens(ENDS);
+			const t = RdfDataFactory.namedNode(`${EX}t`);
+
+			expect(textsOf(comments.endComments(s))).toEqual(['ends s', 'really']);
+			expect(textsOf(comments.endComments(t))).toEqual(['ends t']);
+			expect(textsOf(comments.resourceComments(t))).toEqual(['about t']);
+			expect(textsOf(comments.documentComments())).toEqual(['closing']);
+		});
+
+		it('gives the comments before the ] that closes a blank node to the end of the node', () => {
+			const { comments, quads } = withTokens(ENDS);
+			const node = quads.find(quad => quad.predicate.value === `${EX}p`)!.subject as ReturnType<typeof RdfDataFactory.blankNode>;
+
+			expect(textsOf(comments.endComments(node))).toEqual(['ends n']);
+			expect(comments.propertyComments(s, `${EX}b`)).toEqual([]);
+		});
+
+		it('gives the comments before a . to what follows it without the tokens', () => {
+			const comments = new CommentAttribution(readTurtleQuadContexts(ENDS));
+
+			expect(comments.endComments(s)).toEqual([]);
+			expect(textsOf(comments.resourceComments(RdfDataFactory.namedNode(`${EX}t`)))).toEqual(['ends s', 'really', 'about t']);
+		});
 	});
 });

@@ -1,10 +1,26 @@
 import { ChangeEvent, KeyboardEvent, useEffect, useRef, useState } from 'react';
-import { getCommentLineText } from '@src/utilities/comment-lines';
 import { useCommentEditor } from '../hooks/use-comment-editor';
 import { CommentEditorData, CommentTarget } from '../state/comment-editor';
 import { getEditProblemMessage } from './edit-problem-message';
 import { AutoSizeTextarea } from './auto-size-textarea';
+import { CommentMarkdown } from './comment-markdown';
 import { RowError } from './row-error';
+
+/**
+ * What the accessible name of a comment being edited adds to the name of the comment: how its text
+ * is written and the keys that render it.
+ */
+const EDITING_HINT = 'Markdown. Ctrl or Cmd plus Enter, or Esc, to render.';
+
+/**
+ * The accessible name of a comment being edited: the name of the comment, how its text is written
+ * and the keys that render it.
+ * @param label The accessible name of the comment.
+ * @returns The name.
+ */
+export function getCommentEditingLabel(label: string): string {
+	return `${label}, ${EDITING_HINT}`;
+}
 
 /**
  * Properties of the {@link CommentField} component.
@@ -21,7 +37,7 @@ export interface CommentFieldProps extends CommentEditorData {
 	className: string;
 
 	/**
-	 * The accessible name of the field.
+	 * The accessible name of the comment.
 	 */
 	label: string;
 
@@ -39,12 +55,11 @@ export interface CommentFieldProps extends CommentEditorData {
 }
 
 /**
- * A comment of the document, as the cells of Markdown in a notebook show their text: rendered as
- * text without the `#` signs that start its lines, and where the form can write the document, open
- * for editing on a double click or Enter, as a text area with the lines as they are written after
- * the `#` that starts each. Leaving the text writes what was typed and renders the comment again,
- * an empty text removing it; Ctrl+Enter does so too, Enter breaks the line, and Escape gives up
- * what was typed. After Ctrl+Enter and Escape the rendered comment keeps the focus.
+ * A comment of the document, as the cells of Markdown in a notebook show their text: rendered from
+ * its Markdown, and where the form can write the document, opened for editing by a double click or Enter, as a text area with
+ * its Markdown text. Ctrl+Enter, Escape and leaving the text write what was typed and render the
+ * comment again, an empty text removing it; Enter breaks the line. After Ctrl+Enter and Escape the
+ * rendered comment keeps the focus.
  * @param props The comment and where it stands.
  * @returns The comment.
  */
@@ -52,8 +67,9 @@ export function CommentField({ target, className, label, autoFocus = false, onLe
 	const { editor, state } = useCommentEditor(target, data);
 	const [editing, setEditing] = useState(autoFocus);
 	const inputRef = useRef<HTMLTextAreaElement>(null);
-	const renderedRef = useRef<HTMLSpanElement>(null);
+	const renderedRef = useRef<HTMLDivElement>(null);
 	const keepFocus = useRef(false);
+	const text = state?.text ?? data.lines.join('\n');
 
 	// A comment asked for while it is shown opens for editing too.
 	useEffect(() => {
@@ -76,16 +92,14 @@ export function CommentField({ target, className, label, autoFocus = false, onLe
 		}
 	}, [editing]);
 
-	const text = _renderedTextOf(state?.text ?? data.lines.join('\n'));
-
 	if (!editor || !state) {
-		return <span className={className}>{text}</span>;
+		return <div className={`${className} comment-field is-rendered`}><RenderedComment text={text} /></div>;
 	}
 
 	const rejection = state.rejection && <RowError message={getEditProblemMessage(state.rejection)} onDismiss={() => editor.dismissRejection()} />;
 
 	if (!editing) {
-		const handleKeyDown = (event: KeyboardEvent<HTMLSpanElement>): void => {
+		const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
 			if (event.key === 'Enter' && !event.shiftKey && !event.ctrlKey && !event.metaKey && !event.altKey) {
 				event.preventDefault();
 				event.stopPropagation();
@@ -94,12 +108,10 @@ export function CommentField({ target, className, label, autoFocus = false, onLe
 		};
 
 		return (
-			<span className={`${className} comment-field is-rendered`}>
-				<span ref={renderedRef} className="comment-field-text" role="button" tabIndex={0} aria-label={label} title="Double-click or press Enter to edit" onDoubleClick={() => setEditing(true)} onKeyDown={handleKeyDown}>
-					{text}
-				</span>
+			<div className={`${className} comment-field is-rendered`}>
+				<RenderedComment text={text} bodyRef={renderedRef} label={label} onOpen={() => setEditing(true)} onKeyDown={handleKeyDown} />
 				{rejection}
-			</span>
+			</div>
 		);
 	}
 
@@ -108,7 +120,7 @@ export function CommentField({ target, className, label, autoFocus = false, onLe
 			return;
 		}
 
-		if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+		if (event.key === 'Escape' || (event.key === 'Enter' && (event.ctrlKey || event.metaKey))) {
 			event.preventDefault();
 			event.stopPropagation();
 			keepFocus.current = true;
@@ -116,12 +128,6 @@ export function CommentField({ target, className, label, autoFocus = false, onLe
 		} else if (event.key === 'Enter') {
 			// Enter breaks the line of the comment, and does not write the row it stands in.
 			event.stopPropagation();
-		} else if (event.key === 'Escape') {
-			event.preventDefault();
-			event.stopPropagation();
-			editor.revert();
-			keepFocus.current = true;
-			event.currentTarget.blur();
 		}
 	};
 
@@ -132,27 +138,74 @@ export function CommentField({ target, className, label, autoFocus = false, onLe
 	};
 
 	return (
-		<span className={`${className} comment-field is-editing`}>
+		<div className={`${className} comment-field is-editing`}>
 			<AutoSizeTextarea
+				className="comment-input"
 				inputRef={inputRef}
 				value={state.text}
 				placeholder="Comment"
-				aria-label={label}
+				aria-label={getCommentEditingLabel(label)}
 				onChange={(event: ChangeEvent<HTMLTextAreaElement>) => editor.input(event.currentTarget.value)}
 				onKeyDown={handleKeyDown}
 				onBlur={handleBlur}
-			/>
+			>
+				<span className="comment-type" aria-hidden="true">markdown</span>
+			</AutoSizeTextarea>
 			{rejection}
-		</span>
+		</div>
 	);
 }
 
 /**
- * The text of a comment as it is rendered: its lines without the `#` signs and the one space that
- * start them.
- * @param lines The lines as they are written after the `#` that starts each, joined by line breaks.
- * @returns The text.
+ * Properties of the {@link RenderedComment} component.
  */
-function _renderedTextOf(lines: string): string {
-	return lines.split('\n').map(getCommentLineText).join('\n');
+interface RenderedCommentProps {
+	/**
+	 * The Markdown text of the comment.
+	 */
+	text: string;
+
+	/**
+	 * Holds the rendered text, which takes the focus back after editing.
+	 */
+	bodyRef?: React.Ref<HTMLDivElement>;
+
+	/**
+	 * The accessible name of the comment, where it opens for editing.
+	 */
+	label?: string;
+
+	/**
+	 * Opens the comment for editing, where it can be.
+	 */
+	onOpen?: () => void;
+
+	/**
+	 * Handles the keys pressed on the rendered text, where it opens for editing.
+	 */
+	onKeyDown?: (event: KeyboardEvent<HTMLDivElement>) => void;
+}
+
+/**
+ * A comment rendered from its Markdown, shown whole.
+ * @param props The comment and how it opens for editing.
+ * @returns The comment.
+ */
+function RenderedComment({ text, bodyRef, label, onOpen, onKeyDown }: RenderedCommentProps): React.JSX.Element {
+	const editable = onOpen !== undefined;
+
+	return (
+		<div
+			ref={bodyRef}
+			className="comment-body"
+			role={editable ? 'button' : undefined}
+			tabIndex={editable ? 0 : undefined}
+			aria-label={editable ? label : undefined}
+			title={editable ? 'Double-click or press Enter to edit' : undefined}
+			onDoubleClick={onOpen}
+			onKeyDown={onKeyDown}
+		>
+			<CommentMarkdown text={text} />
+		</div>
+	);
 }

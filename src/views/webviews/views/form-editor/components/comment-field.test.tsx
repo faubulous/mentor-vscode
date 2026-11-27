@@ -11,6 +11,7 @@ import { ResourceCardBodyData } from '../form-editor-model';
 import { EditingController } from '../state/editing-controller';
 import { FormEditorContext, FormEditorContextValue } from '../state/form-editor-context';
 import { CommentBlock } from './comment-block';
+import { getCommentEditingLabel } from './comment-field';
 import { StatementList } from './statement-list';
 
 const NAMESPACES = Object.entries(TEST_NAMESPACES).map(([prefix, iri]) => ({ prefix, iri }));
@@ -73,7 +74,7 @@ async function open(rendered: HTMLElement): Promise<HTMLTextAreaElement> {
 }
 
 describe('CommentField', () => {
-	it('writes a comment between the cards in place, a line per comment line', async () => {
+	it('writes a comment between the cards in place, a line per line of its text', async () => {
 		const { host, context } = editableContext();
 		const block = { kind: 'comment' as const, id: 'comment', lines: ['About the file'], anchor: { kind: 'resource' as const, subject: TEST_SUBJECT, run: 0 }, subject: TEST_SUBJECT };
 
@@ -86,43 +87,50 @@ describe('CommentField', () => {
 		await write(rendered, 'About the file\nand more');
 
 		expect(host.submitted.map(edit => edit.operations)).toEqual([[{ op: 'setComment', at: block.anchor, lines: ['About the file', 'and more'] }]]);
-		expect(screen.getByRole('button', { name: 'Comment' }).textContent).toBe('About the file\nand more');
+		expect(screen.getByRole('button', { name: 'Comment' }).textContent).toBe('About the file and more');
 	});
 
-	it('renders a comment without the # signs that start its lines, and opens its lines as written for editing', async () => {
+	it('renders a comment from its Markdown, and opens its Markdown text for editing, marked as Markdown', async () => {
 		const { context } = editableContext();
-		const block = { kind: 'comment' as const, id: 'comment', lines: [' about the file', '# Heading', 'no space'], anchor: { kind: 'resource' as const, subject: TEST_SUBJECT, run: 0 }, subject: TEST_SUBJECT };
+		const block = { kind: 'comment' as const, id: 'comment', lines: ['about the file', '# Heading', '- an **item**'], anchor: { kind: 'resource' as const, subject: TEST_SUBJECT, run: 0 }, subject: TEST_SUBJECT };
 
 		renderWebview(<FormEditorContext.Provider value={context}><CommentBlock block={block} version={1} /></FormEditorContext.Provider>);
 
 		const rendered = screen.getByRole('button', { name: 'Comment' });
 
-		expect(rendered.textContent).toBe('about the file\nHeading\nno space');
+		expect(rendered.querySelector('.comment-heading')?.textContent).toBe('Heading');
+		expect(rendered.querySelector('.comment-list strong')?.textContent).toBe('item');
+		expect(document.querySelector('.comment-block .comment-gutter')?.textContent).toBe('#');
 		expect(screen.queryByRole('textbox')).toBeNull();
 
 		await act(async () => {
 			fireEvent.keyDown(rendered, { key: 'Enter' });
 		});
 
-		const field = screen.getByRole('textbox', { name: 'Comment' }) as HTMLTextAreaElement;
+		const field = screen.getByRole('textbox', { name: 'Comment, Markdown. Ctrl or Cmd plus Enter, or Esc, to render.' }) as HTMLTextAreaElement;
 
-		expect(field.value).toBe(' about the file\n# Heading\nno space');
+		expect(field.value).toBe('about the file\n# Heading\n- an **item**');
+		expect(field.closest('.comment-field')?.querySelector('.comment-type')?.textContent).toBe('markdown');
 		expect(document.activeElement).toBe(field);
 	});
 
 	it('shows the text of a comment of a document the form cannot write', () => {
-		const block = { kind: 'comment' as const, id: 'comment', lines: [' About the file'], anchor: { kind: 'document' as const, run: 0 }, subject: TEST_SUBJECT };
+		const block = { kind: 'comment' as const, id: 'comment', lines: ['About the file'], anchor: { kind: 'document' as const, run: 0 }, subject: TEST_SUBJECT };
 
 		renderWebview(<FormEditorContext.Provider value={{ readOnly: true, namespaces: [], languageTags: {} }}><CommentBlock block={block} version={1} /></FormEditorContext.Provider>);
 
 		expect(screen.queryByRole('button', { name: 'Comment' })).toBeNull();
-		expect(screen.getByText('About the file').classList.contains('comment-block-text')).toBe(true);
+		expect(screen.getByText('About the file').closest('.comment-block-text')).not.toBeNull();
 	});
 
-	it('breaks the line of a property comment on Enter without writing the row, and gives up what was typed on Escape', async () => {
+	it('shows the comment of a property above its row, breaks its line on Enter without writing the row, and writes and renders it on Escape', async () => {
 		const label = { ...createProperty('rdfs:label', [createLiteralView('Tree')]), comments: ['the name'] };
 		const { host } = renderList(withAnchors(createTestCardBody([createProperty('rdfs:comment', [createLiteralView('x')]), label])));
-		const field = await open(screen.getByRole('button', { name: 'Comment on the property' }));
+		const rendered = screen.getByRole('button', { name: 'Comment on the property' });
+
+		expect(rendered.closest('.statement-property-comment')?.parentElement).toBe(screen.getByRole('group', { name: 'rdfs:label' }));
+
+		const field = await open(rendered);
 
 		await act(async () => {
 			fireEvent.change(field, { target: { value: 'the common name' } });
@@ -135,11 +143,11 @@ describe('CommentField', () => {
 			fireEvent.keyDown(field, { key: 'Escape' });
 		});
 
-		const rendered = screen.getByRole('button', { name: 'Comment on the property' });
+		const renderedAgain = screen.getByRole('button', { name: 'Comment on the property' });
 
-		expect(rendered.textContent).toBe('the name');
-		expect(document.activeElement).toBe(rendered);
-		expect(host.submitted).toEqual([]);
+		expect(renderedAgain.textContent).toBe('the common name');
+		expect(document.activeElement).toBe(renderedAgain);
+		expect(host.submitted[0].operations).toEqual([{ op: 'setComment', at: { kind: 'property', subject: TEST_SUBJECT, predicate: RDFS.label }, lines: ['the common name'] }]);
 	});
 
 	it('writes a property comment, which Ctrl+Enter leaves', async () => {
@@ -155,11 +163,36 @@ describe('CommentField', () => {
 		expect(host.submitted[0].operations).toEqual([{ op: 'setComment', at: { kind: 'property', subject: TEST_SUBJECT, predicate: RDFS.label }, lines: ['the common name'] }]);
 	});
 
+	it('removes a comment confirmed empty', async () => {
+		const label = { ...createProperty('rdfs:label', [createLiteralView('Tree')]), comments: ['the name'] };
+		const { host } = renderList(withAnchors(createTestCardBody([createProperty('rdfs:comment', [createLiteralView('x')]), label])));
+		const field = await open(screen.getByRole('button', { name: 'Comment on the property' }));
+
+		await act(async () => {
+			fireEvent.change(field, { target: { value: '' } });
+			fireEvent.keyDown(field, { key: 'Enter', metaKey: true });
+		});
+
+		expect(host.submitted[0].operations).toEqual([{ op: 'setComment', at: { kind: 'property', subject: TEST_SUBJECT, predicate: RDFS.label }, lines: [''] }]);
+	});
+
+	it('shows the comment ending the statements of a resource after its last row, and writes it there', async () => {
+		const cardBody = { ...withAnchors(createTestCardBody([createProperty('rdfs:label', [createLiteralView('Tree')])])), endComments: ['the end'] };
+		const { host } = renderList(cardBody);
+		const rendered = screen.getByRole('button', { name: 'Comment at the end' });
+
+		expect(rendered.closest('.statement-end-comment')?.previousElementSibling?.classList.contains('statement-line')).toBe(true);
+
+		await write(rendered, 'the very end');
+
+		expect(host.submitted[0].operations).toEqual([{ op: 'setComment', at: { kind: 'end', subject: TEST_SUBJECT }, lines: ['the very end'] }]);
+	});
+
 	it('puts a pill with a comment on a line of its own under the comment, and writes the comment of that value', async () => {
 		const cardBody = withAnchors(createTestCardBody([createProperty('rdfs:seeAlso', [createIriView('ex:A', 'A'), { ...createIriView('ex:B', 'B'), comments: ['about B'] }])]));
 		const { host } = renderList(cardBody);
 		const line = document.querySelector('.value-pill-line')!;
-		const field = within(line as HTMLElement).getByLabelText('Comment on the value');
+		const field = within(line as HTMLElement).getByRole('button', { name: 'Comment on the value' });
 
 		expect(line.querySelector('.value-pill')?.textContent).toBe('B');
 
@@ -174,7 +207,7 @@ describe('CommentField', () => {
 		const cardBody = withAnchors(createTestCardBody([createProperty('ex:has', [{ term: node, editable: true, nested: { term: node, propertyCount: 1 } }])]));
 		const { host } = renderList(cardBody, [nested]);
 
-		await write(screen.getByLabelText('Comment on the node'), 'the node, edited');
+		await write(screen.getByRole('button', { name: 'Comment on the node' }), 'the node, edited');
 
 		expect(host.submitted[0].operations).toEqual([{ op: 'setComment', at: { kind: 'node', subject: node }, lines: ['the node, edited'] }]);
 	});
@@ -197,7 +230,7 @@ describe('CommentField', () => {
 
 			await pressComment(screen.getByLabelText('Value 2'));
 
-			const field = screen.getByLabelText('Comment on the value');
+			const field = screen.getByLabelText(getCommentEditingLabel('Comment on the value'));
 
 			expect(document.activeElement).toBe(field);
 			expect(field.closest('.statement-value')?.querySelector('[data-value-index="1"]')).not.toBeNull();
@@ -205,7 +238,7 @@ describe('CommentField', () => {
 			await write(field, 'the German name');
 
 			expect(host.submitted[0].operations).toEqual([{ op: 'setComment', at: { kind: 'value', subject: TEST_SUBJECT, predicate: RDFS.label, anchor: LABEL.predicates[1].values[1].anchor }, lines: ['the German name'] }]);
-			expect(screen.queryByLabelText('Comment on the value')).toBeNull();
+			expect(screen.queryByLabelText(getCommentEditingLabel('Comment on the value'))).toBeNull();
 		});
 
 		it('opens an empty comment above the property from its predicate field, and writes nothing when left empty', async () => {
@@ -214,14 +247,14 @@ describe('CommentField', () => {
 
 			await pressComment(row.querySelector('.statement-predicate .input-field')!);
 
-			const field = screen.getByLabelText('Comment on the property');
+			const field = screen.getByLabelText(getCommentEditingLabel('Comment on the property'));
 
 			expect(document.activeElement).toBe(field);
 
 			await act(async () => fireEvent.blur(field));
 
 			expect(host.submitted).toEqual([]);
-			expect(screen.queryByLabelText('Comment on the property')).toBeNull();
+			expect(screen.queryByLabelText(getCommentEditingLabel('Comment on the property'))).toBeNull();
 		});
 
 		it('takes the focus to the comment a value has already', async () => {
@@ -230,8 +263,8 @@ describe('CommentField', () => {
 			renderList(cardBody);
 			await pressComment(within(screen.getByRole('group', { name: 'rdfs:label' })).getByLabelText('Value 1'));
 
-			expect(screen.getAllByLabelText('Comment on the value')).toHaveLength(1);
-			expect(document.activeElement).toBe(screen.getByLabelText('Comment on the value'));
+			expect(screen.getAllByLabelText(getCommentEditingLabel('Comment on the value'))).toHaveLength(1);
+			expect(document.activeElement).toBe(screen.getByLabelText(getCommentEditingLabel('Comment on the value')));
 		});
 
 		it('opens the comment above a nested card from its header', async () => {
@@ -241,7 +274,7 @@ describe('CommentField', () => {
 			const { host } = renderList(cardBody, [nested]);
 
 			await pressComment(screen.getByRole('button', { name: 'Expand' }));
-			await write(screen.getByLabelText('Comment on the value'), 'the node');
+			await write(screen.getByLabelText(getCommentEditingLabel('Comment on the value')), 'the node');
 
 			expect(host.submitted[0].operations).toEqual([{ op: 'setComment', at: { kind: 'value', subject: TEST_SUBJECT, predicate: `${TEST_NAMESPACES.ex}has`, anchor: cardBody.predicates[0].values[0].anchor }, lines: ['the node'] }]);
 		});

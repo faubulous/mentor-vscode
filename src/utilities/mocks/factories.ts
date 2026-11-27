@@ -601,19 +601,29 @@ export function createStatusBarRecorder(): StatusBarRecorder {
 }
 
 /**
- * Read the quad contexts of a Turtle text the way the document context does.
+ * Read the tokens and quad contexts of a Turtle text the way the document context does.
  * @param text The Turtle text.
- * @returns The quad contexts.
+ * @returns The tokens and the quad contexts.
  * @throws {Error} If the text does not parse.
  */
-export function readTurtleQuadContexts(text: string): QuadContext[] {
+export function readTurtleDocument(text: string): { tokens: IToken[]; quadContexts: QuadContext[] } {
 	const read = new DocumentReader(RdfSyntax.Turtle).read(text);
 
 	if (!read.ok) {
 		throw new Error(read.message);
 	}
 
-	return read.quadContexts;
+	return { tokens: read.tokens, quadContexts: read.quadContexts };
+}
+
+/**
+ * Read the quad contexts of a Turtle text the way the document context does.
+ * @param text The Turtle text.
+ * @returns The quad contexts.
+ * @throws {Error} If the text does not parse.
+ */
+export function readTurtleQuadContexts(text: string): QuadContext[] {
+	return readTurtleDocument(text).quadContexts;
 }
 
 /**

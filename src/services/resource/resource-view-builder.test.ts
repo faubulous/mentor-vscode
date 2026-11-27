@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 
 import { OWL, RDF, RDFS, _OWL, _RDFS, _SH, _XSD } from '@faubulous/mentor-rdf';
-import { ResolvingDocumentContextOptions, createResolvingDocumentContext, readTurtleQuadContexts } from '@src/utilities/mocks/factories';
+import { ResolvingDocumentContextOptions, createResolvingDocumentContext, readTurtleDocument, readTurtleQuadContexts } from '@src/utilities/mocks/factories';
 import { ResourceCardBodyData } from '@src/services/resource/resource-card-data';
 import { ResourceIndexOptions, getEntry } from './resource-index';
 import { ResourceIndexBuilder } from './resource-index-builder';
@@ -215,9 +215,9 @@ describe('ResourceViewBuilder comments', () => {
 		// What introduces a resource stands outside its card, so its list item carries it, not its card body.
 		expect(cardBody.leadingComments).toBeUndefined();
 		expect(type.comments).toBeUndefined();
-		expect(label.comments).toEqual([' what it is called']);
+		expect(label.comments).toEqual(['what it is called']);
 		expect(label.values[0].comments).toBeUndefined();
-		expect(label.values[1].comments).toEqual([' about the second one']);
+		expect(label.values[1].comments).toEqual(['about the second one']);
 	});
 
 	it('gives a comment above a statement whose value is a blank node to that value, first or not', () => {
@@ -233,9 +233,9 @@ describe('ResourceViewBuilder comments', () => {
 		const [, property, cls] = cardBody.predicates;
 
 		expect(property.comments).toBeUndefined();
-		expect(property.values[0].comments).toEqual([' the first one']);
-		expect(property.values[1].comments).toEqual([' the second one']);
-		expect(cls.comments).toEqual([' about the class']);
+		expect(property.values[0].comments).toEqual(['the first one']);
+		expect(property.values[1].comments).toEqual(['the second one']);
+		expect(cls.comments).toEqual(['about the class']);
 	});
 
 	it('keeps the comments of a node written inside another with its card', () => {
@@ -246,7 +246,18 @@ describe('ResourceViewBuilder comments', () => {
 			] .
 		`);
 
-		expect(nested.leadingComments).toEqual([' what the node is for']);
+		expect(nested.leadingComments).toEqual(['what the node is for']);
+	});
+
+	it('carries the comments ending the statements of a resource, where the tokens of the document are known', () => {
+		const text = `${PREAMBLE}ex:Thing a ex:Class ;\n    # the end\n.\n`;
+		const read = readTurtleDocument(text);
+		const documentContext = createResolvingDocumentContext({ namespaces: NAMESPACES });
+		const index = new ResourceIndexBuilder(read.quadContexts, documentContext, { tokens: read.tokens }).build();
+		const cardBody = new ResourceViewBuilder(index, documentContext).buildCardBody(getEntry(index, index.listItems[0].subject)!);
+
+		expect(cardBody.endComments).toEqual(['the end']);
+		expect(detailOf('ex:Thing a ex:Class .').endComments).toBeUndefined();
 	});
 });
 

@@ -121,7 +121,7 @@ export class EditorSnapshotService {
 	 */
 	build(): SnapshotResult {
 		const { context, quadContexts } = this._input;
-		const index = new ResourceIndexBuilder(quadContexts, context, { shownTypesOf: this._input.shownTypesOf }).build();
+		const index = new ResourceIndexBuilder(quadContexts, context, { shownTypesOf: this._input.shownTypesOf, tokens: context.tokens }).build();
 		const externals = new ExternalDeclarationDetector(index, context.namespaces);
 		const documentResource = EditorSnapshotService._findDocumentResource(index);
 		const resources = index.listItems.map(listItem => ({

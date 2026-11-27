@@ -76,7 +76,7 @@ export class ResourceIndexBuilder {
 				&& this._referenceCounts.get(key) === 1;
 		}
 
-		const comments = new CommentAttribution(this._quadContexts);
+		const comments = new CommentAttribution(this._quadContexts, this._options.tokens);
 		const index: ResourceIndex = {
 			listItems: [],
 			entries: this._entries,

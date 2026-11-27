@@ -295,6 +295,12 @@ export interface ResourceCardBodyData {
 	 * outside its card rather than within it.
 	 */
 	leadingComments?: string[];
+
+	/**
+	 * The comment lines written after the last statement of the resource, before the `.` or `]`
+	 * that closes its statements, which end its card.
+	 */
+	endComments?: string[];
 }
 
 /**
