@@ -149,26 +149,28 @@ function _itemsOf(cardBody: ResourceCardBodyData, pins: readonly PinnedProperty[
 
 /**
  * One value of a pinned property: a resource as a small pill, a blank node or a list as a line that
- * names it, a number monospace, any other literal as its text.
+ * names it, a number monospace, any other literal as its text, each in italics where inferred.
  * @param view The value.
  * @param index The index of the value in the item.
  * @returns The value.
  */
 function _valueOf(view: TermData, index: number): React.JSX.Element {
+	const inferred = view.inferred ? ' is-inferred' : '';
+
 	if (view.collection) {
-		return <span key={index} className="pinned-property-value">{_textOf(view)}</span>;
+		return <span key={index} className={`pinned-property-value${inferred}`}>{_textOf(view)}</span>;
 	}
 
 	if (view.nested) {
 		const name = view.nested.label ?? view.nested.typeLabel ?? 'blank node';
 
-		return <span key={index} className="pinned-property-value is-node">[ {name} · {view.nested.propertyCount} {view.nested.propertyCount === 1 ? 'property' : 'properties'} ]</span>;
+		return <span key={index} className={`pinned-property-value is-node${inferred}`}>[ {name} · {view.nested.propertyCount} {view.nested.propertyCount === 1 ? 'property' : 'properties'} ]</span>;
 	}
 
 	if (view.term.termType === 'Literal') {
 		const numeric = LiteralDatatypes.isNumeric(view.term.datatype.value);
 
-		return <span key={index} className={`pinned-property-value${numeric ? ' is-numeric' : ''}`}>{view.term.value}</span>;
+		return <span key={index} className={`pinned-property-value${numeric ? ' is-numeric' : ''}${inferred}`}>{view.term.value}</span>;
 	}
 
 	return <ValuePill key={index} view={view} />;

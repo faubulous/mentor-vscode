@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 
-import { RDFS, _OWL, _RDFS, _SH, _XSD } from '@faubulous/mentor-rdf';
+import { OWL, RDF, RDFS, _OWL, _RDFS, _SH, _XSD } from '@faubulous/mentor-rdf';
 import { ResolvingDocumentContextOptions, createResolvingDocumentContext, readTurtleQuadContexts } from '@src/utilities/mocks/factories';
 import { ResourceCardBodyData } from '@src/services/resource/resource-card-data';
 import { ResourceIndexOptions, getEntry } from './resource-index';
@@ -247,5 +247,45 @@ describe('ResourceViewBuilder comments', () => {
 		`);
 
 		expect(nested.leadingComments).toEqual(['what the node is for']);
+	});
+});
+
+describe('ResourceViewBuilder, with the statements the reasoner infers', () => {
+	const thing = RdfDataFactory.namedNode(`${EX}Thing`);
+
+	/**
+	 * A statement the reasoner infers about the thing.
+	 * @param predicate The IRI of the predicate.
+	 * @param object The IRI of the object.
+	 * @returns The statement.
+	 */
+	const inferredQuad = (predicate: string, object: string) => RdfDataFactory.quad(thing, RdfDataFactory.namedNode(predicate), RdfDataFactory.namedNode(object));
+
+	it('shows an inferred value after the asserted values of its predicate, and a predicate only inferred after the others, read-only', () => {
+		const inferred = [inferredQuad(RDF.type, OWL.NamedIndividual), inferredQuad(RDFS.seeAlso, `${EX}Other`)];
+		const cardBody = detailOf('ex:Thing a ex:Class ;\n    rdfs:label "Thing" .\n', {}, { inferredQuadsOf: () => inferred });
+		const rows = cardBody.predicates.map(property => [property.predicate.term.value, property.values.map(value => [value.term.value, value.inferred === true, value.editable, value.anchor !== undefined])]);
+
+		expect(rows).toEqual([
+			[RDF.type, [[`${EX}Class`, false, true, true], [OWL.NamedIndividual, true, false, false]]],
+			[RDFS.label, [['Thing', false, true, true]]],
+			[RDFS.seeAlso, [[`${EX}Other`, true, false, false]]]
+		]);
+		expect(cardBody.predicates[2].predicate.editable).toBe(false);
+	});
+
+	it('names the types the store gives a resource besides those it asserts as inferred', () => {
+		const documentContext = createResolvingDocumentContext({ namespaces: NAMESPACES });
+		const options: ResourceIndexOptions = { inferredTypesOf: () => [`${EX}Class`, OWL.NamedIndividual] };
+		const index = new ResourceIndexBuilder(readTurtleQuadContexts(PREAMBLE + 'ex:Thing a ex:Class .\n'), documentContext, options).build();
+
+		expect(index.listItems[0]).toMatchObject({ typeLabels: ['ex:Class'], inferredTypeLabels: ['owl:NamedIndividual'] });
+	});
+
+	it('names no inferred type where the store gives a resource none but those it asserts', () => {
+		const documentContext = createResolvingDocumentContext({ namespaces: NAMESPACES });
+		const index = new ResourceIndexBuilder(readTurtleQuadContexts(PREAMBLE + 'ex:Thing a ex:Class .\n'), documentContext, { inferredTypesOf: () => [`${EX}Class`] }).build();
+
+		expect(index.listItems[0].inferredTypeLabels).toBeUndefined();
 	});
 });

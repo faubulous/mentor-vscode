@@ -10,15 +10,18 @@ import { FormToolbar, FormToolbarProps } from './form-toolbar';
  */
 function renderToolbar(props: Partial<FormToolbarProps> = {}) {
 	const onToggleExternalDeclarations = vi.fn();
+	const onToggleInferred = vi.fn();
 	const result = renderWebview(
 		<FormToolbar
 			externalDeclarationsHidden={false}
 			onToggleExternalDeclarations={onToggleExternalDeclarations}
+			inferredHidden={false}
+			onToggleInferred={onToggleInferred}
 			{...props}
 		/>
 	);
 
-	return { ...result, onToggleExternalDeclarations };
+	return { ...result, onToggleExternalDeclarations, onToggleInferred };
 }
 
 describe('FormToolbar', () => {
@@ -34,6 +37,20 @@ describe('FormToolbar', () => {
 		await userEvent.click(screen.getAllByTitle('More actions')[1]);
 
 		expect(screen.getByText('Show External Declarations')).toBeTruthy();
+	});
+
+	it('offers to hide or show the inferred statements in its menu', async () => {
+		const { onToggleInferred } = renderToolbar();
+
+		await userEvent.click(screen.getByTitle('More actions'));
+		await userEvent.click(screen.getByText('Hide Inferred Statements'));
+
+		expect(onToggleInferred).toHaveBeenCalled();
+
+		renderToolbar({ inferredHidden: true });
+		await userEvent.click(screen.getAllByTitle('More actions')[1]);
+
+		expect(screen.getByText('Show Inferred Statements')).toBeTruthy();
 	});
 	it('names the language the document is read in, and asks for the language quick pick', async () => {
 		const onPick = vi.fn();

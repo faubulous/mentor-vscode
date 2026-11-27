@@ -21,6 +21,16 @@ export interface FormToolbarProps {
 	onToggleExternalDeclarations: () => void;
 
 	/**
+	 * Whether the statements the reasoner infers are left out of the cards.
+	 */
+	inferredHidden: boolean;
+
+	/**
+	 * Called when the inferred statements are to be shown or hidden.
+	 */
+	onToggleInferred: () => void;
+
+	/**
 	 * Whether the toolbar stays below the context bar, as it does once the title of the document
 	 * has scrolled away: the two are one header then, which a line and a shadow end.
 	 */
@@ -34,14 +44,15 @@ export interface FormToolbarProps {
  * @param props The actions.
  * @returns The toolbar.
  */
-export function FormToolbar({ languages, externalDeclarationsHidden, onToggleExternalDeclarations, stuck = false }: FormToolbarProps): React.JSX.Element {
+export function FormToolbar({ languages, externalDeclarationsHidden, onToggleExternalDeclarations, inferredHidden, onToggleInferred, stuck = false }: FormToolbarProps): React.JSX.Element {
 	return (
 		<div className={`form-toolbar${stuck ? ' is-stuck' : ''}`} role="toolbar" aria-label="Form editor">
 			<div className="form-toolbar-content">
 				<div className="form-toolbar-end">
 					{languages && <LanguagePicker {...languages} />}
 					<SectionHeaderContextMenu items={[
-						{ label: externalDeclarationsHidden ? 'Show External Declarations' : 'Hide External Declarations', onClick: onToggleExternalDeclarations }
+						{ label: externalDeclarationsHidden ? 'Show External Declarations' : 'Hide External Declarations', onClick: onToggleExternalDeclarations },
+						{ label: inferredHidden ? 'Show Inferred Statements' : 'Hide Inferred Statements', onClick: onToggleInferred }
 					]} />
 				</div>
 			</div>

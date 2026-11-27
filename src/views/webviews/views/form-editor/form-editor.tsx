@@ -171,6 +171,12 @@ function FormEditor(): React.JSX.Element {
 		updateViewState({ hideExternalDeclarations: declarationsHidden ? undefined : true });
 	}, [updateViewState, declarationsHidden]);
 
+	const inferredHidden = viewState.hideInferred === true;
+
+	const handleToggleInferred = useCallback(() => {
+		updateViewState({ hideInferred: inferredHidden ? undefined : true });
+	}, [updateViewState, inferredHidden]);
+
 	const handleRevealResource = useCallback((resource: NamedNode | BlankNode) => {
 		// A resource the filter leaves out is revealed among all of them, hidden declarations included.
 		if (!visibleResources.some(visible => visible.subject.equals(resource))) {
@@ -260,6 +266,7 @@ function FormEditor(): React.JSX.Element {
 		namespaces: snapshot?.namespaces ?? [],
 		languageTags: snapshot?.languageTags ?? {},
 		languageFilter,
+		showInferred: !inferredHidden,
 		resources: snapshot?.resources,
 		labelPredicates: snapshot?.labelPredicates,
 		descriptionPredicates: snapshot?.descriptionPredicates,
@@ -273,7 +280,7 @@ function FormEditor(): React.JSX.Element {
 		onRevealInTextEditor: handleRevealPosition,
 		revealedResource: revealed,
 		filterText
-	}), [snapshot, editable, controller, termSearch, languageFilter, handleRevealResource, handleOpenExternal, handleRenameResource, handleRevealPosition, handleSetPin, handleUnpinAll, handleRemoveResource, revealed, filterText]);
+	}), [snapshot, editable, controller, termSearch, languageFilter, inferredHidden, handleRevealResource, handleOpenExternal, handleRenameResource, handleRevealPosition, handleSetPin, handleUnpinAll, handleRemoveResource, revealed, filterText]);
 
 	if (!snapshot) {
 		return (
@@ -327,6 +334,8 @@ function FormEditor(): React.JSX.Element {
 											languages={pickerProps}
 											externalDeclarationsHidden={declarationsHidden}
 											onToggleExternalDeclarations={handleToggleExternalDeclarations}
+											inferredHidden={inferredHidden}
+											onToggleInferred={handleToggleInferred}
 											stuck={titleScrolledPast}
 										/>
 										{snapshot.resources.length === 0

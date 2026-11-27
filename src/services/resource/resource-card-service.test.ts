@@ -82,6 +82,52 @@ describe('ResourceCardService', () => {
 		expect(service.getInferredTypes(undefined, oak)).toContain(`${EX}Deciduous`);
 	});
 
+	it('reads the statements inferred about a resource that no graph asserts as well', () => {
+		const { service, store } = createService();
+
+		store.loadTurtle(`@prefix ex: <${EX}> .\n@prefix owl: <${_OWL}> .\nex:Pine a ex:Tree, owl:NamedIndividual .`, 'file:///w/pine.ttl', true);
+
+		const statementsOf = (iri: string) => service.getInferredQuads(undefined, RdfDataFactory.namedNode(iri)).map(quad => `${quad.predicate.value} ${quad.object.value}`);
+
+		expect(statementsOf(`${EX}Oak`)).toEqual([`${RDF.type} ${OWL.NamedIndividual}`]);
+		expect(statementsOf(`${EX}Pine`)).toEqual([]);
+		expect(statementsOf(`${EX}Tree`)).toEqual([`${RDF.type} ${RDFS.Class}`]);
+	});
+
+	it('reads the inferred statements once until the store changes', () => {
+		const { service, store } = createService();
+		const oak = RdfDataFactory.namedNode(`${EX}Oak`);
+		const first = service.getInferredQuads(['file:///w/vocabulary.ttl'], oak);
+
+		expect(service.getInferredQuads(['file:///w/vocabulary.ttl'], oak)).toBe(first);
+
+		store.loadTurtle(`@prefix ex: <${EX}> .\nex:Elm a ex:Tree .`, 'file:///w/more.ttl', true);
+
+		expect(service.getInferredQuads(['file:///w/vocabulary.ttl'], oak)).not.toBe(first);
+	});
+
+	it('reads no inferred statements from a store without a reasoner', () => {
+		const store = new Store();
+
+		store.loadTurtle(VOCABULARY, 'file:///w/vocabulary.ttl', true);
+
+		const service = new ResourceCardService(store, {} as ResourceReferenceProvider);
+
+		expect(service.getInferredQuads(undefined, RdfDataFactory.namedNode(`${EX}Oak`))).toEqual([]);
+	});
+
+	it('shows the inferred statements and types on the card of a resource of the store, read-only', () => {
+		const { service, context } = createService();
+		const card = service.getStoreCard(RdfDataFactory.namedNode(`${EX}Oak`), context)!;
+		const types = card.cardBody.predicates.find(property => property.predicate.term.value === RDF.type)!;
+
+		expect(types.values.map(value => [value.term.value, value.inferred === true, value.editable])).toEqual([
+			[`${EX}Tree`, false, false],
+			[OWL.NamedIndividual, true, false]
+		]);
+		expect(card.cardHeader.inferredTypeLabels).toEqual(['NamedIndividual']);
+	});
+
 	it('counts the usages of a resource without the statement that defines it', () => {
 		const { service } = createService({ [`${EX}Oak`]: 1 });
 

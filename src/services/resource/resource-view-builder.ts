@@ -1,12 +1,12 @@
 import { QuadContext } from '@faubulous/mentor-rdf-parsers';
-import { BlankNode, Literal, NamedNode, Quad_Object, Quad_Subject, Term } from '@rdfjs/types';
+import { BlankNode, Literal, NamedNode, Quad, Quad_Object, Quad_Subject, Term } from '@rdfjs/types';
 import { OWL, RDF, Uri } from '@faubulous/mentor-rdf';
 import { IDocumentContext } from '@src/services/document/document-context.interface';
 import { termToString } from 'rdf-string';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { getIconContextOf } from '@src/utilities/resource-icon';
 import { DEFAULT_ICON, getSubjectIconName } from '@src/utilities/subject-icon';
-import { getTokenPosition, hasSourcePosition } from '@src/utilities/tokens';
+import { createSyntheticToken, getTokenPosition, hasSourcePosition } from '@src/utilities/tokens';
 import {
 	DocumentPosition,
 	NestedResourceData,
@@ -78,6 +78,7 @@ export class ResourceViewBuilder {
 			typeIri: typeIris[primaryType],
 			typeLabel: typeLabels?.[primaryType],
 			typeLabels,
+			inferredTypeLabels: this._resolveInferredTypeLabels(entry, typeIris),
 			position: _positionOf(entry),
 			propertyCount: _countProperties(entry),
 			hasLabel: this._annotations.findLabel(entry) !== undefined,
@@ -94,14 +95,52 @@ export class ResourceViewBuilder {
 	 */
 	buildCardBody(entry: ResourceIndexEntry): ResourceCardBodyData {
 		const { groups, resourceComments } = this._collectProperties(entry);
+		const predicates = this._withInferredValues(groups, this._options.inferredQuadsOf?.(entry.term) ?? []);
 
 		return {
 			subject: entry.term,
-			predicates: groups.map(group => this._withRange(group, entry)),
+			predicates: predicates.map(group => this._withRange(group, entry)),
 			// A resource of its own shows them above its card, where they were written; a node
 			// written inside another has no card of its own to stand outside of.
 			leadingComments: entry.nested && resourceComments.length > 0 ? resourceComments : undefined
 		};
+	}
+
+	/**
+	 * Add the statements the reasoner infers about a resource to its properties, marked as inferred
+	 * and read-only, as no document writes them: each value after the asserted values of its
+	 * predicate, and the predicates only inferred after the asserted ones.
+	 * @param groups The properties the statements of the resource assert.
+	 * @param inferred The statements inferred about the resource, which none of those assert.
+	 * @returns The properties.
+	 */
+	private _withInferredValues(groups: readonly PredicateData[], inferred: readonly Quad[]): PredicateData[] {
+		if (inferred.length === 0) {
+			return [...groups];
+		}
+
+		const properties = new Map(groups.map(group => [group.predicate.term.value, { ...group, values: [...group.values] }]));
+
+		for (const quad of inferred) {
+			const predicateIri = quad.predicate.value;
+
+			if (isCollectionChainPredicate(predicateIri)) {
+				continue;
+			}
+
+			let property = properties.get(predicateIri);
+
+			if (!property) {
+				property = { predicate: this._toTermView(quad.predicate as NamedNode, createSyntheticToken()), values: [] };
+				properties.set(predicateIri, property);
+			}
+
+			const value = this._decorateValue(this._toTermView(quad.object, createSyntheticToken()), quad.object, true);
+
+			property.values.push({ ...value, inferred: true });
+		}
+
+		return Array.from(properties.values());
 	}
 
 	/**
@@ -332,6 +371,20 @@ export class ResourceViewBuilder {
 		}
 
 		return typeIris.map(iri => this._resolveLabel(RdfDataFactory.namedNode(iri)).text);
+	}
+
+	/**
+	 * Resolve the labels of the types the store gives a resource besides those it asserts, which the
+	 * reasoner inferred.
+	 * @param entry The resource.
+	 * @param typeIris The types the resource asserts.
+	 * @returns The labels, or `undefined` when no other type is inferred.
+	 */
+	private _resolveInferredTypeLabels(entry: ResourceIndexEntry, typeIris: readonly string[]): string[] | undefined {
+		const asserted = new Set(typeIris);
+		const inferred = (this._options.inferredTypesOf?.(entry.term) ?? []).filter(iri => !asserted.has(iri));
+
+		return this._resolveTypeLabels(inferred);
 	}
 
 	/**

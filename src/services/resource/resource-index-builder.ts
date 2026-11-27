@@ -1,11 +1,11 @@
 import { QuadContext, RdfToken, toQuadContext } from '@faubulous/mentor-rdf-parsers';
-import { BlankNode, NamedNode, Quad, Term } from '@rdfjs/types';
+import { BlankNode, NamedNode, Term } from '@rdfjs/types';
 import { termToString } from 'rdf-string';
 import { RDF, Store } from '@faubulous/mentor-rdf';
 import { IDocumentContext } from '@src/services/document/document-context.interface';
 import { createSyntheticToken, isTokenOfType } from '@src/utilities/tokens';
 import { NamespaceData } from '@src/services/resource/resource-card-data';
-import { CollectionItem, ResourceIndex, ResourceIndexEntry } from './resource-index';
+import { CollectionItem, ResourceIndex, ResourceIndexEntry, ResourceIndexOptions, getStatementKey } from './resource-index';
 import { ResourceViewBuilder } from './resource-view-builder';
 import { trailingCommentRunsOf } from './statement-comments';
 
@@ -36,8 +36,13 @@ export class ResourceIndexBuilder {
 	 * Create a builder for the statements of a document.
 	 * @param _quadContexts The quad contexts of the document.
 	 * @param _context The document context, used to resolve labels and prefixes.
+	 * @param _options Options controlling how the list items are built.
 	 */
-	constructor(private readonly _quadContexts: readonly QuadContext[], private readonly _context: IDocumentContext) { }
+	constructor(
+		private readonly _quadContexts: readonly QuadContext[],
+		private readonly _context: IDocumentContext,
+		private readonly _options: ResourceIndexOptions = {}
+	) { }
 
 	/**
 	 * Build the index of what the store states about a resource the document does not define, as
@@ -47,12 +52,13 @@ export class ResourceIndexBuilder {
 	 * @param store The store.
 	 * @param resource The resource: an IRI, or a blank node of a document of the workspace.
 	 * @param context The document context, used to resolve labels and prefixes.
+	 * @param options Options controlling how the list items are built.
 	 * @returns The index, or `undefined` when the store states nothing about the resource.
 	 */
-	static fromStore(store: Store, resource: NamedNode | BlankNode, context: IDocumentContext): ResourceIndex | undefined {
+	static fromStore(store: Store, resource: NamedNode | BlankNode, context: IDocumentContext, options: ResourceIndexOptions = {}): ResourceIndex | undefined {
 		const quads = _storeQuadsOf(store, resource);
 
-		return quads.length > 0 ? new ResourceIndexBuilder(quads, context).build() : undefined;
+		return quads.length > 0 ? new ResourceIndexBuilder(quads, context, options).build() : undefined;
 	}
 
 	/**
@@ -79,7 +85,7 @@ export class ResourceIndexBuilder {
 			trailingComments: trailingCommentRunsOf(this._quadContexts),
 			...this._buildCollections()
 		};
-		const views = new ResourceViewBuilder(index, this._context);
+		const views = new ResourceViewBuilder(index, this._context, this._options);
 
 		index.listItems = this._order
 			.filter(key => !this._entries.get(key)!.nested && !index.collectionNodes.has(key))
@@ -226,7 +232,7 @@ function _storeQuadsOf(store: Store, subject: NamedNode | BlankNode): QuadContex
 
 	const visit = (node: NamedNode | BlankNode, graph: string | undefined, depth: number): void => {
 		for (const quad of store.matchAll(graph, node, null, null, false)) {
-			const key = _statementKeyOf(quad);
+			const key = getStatementKey(quad);
 
 			if (seen.has(key)) {
 				continue;
@@ -244,13 +250,4 @@ function _storeQuadsOf(store: Store, subject: NamedNode | BlankNode): QuadContex
 	visit(subject, undefined, 0);
 
 	return quads;
-}
-
-/**
- * The key of a statement regardless of its graph.
- * @param quad The statement.
- * @returns The key.
- */
-function _statementKeyOf(quad: Quad): string {
-	return `${termToString(quad.subject)} ${termToString(quad.predicate)} ${termToString(quad.object)}`;
 }

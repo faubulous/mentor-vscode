@@ -1,6 +1,6 @@
 import { QuadContext } from '@faubulous/mentor-rdf-parsers';
 import { RDF } from '@faubulous/mentor-rdf';
-import { BlankNode, NamedNode, Term } from '@rdfjs/types';
+import { BlankNode, NamedNode, Quad, Term } from '@rdfjs/types';
 import { termToString } from 'rdf-string';
 import { NamespaceData, ResourceListItemData } from '@src/services/resource/resource-card-data';
 import { PredicateRangeData } from '@src/services/vocabulary/predicate-range';
@@ -104,6 +104,18 @@ export interface ResourceIndexOptions {
 	 * holds.
 	 */
 	resolvePredicateRange?: (predicate: string, entry: ResourceIndexEntry) => PredicateRangeData | undefined;
+
+	/**
+	 * Read the statements the reasoner infers about a resource and the statements read for it do
+	 * not assert, which its card shows after those, read-only.
+	 */
+	inferredQuadsOf?: (resource: NamedNode | BlankNode) => readonly Quad[];
+
+	/**
+	 * Read the types the store gives a resource, inferred ones included; those it does not assert
+	 * are named as inferred.
+	 */
+	inferredTypesOf?: (resource: NamedNode | BlankNode) => readonly string[];
 }
 
 /**
@@ -117,6 +129,16 @@ export function typeIrisOf(entry: ResourceIndexEntry): string[] {
 		.map(quad => quad.object.value);
 
 	return [...new Set(types)];
+}
+
+/**
+ * Get the key of a statement regardless of its graph, which tells the statements a resource is
+ * read with apart however many graphs state them.
+ * @param quad The statement.
+ * @returns The key.
+ */
+export function getStatementKey(quad: Quad): string {
+	return `${termToString(quad.subject)} ${termToString(quad.predicate)} ${termToString(quad.object)}`;
 }
 
 /**

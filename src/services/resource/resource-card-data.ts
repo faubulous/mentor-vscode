@@ -70,6 +70,11 @@ export interface TermData {
 	editable: boolean;
 
 	/**
+	 * Set for a value the reasoner infers, which no document writes and which therefore only reads.
+	 */
+	inferred?: boolean;
+
+	/**
 	 * The comment lines written above this value, when it does not stand first under its predicate.
 	 */
 	comments?: string[];
@@ -191,6 +196,11 @@ export interface ResourceCardHeaderData extends ResourcePillData {
 	 * The labels of every type the resource asserts, in the order asserted, where they resolve.
 	 */
 	typeLabels?: string[];
+
+	/**
+	 * The labels of the types the reasoner infers for the resource besides those it asserts.
+	 */
+	inferredTypeLabels?: string[];
 
 	/**
 	 * Human readable description, resolved from the configured description predicates.

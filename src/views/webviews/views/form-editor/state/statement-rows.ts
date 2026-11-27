@@ -1,5 +1,6 @@
 import { BlankNode, NamedNode } from '@rdfjs/types';
-import { PredicateData } from '../form-editor-model';
+import { PredicateData, TermData } from '../form-editor-model';
+import { splitInferredValues } from '@src/services/resource/inferred-statements';
 import { TypedTermReader } from '../services/statement/typed-term-reader';
 import { IEditingController } from './editing-controller.interface';
 import { StatementDraft } from './statement-draft';
@@ -26,6 +27,12 @@ export interface StatementRowEntry {
 	 * Edits the row; absent for a property the row only reads.
 	 */
 	editor?: StatementRowEditor;
+
+	/**
+	 * The values of the property the reasoner infers, which an edited row shows after those it
+	 * edits, read-only. A row that only reads has them among the values of its property.
+	 */
+	inferredValues?: readonly TermData[];
 
 	/**
 	 * Whether the row leads the rows of its card, as the type of a blank node or the label of a
@@ -154,7 +161,9 @@ export class StatementRows implements StatementRowOwner {
 	/**
 	 * Match the properties of the card with the rows, as the card renders: each editable property
 	 * goes to the row that claims its predicate, else to the row that holds it, else to a new row.
-	 * A row whose property went goes too, and rows for new statements stay.
+	 * A row whose property went goes too, and rows for new statements stay. A row edits the values
+	 * its property asserts only; those inferred it shows besides, and a property with nothing but
+	 * inferred values only reads, though a new statement may still write its predicate.
 	 * @param data The data of the card.
 	 * @returns The rows in the order they are shown.
 	 */
@@ -166,27 +175,41 @@ export class StatementRows implements StatementRowOwner {
 
 		const leadingPredicate = this._leadingPredicateOf(data.properties);
 		let leadingEntry: StatementRowEntry | undefined;
+		let leadingInferred: TermData[] | undefined;
 
 		this._notEditable = new Set();
 
 		for (const property of data.properties) {
 			const predicate = property.predicate.term.termType === 'NamedNode' ? property.predicate.term.value : '';
+			const { asserted, inferred } = splitInferredValues(property);
 
-			if (!StatementDraft.canEdit(property)) {
+			if (!asserted) {
+				// The row that stands in for a missing leading property shows what is inferred of it.
+				if (!leadingPredicate && predicate === this._options.leadingRow?.predicates[0]) {
+					leadingInferred = inferred;
+				} else {
+					entries.push({ key: `inferred-${predicate}`, property });
+				}
+
+				continue;
+			}
+
+			if (!StatementDraft.canEdit(asserted)) {
 				this._notEditable.add(predicate);
 				entries.push({ key: `read-${predicate}`, property });
 				continue;
 			}
 
-			const editor = this._editorFor(predicate, unmatched) ?? this._create({ ...data, property, predicateText: data.predicateTextOf(property) });
+			const editor = this._editorFor(predicate, unmatched) ?? this._create({ ...data, property: asserted, predicateText: data.predicateTextOf(asserted) });
+			const inferredValues = inferred.length > 0 ? inferred : undefined;
 
 			unmatched.delete(editor);
-			editor.deliver({ ...data, property, predicateText: data.predicateTextOf(property) });
+			editor.deliver({ ...data, property: asserted, predicateText: data.predicateTextOf(asserted) });
 
 			if (predicate === leadingPredicate) {
-				leadingEntry = { key: `row-${editor.id}`, property, editor, isLeading: true };
+				leadingEntry = { key: `row-${editor.id}`, property: asserted, editor, inferredValues, isLeading: true };
 			} else {
-				entries.push({ key: `row-${editor.id}`, property, editor });
+				entries.push({ key: `row-${editor.id}`, property: asserted, editor, inferredValues });
 			}
 		}
 
@@ -204,7 +227,7 @@ export class StatementRows implements StatementRowOwner {
 		}
 
 		if (this._options.leadingRow) {
-			entries.unshift(leadingEntry ?? this._leadingPlaceholderEntry(data, this._options.leadingRow));
+			entries.unshift(leadingEntry ?? { ...this._leadingPlaceholderEntry(data, this._options.leadingRow), inferredValues: leadingInferred });
 		}
 
 		return entries;
@@ -259,12 +282,13 @@ export class StatementRows implements StatementRowOwner {
 
 	/**
 	 * The predicate of the property that leads the rows: the most preferred of the leading
-	 * predicates the resource has.
+	 * predicates the resource asserts a value of.
 	 * @param properties The properties of the resource.
 	 * @returns The IRI of the predicate, or `undefined` when no row leads or the resource has none.
 	 */
 	private _leadingPredicateOf(properties: readonly PredicateData[]): string | undefined {
-		const predicates = new Set(properties.flatMap(property => property.predicate.term.termType === 'NamedNode' ? [property.predicate.term.value] : []));
+		const asserted = properties.filter(property => property.values.some(value => !value.inferred));
+		const predicates = new Set(asserted.flatMap(property => property.predicate.term.termType === 'NamedNode' ? [property.predicate.term.value] : []));
 
 		return this._options.leadingRow?.predicates.find(predicate => predicates.has(predicate));
 	}

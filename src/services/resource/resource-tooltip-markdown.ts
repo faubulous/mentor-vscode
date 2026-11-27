@@ -1,6 +1,7 @@
 import { BlankNode, NamedNode, Term } from '@rdfjs/types';
 import { RDF } from '@faubulous/mentor-rdf';
 import { PinnedProperty, PredicateData, ResourceCardData, TermData } from './resource-card-data';
+import { getAssertedCardBody } from './inferred-statements';
 import { getTermLabel } from './term-labels';
 
 /**
@@ -64,7 +65,8 @@ const MARKDOWN_CHARACTERS = /[\\`*_{}[\]()#+\-.!|<>~]/g;
  * properties of its types as lines of their names and values, in document order with its
  * description, or else the description alone, and below a rule the IRI. The resources, the
  * captions of the properties, the types and the IRI link to their definitions where the options
- * give links. Everything taken from the store is escaped; the Markdown has no HTML and no icons.
+ * give links. It shows the statements asserted only, not those the reasoner inferred. Everything
+ * taken from the store is escaped; the Markdown has no HTML and no icons.
  */
 export class ResourceTooltipMarkdown {
 	/**
@@ -79,9 +81,9 @@ export class ResourceTooltipMarkdown {
 	 * @returns The Markdown.
 	 */
 	render(card: ResourceCardData): string {
-		const header = card.cardHeader;
+		const asserted = { ...card, cardBody: getAssertedCardBody(card.cardBody) };
 
-		return _joinBlocks([this._titleOf(card), this._bodyOf(card), '---', this._identifierOf(header.subject)]);
+		return _joinBlocks([this._titleOf(asserted), this._bodyOf(asserted), '---', this._identifierOf(card.cardHeader.subject)]);
 	}
 
 	/**
