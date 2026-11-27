@@ -2,7 +2,7 @@ import { IToken, QuadContext } from '@faubulous/mentor-rdf-parsers';
 import { NamedNode, BlankNode } from '@rdfjs/types';
 import { termToString } from 'rdf-string';
 import { hasSourcePosition, splitCommentRuns } from '@src/utilities/tokens';
-import { getCommentLine } from './comment-lines';
+import { getCommentLine } from '@src/utilities/comment-lines';
 import { isCollectionChainPredicate } from './resource-index';
 
 /**

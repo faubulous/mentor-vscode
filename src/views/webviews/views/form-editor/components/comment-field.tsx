@@ -1,5 +1,5 @@
 import { ChangeEvent, KeyboardEvent, useEffect, useRef, useState } from 'react';
-import { getCommentLineText } from '@src/services/resource/comment-lines';
+import { getCommentLineText } from '@src/utilities/comment-lines';
 import { useCommentEditor } from '../hooks/use-comment-editor';
 import { CommentEditorData, CommentTarget } from '../state/comment-editor';
 import { getEditProblemMessage } from './edit-problem-message';

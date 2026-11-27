@@ -2,7 +2,7 @@ import { IToken, RdfSyntax } from '@faubulous/mentor-rdf-parsers';
 import { indentBefore, lineStartOffset } from '@src/utilities/string';
 import { TextEditSpec, absorbBlankLine, expandToWholeLines } from '@src/utilities/text-edits';
 import { splitCommentRuns, tokenEnd } from '@src/utilities/tokens';
-import { getCommentImage, getCommentLine } from '@src/services/resource/comment-lines';
+import { getCommentImage, getCommentLine } from '@src/utilities/comment-lines';
 import { CommentRun, CommentRunResolver } from '../comment-run-resolver';
 import { EditOperation } from '../edit-operation';
 import { EditPlan, createPlan } from '../edit-plan';
