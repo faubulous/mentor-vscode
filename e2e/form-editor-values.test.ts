@@ -216,7 +216,7 @@ suite('form editor values', () => {
 
 		const snapshot = await vscode.commands.executeCommand<{ resources: { comments?: string[][] }[] }>('mentor.e2e.getFormEditorSnapshot', document.uri.toString());
 
-		assert.deepStrictEqual(snapshot.resources[0].comments, [['about s']]);
+		assert.deepStrictEqual(snapshot.resources[0].comments, [[' about s']]);
 
 		const rewritten = await vscode.commands.executeCommand<EditOutcomeView>('mentor.e2e.applyFormEditorEdit', document.uri.toString(), [{ op: 'setComment', at, lines: ['about s', 'and more'] }]);
 

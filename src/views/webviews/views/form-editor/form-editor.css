@@ -1198,9 +1198,29 @@ body {
 	flex-basis: 100%;
 }
 
-/* A comment edited in place looks like its text at rest; the caret shows where it is written. */
+/*
+ * A comment is rendered as its text, which a double click or Enter opens for editing, as a cell of
+ * Markdown in a notebook: the text then shows its lines as written, outlined while it is edited.
+ */
 .comment-field {
 	display: block;
+}
+
+.comment-field-text {
+	display: block;
+	border-radius: var(--mentor-radius-sm);
+	cursor: default;
+}
+
+.comment-field-text:focus-visible {
+	outline: 1px solid var(--vscode-focusBorder);
+	outline-offset: 2px;
+}
+
+.comment-field.is-editing {
+	border-radius: var(--mentor-radius-sm);
+	outline: 1px solid var(--vscode-focusBorder);
+	outline-offset: 2px;
 	cursor: text;
 }
 

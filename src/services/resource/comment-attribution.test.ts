@@ -6,7 +6,7 @@ import { IToken } from '@faubulous/mentor-rdf-parsers';
 import { readTurtleQuadContexts } from '@src/utilities/mocks/factories';
 import { RdfDataFactory } from '@src/utilities/rdf-data-factory';
 import { getCommentText } from '@src/utilities/tokens';
-import { CommentAttribution, getCommentRunTexts } from './comment-attribution';
+import { CommentAttribution, getCommentRunLines } from './comment-attribution';
 
 const EX = 'http://example.org/';
 
@@ -63,7 +63,7 @@ describe('CommentAttribution', () => {
 	const s = RdfDataFactory.namedNode(`${EX}s`);
 
 	it('gives the comments above the first statement of a resource to the resource, as its runs', () => {
-		expect(getCommentRunTexts(attribution().comments.resourceComments(s))).toEqual([['run one'], ['run two'], ['above a']]);
+		expect(getCommentRunLines(attribution().comments.resourceComments(s))).toEqual([[' run one'], [' run two'], [' above a']]);
 	});
 
 	it('gives a comment above a value in a list of values to that value', () => {
@@ -99,7 +99,7 @@ describe('CommentAttribution', () => {
 		].map(getCommentText);
 
 		expect(all.some(text => text.startsWith('ends'))).toBe(false);
-		expect(getCommentRunTexts(comments.documentComments())).toEqual([['closing one'], ['closing two']]);
+		expect(getCommentRunLines(comments.documentComments())).toEqual([[' closing one'], [' closing two']]);
 	});
 
 	it('names the first statement of a resource and of each of its properties', () => {

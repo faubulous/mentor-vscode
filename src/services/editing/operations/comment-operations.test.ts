@@ -64,7 +64,12 @@ function edited(from: string, to: string, lines: string[]): string {
 
 describe('CommentOperations.setComment', () => {
 	it('rewrites a run above a resource, keeping how an unchanged line is written', () => {
-		expect(setComment({ kind: 'resource', subject, run: 0 }, ['kept as written', 'new'])).toBe(edited('## kept as written', '# old', ['## kept as written', '# new']));
+		expect(setComment({ kind: 'resource', subject, run: 0 }, ['# kept as written', 'new'])).toBe(edited('## kept as written', '# old', ['## kept as written', '# new']));
+	});
+
+	it('writes each line after a #, with a space before a line that starts with text, and keeps an unchanged line as written', () => {
+		expect(setComment({ kind: 'resource', subject, run: 0 }, ['text', ' spaced', '# heading'], '#nospace\nex:s ex:a 1 .\n')).toBe('# text\n# spaced\n## heading\nex:s ex:a 1 .\n');
+		expect(setComment({ kind: 'resource', subject, run: 0 }, ['nospace', 'more'], '#nospace\nex:s ex:a 1 .\n')).toBe('#nospace\n# more\nex:s ex:a 1 .\n');
 	});
 
 	it('removes a run, keeping the blank line that separates the run before it from the resource', () => {
