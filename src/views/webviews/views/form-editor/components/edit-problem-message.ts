@@ -44,6 +44,10 @@ export function getEditProblemMessage(problem: EditProblem): string {
 			return `'${problem.prefix}' is not a valid prefix.`;
 		case 'prefixTaken':
 			return `The document already declares the prefix '${problem.prefix}' for another namespace.`;
+		case 'commentGone':
+			return 'The comment is no longer where it was shown.';
+		case 'commentsNotSupported':
+			return 'Comments of documents in this syntax cannot be edited in the form editor.';
 		case 'emptyIri':
 			return 'An IRI must not be empty.';
 		case 'invalidIri':

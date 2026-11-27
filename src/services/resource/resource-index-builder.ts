@@ -7,7 +7,7 @@ import { createSyntheticToken, isTokenOfType } from '@src/utilities/tokens';
 import { NamespaceData } from '@src/services/resource/resource-card-data';
 import { CollectionItem, ResourceIndex, ResourceIndexEntry, ResourceIndexOptions, getStatementKey } from './resource-index';
 import { ResourceViewBuilder } from './resource-view-builder';
-import { trailingCommentRunsOf } from './statement-comments';
+import { CommentAttribution, getCommentRunTexts } from './comment-attribution';
 
 /**
  * How deep the blank nodes a resource of the store refers to are followed, which bounds what is
@@ -76,13 +76,15 @@ export class ResourceIndexBuilder {
 				&& this._referenceCounts.get(key) === 1;
 		}
 
+		const comments = new CommentAttribution(this._quadContexts);
 		const index: ResourceIndex = {
 			listItems: [],
 			entries: this._entries,
 			namespaces: this._buildNamespaces(),
 			referenceCounts: this._referenceCounts,
 			holders: this._holders,
-			trailingComments: trailingCommentRunsOf(this._quadContexts),
+			trailingComments: getCommentRunTexts(comments.documentComments()),
+			comments,
 			...this._buildCollections()
 		};
 		const views = new ResourceViewBuilder(index, this._context, this._options);

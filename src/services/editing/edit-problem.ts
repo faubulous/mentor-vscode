@@ -78,6 +78,14 @@ export type EditProblem =
 	 */
 	| { kind: 'prefixTaken'; prefix: string }
 	/**
+	 * A comment the edit refers to is no longer where the form showed it.
+	 */
+	| { kind: 'commentGone' }
+	/**
+	 * The form editor does not write the comments of documents of this syntax.
+	 */
+	| { kind: 'commentsNotSupported' }
+	/**
 	 * An IRI is empty.
 	 */
 	| { kind: 'emptyIri' }

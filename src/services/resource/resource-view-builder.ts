@@ -17,7 +17,7 @@ import {
 } from '@src/services/resource/resource-card-data';
 import { AnnotationResolver } from './annotation-resolver';
 import { CollectionItem, ResourceIndex, ResourceIndexEntry, ResourceIndexOptions, getEntry, isCollectionChainPredicate, typeIrisOf } from './resource-index';
-import { leadingCommentRunsOf, splitLeadingComments } from './statement-comments';
+import { getCommentRunTexts, getCommentTexts } from './comment-attribution';
 
 /**
  * The display text of a term, with the language it was read in.
@@ -82,7 +82,7 @@ export class ResourceViewBuilder {
 			position: _positionOf(entry),
 			propertyCount: _countProperties(entry),
 			hasLabel: this._annotations.findLabel(entry) !== undefined,
-			comments: entry.nested ? undefined : leadingCommentRunsOf(entry)
+			comments: entry.nested ? undefined : this._commentRunsOf(entry)
 		};
 	}
 
@@ -94,7 +94,7 @@ export class ResourceViewBuilder {
 	 * @returns The statements about the resource.
 	 */
 	buildCardBody(entry: ResourceIndexEntry): ResourceCardBodyData {
-		const { groups, resourceComments } = this._collectProperties(entry);
+		const groups = this._collectProperties(entry);
 		const predicates = this._withInferredValues(groups, this._options.inferredQuadsOf?.(entry.term) ?? []);
 
 		return {
@@ -102,8 +102,19 @@ export class ResourceViewBuilder {
 			predicates: predicates.map(group => this._withRange(group, entry)),
 			// A resource of its own shows them above its card, where they were written; a node
 			// written inside another has no card of its own to stand outside of.
-			leadingComments: entry.nested && resourceComments.length > 0 ? resourceComments : undefined
+			leadingComments: entry.nested ? getCommentTexts(this._index.comments.resourceComments(entry.term)) : undefined
 		};
+	}
+
+	/**
+	 * The comments written above a resource of its own, which stand above its card.
+	 * @param entry The resource.
+	 * @returns The lines of each run, or `undefined` when there are none.
+	 */
+	private _commentRunsOf(entry: ResourceIndexEntry): string[][] | undefined {
+		const runs = getCommentRunTexts(this._index.comments.resourceComments(entry.term));
+
+		return runs.length > 0 ? runs : undefined;
 	}
 
 	/**
@@ -157,16 +168,14 @@ export class ResourceViewBuilder {
 	}
 
 	/**
-	 * Group the statements of a resource by predicate in document order, giving the comments
-	 * written above each statement to what they introduce: the resource for its first statement,
-	 * the property for the first statement of a later predicate, and otherwise the value.
+	 * Group the statements of a resource by predicate in document order, with the comments written
+	 * about each property and each value.
 	 * @param entry The resource.
-	 * @returns The property rows and the comment lines introducing the resource.
+	 * @returns The property rows.
 	 */
-	private _collectProperties(entry: ResourceIndexEntry): { groups: PredicateData[]; resourceComments: string[] } {
+	private _collectProperties(entry: ResourceIndexEntry): PredicateData[] {
 		const groups = new Map<string, PredicateData>();
-		const resourceComments: string[] = [];
-		let isFirstStatement = true;
+		const comments = this._index.comments;
 
 		for (const quad of entry.quads) {
 			const predicateIri = quad.predicate.value;
@@ -175,35 +184,22 @@ export class ResourceViewBuilder {
 				continue;
 			}
 
-			const { aboveProperty, aboveValue } = splitLeadingComments(quad);
 			let group = groups.get(predicateIri);
 
-			// A comment above a later statement of a predicate introduces that value, not the row.
-			// So does one above a statement whose object is a blank node: the node stands in the
-			// value column, and a shape lists its property shapes that way, each under its own
-			// comment.
-			const introducesValue = group !== undefined || (!isFirstStatement && quad.object.termType === 'BlankNode');
-
 			if (!group) {
-				group = { predicate: this._toTermView(quad.predicate, quad.predicateToken), values: [] };
+				const propertyComments = getCommentTexts(comments.propertyComments(entry.term, predicateIri));
 
-				if (isFirstStatement) {
-					resourceComments.push(...aboveProperty);
-				} else if (!introducesValue && aboveProperty.length > 0) {
-					group.comments = aboveProperty;
-				}
-
+				group = { predicate: this._toTermView(quad.predicate, quad.predicateToken), values: [], ...(propertyComments ? { comments: propertyComments } : {}) };
 				groups.set(predicateIri, group);
 			}
 
 			const value = this._toObjectTermView(quad);
-			const comments = introducesValue ? [...aboveProperty, ...aboveValue] : aboveValue;
+			const valueComments = hasSourcePosition(quad.objectToken) ? getCommentTexts(comments.valueComments(entry.term, predicateIri, quad.objectToken.startOffset)) : undefined;
 
-			group.values.push(comments.length > 0 ? { ...value, comments } : value);
-			isFirstStatement = false;
+			group.values.push(valueComments ? { ...value, comments: valueComments } : value);
 		}
 
-		return { groups: Array.from(groups.values()), resourceComments };
+		return Array.from(groups.values());
 	}
 
 	/**

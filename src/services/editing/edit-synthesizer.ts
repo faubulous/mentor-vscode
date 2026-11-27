@@ -4,6 +4,7 @@ import { EditOperation } from './edit-operation';
 import { EditPlan, mergePlans } from './edit-plan';
 import { EditRejection, EditRejectionError } from './edit-rejection';
 import { LocalStyleDetector } from './local-style-detector';
+import { CommentOperations } from './operations/comment-operations';
 import { DeclarePrefixOperation, PrefixOperations } from './operations/prefix-operations';
 import { PropertyOperations } from './operations/property-operations';
 import { ResourceOperations } from './operations/resource-operations';
@@ -94,6 +95,10 @@ export class EditSynthesizer {
 				return new PropertyOperations(context).moveProperty(operation);
 			case 'removeResource':
 				return new ResourceOperations(context).removeResource(operation);
+			case 'setComment':
+				return new CommentOperations(context).setComment(operation);
+			case 'addComment':
+				return new CommentOperations(context).addComment(operation);
 			default:
 				throw new EditRejectionError({ kind: 'unsupportedOperation', op: (operation as { op: string }).op });
 		}

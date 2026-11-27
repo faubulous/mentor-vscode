@@ -203,4 +203,24 @@ suite('form editor values', () => {
 		assert.ok(outcome.ok, `the edit must be applied, got ${JSON.stringify(outcome)}`);
 		assert.ok(document.getText().includes('ex:OakTree a owl:Class ;\n    rdfs:label "Oak tree"@en .'), `the class must follow its label, got ${document.getText()}`);
 	});
+
+	test('writes a comment above a resource, which the snapshot shows above its card, and rewrites it', async () => {
+		const document = await openInFormEditor('data/form-values.ttl');
+		const at = { kind: 'resource', subject: factory.namedNode(`${NS}s`), run: 0 };
+		const written = await vscode.commands.executeCommand<EditOutcomeView>('mentor.e2e.applyFormEditorEdit', document.uri.toString(), [{ op: 'setComment', at, lines: ['about s'] }]);
+
+		assert.ok(written.ok, `the comment must be written, got ${JSON.stringify(written)}`);
+		assert.strictEqual(document.getText(), '@prefix ex: <http://example.org/values#> .\n\n# about s\nex:s ex:p "a", ex:b .\n');
+
+		await waitForFormEditorVersion(document);
+
+		const snapshot = await vscode.commands.executeCommand<{ resources: { comments?: string[][] }[] }>('mentor.e2e.getFormEditorSnapshot', document.uri.toString());
+
+		assert.deepStrictEqual(snapshot.resources[0].comments, [['about s']]);
+
+		const rewritten = await vscode.commands.executeCommand<EditOutcomeView>('mentor.e2e.applyFormEditorEdit', document.uri.toString(), [{ op: 'setComment', at, lines: ['about s', 'and more'] }]);
+
+		assert.ok(rewritten.ok, `the comment must be rewritten, got ${JSON.stringify(rewritten)}`);
+		assert.strictEqual(document.getText(), '@prefix ex: <http://example.org/values#> .\n\n# about s\n# and more\nex:s ex:p "a", ex:b .\n');
+	});
 });
