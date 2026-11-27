@@ -1,5 +1,6 @@
 import { ChangeEvent, FocusEvent, KeyboardEvent, useId, useRef, useState } from 'react';
 import { useOverflowing } from '../hooks/use-overflowing';
+import { AutoSizeTextarea } from './auto-size-textarea';
 import { useLiteralAnnotationPicker } from '../hooks/use-literal-annotation-picker';
 import { LiteralAnnotation } from '../state/literal-annotation';
 import { LiteralAnnotationData } from './datatype-labels';
@@ -156,25 +157,23 @@ export function LiteralField(props: LiteralFieldProps): React.JSX.Element {
 	return (
 		<span className={classes.join(' ')} data-value-index={index} onFocus={() => setFocused(true)} onBlur={handleBlur}>
 			<span className="literal-field-box input-field">
-				<span ref={textRef} className="literal-field-text">
-					<span className="literal-field-copy" aria-hidden="true">{`${text || placeholder}\u200b`}</span>
+				<AutoSizeTextarea
+					className="literal-field-text"
+					inputClassName="literal-field-input"
+					textRef={textRef}
+					inputRef={inputRef}
+					value={text}
+					placeholder={placeholder}
+					aria-label={`Value ${index + 1}`}
+					aria-invalid={problem !== undefined}
+					aria-describedby={problem ? problemId : undefined}
+					onChange={(event: ChangeEvent<HTMLTextAreaElement>) => onInput(event.currentTarget.value)}
+					onKeyDown={event => _handleKeyDown(event, props)}
+				>
 					{suggested
 						? <LiteralAnnotationButton key={suggested.text} annotation={suggested} variant="is-suggestion" guarded onAct={onAcceptSuggestion} />
 						: shownAnnotation && <LiteralAnnotationButton key={shownAnnotation.text} annotation={shownAnnotation} problem={problem} guarded={annotation === undefined} onAct={togglePicker} />}
-					<textarea
-						ref={inputRef}
-						className="literal-field-input"
-						rows={1}
-						value={text}
-						placeholder={placeholder}
-						spellCheck={false}
-						aria-label={`Value ${index + 1}`}
-						aria-invalid={problem !== undefined}
-						aria-describedby={problem ? problemId : undefined}
-						onChange={(event: ChangeEvent<HTMLTextAreaElement>) => onInput(event.currentTarget.value)}
-						onKeyDown={event => _handleKeyDown(event, props)}
-					/>
-				</span>
+				</AutoSizeTextarea>
 			</span>
 			{problem && <span id={problemId} className="literal-field-problem">{problem}</span>}
 			{picker.open && <LiteralAnnotationPicker picker={picker} listId={listId} />}

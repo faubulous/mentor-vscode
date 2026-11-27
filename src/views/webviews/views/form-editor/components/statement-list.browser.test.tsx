@@ -670,7 +670,7 @@ describe('StatementList, edited in a browser', () => {
 	it('gives every row of one line the height of the row token of a wide card, whether it holds a field or pills', async () => {
 		await renderList();
 
-		expect(rows().map(row => Math.round(row.getBoundingClientRect().height))).toEqual([32, 32, 32]);
+		expect(rows().map(row => Math.round(row.getBoundingClientRect().height))).toEqual([33, 33, 33]);
 	});
 
 	it('stacks the predicate of a row of a narrow card above its values, both at the content edge, where the text of its IRI starts', async () => {
@@ -858,6 +858,28 @@ describe('StatementList, edited in a browser', () => {
 		expect(document.activeElement).toBe(rows()[1].querySelector('.row-grip'));
 	});
 
+		it('puts a pill with a comment on a line of its own, under its comment, which grows with its lines', async () => {
+		await renderList(withAnchors(createTestCardBody([createProperty('rdfs:seeAlso', [createIriView('ex:A', 'A'), { ...createIriView('ex:B', 'B'), comments: ['about B'] }])])));
+
+		const boxOf = (element: Element | null) => element!.getBoundingClientRect();
+		const first = boxOf(document.querySelector('.resource-values [data-value-index="0"]'));
+		const field = document.querySelector<HTMLTextAreaElement>('.value-pill-line textarea')!;
+		const comment = boxOf(field);
+		const second = boxOf(document.querySelector('.value-pill-line [data-value-index="1"]'));
+
+		expect(comment.top).toBeGreaterThanOrEqual(first.bottom);
+		expect(second.top).toBeGreaterThanOrEqual(comment.bottom);
+		expect(Math.round(second.left)).toBe(Math.round(first.left));
+
+		const height = comment.height;
+
+		await act(async () => {
+			fireEvent.change(field, { target: { value: 'about B\nand more' } });
+		});
+
+		expect(boxOf(field).height).toBeGreaterThan(height);
+	});
+
 		it('shows no focus ring on the grip of a row while the row is dragged', async () => {
 		await renderList();
 
@@ -927,7 +949,7 @@ describe('StatementList, edited in a browser', () => {
 			return Math.round(input.top + input.height / 2);
 		};
 
-		expect(Math.round(row.getBoundingClientRect().height)).toBe(32);
+		expect(Math.round(row.getBoundingClientRect().height)).toBe(33);
 		expect(fields.map(field => Math.round(field.getBoundingClientRect().bottom))).toEqual([Math.round(cells.bottom), Math.round(cells.bottom)]);
 		expect(getComputedStyle(row.querySelector('textarea')!).fontSize).toBe('17px');
 		expect(centreOf(fields[1])).toBe(centreOf(fields[0]));
@@ -963,7 +985,7 @@ describe('StatementList, edited in a browser', () => {
 		await renderList(cardBody, [nodeCardBody]);
 
 		const row = rows()[0];
-		const centreOf = (element: Element): number => Math.round(element.getBoundingClientRect().top + element.getBoundingClientRect().height / 2);
+		const centreOf = (element: Element): number => element.getBoundingClientRect().top + element.getBoundingClientRect().height / 2;
 		const box = row.querySelector('.resource-card.is-nested')!;
 		const centre = centreOf(row.querySelector('.statement-predicate vscode-textfield')!);
 
@@ -975,11 +997,29 @@ describe('StatementList, edited in a browser', () => {
 		expect(Math.round(chevron.top - bounds.top - 1)).toBe(Math.round(chevron.left - bounds.left - 1));
 		expect(Math.round(bounds.bottom - 1 - chevron.bottom)).toBe(Math.round(chevron.left - bounds.left - 1));
 		expect(Math.round(bounds.height)).toBe(36);
-		expect(Math.round(row.getBoundingClientRect().height * 2) / 2).toBe(2.5 + 36 + 2.5 + 1 + 6 + 26);
-		expect([centreOf(box), centreOf(row.querySelector('.row-grip')!), centreOf(row.querySelector('.row-menu')!)]).toEqual([centre, centre, centre]);
+		expect(Math.round(row.getBoundingClientRect().height)).toBe(3 + 36 + 3 + 1 + (2 * 3 + 1) + 26);
+		// The field of the predicate reaches a pixel further down than up, for its underline.
+		for (const element of [box, row.querySelector('.row-grip')!, row.querySelector('.row-menu')!]) {
+			expect(Math.abs(centreOf(element) - centre)).toBeLessThanOrEqual(0.5);
+		}
 	});
 
-	it('keeps text typed into the input of a row of resources, with resource right after it, and shows no type before the first character', async () => {
+	it('starts the text of the input of a row of resources as far after the last pill as the pills stand apart', async () => {
+		await renderList(withAnchors(createTestCardBody([createProperty('rdfs:seeAlso', [createIriView('ex:A', 'A'), createIriView('ex:B', 'B')])])));
+
+		const row = rows()[0];
+
+		await userEvent.click(within(row).getByLabelText('New value'));
+
+		const pills = row.querySelectorAll('.resource-values [data-value-index]');
+		const inner = (within(row).getByLabelText('New value') as unknown as { wrappedElement: HTMLInputElement }).wrappedElement;
+		const textStart = inner.getBoundingClientRect().left + parseFloat(getComputedStyle(inner).paddingLeft) + parseFloat(getComputedStyle(inner).borderLeftWidth);
+		const pillGap = pills[1].getBoundingClientRect().left - pills[0].getBoundingClientRect().right;
+
+		expect(Math.round(textStart - pills[1].getBoundingClientRect().right)).toBe(Math.round(pillGap));
+	});
+
+		it('keeps text typed into the input of a row of resources, with resource right after it, and shows no type before the first character', async () => {
 		await renderList(MIXED);
 
 		const row = rows()[0];

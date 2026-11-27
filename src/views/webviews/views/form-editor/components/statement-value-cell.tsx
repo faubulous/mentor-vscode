@@ -1,3 +1,4 @@
+import { ReactNode } from 'react';
 import { TermData } from '../form-editor-model';
 import { RowValue } from '../state/row-value';
 import { DraftResourceCard } from './draft-resource-card';
@@ -30,6 +31,11 @@ export interface StatementValueCellProps extends StatementRowContext {
 	 * The row the value belongs to, where it is edited.
 	 */
 	edited?: EditedRow;
+
+	/**
+	 * The comment written above the value, where it has one.
+	 */
+	comment?: ReactNode;
 }
 
 /**
@@ -40,14 +46,13 @@ export interface StatementValueCellProps extends StatementRowContext {
  * @param props The value, its row and where the row stands.
  * @returns The value.
  */
-export function StatementValueCell({ value, view, index, edited, ...context }: StatementValueCellProps): React.JSX.Element {
-	const comments = value.kind === 'written' ? value.view.comments : undefined;
+export function StatementValueCell({ value, view, index, edited, comment, ...context }: StatementValueCellProps): React.JSX.Element {
 	const isNode = view.nested !== undefined || (value.kind === 'term' && value.node !== undefined);
 
 	return (
 		<span className={`statement-value${isNode ? ' is-node' : ''}${view.inferred ? ' is-inferred' : ''}`}>
-			{comments && !view.nested && <span className="statement-comment statement-value-comment">{comments.join('\n')}</span>}
-			{edited ? _editedValue(value, view, index, edited, context) : <TermValue view={view} comments={comments} {...context} />}
+			{comment}
+			{edited ? _editedValue(value, view, index, edited, context) : <TermValue view={view} {...context} />}
 		</span>
 	);
 }
@@ -77,7 +82,7 @@ function _editedValue(value: RowValue, view: TermData, index: number, edited: Ed
 	}
 
 	if (view.nested) {
-		return <TermValue view={view} comments={value.kind === 'written' ? value.view.comments : undefined} {...context} nestedActions={_nestedActionsOf(index, edited)} />;
+		return <TermValue view={view} {...context} nestedActions={_nestedActionsOf(index, edited)} />;
 	}
 
 	return (

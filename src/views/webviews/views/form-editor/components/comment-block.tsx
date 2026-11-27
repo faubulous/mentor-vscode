@@ -1,23 +1,31 @@
+import { CommentFormBlock } from '../state/form-block';
+import { CommentField } from './comment-field';
+
 /**
  * Properties of the {@link CommentBlock} component.
  */
 export interface CommentBlockProps {
 	/**
-	 * The text of the comment, one line per comment line of the document.
+	 * The comment and where it is written.
 	 */
-	text: string;
+	block: CommentFormBlock;
+
+	/**
+	 * The document version the comment belongs to.
+	 */
+	version: number;
 }
 
 /**
- * A comment written between the resources of the document: grey text behind a bar along its
- * left edge, as written.
- * @param props The text.
+ * A comment written between the resources of the document: grey text, as written, which can be
+ * edited in place where the form can write the document.
+ * @param props The comment.
  * @returns The block.
  */
-export function CommentBlock({ text }: CommentBlockProps): React.JSX.Element {
+export function CommentBlock({ block, version }: CommentBlockProps): React.JSX.Element {
 	return (
 		<div className="comment-block">
-			<div className="comment-block-text">{text}</div>
+			<CommentField className="comment-block-text" label="Comment" lines={block.lines} anchor={block.anchor} subject={block.subject} card={block.subject} version={version} />
 		</div>
 	);
 }

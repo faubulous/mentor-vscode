@@ -20,11 +20,6 @@ export interface TermValueProps extends StatementRowContext {
 	 */
 	nestedActions?: NestedCardActions;
 
-	/**
-	 * The comment lines written above the value, which the nested card of a blank node shows in
-	 * its header.
-	 */
-	comments?: string[];
 }
 
 /**
@@ -33,7 +28,7 @@ export interface TermValueProps extends StatementRowContext {
  * @param props The value and where it stands.
  * @returns The value.
  */
-export function TermValue({ view, dataService, depth, visited, nestedActions, comments }: TermValueProps): React.JSX.Element {
+export function TermValue({ view, dataService, depth, visited, nestedActions }: TermValueProps): React.JSX.Element {
 	const navigate = useIriNavigation();
 
 	if (view.collection) {
@@ -49,7 +44,7 @@ export function TermValue({ view, dataService, depth, visited, nestedActions, co
 	}
 
 	if (view.nested) {
-		return <NestedResourceCard nested={view.nested} dataService={dataService} depth={depth + 1} visited={visited} actions={nestedActions} comments={comments} />;
+		return <NestedResourceCard nested={view.nested} dataService={dataService} depth={depth + 1} visited={visited} actions={nestedActions} />;
 	}
 
 	switch (view.term.termType) {

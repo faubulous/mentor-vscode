@@ -93,7 +93,7 @@ describe('StatementList', () => {
 		expect(screen.getAllByRole('listitem').map(item => item.textContent)).toEqual(['A', 'b']);
 	});
 
-	it('renders the card of a blank node in place of its value, collapsed to its header with the comments above the value and the node, and asks for one it does not hold', async () => {
+	it('renders the card of a blank node in place of its value under the comment above the value, collapsed to its header with the comment of the node, and asks for one it does not hold', async () => {
 		const nestedCardBody: ResourceCardBodyData = { subject: RdfDataFactory.blankNode('b1'), leadingComments: ['the node'], predicates: [createProperty('rdfs:comment', [createLiteralView('inside')])] };
 		const cardBody = createTestCardBody([createProperty('ex:has', [{ ...createNestedView('b1'), comments: ['the value'] }, createNestedView('b2')])]);
 		const { dataService } = renderList(cardBody, {}, [nestedCardBody]);
@@ -103,9 +103,12 @@ describe('StatementList', () => {
 		await userEvent.click(screen.getByRole('button', { name: 'Expand' }));
 
 		expect(screen.getByText('inside').closest('.resource-card.is-nested')?.getAttribute('data-resource-id')).toBe('_:b1');
-		expect(screen.getByText('the value the node', { normalizer: text => text.replace(/\s+/g, ' ') }).classList.contains('nested-card-caption')).toBe(true);
-		expect(screen.getByText(/the node/).closest('.statement-line')?.getAttribute('aria-label')).toBe('Type');
-		expect(screen.queryByText('the value', { selector: '.statement-value-comment' })).toBeNull();
+		const caption = document.querySelector('.nested-card-caption')!;
+		const valueComment = screen.getByText('the value', { selector: '.statement-value-comment' });
+
+		expect(caption.textContent).toBe('the node');
+		expect(caption.closest('.statement-line')?.getAttribute('aria-label')).toBe('Type');
+		expect(valueComment.nextElementSibling?.classList.contains('resource-card')).toBe(true);
 		expect(screen.getByText('Loading…').closest('.resource-card.is-nested')?.getAttribute('data-resource-id')).toBe('_:b2');
 		expect(dataService.requested).toEqual([RdfDataFactory.blankNode('b2')]);
 		expect(screen.queryByRole('button', { name: 'More actions' })).toBeNull();

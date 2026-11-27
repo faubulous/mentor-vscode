@@ -1,6 +1,6 @@
 import { BlankNode, NamedNode } from '@rdfjs/types';
 import { RDF } from '@faubulous/mentor-rdf/ontologies';
-import { useMemo, useRef, useState } from 'react';
+import { ReactNode, useMemo, useRef, useState } from 'react';
 import { PinnedProperty, ResourceCardBodyData, TermData } from '../form-editor-model';
 import { useNestedCollapse } from '../hooks/use-nested-collapse';
 import { useRowReorder } from '../hooks/use-row-reorder';
@@ -48,9 +48,9 @@ export interface StatementListProps {
 	labelRow?: boolean;
 
 	/**
-	 * The comment lines written above a blank node, which the header of its nested card shows.
+	 * The comment written at the head of a blank node, which the header of its nested card shows.
 	 */
-	comments?: string[];
+	caption?: ReactNode;
 }
 
 /**
@@ -73,7 +73,7 @@ const TYPE_ROW: LeadingRow = { predicates: [RDF.type], predicateText: 'a' };
  * @param props The resource and where the list stands.
  * @returns The rows.
  */
-export function StatementList({ cardBody, stale = false, dataService, depth, visited, labelRow = false, comments }: StatementListProps): React.JSX.Element {
+export function StatementList({ cardBody, stale = false, dataService, depth, visited, labelRow = false, caption }: StatementListProps): React.JSX.Element {
 	const { editing, readOnly, labelPredicates } = useFormEditorContext();
 	const { pins } = usePinnedProperties();
 	const editable = !readOnly && editing !== undefined;
@@ -94,7 +94,7 @@ export function StatementList({ cardBody, stale = false, dataService, depth, vis
 	const leadingEntry = leadingRow ? _leadingEntryOf(entries, leadingRow) : undefined;
 	const rows = entries.filter(entry => entry !== leadingEntry);
 	const header: RowHeader | undefined = nested
-		? { kind: 'type', collapsed: collapsed.value, summary: _summaryOf(rows), pinned: _pinnedOf(rows, pins), caption: comments, onToggle: collapsed.toggle }
+		? { kind: 'type', collapsed: collapsed.value, summary: _summaryOf(rows), pinned: _pinnedOf(rows, pins), caption, onToggle: collapsed.toggle }
 		: labelRow ? { kind: 'label' } : undefined;
 	const adding = rows.some(entry => entry.editor?.isOpen === true);
 	const listRef = useRef<HTMLDivElement>(null);

@@ -129,7 +129,7 @@ export function BlockList({ blocks, dataService, scrollElement, cardStates, pinn
 						>
 							{block.kind === 'resource'
 								? <ResourceCard cardHeader={block.resource} dataService={dataService} expanded={cardStates.stateOf(block.id).open !== 'collapsed'} writing={busyIds?.has(block.id) === true} current={block.id === currentId} onToggle={onToggle} />
-								: <CommentBlock text={block.text} />}
+								: <CommentBlock block={block} version={dataService.version} />}
 						</div>
 					);
 				})}
