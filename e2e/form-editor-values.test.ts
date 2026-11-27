@@ -165,7 +165,25 @@ suite('form editor values', () => {
 		assert.strictEqual(document.getText(), '@prefix ex: <http://example.org/values#> .\n\nex:s ex:p "a", [ a ex:T ], [ a ex:T ] .\n');
 	});
 
-	test('renames a resource from its card as F2 does', async () => {
+	test('shows the cards of a document again when it is opened after its editors closed', async () => {
+		const document = await openInFormEditor('data/form-values.ttl');
+		const original = document.getText();
+
+		assert.ok((await keepAndAdd(document)).ok);
+		await waitForFormEditorVersion(document);
+
+		// Edited back to what is saved, the document is clean, so its model outlives its editors.
+		assert.ok((await setValues(document, [
+			{ kind: 'existing', anchor: document.getText().indexOf('"a"') },
+			{ kind: 'term', term: factory.namedNode(`${NS}b`) }
+		])).ok);
+		assert.strictEqual(document.getText(), original);
+
+		await vscode.commands.executeCommand('workbench.action.closeAllEditors');
+		await openInFormEditor('data/form-values.ttl');
+	});
+
+		test('renames a resource from its card as F2 does', async () => {
 		const document = await openInFormEditor('data/form-values.ttl');
 
 		await vscode.commands.executeCommand('mentor.e2e.renameFormEditorResource', document.uri.toString(), `${NS}s`, `${NS}t`);

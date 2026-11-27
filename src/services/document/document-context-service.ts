@@ -522,7 +522,8 @@ export class DocumentContextService {
 	 * editor drives this, and so do editors that are not text editors, such as the form editor,
 	 * to keep the definition tree, the language selection and context-driven refreshes on the
 	 * document being looked at. A document that is active already stays so without a change
-	 * being published, and a document asked for after this one wins while this one loads.
+	 * being published, but gets back the tokens that closing its last editor released, which the
+	 * editor showing it needs. A document asked for after this one wins while this one loads.
 	 * @param document The document whose context should become active.
 	 * @returns A promise that resolves to the active context, or `undefined` if the document is
 	 * not supported or another document was asked for while it loaded.
@@ -532,7 +533,13 @@ export class DocumentContextService {
 
 		this._activationRequest = uri;
 
-		if (uri === this.activeContext?.uri.toString()) {
+		const active = this.activeContext;
+
+		if (active && uri === active.uri.toString()) {
+			if (active.isTokenized() && !active.isParsed) {
+				await this.loadDocument(document, false, this._getNotebookCellSlug(document));
+			}
+
 			return this.activeContext;
 		}
 
