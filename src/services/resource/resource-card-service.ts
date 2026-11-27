@@ -1,11 +1,12 @@
 import { BlankNode, NamedNode, Quad } from '@rdfjs/types';
 import { termToString } from 'rdf-string';
-import { Store, rdf } from '@faubulous/mentor-rdf';
+import { RDF, Store, rdf } from '@faubulous/mentor-rdf';
 import { IDocumentContext } from '@src/services/document/document-context.interface';
 import { ResourceReferenceProvider } from '@src/providers/resource-reference-provider';
 import { PredicateRangeResolver } from '@src/services/vocabulary/predicate-range-resolver';
 import { StoreIconResolver } from '@src/services/vocabulary/store-icon-resolver';
 import { getConfig } from '@src/utilities/vscode/config';
+import { getClassWithSuperClasses } from '@src/utilities/store-statements';
 import { PinnedPropertiesService } from './pinned-properties-service';
 import { ResourceCardData, ResourceCardHeaderData } from './resource-card-data';
 import { ResourceIndexEntry, ResourceIndexOptions, getEntry, getStatementKey, typeIrisOf } from './resource-index';
@@ -37,6 +38,11 @@ interface InferenceCache {
 	 * term.
 	 */
 	quads: Map<string, readonly Quad[]>;
+
+	/**
+	 * Each class asked for with its superclasses.
+	 */
+	superClasses: Map<string, ReadonlySet<string>>;
 }
 
 /**
@@ -156,6 +162,56 @@ export class ResourceCardService {
 	}
 
 	/**
+	 * The types a card names for a resource: its types, inferred ones included, without those that
+	 * are superclasses of its other types, as `sh:Shape` is of `sh:PropertyShape`. Classes that are
+	 * each other's superclasses all stay.
+	 * @param graphs The graphs its types are read from, all graphs when absent.
+	 * @param resource The resource.
+	 * @returns The type IRIs.
+	 */
+	getShownTypes(graphs: string[] | undefined, resource: NamedNode | BlankNode): readonly string[] {
+		const store = this._store;
+		const types = this.getInferredTypes(graphs, resource);
+
+		if (!store || types.length < 2) {
+			return types;
+		}
+
+		const cache = this._inferenceOf(store);
+		const superClassesOf = (type: string): ReadonlySet<string> => {
+			let classes = cache.superClasses.get(type);
+
+			if (!classes) {
+				classes = getClassWithSuperClasses(store, type);
+				cache.superClasses.set(type, classes);
+			}
+
+			return classes;
+		};
+
+		return types.filter(type => !types.some(other => other !== type && superClassesOf(other).has(type) && !superClassesOf(type).has(other)));
+	}
+
+	/**
+	 * The statements the reasoner infers about a resource that a card shows: those of
+	 * {@link getInferredQuads} without the types that are superclasses of its other types.
+	 * @param graphs The graphs whose statements and inferences are read, all graphs when absent.
+	 * @param resource The resource.
+	 * @returns The statements.
+	 */
+	getShownInferredQuads(graphs: string[] | undefined, resource: NamedNode | BlankNode): readonly Quad[] {
+		const quads = this.getInferredQuads(graphs, resource);
+
+		if (!quads.some(quad => quad.predicate.value === RDF.type)) {
+			return quads;
+		}
+
+		const shown = new Set(this.getShownTypes(graphs, resource));
+
+		return quads.filter(quad => quad.predicate.value !== RDF.type || shown.has(quad.object.value));
+	}
+
+	/**
 	 * The statements the reasoner infers about a resource that the graphs do not assert as well,
 	 * each once however many inference graphs hold it. Memoized until the store changes.
 	 * @param graphs The graphs whose statements and inferences are read, all graphs when absent.
@@ -205,7 +261,7 @@ export class ResourceCardService {
 	 */
 	private _inferenceOf(store: Store): InferenceCache {
 		if (!this._inference || this._inference.version !== store.version) {
-			this._inference = { version: store.version, types: new Map(), quads: new Map() };
+			this._inference = { version: store.version, types: new Map(), quads: new Map(), superClasses: new Map() };
 		}
 
 		return this._inference;
@@ -250,8 +306,8 @@ export class ResourceCardService {
 		return {
 			resolveObjectIcon: icons ? iri => icons.resolve(iri) : undefined,
 			resolvePredicateRange: ranges ? (predicate, entry) => ranges.resolve(predicate, this.getTypes(entry, graphs)) : undefined,
-			inferredQuadsOf: resource => this.getInferredQuads(graphs, resource),
-			inferredTypesOf: resource => this.getInferredTypes(graphs, resource)
+			inferredQuadsOf: resource => this.getShownInferredQuads(graphs, resource),
+			shownTypesOf: resource => this.getShownTypes(graphs, resource)
 		};
 	}
 

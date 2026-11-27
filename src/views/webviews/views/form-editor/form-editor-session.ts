@@ -668,6 +668,7 @@ export class FormEditorSession implements vscode.Disposable {
 			countUsages: iri => this._cards.countUsages(iri),
 			pins: this._cards.readPins(),
 			inferredTypesOf: resource => this._cards.getInferredTypes(context.graphs, resource),
+			shownTypesOf: resource => this._cards.getShownTypes(context.graphs, resource),
 			pinScopes: _pinScopes()
 		}).build();
 
