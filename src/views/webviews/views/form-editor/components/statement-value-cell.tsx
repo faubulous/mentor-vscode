@@ -1,3 +1,4 @@
+import { ReactNode } from 'react';
 import { TermData } from '../form-editor-model';
 import { RowValue } from '../state/row-value';
 import { DraftResourceCard } from './draft-resource-card';
@@ -6,7 +7,6 @@ import { NestedCardActions } from './nested-card-menu';
 import { EditedRow } from './edited-row';
 import { StatementRowContext } from './statement-row-context';
 import { TermValue } from './term-value';
-import { CommentScope, ValueComment } from './value-comment';
 
 /**
  * Properties of the {@link StatementValueCell} component.
@@ -33,9 +33,9 @@ export interface StatementValueCellProps extends StatementRowContext {
 	edited?: EditedRow;
 
 	/**
-	 * Where the comment of the value is written.
+	 * The comment written above the value, where it has one.
 	 */
-	scope: CommentScope;
+	comment?: ReactNode;
 }
 
 /**
@@ -46,8 +46,7 @@ export interface StatementValueCellProps extends StatementRowContext {
  * @param props The value, its row and where the row stands.
  * @returns The value.
  */
-export function StatementValueCell({ value, view, index, edited, scope, ...context }: StatementValueCellProps): React.JSX.Element {
-	const comment = value.kind === 'written' && value.view.comments ? <ValueComment view={value.view} scope={scope} /> : undefined;
+export function StatementValueCell({ value, view, index, edited, comment, ...context }: StatementValueCellProps): React.JSX.Element {
 	const isNode = view.nested !== undefined || (value.kind === 'term' && value.node !== undefined);
 
 	return (
