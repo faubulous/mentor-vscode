@@ -5,6 +5,7 @@
  */
 
 import { BlankNode, NamedNode } from '@rdfjs/types';
+import { CommentAnchor } from './comment-anchor';
 import { StatementValue } from './statement-value';
 
 /**
@@ -45,5 +46,17 @@ export type EditOperation =
 	 * the other operations of the same action write, wherever it is listed among them. Declaring a
 	 * prefix the document already declares for the namespace changes nothing.
 	 */
-	| { op: 'declarePrefix'; prefix: string; namespace: string };
+	| { op: 'declarePrefix'; prefix: string; namespace: string }
+	/**
+	 * Make `lines` the lines of the comment at an anchor: they replace the run written there, or
+	 * are written where it would stand, each as a comment line. No lines remove the run with one
+	 * blank line beside it.
+	 */
+	| { op: 'setComment'; at: CommentAnchor; lines: string[] }
+	/**
+	 * Write a comment of its own, a blank line apart from what is around it: before the run of
+	 * the comments above a resource of its own with the given index, or directly above the resource
+	 * when no run is given, or at the end of the document when no resource is given.
+	 */
+	| { op: 'addComment'; before?: { subject: NamedNode | BlankNode; run?: number }; lines: string[] };
 

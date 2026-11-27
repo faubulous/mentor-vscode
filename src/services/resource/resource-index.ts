@@ -4,6 +4,7 @@ import { BlankNode, NamedNode, Quad, Term } from '@rdfjs/types';
 import { termToString } from 'rdf-string';
 import { NamespaceData, ResourceListItemData } from '@src/services/resource/resource-card-data';
 import { PredicateRangeData } from '@src/services/vocabulary/predicate-range';
+import type { CommentAttribution } from './comment-attribution';
 
 /**
  * A resource collected from the document, together with the statements that describe it.
@@ -87,6 +88,11 @@ export interface ResourceIndex {
 	 * lines of each run.
 	 */
 	trailingComments: string[][];
+
+	/**
+	 * What each comment line of the document is written about.
+	 */
+	comments: CommentAttribution;
 }
 
 /**
