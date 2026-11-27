@@ -7,7 +7,7 @@ import { createSyntheticToken, isTokenOfType } from '@src/utilities/tokens';
 import { NamespaceData } from '@src/services/resource/resource-card-data';
 import { CollectionItem, ResourceIndex, ResourceIndexEntry, ResourceIndexOptions, getStatementKey } from './resource-index';
 import { ResourceViewBuilder } from './resource-view-builder';
-import { CommentAttribution, getCommentRunTexts } from './comment-attribution';
+import { CommentAttribution, getCommentRunLines } from './comment-attribution';
 
 /**
  * How deep the blank nodes a resource of the store refers to are followed, which bounds what is
@@ -83,7 +83,7 @@ export class ResourceIndexBuilder {
 			namespaces: this._buildNamespaces(),
 			referenceCounts: this._referenceCounts,
 			holders: this._holders,
-			trailingComments: getCommentRunTexts(comments.documentComments()),
+			trailingComments: getCommentRunLines(comments.documentComments()),
 			comments,
 			...this._buildCollections()
 		};

@@ -17,7 +17,7 @@ import {
 } from '@src/services/resource/resource-card-data';
 import { AnnotationResolver } from './annotation-resolver';
 import { CollectionItem, ResourceIndex, ResourceIndexEntry, ResourceIndexOptions, getEntry, isCollectionChainPredicate, typeIrisOf } from './resource-index';
-import { getCommentRunTexts, getCommentTexts } from './comment-attribution';
+import { getCommentRunLines, getCommentLines } from './comment-attribution';
 
 /**
  * The display text of a term, with the language it was read in.
@@ -102,7 +102,7 @@ export class ResourceViewBuilder {
 			predicates: predicates.map(group => this._withRange(group, entry)),
 			// A resource of its own shows them above its card, where they were written; a node
 			// written inside another has no card of its own to stand outside of.
-			leadingComments: entry.nested ? getCommentTexts(this._index.comments.resourceComments(entry.term)) : undefined
+			leadingComments: entry.nested ? getCommentLines(this._index.comments.resourceComments(entry.term)) : undefined
 		};
 	}
 
@@ -112,7 +112,7 @@ export class ResourceViewBuilder {
 	 * @returns The lines of each run, or `undefined` when there are none.
 	 */
 	private _commentRunsOf(entry: ResourceIndexEntry): string[][] | undefined {
-		const runs = getCommentRunTexts(this._index.comments.resourceComments(entry.term));
+		const runs = getCommentRunLines(this._index.comments.resourceComments(entry.term));
 
 		return runs.length > 0 ? runs : undefined;
 	}
@@ -187,14 +187,14 @@ export class ResourceViewBuilder {
 			let group = groups.get(predicateIri);
 
 			if (!group) {
-				const propertyComments = getCommentTexts(comments.propertyComments(entry.term, predicateIri));
+				const propertyComments = getCommentLines(comments.propertyComments(entry.term, predicateIri));
 
 				group = { predicate: this._toTermView(quad.predicate, quad.predicateToken), values: [], ...(propertyComments ? { comments: propertyComments } : {}) };
 				groups.set(predicateIri, group);
 			}
 
 			const value = this._toObjectTermView(quad);
-			const valueComments = hasSourcePosition(quad.objectToken) ? getCommentTexts(comments.valueComments(entry.term, predicateIri, quad.objectToken.startOffset)) : undefined;
+			const valueComments = hasSourcePosition(quad.objectToken) ? getCommentLines(comments.valueComments(entry.term, predicateIri, quad.objectToken.startOffset)) : undefined;
 
 			group.values.push(valueComments ? { ...value, comments: valueComments } : value);
 		}

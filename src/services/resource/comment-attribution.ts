@@ -1,7 +1,8 @@
 import { IToken, QuadContext } from '@faubulous/mentor-rdf-parsers';
 import { NamedNode, BlankNode } from '@rdfjs/types';
 import { termToString } from 'rdf-string';
-import { getCommentText, hasSourcePosition, splitCommentRuns } from '@src/utilities/tokens';
+import { hasSourcePosition, splitCommentRuns } from '@src/utilities/tokens';
+import { getCommentLine } from '@src/utilities/comment-lines';
 import { isCollectionChainPredicate } from './resource-index';
 
 /**
@@ -214,21 +215,23 @@ export class CommentAttribution {
 }
 
 /**
- * The text of comment lines, one entry per line.
+ * The lines of comment tokens as they are written, without the `#` that starts each, one entry per
+ * line.
  * @param comments The comment tokens.
  * @returns The lines, or `undefined` when there are none.
  */
-export function getCommentTexts(comments: readonly IToken[]): string[] | undefined {
-	return comments.length > 0 ? comments.map(getCommentText) : undefined;
+export function getCommentLines(comments: readonly IToken[]): string[] | undefined {
+	return comments.length > 0 ? comments.map(getCommentLine) : undefined;
 }
 
 /**
- * The text of comment lines as their runs, which blank lines or other content separate.
+ * The lines of comment tokens as they are written, without the `#` that starts each, as their runs,
+ * which blank lines or other content separate.
  * @param comments The comment tokens.
  * @returns The lines of each run.
  */
-export function getCommentRunTexts(comments: readonly IToken[]): string[][] {
-	return splitCommentRuns(comments).map(run => run.map(getCommentText));
+export function getCommentRunLines(comments: readonly IToken[]): string[][] {
+	return splitCommentRuns(comments).map(run => run.map(getCommentLine));
 }
 
 /**

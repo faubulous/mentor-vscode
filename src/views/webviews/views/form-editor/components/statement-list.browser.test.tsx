@@ -801,7 +801,7 @@ describe('StatementList, edited in a browser', () => {
 		expect(host.submitted[0].operations).toEqual([{ op: 'moveProperty', subject: node, predicate: `${EXAMPLE_NAMESPACE}maxCount`, target: `${EXAMPLE_NAMESPACE}class`, placement: 'before' }]);
 	});
 
-		it('shows the focus ring of a grip clicked with the mouse, whose arrows then move its row', async () => {
+	it('shows the focus ring of a grip clicked with the mouse, whose arrows then move its row', async () => {
 		await renderList();
 
 		const grip = rows()[0].querySelector<HTMLElement>('.row-grip')!;
@@ -813,7 +813,7 @@ describe('StatementList, edited in a browser', () => {
 		expect(getComputedStyle(grip).outlineStyle).toBe('solid');
 	});
 
-		it('keeps the focus on the grip of a row moved down by its arrows, which is put in its new place and loses the focus on the way', async () => {
+	it('keeps the focus on the grip of a row moved down by its arrows, which is put in its new place and loses the focus on the way', async () => {
 		const { host, deliver } = await renderList();
 		const grip = rows()[1].querySelector<HTMLElement>('.row-grip')!;
 
@@ -842,7 +842,7 @@ describe('StatementList, edited in a browser', () => {
 		expect(getComputedStyle(grip).outlineStyle).toBe('solid');
 	});
 
-		it('keeps the focus on the grip of a row moved by its arrows, once the row stands in its new place', async () => {
+	it('keeps the focus on the grip of a row moved by its arrows, once the row stands in its new place', async () => {
 		const { host, deliver } = await renderList();
 		const grip = rows()[2].querySelector<HTMLElement>('.row-grip')!;
 
@@ -858,20 +858,23 @@ describe('StatementList, edited in a browser', () => {
 		expect(document.activeElement).toBe(rows()[1].querySelector('.row-grip'));
 	});
 
-		it('puts a pill with a comment on a line of its own, under its comment, which grows with its lines', async () => {
+	it('puts a pill with a comment on a line of its own, under its comment, which grows with its lines', async () => {
 		await renderList(withAnchors(createTestCardBody([createProperty('rdfs:seeAlso', [createIriView('ex:A', 'A'), { ...createIriView('ex:B', 'B'), comments: ['about B'] }])])));
 
 		const boxOf = (element: Element | null) => element!.getBoundingClientRect();
 		const first = boxOf(document.querySelector('.resource-values [data-value-index="0"]'));
-		const field = document.querySelector<HTMLTextAreaElement>('.value-pill-line textarea')!;
-		const comment = boxOf(field);
+		const rendered = document.querySelector<HTMLElement>('.value-pill-line .comment-field-text')!;
+		const comment = boxOf(rendered);
 		const second = boxOf(document.querySelector('.value-pill-line [data-value-index="1"]'));
 
 		expect(comment.top).toBeGreaterThanOrEqual(first.bottom);
 		expect(second.top).toBeGreaterThanOrEqual(comment.bottom);
 		expect(Math.round(second.left)).toBe(Math.round(first.left));
 
-		const height = comment.height;
+		await userEvent.dblClick(rendered);
+
+		const field = document.querySelector<HTMLTextAreaElement>('.value-pill-line textarea')!;
+		const height = boxOf(field).height;
 
 		await act(async () => {
 			fireEvent.change(field, { target: { value: 'about B\nand more' } });
@@ -880,7 +883,7 @@ describe('StatementList, edited in a browser', () => {
 		expect(boxOf(field).height).toBeGreaterThan(height);
 	});
 
-		it('shows no focus ring on the grip of a row while the row is dragged', async () => {
+	it('shows no focus ring on the grip of a row while the row is dragged', async () => {
 		await renderList();
 
 		const grip = rows()[2].querySelector<HTMLElement>('.row-grip')!;
@@ -1019,7 +1022,7 @@ describe('StatementList, edited in a browser', () => {
 		expect(Math.round(textStart - pills[1].getBoundingClientRect().right)).toBe(Math.round(pillGap));
 	});
 
-		it('keeps text typed into the input of a row of resources, with resource right after it, and shows no type before the first character', async () => {
+	it('keeps text typed into the input of a row of resources, with resource right after it, and shows no type before the first character', async () => {
 		await renderList(MIXED);
 
 		const row = rows()[0];
