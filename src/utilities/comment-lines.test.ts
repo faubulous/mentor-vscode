@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { IToken } from '@faubulous/mentor-rdf-parsers';
-import { getCommentImage, getCommentLine, getCommentLineText } from '@src/utilities/comment-lines';
+import { getCommentImage, getCommentMarkdown } from '@src/utilities/comment-lines';
 
 /**
  * A comment token with the given image.
@@ -11,36 +11,28 @@ function commentToken(image: string): IToken {
 	return { image } as IToken;
 }
 
-describe('getCommentLine', () => {
-	it('drops the first # and trailing whitespace', () => {
-		expect(getCommentLine(commentToken('# about'))).toBe(' about');
-		expect(getCommentLine(commentToken('## Heading  '))).toBe('# Heading');
-		expect(getCommentLine(commentToken('#'))).toBe('');
-	});
-});
-
-describe('getCommentLineText', () => {
-	it('drops the # signs and the one space or tab after them', () => {
-		expect(getCommentLineText(' about')).toBe('about');
-		expect(getCommentLineText('# Heading')).toBe('Heading');
-		expect(getCommentLineText('\tindented')).toBe('indented');
-		expect(getCommentLineText('  two spaces')).toBe(' two spaces');
+describe('getCommentMarkdown', () => {
+	it('drops the first #, the one space or tab after it and trailing whitespace', () => {
+		expect(getCommentMarkdown(commentToken('# about'))).toBe('about');
+		expect(getCommentMarkdown(commentToken('## Heading  '))).toBe('# Heading');
+		expect(getCommentMarkdown(commentToken('#\tindented'))).toBe('indented');
+		expect(getCommentMarkdown(commentToken('#   - item'))).toBe('  - item');
 	});
 
 	it('keeps a line without a space after the #', () => {
-		expect(getCommentLineText('about')).toBe('about');
-		expect(getCommentLineText('')).toBe('');
+		expect(getCommentMarkdown(commentToken('#about'))).toBe('about');
+		expect(getCommentMarkdown(commentToken('#'))).toBe('');
 	});
 });
 
 describe('getCommentImage', () => {
-	it('puts a space before a line that starts with text', () => {
+	it('writes # and a space before the text of a line', () => {
 		expect(getCommentImage('about')).toBe('# about');
+		expect(getCommentImage('# Heading')).toBe('# # Heading');
+		expect(getCommentImage('  - item')).toBe('#   - item');
 	});
 
-	it('keeps a line that starts with a space or # as typed', () => {
-		expect(getCommentImage(' about')).toBe('# about');
-		expect(getCommentImage('# Heading')).toBe('## Heading');
+	it('writes an empty line as # alone', () => {
 		expect(getCommentImage('')).toBe('#');
 	});
 });

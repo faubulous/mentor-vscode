@@ -2,7 +2,7 @@ import { IToken, RdfSyntax } from '@faubulous/mentor-rdf-parsers';
 import { indentBefore, lineStartOffset } from '@src/utilities/string';
 import { TextEditSpec, absorbBlankLine, expandToWholeLines } from '@src/utilities/text-edits';
 import { splitCommentRuns, tokenEnd } from '@src/utilities/tokens';
-import { getCommentImage, getCommentLine } from '@src/utilities/comment-lines';
+import { getCommentImage, getCommentMarkdown } from '@src/utilities/comment-lines';
 import { CommentRun, CommentRunResolver } from '../comment-run-resolver';
 import { EditOperation } from '../edit-operation';
 import { EditPlan, createPlan } from '../edit-plan';
@@ -15,8 +15,7 @@ type AddCommentOperation = Extract<EditOperation, { op: 'addComment' }>;
 
 /**
  * Writes, rewrites and removes the runs of comment lines of a Turtle document. The lines are given
- * as they are written after the `#` that starts each: a line that starts with text is written with
- * a space after the `#`, one that starts with a space or `#` as it is, and a line the run has
+ * as their Markdown text, each written after `# `, an empty one as `#` alone; a line the run has
  * already keeps how it is written. The lines are indented like the run. The statements stay the
  * same, so the plans expect no change of them.
  */
@@ -155,9 +154,9 @@ export class CommentOperations {
 }
 
 /**
- * Write lines as comment lines, joined by line breaks: each after a `#`, a line that a comment
+ * Write lines as comment lines, joined by line breaks: each after `# `, a line that a comment
  * written before has keeping how that comment is written.
- * @param lines The lines, as they are written after the `#` that starts each.
+ * @param lines The Markdown text of the lines.
  * @param indent The indentation of each line.
  * @param eol The line break.
  * @param written The comment tokens written before.
@@ -167,7 +166,7 @@ function _commentLines(lines: readonly string[], indent: string, eol: string, wr
 	const unused = [...written];
 
 	return lines.map(line => {
-		const index = unused.findIndex(token => getCommentLine(token) === line);
+		const index = unused.findIndex(token => getCommentMarkdown(token) === line);
 		const image = index >= 0 ? unused.splice(index, 1)[0].image.trimEnd() : getCommentImage(line).trimEnd();
 
 		return indent + image;

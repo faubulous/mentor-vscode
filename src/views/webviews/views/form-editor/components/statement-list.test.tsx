@@ -57,7 +57,7 @@ describe('StatementList', () => {
 		expect(screen.getAllByText(/./, { selector: '.literal-annotation' })).toHaveLength(1);
 	});
 
-	it('puts the comment lines of a property under its values, and those of a later value above the value', () => {
+	it('puts the comment lines of a property above its row, and those of a later value above the value', () => {
 		const cardBody = createTestCardBody([
 			{ ...createProperty('rdfs:label', [createLiteralView('First'), { ...createLiteralView('Second'), comments: ['about the second'] }]), comments: ['what it is called', 'two lines'] }
 		]);
@@ -66,9 +66,11 @@ describe('StatementList', () => {
 
 		const comment = screen.getByText('what it is called two lines', { normalizer: text => text.replace(/\s+/g, ' ') });
 
-		expect(comment.classList.contains('statement-comment')).toBe(true);
-		expect(comment.closest('.statement-values')?.lastElementChild).toBe(comment);
-		expect(screen.getByText('about the second').classList.contains('statement-value-comment')).toBe(true);
+		const row = screen.getByRole('group', { name: 'rdfs:label' });
+
+		expect(row.firstElementChild?.classList.contains('statement-property-comment')).toBe(true);
+		expect(row.firstElementChild?.contains(comment)).toBe(true);
+		expect(screen.getByText('about the second').closest('.statement-value-comment')).not.toBeNull();
 	});
 
 	it('follows a pill to the card of a resource the document describes, and out of the editor otherwise', async () => {
@@ -104,11 +106,11 @@ describe('StatementList', () => {
 
 		expect(screen.getByText('inside').closest('.resource-card.is-nested')?.getAttribute('data-resource-id')).toBe('_:b1');
 		const caption = document.querySelector('.nested-card-caption')!;
-		const valueComment = screen.getByText('the value', { selector: '.statement-value-comment' });
+		const valueComment = screen.getByText('the value').closest('.statement-value-comment');
 
 		expect(caption.textContent).toBe('the node');
 		expect(caption.closest('.statement-line')?.getAttribute('aria-label')).toBe('Type');
-		expect(valueComment.nextElementSibling?.classList.contains('resource-card')).toBe(true);
+		expect(valueComment?.nextElementSibling?.classList.contains('resource-card')).toBe(true);
 		expect(screen.getByText('Loading…').closest('.resource-card.is-nested')?.getAttribute('data-resource-id')).toBe('_:b2');
 		expect(dataService.requested).toEqual([RdfDataFactory.blankNode('b2')]);
 		expect(screen.queryByRole('button', { name: 'More actions' })).toBeNull();

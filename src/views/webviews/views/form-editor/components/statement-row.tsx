@@ -25,6 +25,7 @@ import { RowMenu } from './row-menu';
 import { PredicateField } from './predicate-field';
 import { PredicateAnnotations } from './predicate-annotations';
 import { CommentField } from './comment-field';
+import { CommentLine } from './comment-line';
 import { ResourceValues } from './resource-values';
 import { getRowErrorMessage } from './row-error-message';
 import { RowError } from './row-error';
@@ -226,6 +227,7 @@ export function StatementRow({ property, editor, inferredValues = [], services, 
 	// The inferred resources of an edited row stand in its box, after the resources it edits.
 	const boxed = edited !== undefined && !(folded && resources.length === 0) && !addLink && !titled;
 	const inferredResources = inferred.filter(entry => _kindOf(entry.view) === 'resource');
+	const propertyComment = property && _propertyCommentOf(property, scope);
 
 	// A literal just started takes the focus once it is shown.
 	useEffect(() => {
@@ -279,7 +281,7 @@ export function StatementRow({ property, editor, inferredValues = [], services, 
 	return (
 		<div
 			ref={rowRef}
-			className={`statement-line is-${rowKind}-row${edited ? ' is-editable' : ''}${editor?.isNew && !header ? ' is-draft' : ''}${_headerClassOf(header)}${folded ? ' is-folded' : ''}${reorder?.dragged ? ' is-dragged' : ''}${reorder?.dropPlacement ? ` is-drop-${reorder.dropPlacement}` : ''}`}
+			className={`statement-line is-${rowKind}-row${edited ? ' is-editable' : ''}${editor?.isNew && !header ? ' is-draft' : ''}${_headerClassOf(header)}${folded ? ' is-folded' : ''}${reorder?.dragged ? ' is-dragged' : ''}${reorder?.dropPlacement ? ` is-drop-${reorder.dropPlacement}` : ''}${propertyComment ? ' has-comment' : ''}`}
 			role="group"
 			aria-label={header ? _headerLabelOf(header) : editor?.isNew ? 'New statement' : label}
 			data-predicate={_predicateIriOf(predicateView)}
@@ -288,6 +290,7 @@ export function StatementRow({ property, editor, inferredValues = [], services, 
 			onBlur={edited ? handleBlur : undefined}
 			onContextMenu={openOnContextMenu}
 		>
+			{propertyComment && <CommentLine className="statement-property-comment">{propertyComment}</CommentLine>}
 			<span className="row-gutter is-start">
 				{reorder?.grip && <RowGrip label={label} {...reorder.grip} />}
 				{header?.kind === 'type' && _chevron(header)}
@@ -313,7 +316,6 @@ export function StatementRow({ property, editor, inferredValues = [], services, 
 					{addLink && <button type="button" className="add-link statement-value-add" onClick={() => setAddingValue(true)}>{addLink}</button>}
 					{header?.kind === 'type' && header.collapsed && _collapsedSummaryOf(header)}
 					{header?.kind === 'type' && header.caption && <span className="nested-card-caption">{header.caption}</span>}
-					{property && _propertyCommentOf(property, scope)}
 				</span>
 				{error && <RowError message={error} onDismiss={state?.rejection ? () => editor?.dismissRejection() : undefined} />}
 			</div>
@@ -735,8 +737,8 @@ function _commentOf(value: RowValue, view: TermData, index: number, scope: Comme
 }
 
 /**
- * The comment written above the property of a row, where it has one, shown under the values of the
- * row and edited in place; once asked for, an empty field for a property without a comment, which
+ * The comment written above the property of a row, where it has one, shown above the row and
+ * edited in place; once asked for, an empty field for a property without a comment, which
  * writes one.
  * @param property The property.
  * @param scope Where the comment is written.

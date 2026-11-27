@@ -102,7 +102,8 @@ export class ResourceViewBuilder {
 			predicates: predicates.map(group => this._withRange(group, entry)),
 			// A resource of its own shows them above its card, where they were written; a node
 			// written inside another has no card of its own to stand outside of.
-			leadingComments: entry.nested ? getCommentLines(this._index.comments.resourceComments(entry.term)) : undefined
+			leadingComments: entry.nested ? getCommentLines(this._index.comments.resourceComments(entry.term)) : undefined,
+			endComments: getCommentLines(this._index.comments.endComments(entry.term))
 		};
 	}
 

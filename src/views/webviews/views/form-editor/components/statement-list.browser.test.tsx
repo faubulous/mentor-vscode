@@ -863,7 +863,7 @@ describe('StatementList, edited in a browser', () => {
 
 		const boxOf = (element: Element | null) => element!.getBoundingClientRect();
 		const first = boxOf(document.querySelector('.resource-values [data-value-index="0"]'));
-		const rendered = document.querySelector<HTMLElement>('.value-pill-line .comment-field-text')!;
+		const rendered = document.querySelector<HTMLElement>('.value-pill-line .comment-body')!;
 		const comment = boxOf(rendered);
 		const second = boxOf(document.querySelector('.value-pill-line [data-value-index="1"]'));
 
@@ -877,10 +877,48 @@ describe('StatementList, edited in a browser', () => {
 		const height = boxOf(field).height;
 
 		await act(async () => {
-			fireEvent.change(field, { target: { value: 'about B\nand more' } });
+			fireEvent.change(field, { target: { value: 'about B\nand more\nand more' } });
 		});
 
 		expect(boxOf(field).height).toBeGreaterThan(height);
+	});
+
+	it('puts the comment of a property above its row, its # in the gutter of the grips and its text at the content edge, with no line under it', async () => {
+		const label = { ...createProperty('rdfs:label', [createLiteralView('Tree')]), comments: ['the name'] };
+
+		await renderList(withAnchors(createTestCardBody([createProperty('rdfs:comment', [createLiteralView('x')]), label])));
+
+		const boxOf = (element: Element | null) => element!.getBoundingClientRect();
+		const row = document.querySelector('.statement-line[aria-label="rdfs:label"]')!;
+		const comment = row.querySelector('.statement-property-comment')!;
+		const cells = boxOf(row.querySelector('.statement-cells'));
+		const gutter = boxOf(comment.querySelector('.comment-gutter'));
+		const body = boxOf(comment.querySelector('.comment-body'));
+		const grip = boxOf(row.querySelector('.row-gutter.is-start'));
+
+		expect(boxOf(comment).bottom).toBeLessThanOrEqual(cells.top);
+		expect(Math.round(gutter.left)).toBe(Math.round(grip.left));
+		expect(Math.round(gutter.width)).toBe(Math.round(grip.width));
+		expect(Math.round(body.left)).toBe(Math.round(cells.left));
+		expect(Math.round(body.right)).toBe(Math.round(cells.right));
+		expect(getComputedStyle(comment).borderBottomStyle).toBe('none');
+	});
+
+	it('edits a comment in a text area of at least two lines, with the type of its text at its end', async () => {
+		const label = { ...createProperty('rdfs:label', [createLiteralView('Tree')]), comments: ['the name'] };
+
+		await renderList(withAnchors(createTestCardBody([createProperty('rdfs:comment', [createLiteralView('x')]), label])));
+		await userEvent.dblClick(document.querySelector('.statement-property-comment .comment-body')!);
+
+		const field = document.querySelector<HTMLTextAreaElement>('.statement-property-comment textarea')!;
+		const type = document.querySelector('.statement-property-comment .comment-type')!.getBoundingClientRect();
+		const box = field.getBoundingClientRect();
+
+		expect(document.activeElement).toBe(field);
+		expect(box.height).toBeGreaterThanOrEqual(2 * TEXT_LINE);
+		expect(type.right).toBeLessThan(box.right);
+		expect(type.top).toBeGreaterThan(box.top);
+		expect(getComputedStyle(field.parentElement!).borderBottomWidth).toBe('2px');
 	});
 
 	it('shows no focus ring on the grip of a row while the row is dragged', async () => {

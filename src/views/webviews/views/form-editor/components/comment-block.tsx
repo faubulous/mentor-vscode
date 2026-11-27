@@ -1,6 +1,7 @@
 import { CommentFormBlock } from '../state/form-block';
 import { getCommentTarget } from '../state/comment-editor';
 import { CommentField } from './comment-field';
+import { CommentLine } from './comment-line';
 
 /**
  * Properties of the {@link CommentBlock} component.
@@ -18,15 +19,15 @@ export interface CommentBlockProps {
 }
 
 /**
- * A comment written between the resources of the document: grey text, as written, which can be
+ * A comment written between the resources of the document, rendered from its Markdown, which can be
  * edited in place where the form can write the document.
  * @param props The comment.
  * @returns The block.
  */
 export function CommentBlock({ block, version }: CommentBlockProps): React.JSX.Element {
 	return (
-		<div className="comment-block">
+		<CommentLine className="comment-block">
 			<CommentField className="comment-block-text" label="Comment" lines={block.lines} target={getCommentTarget(block.anchor)} subject={block.subject} card={block.subject} version={version} />
-		</div>
+		</CommentLine>
 	);
 }

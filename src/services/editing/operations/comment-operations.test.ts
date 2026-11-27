@@ -67,8 +67,8 @@ describe('CommentOperations.setComment', () => {
 		expect(setComment({ kind: 'resource', subject, run: 0 }, ['# kept as written', 'new'])).toBe(edited('## kept as written', '# old', ['## kept as written', '# new']));
 	});
 
-	it('writes each line after a #, with a space before a line that starts with text, and keeps an unchanged line as written', () => {
-		expect(setComment({ kind: 'resource', subject, run: 0 }, ['text', ' spaced', '# heading'], '#nospace\nex:s ex:a 1 .\n')).toBe('# text\n# spaced\n## heading\nex:s ex:a 1 .\n');
+	it('writes each line after "# ", an empty one as # alone, and keeps an unchanged line as written', () => {
+		expect(setComment({ kind: 'resource', subject, run: 0 }, ['text', ' spaced', '', '# heading'], '#nospace\nex:s ex:a 1 .\n')).toBe('# text\n#  spaced\n#\n# # heading\nex:s ex:a 1 .\n');
 		expect(setComment({ kind: 'resource', subject, run: 0 }, ['nospace', 'more'], '#nospace\nex:s ex:a 1 .\n')).toBe('#nospace\n# more\nex:s ex:a 1 .\n');
 	});
 
@@ -100,6 +100,24 @@ describe('CommentOperations.setComment', () => {
 		const node = createSynthesisInput(BODY).quadContexts.find(quad => quad.predicate.value === `${EX}p`)!.subject as BlankNode;
 
 		expect(setComment({ kind: 'node', subject: node }, ['inside'])).toBe(edited('    ex:n [ ex:p 1 ] .', '    ex:n [ ex:p 1 ] .', ['    ex:n [', '        # inside', '        ex:p 1 ] .']));
+	});
+
+	it('writes the comment ending a resource before the . that closes it, on a line of its own', () => {
+		expect(setComment({ kind: 'end', subject }, ['the end'])).toBe(edited('    ex:n [ ex:p 1 ] .', '    ex:n [ ex:p 1 ] .', ['    ex:n [ ex:p 1 ]', '    # the end', '.']));
+		expect(setComment({ kind: 'end', subject }, ['the end'], 'ex:s ex:a 1 ;\n.\n')).toBe('ex:s ex:a 1 ;\n    # the end\n.\n');
+	});
+
+	it('writes the comment ending a node before the ] that closes it, which keeps the indentation of the line of its [', () => {
+		const node = createSynthesisInput(BODY).quadContexts.find(quad => quad.predicate.value === `${EX}p`)!.subject as BlankNode;
+
+		expect(setComment({ kind: 'end', subject: node }, ['ends n'])).toBe(edited('    ex:n [ ex:p 1 ] .', '    ex:n [ ex:p 1 ] .', ['    ex:n [ ex:p 1', '        # ends n', '    ] .']));
+	});
+
+	it('rewrites and removes the comment ending a resource', () => {
+		const body = 'ex:s ex:a 1\n    # old end\n.\n';
+
+		expect(setComment({ kind: 'end', subject }, ['new end'], body)).toBe('ex:s ex:a 1\n    # new end\n.\n');
+		expect(setComment({ kind: 'end', subject }, [], body)).toBe('ex:s ex:a 1\n.\n');
 	});
 
 	it('rewrites a run closing the document', () => {

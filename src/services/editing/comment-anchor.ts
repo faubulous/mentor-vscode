@@ -24,6 +24,11 @@ export type CommentAnchor =
 	 */
 	| { kind: 'value'; subject: NamedNode | BlankNode; predicate: string; anchor: number }
 	/**
+	 * The comments after the last statement of a resource, before the `.` or `]` that closes its
+	 * statements.
+	 */
+	| { kind: 'end'; subject: NamedNode | BlankNode }
+	/**
 	 * A run of the comments closing the document, by its index among them.
 	 */
 	| { kind: 'document'; run: number };

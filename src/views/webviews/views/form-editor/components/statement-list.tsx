@@ -10,6 +10,9 @@ import { IResourceDataService } from '../services/resource-data-service.interfac
 import { usePinnedProperties } from '../state/pinned-properties-context';
 import { useFormEditorContext } from '../state/form-editor-context';
 import { LeadingRow, StatementRowEntry } from '../state/statement-rows';
+import { getCommentTarget } from '../state/comment-editor';
+import { CommentField } from './comment-field';
+import { CommentLine } from './comment-line';
 import { RowHeader, StatementRow } from './statement-row';
 import { getTermLabel } from '@src/services/resource/term-labels';
 
@@ -60,7 +63,7 @@ const TYPE_ROW: LeadingRow = { predicates: [RDF.type], predicateText: 'a' };
 
 /**
  * The statements of a card as rows, in document order, each with the comment lines written above
- * it. Where the document can be written, the rows are edited in place, except those whose values
+ * it, and the comment lines written after the last of them. Where the document can be written, the rows are edited in place, except those whose values
  * cannot all be kept by their place, which only read, and the link that adds a property ends them:
  * it opens a row for a new statement with the focus in its predicate, and the row closes again
  * when it is left with nothing typed. The label row leads the rows of a card of the list where the
@@ -124,6 +127,19 @@ export function StatementList({ cardBody, stale = false, dataService, depth, vis
 		<div ref={listRef} className={`statement-list${editable ? ' is-editable' : ''}${collapsed.value ? ' is-collapsed' : ''}`} {...listDrop}>
 			{header && rowOf(leadingEntry, header)}
 			{!collapsed.value && rows.map(entry => rowOf(entry))}
+			{!collapsed.value && cardBody.endComments && (
+				<CommentLine className="statement-end-comment">
+					<CommentField
+						className="statement-comment"
+						label="Comment at the end"
+						lines={cardBody.endComments}
+						target={getCommentTarget({ kind: 'end', subject: cardBody.subject })}
+						subject={cardBody.subject}
+						card={visited[0] ?? cardBody.subject}
+						version={dataService.version}
+					/>
+				</CommentLine>
+			)}
 			{!collapsed.value && addRow && !adding && (
 				<div className="statement-list-add-row">
 					<button type="button" className="add-link statement-list-add" onClick={handleAddProperty}>Add property</button>

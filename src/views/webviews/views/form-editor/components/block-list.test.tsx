@@ -11,6 +11,7 @@ import { FormEditorContext } from '../state/form-editor-context';
 import { ResourceCardStates } from '../state/resource-card-states';
 import { buildFormBlocks } from '../hooks/use-form-blocks';
 import { BlockList } from './block-list';
+import { getCommentEditingLabel } from './comment-field';
 
 /**
  * A resize observer for jsdom, which reports the size an element claims through its bounding rectangle.
@@ -82,7 +83,7 @@ describe('BlockList', () => {
 
 		expect(rendered).toBeGreaterThan(0);
 		expect(rendered).toBeLessThan(blocks.length);
-		expect(screen.getByText('About the file').className).toBe('comment-block-text');
+		expect(screen.getByText('About the file').closest('.comment-block-text')).not.toBeNull();
 		expect(document.querySelector('.form-block')?.getAttribute('data-block-id')).toBe(blocks[0].id);
 		expect(dataService.requested.length).toBeGreaterThan(0);
 		expect(dataService.requested.length).toBeLessThan(RESOURCES.length);
@@ -115,7 +116,7 @@ describe('BlockList', () => {
 		 * @param text The text.
 		 */
 		async function writeNewComment(text: string): Promise<void> {
-			const field = screen.getByLabelText('New comment');
+			const field = screen.getByLabelText(getCommentEditingLabel('New comment'));
 
 			expect(document.activeElement).toBe(field);
 
@@ -141,7 +142,7 @@ describe('BlockList', () => {
 			await writeNewComment('About Thing1');
 
 			expect(host.submitted[0].operations).toEqual([{ op: 'addComment', before: { subject: RESOURCES[1].subject }, lines: ['About Thing1'] }]);
-			expect(screen.queryByLabelText('New comment')).toBeNull();
+			expect(screen.queryByLabelText(getCommentEditingLabel('New comment'))).toBeNull();
 		});
 
 		it('adds a comment before a comment above a resource, and at the end of the document', async () => {
@@ -164,7 +165,7 @@ describe('BlockList', () => {
 			const { host, blocks } = await renderEditable();
 
 			await act(async () => fireEvent.click(linkAbove(blocks[2].id)));
-			await act(async () => fireEvent.blur(screen.getByLabelText('New comment')));
+			await act(async () => fireEvent.blur(screen.getByLabelText(getCommentEditingLabel('New comment'))));
 
 			expect(host.submitted).toEqual([]);
 			expect(linkAbove(blocks[blocks.length - 1].id)).toBeNull();

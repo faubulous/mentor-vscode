@@ -35,7 +35,7 @@ export type NewCommentPosition = Extract<EditOperation, { op: 'addComment' }>['b
  */
 export interface CommentEditorState {
 	/**
-	 * The text of the comment, one line per comment line, as typed.
+	 * The Markdown text of the comment, one line per comment line, as typed.
 	 */
 	text: string;
 
@@ -60,7 +60,7 @@ export interface CommentEditorData {
 	card: NamedNode | BlankNode;
 
 	/**
-	 * The lines of the comment as the document writes them.
+	 * The Markdown text of the lines of the comment as the document writes them.
 	 */
 	lines: readonly string[];
 
@@ -293,6 +293,8 @@ export function getCommentAnchorKey(anchor: CommentAnchor): string {
 			return `property ${termToString(anchor.subject)} ${anchor.predicate}`;
 		case 'value':
 			return `value ${termToString(anchor.subject)} ${anchor.predicate} ${anchor.anchor}`;
+		case 'end':
+			return `end ${termToString(anchor.subject)}`;
 		default:
 			return `document ${anchor.run}`;
 	}

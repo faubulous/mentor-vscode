@@ -59,7 +59,7 @@ export class CommentRunResolver {
 	 * @param _context The shared state of the action.
 	 */
 	constructor(private readonly _context: SynthesisContext) {
-		this.attribution = new CommentAttribution(_context.input.quadContexts);
+		this.attribution = new CommentAttribution(_context.input.quadContexts, _context.model.tokens);
 	}
 
 	/**
@@ -93,9 +93,44 @@ export class CommentRunResolver {
 
 				return this._runOf(attribution.valueComments(anchor.subject, anchor.predicate, anchor.anchor), quad.objectToken, () => this._indentOf(anchor.subject, anchor.anchor, true));
 			}
+			case 'end':
+				return this._endRun(anchor.subject);
 			default:
 				return this._documentRun(anchor.run);
 		}
+	}
+
+	/**
+	 * The run of the comments ending the statements of a resource, or the place before the `.` or
+	 * `]` that closes its last block where a new one is written: the start of the line of that
+	 * token, where it starts the line, or else a line break before it, so it moves onto a line of
+	 * its own below the comment. The lines are indented as the predicates of the block.
+	 * @param subject The resource.
+	 * @returns The run.
+	 * @throws {EditRejectionError} If the resource has no closed block in the document.
+	 */
+	private _endRun(subject: NamedNode | BlankNode): CommentRun {
+		const comments = this.attribution.endComments(subject);
+
+		if (comments.length > 0) {
+			return this._existingRun(comments);
+		}
+
+		const block = this._found(new StatementLocator(this._context.model).blocksOf(subject).filter(candidate => candidate.terminator).pop());
+		const terminator = block.terminator!;
+		const indent = this._context.styleDetector.predicateIndentFor(block);
+		const { text, tokens } = this._context.model;
+
+		if (indentBefore(text, terminator.startOffset) !== undefined) {
+			const start = lineStartOffset(text, terminator.startOffset);
+
+			return { tokens: [], start, end: start, indent, prefix: '', suffix: '' };
+		}
+
+		const index = tokens.findIndex(token => token.startOffset === terminator.startOffset);
+		const previous = tokens[previousNonCommentTokenIndex(tokens, index)];
+
+		return { tokens: [], start: tokenEnd(previous), end: terminator.startOffset, indent, prefix: this._context.style.eol, suffix: _lineIndentOf(text, block.start) };
 	}
 
 	/**
@@ -234,6 +269,18 @@ function _nthRun(comments: readonly IToken[], run: number): readonly IToken[] {
 	}
 
 	return runs[run];
+}
+
+/**
+ * The indentation of the line holding an offset.
+ * @param text The text.
+ * @param offset The offset.
+ * @returns The whitespace that starts the line.
+ */
+function _lineIndentOf(text: string, offset: number): string {
+	const start = lineStartOffset(text, offset);
+
+	return /^[ \t]*/.exec(text.slice(start, offset))![0];
 }
 
 /**
